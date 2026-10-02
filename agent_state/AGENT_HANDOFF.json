@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 10,
+  "turn": "claude",
+  "revision": 11,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,9 +34,11 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Phase 0 code complete and approved: CI green with reversibility, non-root, persistence and core/worker checks; image publishes to private GHCR. Phase 0 formally closes when the owner boots the pod (Q-012). Codex proceeds to Phase 1 (T-010 onward) and reviews C-003/C-004/C-005. Q-010 open.",
+    "summary": "Owner followed the RunPod guide, but the Network Volume deployment failed PostgreSQL startup with invalid data-directory permissions; chmod 700 did not fix it. T-009 adds an opt-in PostgreSQL data path for a smoke-only /health check, with explicit non-durability warning. Draft PR #1 has green CI run 37054510130 and awaits Claude review/merge; the owner must deploy the published image and confirm /health before Phase 0 closes. Phase 1 remains eligible to proceed per Q-012; Q-010 remains open.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
-    "known_failing": [],
+    "known_failing": [
+      "RunPod Network Volume PostgreSQL startup failed for the owner; T-009 smoke-only workaround is in draft PR #1 pending review and publication."
+    ],
     "environment": {
       "runtime": "RunPod Docker",
       "python": "3.12",
@@ -1575,6 +1577,37 @@
         "Record in decisions that GHCR is the registry (D-022) and note how to rotate the token",
         "Owner can then boot the pod and confirm /health, which closes Phase 0"
       ]
+    },
+    {
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-23"
+      ],
+      "depends_on": [
+        "T-007",
+        "T-008"
+      ],
+      "deliverables": [
+        "scripts/start_postgres.sh",
+        ".github/workflows/ci.yml",
+        "infra/runpod/README.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "PR #1",
+        "GitHub Actions run 37054510130"
+      ],
+      "completion_note": "Added an absolute-path POSTGRES_DATA_DIR override while retaining /workspace/pgdata as the default; CI exercises the override through ROLE=all health and container restart; RunPod guide documents /tmp as a smoke-only, non-durable workaround and requires POSIX-compatible or managed PostgreSQL for durable use. GitHub Actions run 37054510130 passed quality, tests, handoff/secret scans, image build, ROLE=all health/restart and core/worker smoke checks. Draft PR #1 awaits Claude review and merge; owner must deploy the published image and confirm /health.",
+      "id": "T-009",
+      "title": "Handle RunPod PostgreSQL data-directory permission incompatibility",
+      "acceptance_criteria": [
+        "PostgreSQL data directory is configurable through POSTGRES_DATA_DIR; default remains /workspace/pgdata",
+        "CI starts ROLE=all and reports healthy using an override outside /workspace, then confirms health survives a container restart",
+        "RunPod guide explains the temporary smoke-check workaround and its non-durable behavior, and documents the durable-storage requirement"
+      ]
     }
   ],
   "decisions": [
@@ -2025,6 +2058,26 @@
       "validated_by": "claude",
       "date": "2026-10-02T19:00:00Z",
       "reverify_if": "Workflow, Dockerfile or guide changes"
+    },
+    {
+      "id": "V-028",
+      "subject": "RunPod Network Volume PostgreSQL directory permissions",
+      "method": "Owner deployed ROLE=all with Network Volume at /workspace; PostgreSQL repeatedly exited during initdb with FATAL invalid permissions. Owner ran chmod 700 and stat reported 700 (drwx------, owner 10001:999), but a pod restart reproduced the same fatal error; API logs reported database/Redis not ready.",
+      "result": "fail",
+      "evidence": "Owner-provided RunPod logs and stat output in Codex conversation, 2026-10-02; scripts/start_postgres.sh and infra/runpod/README.md",
+      "validated_by": "codex",
+      "date": "2026-10-02T19:32:04Z",
+      "reverify_if": "RunPod storage mode behavior changes or the PostgreSQL data location/storage type changes"
+    },
+    {
+      "id": "V-029",
+      "subject": "T-009 configurable PostgreSQL data directory smoke path",
+      "method": "GitHub Actions PR workflow ran full quality, type, migration, test, secret scan, Docker build, ROLE=all health/restart and core/worker smoke checks with POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata.",
+      "result": "pass",
+      "evidence": "GitHub Actions run 37054510130 on PR #1 branch codex/runpod-postgres-data-dir",
+      "validated_by": "codex",
+      "date": "2026-10-02T19:32:04Z",
+      "reverify_if": "PostgreSQL startup script, Docker image, or CI runtime workflow changes"
     }
   ],
   "blockers": [
@@ -2039,6 +2092,12 @@
       "text": "CI run 37038319627 (commit 1845155) fails at step 'Apply migrations and run tests' with exit code 2; Lint and Type check now pass. Claude cannot download job logs (403), so the cause is unknown. Codex: (1) split that step into 'Apply migrations' and 'Run tests'; (2) on failure emit the last 30 log lines as a GitHub ::error:: annotation (single line, newlines replaced) so Claude can read it through the API; (3) fix the cause; (4) report which command failed. Exit code 2 from pytest means collection/usage error, so check imports and conftest first. Until CI is green through Docker ROLE=all health, T-001, T-003, T-004, T-005, T-006 cannot be approved. Resolved by Codex: SQLAlchemy parsed the literal JSON colon in text() as a bind parameter. Test now binds JSON through exec_driver_sql. CI annotations expose failing commands and recent logs; all checks including ROLE=all health pass on run 37044750525.",
       "raised_by": "claude",
       "status": "resolved"
+    },
+    {
+      "id": "B-003",
+      "text": "Owner's RunPod Network Volume deployment does not start embedded PostgreSQL: postgres exits with invalid permissions for /workspace/pgdata even after chmod 700; API remains degraded. T-009 adds an opt-in /tmp smoke-check path but the PR is not yet merged/published and that path is not durable. Keep the existing volume; do not use the temporary path for ongoing operations.",
+      "raised_by": "codex",
+      "status": "open"
     }
   ],
   "questions": [
@@ -2171,6 +2230,15 @@
         "Yes, I will follow the guide now",
         "Later, let Codex continue with Phase 1 first"
       ],
+      "answer": ""
+    },
+    {
+      "id": "Q-013",
+      "to": "claude",
+      "from": "codex",
+      "text": "Please review T-009 / PR #1. Owner's RunPod Network Volume repeatedly triggers PostgreSQL invalid-permissions during initdb even though stat reports mode 700 after chmod. The PR adds a POSTGRES_DATA_DIR override for a smoke-only local path and documents that it is non-durable. Is this suitable to proceed with Phase 0 /health verification? Please also advise the durable PostgreSQL storage route for paper operation, given D-005 requires managed Postgres/Redis before live trading.",
+      "status": "open",
+      "options": [],
       "answer": ""
     }
   ],
@@ -2453,6 +2521,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-007 and T-008 on green CI run 37047681699. Asked owner to boot the pod (Q-012). Codex continues with Phase 1; turn to Codex."
+    },
+    {
+      "revision": 11,
+      "ts": "2026-10-02T19:32:04Z",
+      "agent": "codex",
+      "action": "runpod_postgres_volume_permission_workaround",
+      "task_ids": [
+        "T-009"
+      ],
+      "files_changed": [
+        "scripts/start_postgres.sh",
+        ".github/workflows/ci.yml",
+        "infra/runpod/README.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Diagnosed owner RunPod Network Volume failure: PostgreSQL rejected /workspace/pgdata permissions on every start despite chmod 700; supervisor stopped retrying and API health remained degraded. Added POSTGRES_DATA_DIR override with unchanged persistent default, smoke-only local-path guidance, and CI coverage. PR #1 CI run 37054510130 passed all checks. Recording V-028 failure and handing over for Claude review; durable storage route remains unresolved."
     }
   ]
 }
