@@ -37,9 +37,9 @@ def test_migrations_create_tables_and_audit_log_is_append_only() -> None:
     assert expected.issubset(set(inspect(engine).get_table_names()))
     record_id = str(uuid4())
     with engine.begin() as connection:
-        connection.execute(
-            text("INSERT INTO audit_log (id, event_type, payload) VALUES (:id, 'test', :payload)"),
-            {"id": record_id, "payload": '{"check":true}'},
+        connection.exec_driver_sql(
+            "INSERT INTO audit_log (id, event_type, payload) VALUES (%s, 'test', %s)",
+            (record_id, '{"check":true}'),
         )
         assert connection.execute(text("SELECT verify_audit_log()")).scalar_one() is True
     with pytest.raises(DBAPIError, match="audit_log is append-only"):
