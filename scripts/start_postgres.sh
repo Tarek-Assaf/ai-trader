@@ -1,7 +1,13 @@
 #!/bin/sh
 set -eu
 
-DATA_DIR=/workspace/pgdata
+# RunPod Network Volumes may not expose PostgreSQL's required POSIX mode bits.
+# Override this for smoke tests with POSTGRES_DATA_DIR on storage that supports 0700.
+DATA_DIR=${POSTGRES_DATA_DIR:-/workspace/pgdata}
+case "$DATA_DIR" in
+    /*) ;;
+    *) echo "POSTGRES_DATA_DIR must be an absolute path" >&2; exit 2 ;;
+esac
 PG_BIN=$(find /usr/lib/postgresql -mindepth 3 -maxdepth 3 -type f -name initdb -print -quit)
 if [ -z "$PG_BIN" ]; then
     echo "PostgreSQL initdb binary was not found" >&2
