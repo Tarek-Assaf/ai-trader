@@ -146,6 +146,218 @@ jobs:
           grep --quiet '"status":"healthy"' /tmp/health.json
           docker exec ai-trader test -f /workspace/persistence-check
           docker exec ai-trader test -s /tmp/ai-trader-pgdata/PG_VERSION
+      - name: Verify ROLE=all PostgreSQL backup and restore across container replacement
+        run: |
+          backup_volume="ai-trader-backup-${GITHUB_RUN_ID}"
+          cleanup() {
+            docker rm --force ai-trader-backup || true
+            docker volume rm "$backup_volume" || true
+          }
+          docker volume create "$backup_volume" >/dev/null
+          trap cleanup EXIT
+          docker run --detach --name ai-trader-backup --publish 8001:8000 \
+            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \
+            --env LIVE_TRADING_ENABLED=false --volume "$backup_volume:/workspace" ai-trader:ci
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8001/health > /tmp/backup-health.json; then
+              grep --quiet '"status":"healthy"' /tmp/backup-health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/backup-health.json
+          docker exec ai-trader-backup test -s /var/lib/ai-trader/pgdata/PG_VERSION
+          docker exec --user trader ai-trader-backup psql -h 127.0.0.1 -U trader -d trader -v ON_ERROR_STOP=1 \
+            -c "INSERT INTO audit_log (id,event_type,payload) VALUES ('11111111-1111-4111-8111-111111111111','restore_test',jsonb_build_object('marker','first')::text)"
+          docker exec --user trader ai-trader-backup psql -h 127.0.0.1 -U trader -d trader -v ON_ERROR_STOP=1 \
+            -c "INSERT INTO decisions (id,payload) VALUES ('22222222-2222-4222-8222-222222222222',jsonb_build_object('marker','first'))"
+          docker exec --user trader ai-trader-backup /app/scripts/backup_postgres.sh
+          docker exec --user trader ai-trader-backup sh -c 'for i in $(seq -w 1 50); do printf old > "/workspace/backups/trader-20000101T000000Z-test-$i.dump"; done'
+          docker exec --user trader ai-trader-backup psql -h 127.0.0.1 -U trader -d trader -v ON_ERROR_STOP=1 \
+            -c "INSERT INTO audit_log (id,event_type,payload) VALUES ('33333333-3333-4333-8333-333333333333','restore_test',jsonb_build_object('marker','second')::text)"
+          docker exec --user trader ai-trader-backup psql -h 127.0.0.1 -U trader -d trader -v ON_ERROR_STOP=1 \
+            -c "INSERT INTO decisions (id,payload) VALUES ('44444444-4444-4444-8444-444444444444',jsonb_build_object('marker','second'))"
+          docker exec --user trader ai-trader-backup /app/scripts/backup_postgres.sh
+          test "$(docker exec --user trader ai-trader-backup sh -c 'find /workspace/backups -maxdepth 1 -name "trader-*.dump" | wc -l')" -eq 48
+          docker exec --user trader ai-trader-backup sh -c 'printf corrupt > /workspace/backups/trader-99991231T235959Z-corrupt.dump'
+          docker stop --time 120 ai-trader-backup
+          docker rm ai-trader-backup
+          docker run --detach --name ai-trader-backup --publish 8001:8000 \
+            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \
+            --env LIVE_TRADING_ENABLED=false --volume "$backup_volume:/workspace" ai-trader:ci
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8001/health > /tmp/backup-health.json; then
+              grep --quiet '"status":"healthy"' /tmp/backup-health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/backup-health.json
+          docker exec ai-trader-backup test -s /var/lib/ai-trader/pgdata/PG_VERSION
+          docker exec --user trader ai-trader-backup psql -h 127.0.0.1 -U trader -d trader -Atqc "SELECT count(*) FROM audit_log WHERE id IN ('11111111-1111-4111-8111-111111111111','33333333-3333-4333-8333-333333333333')" | grep --quiet '^2
+        env:
+          POSTGRES_HOST_PORT: "15432"
+          REDIS_HOST_PORT: "16379"
+          API_HOST_PORT: "18000"
+        run: |
+          cleanup() {
+            docker compose --file docker/docker-compose.dev.yml down --volumes --remove-orphans || true
+          }
+          trap cleanup EXIT
+          docker compose --file docker/docker-compose.dev.yml up --detach --build api worker
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:${API_HOST_PORT}/health > /tmp/core-health.json; then
+              grep --quiet '"status":"healthy"' /tmp/core-health.json &&
+                grep --quiet '"role":"core"' /tmp/core-health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/core-health.json
+          grep --quiet '"role":"core"' /tmp/core-health.json
+          worker_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet worker)"
+          test "$(docker inspect --format='{{.State.Health.Status}}' "$worker_id")" = healthy
+          for service in api worker; do
+            container_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet "$service")"
+            if docker top "$container_id" -eo pid,comm | grep --extended-regexp --quiet '^(postgres|redis-server)$'; then
+              echo "$service unexpectedly started embedded PostgreSQL or Redis" >&2
+              exit 1
+            fi
+          done
+  publish-image:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/tarek-assaf/ai-trader:${{ github.sha }}
+            ghcr.io/tarek-assaf/ai-trader:latest
+
+          docker exec --user trader ai-trader-backup psql -h 127.0.0.1 -U trader -d trader -Atqc "SELECT count(*) FROM decisions WHERE id IN ('22222222-2222-4222-8222-222222222222','44444444-4444-4444-8444-444444444444')" | grep --quiet '^2
+        env:
+          POSTGRES_HOST_PORT: "15432"
+          REDIS_HOST_PORT: "16379"
+          API_HOST_PORT: "18000"
+        run: |
+          cleanup() {
+            docker compose --file docker/docker-compose.dev.yml down --volumes --remove-orphans || true
+          }
+          trap cleanup EXIT
+          docker compose --file docker/docker-compose.dev.yml up --detach --build api worker
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:${API_HOST_PORT}/health > /tmp/core-health.json; then
+              grep --quiet '"status":"healthy"' /tmp/core-health.json &&
+                grep --quiet '"role":"core"' /tmp/core-health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/core-health.json
+          grep --quiet '"role":"core"' /tmp/core-health.json
+          worker_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet worker)"
+          test "$(docker inspect --format='{{.State.Health.Status}}' "$worker_id")" = healthy
+          for service in api worker; do
+            container_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet "$service")"
+            if docker top "$container_id" -eo pid,comm | grep --extended-regexp --quiet '^(postgres|redis-server)$'; then
+              echo "$service unexpectedly started embedded PostgreSQL or Redis" >&2
+              exit 1
+            fi
+          done
+  publish-image:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/tarek-assaf/ai-trader:${{ github.sha }}
+            ghcr.io/tarek-assaf/ai-trader:latest
+
+          docker exec --user trader ai-trader-backup psql -h 127.0.0.1 -U trader -d trader -Atqc "SELECT verify_audit_log()" | grep --quiet '^t
+        env:
+          POSTGRES_HOST_PORT: "15432"
+          REDIS_HOST_PORT: "16379"
+          API_HOST_PORT: "18000"
+        run: |
+          cleanup() {
+            docker compose --file docker/docker-compose.dev.yml down --volumes --remove-orphans || true
+          }
+          trap cleanup EXIT
+          docker compose --file docker/docker-compose.dev.yml up --detach --build api worker
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:${API_HOST_PORT}/health > /tmp/core-health.json; then
+              grep --quiet '"status":"healthy"' /tmp/core-health.json &&
+                grep --quiet '"role":"core"' /tmp/core-health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/core-health.json
+          grep --quiet '"role":"core"' /tmp/core-health.json
+          worker_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet worker)"
+          test "$(docker inspect --format='{{.State.Health.Status}}' "$worker_id")" = healthy
+          for service in api worker; do
+            container_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet "$service")"
+            if docker top "$container_id" -eo pid,comm | grep --extended-regexp --quiet '^(postgres|redis-server)$'; then
+              echo "$service unexpectedly started embedded PostgreSQL or Redis" >&2
+              exit 1
+            fi
+          done
+  publish-image:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/tarek-assaf/ai-trader:${{ github.sha }}
+            ghcr.io/tarek-assaf/ai-trader:latest
+
+          test "$(docker exec --user trader ai-trader-backup sh -c 'find /workspace/backups -maxdepth 1 -name "trader-*.dump" | wc -l')" -le 48
       - name: Verify ROLE=core and ROLE=worker compose services
         env:
           POSTGRES_HOST_PORT: "15432"

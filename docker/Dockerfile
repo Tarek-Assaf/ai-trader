@@ -22,8 +22,8 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends ca-certificates gosu postgresql redis-server supervisor \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 10001 --create-home --shell /usr/sbin/nologin trader \
-    && mkdir -p /workspace/pgdata /workspace/redisdata /workspace/logs /app/baked \
-    && chown -R trader:trader /workspace
+    && mkdir -p /workspace/redisdata /workspace/logs /workspace/backups /var/lib/ai-trader/pgdata /app/baked \
+    && chown -R trader:trader /workspace /var/lib/ai-trader
 
 WORKDIR /app
 COPY --from=builder --chown=trader:trader /app/.venv /app/.venv
@@ -35,7 +35,7 @@ COPY --chown=root:root migrations /app/migrations
 COPY --chown=root:root alembic.ini /app/alembic.ini
 COPY --chown=root:root src /app/src
 RUN chmod 0444 /app/baked/risk_ceilings.yaml \
-    && chmod 0555 /app/docker/entrypoint.sh /app/scripts/start_postgres.sh /app/scripts/start_redis.sh /app/scripts/start_api.sh \
+    && chmod 0555 /app/docker/entrypoint.sh /app/scripts/start_postgres.sh /app/scripts/backup_postgres.sh /app/scripts/postgres_backup_loop.sh /app/scripts/start_redis.sh /app/scripts/start_api.sh \
     && chown -R root:root /app
 
 EXPOSE 8000
