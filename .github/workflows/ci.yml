@@ -51,10 +51,26 @@ jobs:
         run: make lint
       - name: Type check
         run: make typecheck
-      - name: Apply migrations and run tests
+      - name: Apply migrations
         run: |
-          uv run alembic upgrade head
-          make test
+          set +e
+          uv run alembic upgrade head 2>&1 | tee /tmp/migrations.log
+          command_status=${PIPESTATUS[0]}
+          if [ "$command_status" -ne 0 ]; then
+            failure_summary="$(tail -n 30 /tmp/migrations.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            printf '::error title=Apply migrations failed::%s\n' "$failure_summary"
+            exit "$command_status"
+          fi
+      - name: Run tests
+        run: |
+          set +e
+          make test 2>&1 | tee /tmp/tests.log
+          command_status=${PIPESTATUS[0]}
+          if [ "$command_status" -ne 0 ]; then
+            failure_summary="$(tail -n 30 /tmp/tests.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            printf '::error title=Run tests failed::%s\n' "$failure_summary"
+            exit "$command_status"
+          fi
       - name: Validate handoff
         run: python agent_state/validate_handoff.py
       - name: Validate handoff changes against base on pull requests
@@ -82,3 +98,4 @@ jobs:
             sleep 2
           done
           exit 1
+
