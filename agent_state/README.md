@@ -12,7 +12,6 @@ This folder is the shared memory between the two builder agents. It exists so th
 | `AGENT_HANDOFF.json` | The single source of truth. Both agents read and write it, one at a time. |
 | `handoff.schema.json` | Defines the allowed structure of the JSON file. |
 | `validate_handoff.py` | Checks the file for mistakes. Run before every hand-over and in CI. |
-| `build_handoff.py` | Only used once to create the first version. Not needed afterwards. |
 
 ## What is inside `AGENT_HANDOFF.json`
 

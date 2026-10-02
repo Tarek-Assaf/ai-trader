@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 3,
+  "turn": "codex",
+  "revision": 4,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,11 +34,11 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Codex completed Phase 0 implementation for T-001 through T-006 and submitted all tasks for Claude review. Local Ruff, format, mypy, secret scan, handoff validation and 22 tests pass; one Postgres integration test skipped without DATABASE_URL. GitHub CI now performs Postgres migration and Docker ROLE=all validation but has not run yet. Q-011 answered and D-021 records uv 0.6.3 plus non-root service operation. Q-010 remains open.",
+    "summary": "Phase 0 code review round 1: T-002 changes requested (log redaction). CI lint failure was Claude's old seed script, now removed. Other Phase 0 tasks await a green CI run (Docker, Postgres) before approval. Q-010 still open for owner.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
-      "PostgreSQL integration skipped locally: DATABASE_URL not configured.",
-      "Docker build and ROLE=all health check not run locally: Docker CLI unavailable; CI workflow added but not yet run on GitHub."
+      "T-002 log redaction only on root logger.",
+      "CI has not yet run past the lint step: Type check, tests, migrations, Docker build and ROLE=all health are unverified."
     ],
     "environment": {
       "runtime": "RunPod Docker",
@@ -450,7 +450,7 @@
         "src/trader",
         "tests/unit/test_package_layout.py"
       ],
-      "completion_note": "Created the Python 3.12 package scaffold, uv lockfile and development targets; package layout and static checks pass."
+      "completion_note": "Created the Python 3.12 package scaffold, uv lockfile and development targets; package layout and static checks pass. CLAUDE REVIEW: code read and consistent with spec; final pass blocked until CI is green (Docker build, ROLE=all health, Postgres migration/audit tests have never run)."
     },
     {
       "id": "T-002",
@@ -458,7 +458,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-24",
         "R-21"
@@ -471,7 +471,7 @@
         "unit tests cover each config file"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/core/config.py",
         "src/trader/core/settings.py",
@@ -481,7 +481,7 @@
         "tests/unit/test_secret_redaction.py",
         "tests/invariants/test_config_write_boundary.py"
       ],
-      "completion_note": "Added immutable strict YAML validation, baked risk ceiling and Strategy Lab floor checks, environment-only secret settings and log redaction. Config and invariant tests pass."
+      "completion_note": "Added immutable strict YAML validation, baked risk ceiling and Strategy Lab floor checks, environment-only secret settings and log redaction. Config and invariant tests pass. CLAUDE REVIEW 1 (changes requested): (1) src/trader/core/logging.py attaches SecretRedactionFilter to the ROOT LOGGER. Python logger filters do not run for records created by child loggers (uvicorn, sqlalchemy, trader.*), so secrets in those records are NOT redacted. Attach the filter to every handler on the root logger (and to uvicorn/uvicorn.access/uvicorn.error handlers), instead of or in addition to the logger. (2) Add a test in tests/unit/test_secret_redaction.py that logs a secret through logging.getLogger('trader.child') and through a message with %-args and asserts the emitted handler output contains [REDACTED] and not the secret. (3) Also redact SecretStr-valued extra fields if structlog is used. (4) Minor, non-blocking: in config._check_risk_ceilings, fail with a clear error if a ceilings key has no matching risk.yaml key, so a typo cannot silently disable a ceiling; add a test. Rest of T-002 (frozen/extra=forbid models, baked ceilings path, floors, env defaults) passes review."
     },
     {
       "id": "T-003",
@@ -516,7 +516,7 @@
         "src/trader/api/health.py",
         ".github/workflows/ci.yml"
       ],
-      "completion_note": "Added single multi-stage image and role entrypoint; ROLE=all runs PostgreSQL, Redis, API, scheduler and supervisord as trader after minimal root-owned volume setup. Image and runtime check are pending CI."
+      "completion_note": "Added single multi-stage image and role entrypoint; ROLE=all runs PostgreSQL, Redis, API, scheduler and supervisord as trader after minimal root-owned volume setup. Image and runtime check are pending CI. CLAUDE REVIEW: code read and consistent with spec; final pass blocked until CI is green (Docker build, ROLE=all health, Postgres migration/audit tests have never run)."
     },
     {
       "id": "T-004",
@@ -544,7 +544,7 @@
         "tests/unit/test_audit_chain.py",
         "tests/integration/test_postgres_migrations.py"
       ],
-      "completion_note": "Added all 16 initial tables, Alembic migration, database triggers rejecting audit updates/deletes/truncation, and hash verification. Local pure hash tests pass; actual migration integration awaits CI PostgreSQL."
+      "completion_note": "Added all 16 initial tables, Alembic migration, database triggers rejecting audit updates/deletes/truncation, and hash verification. Local pure hash tests pass; actual migration integration awaits CI PostgreSQL. CLAUDE REVIEW: code read and consistent with spec; final pass blocked until CI is green (Docker build, ROLE=all health, Postgres migration/audit tests have never run)."
     },
     {
       "id": "T-005",
@@ -572,7 +572,7 @@
         "tests/unit/test_secret_scan.py",
         "Makefile"
       ],
-      "completion_note": "Added locked-dependency verification, lint/type/test/migration/handoff checks, base-branch handoff check for PRs, secret scanner and Docker build/runtime health validation. Scanner detection/redaction tests pass; GitHub Actions has not run yet."
+      "completion_note": "Added locked-dependency verification, lint/type/test/migration/handoff checks, base-branch handoff check for PRs, secret scanner and Docker build/runtime health validation. Scanner detection/redaction tests pass; GitHub Actions has not run yet. CLAUDE REVIEW: code read and consistent with spec; final pass blocked until CI is green (Docker build, ROLE=all health, Postgres migration/audit tests have never run)."
     },
     {
       "id": "T-006",
@@ -595,7 +595,7 @@
       "evidence": [
         "infra/runpod/README.md"
       ],
-      "completion_note": "Added click-by-click RunPod guide covering account credit, 100 GB same-region network volume, CPU pod sizing, secret references, paper/demo environment, health check, stop/restart behavior and troubleshooting."
+      "completion_note": "Added click-by-click RunPod guide covering account credit, 100 GB same-region network volume, CPU pod sizing, secret references, paper/demo environment, health check, stop/restart behavior and troubleshooting. CLAUDE REVIEW: code read and consistent with spec; final pass blocked until CI is green (Docker build, ROLE=all health, Postgres migration/audit tests have never run)."
     },
     {
       "id": "T-010",
@@ -1391,7 +1391,7 @@
       "phase": 0,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-19",
         "R-23"
@@ -1409,7 +1409,7 @@
       "deliverables": [],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Review 1 done: T-002 changes_requested; T-001/3/4/5/6 held in review until CI is green."
     },
     {
       "id": "C-004",
@@ -1854,6 +1854,26 @@
       "validated_by": "codex",
       "date": "2026-10-02T16:20:00Z",
       "reverify_if": "Source changes"
+    },
+    {
+      "id": "V-018",
+      "subject": "CI run 37036782167 failure diagnosis",
+      "method": "Reproduced locally with ruff 0.16.8: all 86 lint errors and the 1 format error are in agent_state/build_handoff.py (Claude's one-time seed script), none in Codex code. Script removed by Claude; ruff check and ruff format --check pass on the rest of the repo.",
+      "result": "pass",
+      "evidence": "commit removing agent_state/build_handoff.py; ruff check . / ruff format --check . clean",
+      "validated_by": "claude",
+      "date": "2026-10-02T17:30:00Z",
+      "reverify_if": "CI still fails at Lint and format"
+    },
+    {
+      "id": "V-019",
+      "subject": "Phase 0 static review (config ceilings, audit triggers/hash chain, Dockerfile non-root and baked ceilings, CI steps, write-boundary invariant)",
+      "method": "Read code against docs/specs/phase0.md; dependencies cannot be installed in Claude's sandbox so tests, mypy, Docker and Postgres were NOT executed by Claude",
+      "result": "fail",
+      "evidence": "Pass: baked ceilings 0444 root-owned, ceiling and floor key names match risk.yaml/strategy_lab.yaml, audit insert/update/delete/truncate triggers and verify_audit_log, non-root gosu, CI covers all spec steps. Fail: log redaction filter on root logger only (see T-002). Unverified: Docker build, ROLE=all health, migration reversibility, Postgres tests.",
+      "validated_by": "claude",
+      "date": "2026-10-02T17:30:00Z",
+      "reverify_if": "Codex pushes fixes or CI result changes"
     }
   ],
   "blockers": [
@@ -2135,6 +2155,27 @@
         "Makefile"
       ],
       "summary": "Implemented Phase 0 scaffold, immutable config validation, non-root multi-role container, Postgres schema and append-only audit chain, secret scanning and CI, and the RunPod deployment guide. Local checks pass (22 tests, one Postgres integration skipped); CI runtime checks are pending. Answered Q-011, recorded D-021 and handing over for review."
+    },
+    {
+      "revision": 4,
+      "ts": "2026-10-02T17:30:00Z",
+      "agent": "claude",
+      "action": "review_phase0",
+      "task_ids": [
+        "C-100",
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "agent_state/README.md",
+        "agent_state/build_handoff.py"
+      ],
+      "summary": "Diagnosed CI lint failure (Claude's own seed script, removed). Requested changes on T-002 (redaction filter must be on handlers, add child-logger test). Other tasks held for a green CI run. Handing back to Codex."
     }
   ]
 }
