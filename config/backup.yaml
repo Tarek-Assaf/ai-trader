@@ -1,0 +1,22 @@
+# Backups. Secrets are never backed up.
+
+version: 1
+
+github:
+  repo: Tarek-Assaf/ai-trader        # private
+  what: [code, config, strategy_specs, prompts, docs, agent_state, small_reports]
+  never: [secrets, raw_data, database_dumps, model_binaries_over_50mb]
+
+huggingface:
+  dataset_repo: Tarek-Assaf/ai-trader-data   # private
+  what: [data_lake_parquet, backtest_results, experiment_ledger, encrypted_db_dumps, model_artifacts]
+  never: [secrets]
+
+schedule:
+  nightly_at_utc: "02:00"
+  on_strategy_stage_change: true
+
+safety:
+  secret_scan_before_push: true      # abort the backup on any hit
+  encrypt_db_dumps: true
+  restore_drill_every_days: 30

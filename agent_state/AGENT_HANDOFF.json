@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 1,
+  "turn": "codex",
+  "revision": 2,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,8 +34,8 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Blueprint v3.1 final and agreed. Earlier project audited and used as reference only. Gates raised (D-019). Open for owner: hosted LLM provider and monthly budget. Claude's next work: specs C-001 to C-004. Nothing implemented yet.",
-    "how_to_run_tests": "make lint test (defined in T-001)",
+    "summary": "Specs C-001 to C-004 and default configs are written and in review. Codex: start Phase 0 (T-001 to T-006) from docs/specs/phase0.md, in order T-001, T-002, T-003, T-004, T-005, then T-006. Answer Q-011. Open for owner (non-blocking): Q-010 extra limits, hosted LLM provider and budget.",
+    "how_to_run_tests": "make check (defined in T-001); python agent_state/validate_handoff.py for the handoff file",
     "known_failing": [],
     "environment": {
       "runtime": "RunPod Docker",
@@ -331,7 +331,7 @@
       "phase": 0,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-19",
         "R-23"
@@ -341,10 +341,14 @@
         "docs/specs/phase0.md exists",
         "every Codex task in phase 0 has acceptance criteria"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "docs/specs/phase0.md"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/specs/phase0.md"
+      ],
+      "completion_note": "Phase 0 spec written: scaffold, config system with baked ceilings, Docker roles, database with append-only audit log, CI, RunPod guide, invariant tests."
     },
     {
       "id": "C-002",
@@ -352,7 +356,7 @@
       "phase": 0,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-08",
         "R-21"
@@ -362,10 +366,30 @@
         "files exist with comments in plain English",
         "owner open decisions listed in questions[]"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "config/risk.yaml",
+        "config/risk_ceilings.yaml",
+        "config/strategy_lab.yaml",
+        "config/settings.yaml",
+        "config/instruments.yaml",
+        "config/scaling.yaml",
+        "config/schedule.yaml",
+        "config/backup.yaml",
+        ".env.example"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "config/risk.yaml",
+        "config/risk_ceilings.yaml",
+        "config/strategy_lab.yaml",
+        "config/settings.yaml",
+        "config/instruments.yaml",
+        "config/scaling.yaml",
+        "config/schedule.yaml",
+        "config/backup.yaml",
+        ".env.example"
+      ],
+      "completion_note": "Default configs written; values cross-checked against ceilings and floors by script. Owner-confirmed values: 0.5/2/10/3 and ceilings 1.0/4/15/5. Other values are proposals (Q-010)."
     },
     {
       "id": "C-003",
@@ -373,7 +397,7 @@
       "phase": 1,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-05",
         "R-07",
@@ -386,10 +410,16 @@
       "acceptance_criteria": [
         "docs/specs/phase1.md and phase2.md exist"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "docs/specs/phase1.md",
+        "docs/specs/phase2.md"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/specs/phase1.md",
+        "docs/specs/phase2.md"
+      ],
+      "completion_note": "Phase 1 and Phase 2 specs written with believed-correct Capital.com details flagged VERIFY."
     },
     {
       "id": "T-001",
@@ -1346,7 +1376,7 @@
       "phase": 2,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-26",
         "R-21"
@@ -1359,10 +1389,14 @@
         "config/risk_ceilings.yaml drafted",
         "every settable key lists direction (tightening/loosening) rule"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "docs/specs/settings_service.md"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/specs/settings_service.md"
+      ],
+      "completion_note": "SettingsService spec written: settable keys, ceilings, tightening vs loosening, TOTP, cooldown, halt rule, audit, tests."
     },
     {
       "id": "T-034",
@@ -1799,6 +1833,27 @@
         "Describe the contents briefly instead"
       ],
       "answer": "Owner made the repo reachable (reported public). Claude audited it: see docs/legacy_audit.md. Models are joblib-saved direction classifiers (dependencies suggest LightGBM, XGBoost and scikit-learn) with no usable edge."
+    },
+    {
+      "id": "Q-010",
+      "to": "human",
+      "from": "claude",
+      "text": "Besides the four limits you confirmed, I proposed starting values and ceilings for others in config/risk.yaml and config/risk_ceilings.yaml (weekly loss 5% with ceiling 8%, 3 open positions with ceiling 5, margin use 40% with ceiling 60%, leverage 5x with ceiling 10x, minimum reward-to-risk 1.5, and similar). Do you accept them for now? They can be changed later from Telegram within the ceilings. Not blocking Phase 0.",
+      "status": "open",
+      "options": [
+        "accept for now",
+        "I want to review each one"
+      ],
+      "answer": ""
+    },
+    {
+      "id": "Q-011",
+      "to": "codex",
+      "from": "claude",
+      "text": "While reading the specs, flag anything unclear or contradictory as a question to Claude before building. Specifically confirm: (1) the best way to run Postgres and Redis inside the ROLE=all container on RunPod as a non-root setup; (2) your lock-file tool choice.",
+      "status": "open",
+      "options": [],
+      "answer": ""
     }
   ],
   "log": [
@@ -1885,6 +1940,35 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Added analyst roster (D-020), task T-044 and prompt/playbook acceptance on C-040. No hand-over."
+    },
+    {
+      "revision": 2,
+      "ts": "2026-10-02T15:55:00Z",
+      "agent": "claude",
+      "action": "specs_and_configs",
+      "task_ids": [
+        "C-001",
+        "C-002",
+        "C-003",
+        "C-004"
+      ],
+      "files_changed": [
+        "docs/specs/phase0.md",
+        "docs/specs/phase1.md",
+        "docs/specs/phase2.md",
+        "docs/specs/settings_service.md",
+        "config/risk.yaml",
+        "config/risk_ceilings.yaml",
+        "config/strategy_lab.yaml",
+        "config/settings.yaml",
+        "config/instruments.yaml",
+        "config/scaling.yaml",
+        "config/schedule.yaml",
+        "config/backup.yaml",
+        ".env.example",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Wrote Phase 0, 1, 2 and SettingsService specs plus default configs. Handing the turn to Codex to start Phase 0."
     }
   ]
 }

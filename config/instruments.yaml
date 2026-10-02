@@ -1,0 +1,44 @@
+# Instruments. Adding a new one means adding a block here and nothing else.
+# Items marked VERIFY must be confirmed against the Capital.com demo API (tasks T-010, T-015, T-016).
+
+version: 1
+
+instruments:
+  NAS100:
+    display_name: Nasdaq-100
+    aliases: [NAS100, US100, NSXUSD, NASDAQ100]
+    capital_epic: US100              # VERIFY with the market search endpoint
+    histdata_code: NSXUSD            # VERIFY coverage dates (V-004)
+    asset_class: index
+    # Read from the broker at startup and cached; leave empty here:
+    tick_size: null
+    value_per_point: null
+    min_size: null
+    max_size: null
+    size_step: null
+    margin_factor: null
+    session:
+      source: broker_status_then_rules
+      timezone: America/New_York
+      notes: "VERIFY trading hours, daily break and holiday behavior of the CFD"
+    typical_spread_points: null      # calibrated by T-017
+    news_tags: [fomc, cpi, nfp, pmi, big_tech_earnings, rates]
+
+  XAUUSD:
+    display_name: Gold
+    aliases: [XAUUSD, GOLD, XAU]
+    capital_epic: GOLD               # VERIFY with the market search endpoint
+    histdata_code: XAUUSD
+    asset_class: commodity
+    tick_size: null
+    value_per_point: null
+    min_size: null
+    max_size: null
+    size_step: null
+    margin_factor: null
+    session:
+      source: broker_status_then_rules
+      timezone: UTC
+      notes: "VERIFY trading hours, daily break and weekend behavior"
+    typical_spread_points: null
+    news_tags: [fomc, cpi, nfp, real_yields, usd, geopolitics]
