@@ -72,7 +72,7 @@ Leave `POSTGRES_DATA_DIR` unset for normal paper-mode use. The image default sto
 1. Wait for the pod status to show **Running**.
 2. Open its **Connect** or **HTTP Service** link for port 8000.
 3. Add `/health` to the end of that address.
-4. Confirm the page returns JSON with a healthy status, role `all`, paper mode, demo broker, `live_enabled` set to `false`, and database and Redis reported reachable.
+4. Confirm the page returns JSON with a healthy status, role `all`, paper mode, demo broker, `live_enabled` set to `false`, and database and Redis reported reachable. It also shows the image Git SHA as `version`, plus `last_backup_at` and `last_backup_age_seconds`. For `ROLE=all`, health is degraded if no backup is present or the newest backup is more than 15 minutes old. The container creates a first snapshot at startup, then backs up every five minutes and on graceful shutdown.
 
 If the service is not healthy, use the pod's **Logs** view and see Troubleshooting below. Do not copy log output that might contain private account information into a public issue.
 

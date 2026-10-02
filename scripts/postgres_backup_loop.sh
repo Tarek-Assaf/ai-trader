@@ -9,11 +9,15 @@ shutdown() {
         wait "$SLEEP_PID" 2>/dev/null || true
     fi
     if ! /app/scripts/backup_postgres.sh; then
-        echo "Final PostgreSQL backup failed" >&2
+        echo "Final PostgreSQL backup failed; inspect the backup error above" >&2
     fi
     exit 0
 }
 trap shutdown TERM INT
+
+if ! /app/scripts/backup_postgres.sh; then
+    echo "Initial PostgreSQL backup failed; inspect the backup error above" >&2
+fi
 
 while :; do
     sleep 300 &
@@ -21,6 +25,6 @@ while :; do
     wait "$SLEEP_PID" || true
     SLEEP_PID=
     if ! /app/scripts/backup_postgres.sh; then
-        echo "Scheduled PostgreSQL backup failed" >&2
+        echo "Scheduled PostgreSQL backup failed; inspect the backup error above" >&2
     fi
 done

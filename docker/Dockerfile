@@ -26,6 +26,8 @@ RUN apt-get update \
     && chown -R trader:trader /workspace /var/lib/ai-trader
 
 WORKDIR /app
+ARG GIT_SHA=unknown
+ENV GIT_SHA=${GIT_SHA}
 COPY --from=builder --chown=trader:trader /app/.venv /app/.venv
 COPY --chown=root:root config /app/config
 COPY --chown=root:root config/risk_ceilings.yaml /app/baked/risk_ceilings.yaml
