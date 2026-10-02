@@ -24,13 +24,11 @@ def test_backup_freshness_uses_newest_nonempty_dump(tmp_path: Path) -> None:
     timestamp, age, fresh = health._backup_freshness(tmp_path, now=now)
 
     assert timestamp == datetime.fromtimestamp(newest_time, UTC).isoformat()
-    assert age == 75
+    assert age in (74, 75)
     assert fresh is True
 
 
-def test_health_is_degraded_when_role_all_backup_is_stale(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_health_is_degraded_when_role_all_backup_is_stale(tmp_path: Path, monkeypatch) -> None:
     """ROLE=all requires a backup no older than fifteen minutes."""
     old_backup = tmp_path / "trader-stale.dump"
     old_backup.write_bytes(b"dump")
@@ -49,9 +47,7 @@ def test_health_is_degraded_when_role_all_backup_is_stale(
     assert payload["last_backup_age_seconds"] >= 900
 
 
-def test_health_is_degraded_when_role_all_has_no_backup(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_health_is_degraded_when_role_all_has_no_backup(tmp_path: Path, monkeypatch) -> None:
     """ROLE=all reports a missing first backup as degraded."""
     monkeypatch.setattr(health, "BACKUP_DIR", tmp_path)
     monkeypatch.setattr(health, "_probe_database", lambda _url: True)

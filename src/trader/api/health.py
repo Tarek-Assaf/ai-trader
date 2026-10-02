@@ -9,10 +9,10 @@ from typing import Any
 
 from sqlalchemy import create_engine, text
 
+from trader.core.settings import EnvironmentSettings
+
 BACKUP_DIR = Path("/workspace/backups")
 BACKUP_MAX_AGE_SECONDS = 15 * 60
-
-from trader.core.settings import EnvironmentSettings
 
 
 def _service_urls() -> tuple[str, str]:
@@ -63,8 +63,9 @@ def _backup_freshness(
     try:
         for backup in backup_dir.glob("trader-*.dump"):
             try:
-                if backup.is_file() and backup.stat().st_size > 0:
-                    modified_at = backup.stat().st_mtime
+                stat_result = backup.stat()
+                if backup.is_file() and stat_result.st_size > 0:
+                    modified_at = stat_result.st_mtime
                     newest_timestamp = max(newest_timestamp or modified_at, modified_at)
             except OSError:
                 continue
