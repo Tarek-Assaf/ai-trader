@@ -5,9 +5,9 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 16,
-  "current_phase": 0,
+  "turn": "human",
+  "revision": 17,
+  "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
     "read_first": [
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-018's two Claude review fixes are implemented; CI run 37060539333 passed all quality, handoff, secret-scan, Docker, ROLE=all and container-replacement checks. Ready for Claude re-review on PR #2. After approval, owner merges PR #2; then Phase 1 (T-010) starts. T-019 is queued. Q-010 remains open.",
+    "summary": "Phase 0 complete (owner health check passed). T-018 durable paper Postgres approved on PR #2, awaiting owner merge (Q-015). Then Codex starts Phase 1 (T-010 Capital.com REST client; needs demo credentials as RunPod Secrets) and T-019. Q-010 open.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1614,7 +1614,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-23"
       ],
@@ -1639,7 +1639,7 @@
         "GitHub Actions run 37058629455 (initial implementation)",
         "GitHub Actions run 37060539333 (review fixes and full CI)"
       ],
-      "completion_note": "Moved the ROLE=all PostgreSQL data directory to the pod container disk by default; backups are validated, atomically published to /workspace/backups every five minutes and on graceful shutdown, and the newest valid snapshot is restored before API startup with audit-chain verification. The end-to-end CI test passed backup rotation, corrupt-newest fallback, SIGTERM backup, full container replacement and restoration of audit/decision rows. RunPod guide documents the five-minute hard-reset loss window, Redis as a rebuildable cache, and managed PostgreSQL/Redis before live trading. Ready for Claude review. CLAUDE REVIEW 1 (changes requested, two small items; everything else approved): (1) scripts/test_postgres_backup_restore.sh does not actually prove the SIGTERM backup. The 'second' rows are inserted and then backed up manually BEFORE docker stop, so a missing shutdown dump would still pass. Insert a third marker pair (audit_log and decisions) AFTER the last manual backup_postgres.sh call and before docker stop, then assert after replacement that all three audit markers and all three decision markers exist (counts 3 and 3). (2) docker/entrypoint.sh changed mode from 100755 to 100644 in this PR. Restore the executable bit (git update-index --chmod=+x docker/entrypoint.sh). The image still works because the Dockerfile chmods it, but the repo mode must not regress. Reviewed and approved: container-disk default data dir, atomic temp-file plus rename dumps with pg_restore --list validation, 48 retention, newest-first restore with fallback, refusal to start empty when backups exist but none restore (fail closed), audit-chain verification after restore, API waits for restore marker, stopwaitsecs=300, loopback-only trust auth, backups created with umask 077. Non-blocking, tracked as T-019 (do after this PR merges). CODEX REVIEW FIXES: added third audit/decision markers after the final manual dump and assert all three restore, proving the SIGTERM backup; restored docker/entrypoint.sh mode 100755. Updated handoff validation to support multiple appended, contiguous handoffs in one PR while verifying agent alternation and final turn. CI run 37060539333 passed all checks including full ROLE=all backup/restore across container replacement. Ready for Claude re-review.",
+      "completion_note": "Moved the ROLE=all PostgreSQL data directory to the pod container disk by default; backups are validated, atomically published to /workspace/backups every five minutes and on graceful shutdown, and the newest valid snapshot is restored before API startup with audit-chain verification. The end-to-end CI test passed backup rotation, corrupt-newest fallback, SIGTERM backup, full container replacement and restoration of audit/decision rows. RunPod guide documents the five-minute hard-reset loss window, Redis as a rebuildable cache, and managed PostgreSQL/Redis before live trading. Ready for Claude review. CLAUDE REVIEW 1 (changes requested, two small items; everything else approved): (1) scripts/test_postgres_backup_restore.sh does not actually prove the SIGTERM backup. The 'second' rows are inserted and then backed up manually BEFORE docker stop, so a missing shutdown dump would still pass. Insert a third marker pair (audit_log and decisions) AFTER the last manual backup_postgres.sh call and before docker stop, then assert after replacement that all three audit markers and all three decision markers exist (counts 3 and 3). (2) docker/entrypoint.sh changed mode from 100755 to 100644 in this PR. Restore the executable bit (git update-index --chmod=+x docker/entrypoint.sh). The image still works because the Dockerfile chmods it, but the repo mode must not regress. Reviewed and approved: container-disk default data dir, atomic temp-file plus rename dumps with pg_restore --list validation, 48 retention, newest-first restore with fallback, refusal to start empty when backups exist but none restore (fail closed), audit-chain verification after restore, API waits for restore marker, stopwaitsecs=300, loopback-only trust auth, backups created with umask 077. Non-blocking, tracked as T-019 (do after this PR merges). CODEX REVIEW FIXES: added third audit/decision markers after the final manual dump and assert all three restore, proving the SIGTERM backup; restored docker/entrypoint.sh mode 100755. Updated handoff validation to support multiple appended, contiguous handoffs in one PR while verifying agent alternation and final turn. CI run 37060539333 passed all checks including full ROLE=all backup/restore across container replacement. Ready for Claude re-review. CLAUDE APPROVED (review 2): shutdown-only third marker now proves the SIGTERM backup; entrypoint.sh mode restored to 100755; CI green on PR head. Validator change (multiple contiguous handoffs allowed, alternation and append-only still enforced) accepted.",
       "id": "T-018",
       "title": "Durable paper-mode PostgreSQL on RunPod: container-disk database with periodic dump to the network volume and automatic restore",
       "acceptance_criteria": [
@@ -2194,6 +2194,16 @@
       "validated_by": "codex",
       "date": "2026-10-02",
       "reverify_if": "PostgreSQL backup/restore test, startup scripts, or handoff validator changes"
+    },
+    {
+      "id": "V-035",
+      "subject": "T-018 re-review: SIGTERM backup test and entrypoint mode; validator change",
+      "method": "Read diff since review 1; checked check-runs on PR head",
+      "result": "pass",
+      "evidence": "scripts/test_postgres_backup_restore.sh (markers 55555555/66666666 inserted after last manual backup); docker/entrypoint.sh mode 100755; agent_state/validate_handoff.py append_only_errors; CI run 37060899848",
+      "validated_by": "claude",
+      "date": "2026-10-02T20:45:00Z",
+      "reverify_if": "backup scripts or validator change"
     }
   ],
   "blockers": [
@@ -2368,6 +2378,18 @@
         "Need help with the steps"
       ],
       "answer": "Merged by the owner (PR #1). CI run 37056646704 on main passed and published the image; image tag is the commit SHA 8aa9e2f45aaeeec4481f93d90ebfcfaaa3c37781."
+    },
+    {
+      "id": "Q-015",
+      "to": "human",
+      "from": "claude",
+      "text": "PR #2 (T-018, durable paper database) is approved. Please open it on GitHub, click Ready for review if shown, then Merge pull request and Confirm merge. After CI on main is green, redeploy the pod from the new image and REMOVE the POSTGRES_DATA_DIR setting (no longer needed). Then check /health once more and tell Codex 'your turn' so it starts Phase 1. Done?",
+      "status": "open",
+      "options": [
+        "Done, merged",
+        "Need help with the steps"
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -2747,6 +2769,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude review: added shutdown-only third marker assertions and restored entrypoint executable mode. Updated handoff base comparison to support contiguous multiple handoffs while preserving append-only log, expected-agent alternation and final turn checks. Full GitHub Actions run 37060539333 passed; handing T-018 back to Claude for re-review."
+    },
+    {
+      "revision": 17,
+      "ts": "2026-10-02T20:45:00Z",
+      "agent": "claude",
+      "action": "approve_t018",
+      "task_ids": [
+        "T-018"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-018 after fixes; Phase 0 complete; owner to merge PR #2 (Q-015), then Codex begins Phase 1. Turn to human."
     }
   ]
 }

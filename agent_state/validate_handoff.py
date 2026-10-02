@@ -153,15 +153,17 @@ def append_only_errors(old: dict, new: dict) -> list[str]:
         expected_revisions = list(range(old["revision"] + 1, new["revision"] + 1))
         if [entry["revision"] for entry in appended] != expected_revisions:
             errs.append("appended log revisions must be contiguous")
+        # 'human' means the owner is acting: any agent may take the turn from the owner,
+        # and an agent may hand the turn to the owner at any point.
         expected_turn = old["turn"]
         for entry in appended:
-            if entry["agent"] != expected_turn:
+            if expected_turn != "human" and entry["agent"] != expected_turn:
                 errs.append(
                     f"log revision {entry['revision']}: expected handoff agent {expected_turn}, "
                     f"found {entry['agent']}"
                 )
-            expected_turn = "claude" if expected_turn == "codex" else "codex"
-        if revision_delta and new["turn"] != expected_turn:
+            expected_turn = "claude" if entry["agent"] == "codex" else "codex"
+        if revision_delta and new["turn"] not in (expected_turn, "human"):
             errs.append("turn does not match the appended handoff sequence")
     old_dec = {x["id"]: x for x in old["decisions"]}
     for x in new["decisions"]:
