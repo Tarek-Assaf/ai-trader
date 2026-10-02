@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 7,
+  "turn": "codex",
+  "revision": 8,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Phase 0 review round 2: Codex fixed B-002. CI is green through PostgreSQL migrations/integration, Docker build and ROLE=all health on f8c884b; handoff returned to Claude for review. Q-010 remains open.",
+    "summary": "Phase 0 approved (CI fully green). Follow-ups T-007 (hardening tests) and T-008 (publish image to GHCR + RunPod guide) added; Phase 0 closes when the owner boots the pod. Codex may start Phase 1 (T-010 Capital.com client) after T-007/T-008. Q-010 open for owner.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -289,7 +289,9 @@
         "C-100",
         "T-001",
         "T-003",
-        "T-006"
+        "T-006",
+        "T-007",
+        "T-008"
       ]
     },
     {
@@ -309,6 +311,7 @@
       "status": "not_started",
       "covered_by": [
         "C-040",
+        "T-008",
         "T-042",
         "T-043"
       ]
@@ -427,7 +430,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-23"
       ],
@@ -447,7 +450,7 @@
         "src/trader",
         "tests/unit/test_package_layout.py"
       ],
-      "completion_note": "Created the Python 3.12 package scaffold, uv lockfile and development targets; package layout and static checks pass. CLAUDE REVIEW: code read and consistent with spec; final pass blocked until CI is green (Docker build, ROLE=all health, Postgres migration/audit tests have never run)."
+      "completion_note": "Created the Python 3.12 package scaffold, uv lockfile and development targets; package layout and static checks pass. CLAUDE REVIEW: code read and consistent with spec; final pass blocked until CI is green (Docker build, ROLE=all health, Postgres migration/audit tests have never run). CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking."
     },
     {
       "id": "T-002",
@@ -455,7 +458,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-24",
         "R-21"
@@ -478,7 +481,7 @@
         "tests/unit/test_secret_redaction.py",
         "tests/invariants/test_config_write_boundary.py"
       ],
-      "completion_note": "Added immutable strict YAML validation, baked risk ceiling and Strategy Lab floor checks, environment-only secret settings and log redaction. Config and invariant tests pass. CLAUDE REVIEW 1 (changes requested): (1) src/trader/core/logging.py attaches SecretRedactionFilter to the ROOT LOGGER. Python logger filters do not run for records created by child loggers (uvicorn, sqlalchemy, trader.*), so secrets in those records are NOT redacted. Attach the filter to every handler on the root logger (and to uvicorn/uvicorn.access/uvicorn.error handlers), instead of or in addition to the logger. (2) Add a test in tests/unit/test_secret_redaction.py that logs a secret through logging.getLogger('trader.child') and through a message with %-args and asserts the emitted handler output contains [REDACTED] and not the secret. (3) Also redact SecretStr-valued extra fields if structlog is used. (4) Minor, non-blocking: in config._check_risk_ceilings, fail with a clear error if a ceilings key has no matching risk.yaml key, so a typo cannot silently disable a ceiling; add a test. Rest of T-002 (frozen/extra=forbid models, baked ceilings path, floors, env defaults) passes review. CODEX RESPONSE TO REVIEW 1: moved redaction to root and Uvicorn handlers, added recursive SecretStr/structured-field redaction and child logger %-args coverage, and made missing max/floor keys fail with a clear ConfigLoadError. Local checks pass (25 passed; 1 Postgres integration test skipped without DATABASE_URL). GitHub Actions checks remain unverified. CLAUDE REVIEW 2: code fix verified by reading (handlers filtered incl. uvicorn, SecretStr extras, child-logger test, missing ceiling keys now fail closed). Lint and mypy are green in CI. Approval waits only for the test step to pass in CI (blocker B-002); no new change request."
+      "completion_note": "Added immutable strict YAML validation, baked risk ceiling and Strategy Lab floor checks, environment-only secret settings and log redaction. Config and invariant tests pass. CLAUDE REVIEW 1 (changes requested): (1) src/trader/core/logging.py attaches SecretRedactionFilter to the ROOT LOGGER. Python logger filters do not run for records created by child loggers (uvicorn, sqlalchemy, trader.*), so secrets in those records are NOT redacted. Attach the filter to every handler on the root logger (and to uvicorn/uvicorn.access/uvicorn.error handlers), instead of or in addition to the logger. (2) Add a test in tests/unit/test_secret_redaction.py that logs a secret through logging.getLogger('trader.child') and through a message with %-args and asserts the emitted handler output contains [REDACTED] and not the secret. (3) Also redact SecretStr-valued extra fields if structlog is used. (4) Minor, non-blocking: in config._check_risk_ceilings, fail with a clear error if a ceilings key has no matching risk.yaml key, so a typo cannot silently disable a ceiling; add a test. Rest of T-002 (frozen/extra=forbid models, baked ceilings path, floors, env defaults) passes review. CODEX RESPONSE TO REVIEW 1: moved redaction to root and Uvicorn handlers, added recursive SecretStr/structured-field redaction and child logger %-args coverage, and made missing max/floor keys fail with a clear ConfigLoadError. Local checks pass (25 passed; 1 Postgres integration test skipped without DATABASE_URL). GitHub Actions checks remain unverified. CLAUDE REVIEW 2: code fix verified by reading (handlers filtered incl. uvicorn, SecretStr extras, child-logger test, missing ceiling keys now fail closed). Lint and mypy are green in CI. Approval waits only for the test step to pass in CI (blocker B-002); no new change request. CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking."
     },
     {
       "id": "T-003",
@@ -486,7 +489,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-23",
         "R-22"
@@ -513,7 +516,7 @@
         "src/trader/api/health.py",
         ".github/workflows/ci.yml"
       ],
-      "completion_note": "Added single multi-stage image and role entrypoint; ROLE=all runs PostgreSQL, Redis, API, scheduler and supervisord as trader after minimal root-owned volume setup. Image and runtime check are pending CI. Docker runtime corrections applied: trader owns /var/run/postgresql; loopback PostgreSQL readiness uses the configured local host auth. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed."
+      "completion_note": "Added single multi-stage image and role entrypoint; ROLE=all runs PostgreSQL, Redis, API, scheduler and supervisord as trader after minimal root-owned volume setup. Image and runtime check are pending CI. Docker runtime corrections applied: trader owns /var/run/postgresql; loopback PostgreSQL readiness uses the configured local host auth. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed. CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking."
     },
     {
       "id": "T-004",
@@ -521,7 +524,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-20"
       ],
@@ -541,7 +544,7 @@
         "tests/unit/test_audit_chain.py",
         "tests/integration/test_postgres_migrations.py"
       ],
-      "completion_note": "Added all 16 initial tables, Alembic migration, database triggers rejecting audit updates/deletes/truncation, and hash verification. Local pure hash tests pass; actual migration integration awaits CI PostgreSQL. CI confirmed migration and integration checks. Initial test failure cause: SQLAlchemy text() interpreted the JSON colon as a bind parameter; test now sends JSON through a bound driver parameter. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed."
+      "completion_note": "Added all 16 initial tables, Alembic migration, database triggers rejecting audit updates/deletes/truncation, and hash verification. Local pure hash tests pass; actual migration integration awaits CI PostgreSQL. CI confirmed migration and integration checks. Initial test failure cause: SQLAlchemy text() interpreted the JSON colon as a bind parameter; test now sends JSON through a bound driver parameter. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed. CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking."
     },
     {
       "id": "T-005",
@@ -549,7 +552,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-19",
         "R-14"
@@ -569,7 +572,7 @@
         "tests/unit/test_secret_scan.py",
         "Makefile"
       ],
-      "completion_note": "Added locked-dependency verification, lint/type/test/migration/handoff checks, base-branch handoff check for PRs, secret scanner and Docker build/runtime health validation. Scanner detection/redaction tests pass; GitHub Actions has not run yet. CI failure output now includes concise ::error annotations and ROLE=all container/service logs on failure. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed."
+      "completion_note": "Added locked-dependency verification, lint/type/test/migration/handoff checks, base-branch handoff check for PRs, secret scanner and Docker build/runtime health validation. Scanner detection/redaction tests pass; GitHub Actions has not run yet. CI failure output now includes concise ::error annotations and ROLE=all container/service logs on failure. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed. CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking."
     },
     {
       "id": "T-006",
@@ -577,7 +580,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-23"
       ],
@@ -592,7 +595,7 @@
       "evidence": [
         "infra/runpod/README.md"
       ],
-      "completion_note": "Added click-by-click RunPod guide covering account credit, 100 GB same-region network volume, CPU pod sizing, secret references, paper/demo environment, health check, stop/restart behavior and troubleshooting. CLAUDE REVIEW: code read and consistent with spec; final pass blocked until CI is green (Docker build, ROLE=all health, Postgres migration/audit tests have never run)."
+      "completion_note": "Added click-by-click RunPod guide covering account credit, 100 GB same-region network volume, CPU pod sizing, secret references, paper/demo environment, health check, stop/restart behavior and troubleshooting. CLAUDE REVIEW: code read and consistent with spec; final pass blocked until CI is green (Docker build, ROLE=all health, Postgres migration/audit tests have never run). CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking."
     },
     {
       "id": "T-010",
@@ -1388,7 +1391,7 @@
       "phase": 0,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "in_progress",
+      "status": "done",
       "requirements": [
         "R-19",
         "R-23"
@@ -1405,8 +1408,12 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Review 1 done: T-002 changes_requested; T-001/3/4/5/6 held in review until CI is green."
+      "evidence": [
+        "CI run 37045114037",
+        "V-023",
+        "V-024"
+      ],
+      "completion_note": "Phase 0 reviewed and approved. Follow-ups T-007 (hardening) and T-008 (publish image) added; Phase 0 exit still needs owner boot check on RunPod after T-008."
     },
     {
       "id": "C-004",
@@ -1509,6 +1516,55 @@
       "review_cycles": 0,
       "evidence": [],
       "completion_note": ""
+    },
+    {
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-23"
+      ],
+      "depends_on": [
+        "T-005"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "id": "T-007",
+      "title": "Phase 0 hardening from review",
+      "acceptance_criteria": [
+        "CI test or step proves migrations are reversible: alembic upgrade head, downgrade base, upgrade head on empty Postgres",
+        "CI step asserts the ROLE=all container processes run as non-root (docker exec id -u is not 0) and that data survives docker restart on the mounted volume",
+        "Embedded Postgres in ROLE=all uses auth-host=trust on 127.0.0.1 only: keep it loopback-only, add a comment explaining why, and add a test or CI check that port 5432 is not published or reachable from outside the container",
+        "ROLE=core and ROLE=worker images start without embedded Postgres/Redis and report health or heartbeat in a CI smoke test (use docker-compose.dev.yml services)"
+      ]
+    },
+    {
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-23",
+        "R-25"
+      ],
+      "depends_on": [
+        "T-005"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "id": "T-008",
+      "title": "Publish the container image so RunPod can pull it, and update the RunPod guide",
+      "acceptance_criteria": [
+        "CI on main builds and pushes the image to a private GitHub Container Registry package ghcr.io/tarek-assaf/ai-trader tagged with the git SHA and latest, using GITHUB_TOKEN with packages: write; never on pull requests",
+        "infra/runpod/README.md gains a step-by-step section for a non-programmer: create a GitHub read-only token (read:packages), add RunPod container registry credentials, and enter the image name in the pod form",
+        "Record in decisions that GHCR is the registry (D-022) and note how to rotate the token",
+        "Owner can then boot the pod and confirm /health, which closes Phase 0"
+      ]
     }
   ],
   "decisions": [
@@ -1679,6 +1735,14 @@
       "decided_by": "codex",
       "date": "2026-10-02T16:20:00Z",
       "do_not_reopen": false
+    },
+    {
+      "id": "D-022",
+      "statement": "Container image is published to a private GitHub Container Registry package (ghcr.io/tarek-assaf/ai-trader) for RunPod to pull; to be built in T-008.",
+      "status": "proposed",
+      "do_not_reopen": false,
+      "decided_by": "claude",
+      "date": "2026-10-02T18:30:00Z"
     }
   ],
   "validations": [
@@ -1901,6 +1965,26 @@
       "validated_by": "codex",
       "date": "2026-10-02T18:05:00Z",
       "reverify_if": "Migrations, test reporting, or Docker startup changes"
+    },
+    {
+      "id": "V-023",
+      "subject": "Phase 0 approval (T-001..T-006)",
+      "method": "Inspected CI run 37045114037 step results via API (all 16 relevant steps success) and reviewed diffs of docker, scripts and workflow since round 1; read RunPod guide",
+      "result": "pass",
+      "evidence": "CI run 37045114037; docker/*.conf, scripts/start_postgres.sh, .github/workflows/ci.yml, infra/runpod/README.md",
+      "validated_by": "claude",
+      "date": "2026-10-02T18:30:00Z",
+      "reverify_if": "Dockerfile, entrypoint, supervisord configs or migrations change"
+    },
+    {
+      "id": "V-024",
+      "subject": "Gaps found at approval: migration reversibility untested, non-root and restart persistence not asserted in CI, no published image for RunPod",
+      "method": "grep of tests and workflow",
+      "result": "fail",
+      "evidence": "no 'downgrade' in tests/.github; no image push step. Tracked as T-007 and T-008",
+      "validated_by": "claude",
+      "date": "2026-10-02T18:30:00Z",
+      "reverify_if": "T-007 or T-008 completed"
     }
   ],
   "blockers": [
@@ -2263,6 +2347,27 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Resolved B-002. Fixed JSON parameter binding in PostgreSQL integration test, split CI migrations/tests and surfaced failure logs, then corrected ROLE=all PostgreSQL runtime socket ownership and loopback authentication. CI run 37044750525 on f8c884b passed every step. Returning turn to Claude."
+    },
+    {
+      "revision": 8,
+      "ts": "2026-10-02T18:30:00Z",
+      "agent": "claude",
+      "action": "approve_phase0",
+      "task_ids": [
+        "C-100",
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006",
+        "T-007",
+        "T-008"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved Phase 0 on green CI. Added T-007 hardening and T-008 image publishing. Turn to Codex."
     }
   ]
 }
