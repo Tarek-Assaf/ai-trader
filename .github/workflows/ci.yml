@@ -131,7 +131,7 @@ jobs:
           done
           grep --quiet '"status":"healthy"' /tmp/health.json
           grep --quiet '"role":"all"' /tmp/health.json
-          docker top ai-trader -eo user,comm | awk 'NR > 1 && $1 == "root" { failed = 1 } END { if (NR < 2 || failed) exit 1 }'
+          docker top ai-trader -eo pid,user,comm | awk 'NR > 1 && $2 == "root" { failed = 1 } END { if (NR < 2 || failed) exit 1 }'
           docker inspect --format='{{if (index .NetworkSettings.Ports "5432/tcp")}}published{{else}}internal{{end}}' ai-trader | grep --quiet '^internal$'
           docker inspect --format='{{if (index .NetworkSettings.Ports "6379/tcp")}}published{{else}}internal{{end}}' ai-trader | grep --quiet '^internal$'
           docker exec ai-trader sh -c 'touch /workspace/persistence-check'
@@ -164,7 +164,7 @@ jobs:
           test "$(docker inspect --format='{{.State.Health.Status}}' "$worker_id")" = healthy
           for service in api worker; do
             container_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet "$service")"
-            if docker top "$container_id" -eo comm | grep --extended-regexp --quiet '^(postgres|redis-server)$'; then
+            if docker top "$container_id" -eo pid,comm | grep --extended-regexp --quiet '^(postgres|redis-server)$'; then
               echo "$service unexpectedly started embedded PostgreSQL or Redis" >&2
               exit 1
             fi
