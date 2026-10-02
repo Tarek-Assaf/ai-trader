@@ -10,7 +10,7 @@ fi
 PG_BIN=$(dirname "$PG_BIN")
 mkdir -p "$DATA_DIR"
 if [ ! -s "$DATA_DIR/PG_VERSION" ]; then
-    "$PG_BIN/initdb" -D "$DATA_DIR" --username=trader --auth-local=trust --auth-host=reject --encoding=UTF8
+    "$PG_BIN/initdb" -D "$DATA_DIR" --username=trader --auth-local=trust --auth-host=trust --encoding=UTF8
 fi
 
 "$PG_BIN/postgres" -D "$DATA_DIR" -c listen_addresses=127.0.0.1 -c port=5432 &
