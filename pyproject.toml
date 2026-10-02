@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ai-trader"
+version = "0.1.0"
+description = "A safety-first, paper-by-default trading agent."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "alembic==1.14.1",
+  "fastapi==0.115.8",
+  "httpx==0.28.1",
+  "jsonschema==4.23.0",
+  "pydantic==2.10.6",
+  "pydantic-settings==2.7.1",
+  "psycopg[binary]==3.2.4",
+  "PyYAML==6.0.2",
+  "redis==5.2.1",
+  "SQLAlchemy==2.0.38",
+  "structlog==25.1.0",
+  "uvicorn[standard]==0.34.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "hypothesis==6.125.3",
+  "mypy==1.15.0",
+  "pytest==8.3.4",
+  "pytest-asyncio==0.25.3",
+  "ruff==0.9.6",
+  "types-PyYAML==6.0.12.20241230",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/trader"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = false
+mypy_path = "src"
+packages = ["trader"]
+
+[[tool.mypy.overrides]]
+module = ["trader.risk.*", "trader.execution.*", "trader.core.*"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = ["yaml.*", "redis.*", "structlog.*", "sqlalchemy.dialects.postgresql.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+addopts = "-ra"
+

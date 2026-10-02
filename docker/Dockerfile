@@ -1,0 +1,42 @@
+# syntax=docker/dockerfile:1
+FROM python:3.12-slim AS builder
+
+COPY --from=ghcr.io/astral-sh/uv:0.6.3 /uv /uvx /bin/
+ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
+WORKDIR /app
+COPY pyproject.toml uv.lock README.md ./
+COPY src ./src
+RUN uv sync --frozen --no-dev
+
+FROM python:3.12-slim AS runtime
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:${PATH}" \
+    ROLE=all \
+    TRADING_MODE=paper \
+    BROKER_ENV=demo \
+    LIVE_TRADING_ENABLED=false \
+    WORKSPACE_ROOT=/workspace
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends ca-certificates gosu postgresql redis-server supervisor \
+    && rm -rf /var/lib/apt/lists/* \
+    && useradd --system --uid 10001 --create-home --shell /usr/sbin/nologin trader \
+    && mkdir -p /workspace/pgdata /workspace/redisdata /workspace/logs /app/baked \
+    && chown -R trader:trader /workspace
+
+WORKDIR /app
+COPY --from=builder --chown=trader:trader /app/.venv /app/.venv
+COPY --chown=root:root config /app/config
+COPY --chown=root:root config/risk_ceilings.yaml /app/baked/risk_ceilings.yaml
+COPY --chown=root:root docker /app/docker
+COPY --chown=root:root scripts /app/scripts
+COPY --chown=root:root migrations /app/migrations
+COPY --chown=root:root alembic.ini /app/alembic.ini
+COPY --chown=root:root src /app/src
+RUN chmod 0444 /app/baked/risk_ceilings.yaml \
+    && chmod 0555 /app/docker/entrypoint.sh /app/scripts/start_postgres.sh /app/scripts/start_redis.sh /app/scripts/start_api.sh \
+    && chown -R root:root /app
+
+EXPOSE 8000
+ENTRYPOINT ["/app/docker/entrypoint.sh"]

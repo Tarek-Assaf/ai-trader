@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: trader
+          POSTGRES_PASSWORD: trader
+          POSTGRES_DB: trader
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trader -d trader"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      DATABASE_URL: postgresql+psycopg://trader:trader@localhost:5432/trader
+      REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.3"
+      - name: Install locked dependencies
+        run: uv sync --extra dev --frozen
+      - name: Verify locked dependency versions
+        run: uv lock --check
+      - name: Lint and format
+        run: make lint
+      - name: Type check
+        run: make typecheck
+      - name: Apply migrations and run tests
+        run: |
+          uv run alembic upgrade head
+          make test
+      - name: Validate handoff
+        run: python agent_state/validate_handoff.py
+      - name: Validate handoff changes against base on pull requests
+        if: github.event_name == 'pull_request'
+        run: |
+          git show "origin/${GITHUB_BASE_REF}:agent_state/AGENT_HANDOFF.json" > /tmp/previous-handoff.json
+          python agent_state/validate_handoff.py --previous /tmp/previous-handoff.json
+      - name: Scan for secrets
+        run: uv run python scripts/secret_scan.py
+      - name: Build container image
+        run: docker build --tag ai-trader:ci --file docker/Dockerfile .
+      - name: Verify ROLE=all health
+        run: |
+          docker run --detach --name ai-trader --publish 8000:8000 \
+            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \
+            --env LIVE_TRADING_ENABLED=false --volume ai-trader-data:/workspace ai-trader:ci
+          trap 'docker logs ai-trader; docker rm --force ai-trader' EXIT
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8000/health > /tmp/health.json; then
+              cat /tmp/health.json
+              grep --quiet '"status":"healthy"' /tmp/health.json
+              grep --quiet '"role":"all"' /tmp/health.json
+              exit 0
+            fi
+            sleep 2
+          done
+          exit 1

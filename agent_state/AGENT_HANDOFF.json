@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 2,
+  "turn": "claude",
+  "revision": 3,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,9 +34,12 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Specs C-001 to C-004 and default configs are written and in review. Codex: start Phase 0 (T-001 to T-006) from docs/specs/phase0.md, in order T-001, T-002, T-003, T-004, T-005, then T-006. Answer Q-011. Open for owner (non-blocking): Q-010 extra limits, hosted LLM provider and budget.",
-    "how_to_run_tests": "make check (defined in T-001); python agent_state/validate_handoff.py for the handoff file",
-    "known_failing": [],
+    "summary": "Codex completed Phase 0 implementation for T-001 through T-006 and submitted all tasks for Claude review. Local Ruff, format, mypy, secret scan, handoff validation and 22 tests pass; one Postgres integration test skipped without DATABASE_URL. GitHub CI now performs Postgres migration and Docker ROLE=all validation but has not run yet. Q-011 answered and D-021 records uv 0.6.3 plus non-root service operation. Q-010 remains open.",
+    "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
+    "known_failing": [
+      "PostgreSQL integration skipped locally: DATABASE_URL not configured.",
+      "Docker build and ROLE=all health check not run locally: Docker CLI unavailable; CI workflow added but not yet run on GitHub."
+    ],
     "environment": {
       "runtime": "RunPod Docker",
       "python": "3.12",
@@ -331,7 +334,7 @@
       "phase": 0,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-19",
         "R-23"
@@ -348,7 +351,7 @@
       "evidence": [
         "docs/specs/phase0.md"
       ],
-      "completion_note": "Phase 0 spec written: scaffold, config system with baked ceilings, Docker roles, database with append-only audit log, CI, RunPod guide, invariant tests."
+      "completion_note": "Reviewed against AGENTS.md and the handoff protocol: the Phase 0 spec exists and defines acceptance criteria for T-001 through T-006."
     },
     {
       "id": "C-002",
@@ -356,7 +359,7 @@
       "phase": 0,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-08",
         "R-21"
@@ -389,7 +392,7 @@
         "config/backup.yaml",
         ".env.example"
       ],
-      "completion_note": "Default configs written; values cross-checked against ceilings and floors by script. Owner-confirmed values: 0.5/2/10/3 and ceilings 1.0/4/15/5. Other values are proposals (Q-010)."
+      "completion_note": "Reviewed the required defaults, ceilings, strategy lab config, settings and environment template. Q-010 correctly remains open for proposed limits."
     },
     {
       "id": "C-003",
@@ -427,7 +430,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-23"
       ],
@@ -440,8 +443,14 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "pyproject.toml",
+        "uv.lock",
+        "Makefile",
+        "src/trader",
+        "tests/unit/test_package_layout.py"
+      ],
+      "completion_note": "Created the Python 3.12 package scaffold, uv lockfile and development targets; package layout and static checks pass."
     },
     {
       "id": "T-002",
@@ -449,7 +458,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-24",
         "R-21"
@@ -463,8 +472,16 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/core/config.py",
+        "src/trader/core/settings.py",
+        "src/trader/core/logging.py",
+        "tests/unit/test_config_loader.py",
+        "tests/unit/test_environment_settings.py",
+        "tests/unit/test_secret_redaction.py",
+        "tests/invariants/test_config_write_boundary.py"
+      ],
+      "completion_note": "Added immutable strict YAML validation, baked risk ceiling and Strategy Lab floor checks, environment-only secret settings and log redaction. Config and invariant tests pass."
     },
     {
       "id": "T-003",
@@ -472,7 +489,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-23",
         "R-22"
@@ -487,8 +504,19 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docker/Dockerfile",
+        "docker/entrypoint.sh",
+        "docker/supervisord.all.conf",
+        "docker/supervisord.core.conf",
+        "docker/supervisord.worker.conf",
+        "scripts/start_postgres.sh",
+        "scripts/start_redis.sh",
+        "scripts/start_api.sh",
+        "src/trader/api/health.py",
+        ".github/workflows/ci.yml"
+      ],
+      "completion_note": "Added single multi-stage image and role entrypoint; ROLE=all runs PostgreSQL, Redis, API, scheduler and supervisord as trader after minimal root-owned volume setup. Image and runtime check are pending CI."
     },
     {
       "id": "T-004",
@@ -496,7 +524,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-20"
       ],
@@ -509,8 +537,14 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/core/db.py",
+        "src/trader/core/audit.py",
+        "migrations/versions/0001_phase0_schema.py",
+        "tests/unit/test_audit_chain.py",
+        "tests/integration/test_postgres_migrations.py"
+      ],
+      "completion_note": "Added all 16 initial tables, Alembic migration, database triggers rejecting audit updates/deletes/truncation, and hash verification. Local pure hash tests pass; actual migration integration awaits CI PostgreSQL."
     },
     {
       "id": "T-005",
@@ -518,7 +552,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-19",
         "R-14"
@@ -532,8 +566,13 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        ".github/workflows/ci.yml",
+        "scripts/secret_scan.py",
+        "tests/unit/test_secret_scan.py",
+        "Makefile"
+      ],
+      "completion_note": "Added locked-dependency verification, lint/type/test/migration/handoff checks, base-branch handoff check for PRs, secret scanner and Docker build/runtime health validation. Scanner detection/redaction tests pass; GitHub Actions has not run yet."
     },
     {
       "id": "T-006",
@@ -541,7 +580,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-23"
       ],
@@ -553,8 +592,10 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "infra/runpod/README.md"
+      ],
+      "completion_note": "Added click-by-click RunPod guide covering account credit, 100 GB same-region network volume, CPU pod sizing, secret references, paper/demo environment, health check, stop/restart behavior and troubleshooting."
     },
     {
       "id": "T-010",
@@ -1633,6 +1674,14 @@
       "decided_by": "owner",
       "date": "2026-10-02T15:40:00Z",
       "do_not_reopen": false
+    },
+    {
+      "id": "D-021",
+      "statement": "Phase 0 uses uv 0.6.3 with committed uv.lock and exact direct dependency pins. In ROLE=all, root entrypoint only prepares /workspace ownership, then supervisord, PostgreSQL, Redis and API run as the non-root trader user; PostgreSQL and Redis bind to loopback.",
+      "status": "final",
+      "decided_by": "codex",
+      "date": "2026-10-02T16:20:00Z",
+      "do_not_reopen": false
     }
   ],
   "validations": [
@@ -1725,6 +1774,86 @@
       "validated_by": "",
       "date": "",
       "reverify_if": ""
+    },
+    {
+      "id": "V-010",
+      "subject": "Phase 0 local Python quality checks pass",
+      "method": "uv 0.6.3 frozen environment: ruff check, ruff format --check, mypy src/trader, pytest -q, scripts/secret_scan.py and agent_state/validate_handoff.py",
+      "result": "pass",
+      "evidence": "local output: 22 passed, 1 skipped; Ruff and mypy passed; secret scan and handoff validator passed",
+      "validated_by": "codex",
+      "date": "2026-10-02T16:20:00Z",
+      "reverify_if": "Source or dependency changes"
+    },
+    {
+      "id": "V-011",
+      "subject": "Phase 0 Postgres migration and Docker runtime validation",
+      "method": "CI workflow applies Alembic migration against PostgreSQL 16, runs integration tests, builds the image, and checks ROLE=all /health",
+      "result": "pending",
+      "evidence": ".github/workflows/ci.yml (workflow not yet triggered on GitHub)",
+      "validated_by": "",
+      "date": "",
+      "reverify_if": "CI workflow completes"
+    },
+    {
+      "id": "V-012",
+      "subject": "Phase 0 scaffold and package layout",
+      "method": "Review task acceptance criteria and run local relevant checks",
+      "result": "pass",
+      "evidence": "pyproject.toml, uv.lock, Makefile, src/trader, tests/unit/test_package_layout.py",
+      "validated_by": "codex",
+      "date": "2026-10-02T16:20:00Z",
+      "reverify_if": "Source changes"
+    },
+    {
+      "id": "V-013",
+      "subject": "Config validation, safe defaults and read-only guard",
+      "method": "Review task acceptance criteria and run local relevant checks",
+      "result": "pass",
+      "evidence": "src/trader/core/config.py and config loader/environment/redaction and invariant tests",
+      "validated_by": "codex",
+      "date": "2026-10-02T16:20:00Z",
+      "reverify_if": "Source changes"
+    },
+    {
+      "id": "V-014",
+      "subject": "Multi-role container definition and health implementation",
+      "method": "Review task acceptance criteria and run local relevant checks",
+      "result": "pending",
+      "evidence": "docker/Dockerfile, docker/entrypoint.sh, docker/supervisord.*.conf, scripts/start_*.sh, src/trader/api/health.py; runtime deferred to CI",
+      "validated_by": "",
+      "date": "",
+      "reverify_if": "GitHub CI validates integration/runtime behavior"
+    },
+    {
+      "id": "V-015",
+      "subject": "Initial database schema and append-only audit design",
+      "method": "Review task acceptance criteria and run local relevant checks",
+      "result": "pending",
+      "evidence": "migrations/versions/0001_phase0_schema.py, src/trader/core/db.py, tests/unit/test_audit_chain.py; live DB test deferred to CI",
+      "validated_by": "",
+      "date": "",
+      "reverify_if": "GitHub CI validates integration/runtime behavior"
+    },
+    {
+      "id": "V-016",
+      "subject": "CI workflow, dependency lock, handoff and secret scan implementation",
+      "method": "Review task acceptance criteria and run local relevant checks",
+      "result": "pass",
+      "evidence": ".github/workflows/ci.yml, scripts/secret_scan.py, tests/unit/test_secret_scan.py",
+      "validated_by": "codex",
+      "date": "2026-10-02T16:20:00Z",
+      "reverify_if": "Source changes"
+    },
+    {
+      "id": "V-017",
+      "subject": "RunPod non-programmer deployment documentation",
+      "method": "Review task acceptance criteria and run local relevant checks",
+      "result": "pass",
+      "evidence": "infra/runpod/README.md",
+      "validated_by": "codex",
+      "date": "2026-10-02T16:20:00Z",
+      "reverify_if": "Source changes"
     }
   ],
   "blockers": [
@@ -1851,9 +1980,9 @@
       "to": "codex",
       "from": "claude",
       "text": "While reading the specs, flag anything unclear or contradictory as a question to Claude before building. Specifically confirm: (1) the best way to run Postgres and Redis inside the ROLE=all container on RunPod as a non-root setup; (2) your lock-file tool choice.",
-      "status": "open",
+      "status": "answered",
       "options": [],
-      "answer": ""
+      "answer": "Codex recommends uv 0.6.3 with a committed uv.lock and exact direct dependency pins. For ROLE=all, a small root entrypoint only creates and chowns persistent /workspace directories, then drops privileges with gosu; supervisord and its PostgreSQL, Redis, API and placeholder children all run as the non-root trader user. PostgreSQL and Redis bind only to loopback."
     }
   ],
   "log": [
@@ -1969,6 +2098,43 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Wrote Phase 0, 1, 2 and SettingsService specs plus default configs. Handing the turn to Codex to start Phase 0."
+    },
+    {
+      "revision": 3,
+      "ts": "2026-10-02T16:20:00Z",
+      "agent": "codex",
+      "action": "phase0_implementation",
+      "task_ids": [
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004",
+        "T-005",
+        "T-006"
+      ],
+      "files_changed": [
+        "pyproject.toml",
+        "uv.lock",
+        "Makefile",
+        "src/trader",
+        "tests",
+        "docker",
+        "scripts",
+        "migrations",
+        "alembic.ini",
+        ".github/workflows/ci.yml",
+        "infra/runpod/README.md",
+        "agent_state/AGENT_HANDOFF.json",
+        "docker/docker-compose.dev.yml",
+        "scripts/secret_scan.py",
+        "tests/unit/test_secret_scan.py",
+        "src/trader/core/config.py",
+        "src/trader/core/db.py",
+        "infra/runpod/README.md",
+        ".github/workflows/ci.yml",
+        "Makefile"
+      ],
+      "summary": "Implemented Phase 0 scaffold, immutable config validation, non-root multi-role container, Postgres schema and append-only audit chain, secret scanning and CI, and the RunPod deployment guide. Local checks pass (22 tests, one Postgres integration skipped); CI runtime checks are pending. Answered Q-011, recorded D-021 and handing over for review."
     }
   ]
 }
