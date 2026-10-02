@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 9,
+  "turn": "codex",
+  "revision": 10,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-007 hardening and T-008 GHCR publishing are implemented; CI, split-role and ROLE=all checks pass, and the private image was published. T-007/T-008 are ready for Claude review. Phase 0 closes after the owner pulls the image to RunPod and confirms /health. Q-010 remains open.",
+    "summary": "Phase 0 code complete and approved: CI green with reversibility, non-root, persistence and core/worker checks; image publishes to private GHCR. Phase 0 formally closes when the owner boots the pod (Q-012). Codex proceeds to Phase 1 (T-010 onward) and reviews C-003/C-004/C-005. Q-010 open.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1521,7 +1521,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-23"
       ],
@@ -1536,7 +1536,7 @@
         "scripts/start_postgres.sh",
         "src/trader/workers/placeholder.py"
       ],
-      "completion_note": "Added CI coverage for alembic upgrade/downgrade/upgrade on the initially empty PostgreSQL service; ROLE=all process UID non-root checks; volume data persistence across docker restart; no published embedded PostgreSQL/Redis ports; and ROLE=core/ROLE=worker Compose smoke tests using API health and worker heartbeat. GitHub Actions run 37047131061 on 16a77739f8ce4cb062621fa9c7f31c8b0b57d7c5: all quality and Docker smoke steps passed. Ready for Claude review.",
+      "completion_note": "Added CI coverage for alembic upgrade/downgrade/upgrade on the initially empty PostgreSQL service; ROLE=all process UID non-root checks; volume data persistence across docker restart; no published embedded PostgreSQL/Redis ports; and ROLE=core/ROLE=worker Compose smoke tests using API health and worker heartbeat. GitHub Actions run 37047131061 on 16a77739f8ce4cb062621fa9c7f31c8b0b57d7c5: all quality and Docker smoke steps passed. Ready for Claude review. CLAUDE APPROVED: CI run 37047681699 green incl. migration downgrade/upgrade, non-root process check, restart persistence, internal-only DB/Redis ports, core/worker compose smoke, GHCR publish after quality job on main only.",
       "id": "T-007",
       "title": "Phase 0 hardening from review",
       "acceptance_criteria": [
@@ -1550,7 +1550,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-23",
         "R-25"
@@ -1566,7 +1566,7 @@
         "D-022",
         "ghcr.io/tarek-assaf/ai-trader:16a77739f8ce4cb062621fa9c7f31c8b0b57d7c5"
       ],
-      "completion_note": "Added a main-only GHCR publish job using GITHUB_TOKEN with packages:write, publishing the commit SHA and latest tags only after quality CI passes. Added RunPod setup steps for a GitHub classic token with read:packages, registry credentials, image selection and safe token rotation. GitHub Actions run 37047131061 on 16a77739f8ce4cb062621fa9c7f31c8b0b57d7c5: publish-image job passed; image tag 16a77739f8ce4cb062621fa9c7f31c8b0b57d7c5 was published. Waiting for Claude review and owner RunPod /health confirmation to close Phase 0.",
+      "completion_note": "Added a main-only GHCR publish job using GITHUB_TOKEN with packages:write, publishing the commit SHA and latest tags only after quality CI passes. Added RunPod setup steps for a GitHub classic token with read:packages, registry credentials, image selection and safe token rotation. GitHub Actions run 37047131061 on 16a77739f8ce4cb062621fa9c7f31c8b0b57d7c5: publish-image job passed; image tag 16a77739f8ce4cb062621fa9c7f31c8b0b57d7c5 was published. Waiting for Claude review and owner RunPod /health confirmation to close Phase 0. CLAUDE APPROVED: CI run 37047681699 green incl. migration downgrade/upgrade, non-root process check, restart persistence, internal-only DB/Redis ports, core/worker compose smoke, GHCR publish after quality job on main only.",
       "id": "T-008",
       "title": "Publish the container image so RunPod can pull it, and update the RunPod guide",
       "acceptance_criteria": [
@@ -2015,6 +2015,16 @@
       "validated_by": "codex",
       "date": "2026-10-02T18:28:00Z",
       "reverify_if": "Registry, package visibility, publishing workflow, or RunPod image pull procedure changes"
+    },
+    {
+      "id": "V-027",
+      "subject": "T-007 hardening and T-008 GHCR publishing",
+      "method": "Checked per-step results of CI run 37047681699 via API and read workflow and RunPod guide diffs",
+      "result": "pass",
+      "evidence": ".github/workflows/ci.yml (quality + publish-image jobs); infra/runpod/README.md sections 1,3,9",
+      "validated_by": "claude",
+      "date": "2026-10-02T19:00:00Z",
+      "reverify_if": "Workflow, Dockerfile or guide changes"
     }
   ],
   "blockers": [
@@ -2150,6 +2160,18 @@
       "status": "answered",
       "options": [],
       "answer": "Codex recommends uv 0.6.3 with a committed uv.lock and exact direct dependency pins. For ROLE=all, a small root entrypoint only creates and chowns persistent /workspace directories, then drops privileges with gosu; supervisord and its PostgreSQL, Redis, API and placeholder children all run as the non-root trader user. PostgreSQL and Redis bind only to loopback."
+    },
+    {
+      "id": "Q-012",
+      "to": "human",
+      "from": "claude",
+      "text": "Phase 0 closes when you boot the pod with infra/runpod/README.md and confirm /health shows healthy, role all, paper mode, demo broker, live_enabled false. It does not block Codex from starting Phase 1 (T-010 onward), but T-010 needs your Capital.com DEMO API key, identifier and password stored as RunPod Secrets before live checks. Ready to follow the guide now?",
+      "status": "open",
+      "options": [
+        "Yes, I will follow the guide now",
+        "Later, let Codex continue with Phase 1 first"
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -2417,6 +2439,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented T-007 hardening and T-008 GHCR publishing/RunPod guide. GitHub Actions run 37047131061 on 16a77739f8ce4cb062621fa9c7f31c8b0b57d7c5 passed quality, migration reversibility, all container runtime checks, and private image publication. Handing off to Claude; owner must boot pod and verify /health before Phase 0 closes."
+    },
+    {
+      "revision": 10,
+      "ts": "2026-10-02T19:00:00Z",
+      "agent": "claude",
+      "action": "approve_t007_t008",
+      "task_ids": [
+        "T-007",
+        "T-008"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-007 and T-008 on green CI run 37047681699. Asked owner to boot the pod (Q-012). Codex continues with Phase 1; turn to Codex."
     }
   ]
 }
