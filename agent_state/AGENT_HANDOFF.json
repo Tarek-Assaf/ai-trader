@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 18,
+  "turn": "claude",
+  "revision": 19,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Phase 0 complete and merged (PR #2, CI green, image published). Owner redeploys the pod without POSTGRES_DATA_DIR and rechecks /health. Codex: start Phase 1 with T-019 then T-010 (Capital.com REST client, demo only; needs demo credentials as RunPod Secrets before live checks). Q-010 open.",
+    "summary": "Phase 0 is complete and merged (PR #2). T-019 health visibility is implemented and CI green on PR #3; awaiting Claude review. Owner should redeploy the merged image without POSTGRES_DATA_DIR and confirm /health reports the Git SHA and fresh backup fields. T-010 follows after C-003 Phase 1 specs are marked done; demo credentials belong only in RunPod Secrets. Q-010 remains open.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1655,7 +1655,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-23"
       ],
@@ -1664,8 +1664,11 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "PR #3",
+        "GitHub Actions run 37063741550"
+      ],
+      "completion_note": "Added baked GIT_SHA metadata to local CI and GHCR image builds; /health now includes version, last_backup_at, and last_backup_age_seconds, and ROLE=all degrades when no snapshot exists or the newest snapshot is older than 15 minutes. The backup loop creates an initial snapshot at startup and reports labeled pg_dump, validation, and publish failures in the container logs. Updated the RunPod guide and added unit coverage for latest snapshot age, stale snapshots, and missing snapshots. CI run 37063741550 passed all quality, handoff, secret scan, Docker, ROLE=all, PostgreSQL restore, and core/worker checks. Ready for Claude review.",
       "id": "T-019",
       "title": "Operational visibility: backup freshness and build version in /health",
       "acceptance_criteria": [
@@ -2204,6 +2207,16 @@
       "validated_by": "claude",
       "date": "2026-10-02T20:45:00Z",
       "reverify_if": "backup scripts or validator change"
+    },
+    {
+      "id": "V-036",
+      "subject": "T-019 backup freshness and build SHA health reporting",
+      "method": "GitHub Actions quality job ran lint/format, type check, reversible migrations, unit/integration tests, handoff validation and base comparison, secret scan, Docker build with GIT_SHA, ROLE=all health and runtime checks, full PostgreSQL backup/restore replacement test, and core/worker compose checks.",
+      "result": "pass",
+      "evidence": "GitHub Actions run 37063741550 on PR #3 head 4552c0ed341646f27dbbb99077685d7ea6efc2fd; all quality job steps succeeded.",
+      "validated_by": "codex",
+      "date": "2026-10-02",
+      "reverify_if": "Health payload, backup freshness checks, backup scripts, or image build metadata changes"
     }
   ],
   "blockers": [
@@ -2797,6 +2810,26 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Confirmed PR #2 merged with green CI. Answered Q-015. Turn to Codex for T-019 and Phase 1 (T-010)."
+    },
+    {
+      "revision": 19,
+      "ts": "2026-10-02T21:00:06Z",
+      "agent": "codex",
+      "action": "implement_t019_health_visibility",
+      "task_ids": [
+        "T-019"
+      ],
+      "files_changed": [
+        "src/trader/api/health.py",
+        "docker/Dockerfile",
+        ".github/workflows/ci.yml",
+        "scripts/postgres_backup_loop.sh",
+        "scripts/backup_postgres.sh",
+        "tests/unit/test_health.py",
+        "infra/runpod/README.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented /health build SHA and backup freshness fields, a 15-minute ROLE=all freshness gate, immediate initial snapshot and labeled backup failure logs. Added unit coverage and RunPod documentation. GitHub Actions run 37063741550 passed all checks. T-019 is ready for Claude review; handed over."
     }
   ]
 }
