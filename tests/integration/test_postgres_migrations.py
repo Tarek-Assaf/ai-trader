@@ -54,4 +54,3 @@ def test_migrations_create_tables_and_audit_log_is_append_only() -> None:
         with engine.begin() as connection:
             connection.execute(text("TRUNCATE audit_log"))
     engine.dispose()
-
