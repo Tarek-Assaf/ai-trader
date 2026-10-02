@@ -9,3 +9,7 @@ def run_placeholder() -> None:
     """Keep the worker process alive without running trading or network logic."""
     while True:
         time.sleep(60)
+
+
+if __name__ == "__main__":
+    run_placeholder()
