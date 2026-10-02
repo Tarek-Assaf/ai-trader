@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 13,
+  "turn": "claude",
+  "revision": 14,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,11 +34,9 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "PR #1 (T-009) merged; CI green and image 8aa9e2f published. Owner is redeploying the pod with POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata to confirm /health (Q-012 still open). Codex: build T-018 (durable paper Postgres via container disk plus dumps), then Phase 1 from T-010. Q-010 open.",
+    "summary": "PR #1 (T-009) merged and its main CI published the image. Owner confirmed /health healthy with role all, paper mode, demo broker, live disabled, and DB/Redis reachable (Q-012). T-018's durable paper-mode PostgreSQL implementation and container-replacement CI test are in review on PR #2; CI run 37058629455 passed. Live trading still requires managed PostgreSQL/Redis (D-005). Handing T-018 to Claude for review.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
-    "known_failing": [
-      "RunPod Network Volume PostgreSQL startup failed for the owner; T-009 smoke-only workaround is in draft PR #1 pending review and publication."
-    ],
+    "known_failing": [],
     "environment": {
       "runtime": "RunPod Docker",
       "python": "3.12",
@@ -1615,17 +1613,31 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-23"
       ],
       "depends_on": [
         "T-009"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "scripts/start_postgres.sh",
+        "scripts/backup_postgres.sh",
+        "scripts/postgres_backup_loop.sh",
+        "scripts/test_postgres_backup_restore.sh",
+        "docker/entrypoint.sh",
+        "scripts/start_api.sh",
+        "docker/Dockerfile",
+        "docker/supervisord.all.conf",
+        ".github/workflows/ci.yml",
+        "infra/runpod/README.md"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "PR #2",
+        "GitHub Actions run 37058629455"
+      ],
+      "completion_note": "Moved the ROLE=all PostgreSQL data directory to the pod container disk by default; backups are validated, atomically published to /workspace/backups every five minutes and on graceful shutdown, and the newest valid snapshot is restored before API startup with audit-chain verification. The end-to-end CI test passed backup rotation, corrupt-newest fallback, SIGTERM backup, full container replacement and restoration of audit/decision rows. RunPod guide documents the five-minute hard-reset loss window, Redis as a rebuildable cache, and managed PostgreSQL/Redis before live trading. Ready for Claude review.",
       "id": "T-018",
       "title": "Durable paper-mode PostgreSQL on RunPod: container-disk database with periodic dump to the network volume and automatic restore",
       "acceptance_criteria": [
@@ -2116,6 +2128,26 @@
       "validated_by": "claude",
       "date": "2026-10-02T19:45:00Z",
       "reverify_if": "start_postgres.sh or data-dir handling changes"
+    },
+    {
+      "id": "V-031",
+      "subject": "T-018 durable PostgreSQL backup and container replacement",
+      "method": "GitHub Actions quality job ran lint, typecheck, migrations, tests, handoff and secret validation, Docker build, ROLE=all health checks, then inserted audit/decision rows, tested 48-backup retention, a corrupt newest dump, graceful-shutdown backup, container removal/recreation on the same /workspace volume, restored rows, and verify_audit_log().",
+      "result": "pass",
+      "evidence": "GitHub Actions run 37058629455 on PR #2 head 0e44ecacc2a87524cbb0036ae881931c312f715a",
+      "validated_by": "codex",
+      "date": "2026-10-02",
+      "reverify_if": "PostgreSQL backup/restore scripts, Docker startup, or container replacement CI test changes"
+    },
+    {
+      "id": "V-032",
+      "subject": "Owner RunPod Phase 0 /health smoke check",
+      "method": "Owner-provided /health JSON from the RunPod pod reports healthy status, role all, paper mode, demo broker, live trading disabled, and database and Redis reachable.",
+      "result": "pass",
+      "evidence": "Owner-provided response timestamped 2026-10-02T19:55:59.322598+00:00 in Codex conversation",
+      "validated_by": "codex",
+      "date": "2026-10-02",
+      "reverify_if": "RunPod pod is redeployed or the /health response contract changes"
     }
   ],
   "blockers": [
@@ -2133,9 +2165,9 @@
     },
     {
       "id": "B-003",
-      "text": "Owner's RunPod Network Volume deployment does not start embedded PostgreSQL: postgres exits with invalid permissions for /workspace/pgdata even after chmod 700; API remains degraded. T-009 adds an opt-in /tmp smoke-check path but the PR is not yet merged/published and that path is not durable. Keep the existing volume; do not use the temporary path for ongoing operations.",
+      "text": "Resolved for paper-mode continuity by T-018: embedded PostgreSQL now defaults to the pod container disk and restores validated backups from /workspace/backups; the RunPod Network Volume is no longer used for PostgreSQL's active data directory. Hard pod loss can lose up to five minutes of rows. Managed PostgreSQL and Redis remain required before live trading (D-005).",
       "raised_by": "codex",
-      "status": "open"
+      "status": "resolved"
     }
   ],
   "questions": [
@@ -2263,12 +2295,12 @@
       "to": "human",
       "from": "claude",
       "text": "Phase 0 closes when you boot the pod with infra/runpod/README.md and confirm /health shows healthy, role all, paper mode, demo broker, live_enabled false. It does not block Codex from starting Phase 1 (T-010 onward), but T-010 needs your Capital.com DEMO API key, identifier and password stored as RunPod Secrets before live checks. Ready to follow the guide now?",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Yes, I will follow the guide now",
         "Later, let Codex continue with Phase 1 first"
       ],
-      "answer": ""
+      "answer": "Owner started the RunPod pod and supplied /health at 2026-10-02T19:55:59.322598+00:00: status healthy, role all, version unknown, mode paper, broker_env demo, live_enabled false, db reachable, redis reachable. Smoke-check acceptance criteria are met."
     },
     {
       "id": "Q-013",
@@ -2615,6 +2647,30 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Confirmed PR #1 merged with green CI and published image; answered Q-014; turn to Codex for T-018."
+    },
+    {
+      "revision": 14,
+      "ts": "2026-10-02T20:12:41Z",
+      "agent": "codex",
+      "action": "implement_t018_durable_runpod_postgres",
+      "task_ids": [
+        "T-018",
+        "T-009"
+      ],
+      "files_changed": [
+        "scripts/start_postgres.sh",
+        "scripts/backup_postgres.sh",
+        "scripts/postgres_backup_loop.sh",
+        "scripts/test_postgres_backup_restore.sh",
+        "docker/entrypoint.sh",
+        "scripts/start_api.sh",
+        "docker/Dockerfile",
+        "docker/supervisord.all.conf",
+        ".github/workflows/ci.yml",
+        "infra/runpod/README.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented container-disk PostgreSQL with validated atomic five-minute and SIGTERM backups, 48-snapshot retention, restore fallback and audit-chain verification. Added full container-replacement CI coverage and updated RunPod guidance. CI run 37058629455 passed. Recorded the owner's healthy /health response, resolved B-003 for paper mode, and handed over T-018 for Claude review."
     }
   ]
 }
