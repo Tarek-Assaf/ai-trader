@@ -1,0 +1,1890 @@
+{
+  "meta": {
+    "project": "ai-trader",
+    "schema_version": "1.0",
+    "created": "2026-10-02T00:00:00Z",
+    "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
+  },
+  "turn": "claude",
+  "revision": 1,
+  "current_phase": 0,
+  "protocol": {
+    "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
+    "read_first": [
+      "decisions",
+      "validations",
+      "blockers",
+      "questions"
+    ],
+    "log_rule": "log[] is append-only. Never edit or delete earlier entries.",
+    "anti_loop": {
+      "max_review_cycles_per_task": 2,
+      "on_exceeding": "Add a question for the human with options and a recommendation; do not continue the argument.",
+      "final_decisions_are_not_reopened": true,
+      "passed_validations_are_not_repeated_unless_reverify_if_is_true": true
+    },
+    "definition_of_done": [
+      "tests pass",
+      "acceptance criteria met",
+      "evidence recorded",
+      "completion_note written",
+      "log entry added"
+    ],
+    "human_override": "Owner may set turn to 'human' to pause both agents.",
+    "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
+  },
+  "project_state": {
+    "summary": "Blueprint v3.1 final and agreed. Earlier project audited and used as reference only. Gates raised (D-019). Open for owner: hosted LLM provider and monthly budget. Claude's next work: specs C-001 to C-004. Nothing implemented yet.",
+    "how_to_run_tests": "make lint test (defined in T-001)",
+    "known_failing": [],
+    "environment": {
+      "runtime": "RunPod Docker",
+      "python": "3.12",
+      "trading_mode": "paper",
+      "broker_env": "demo"
+    }
+  },
+  "requirements": [
+    {
+      "id": "R-01",
+      "text": "Natural-language interaction; validate a suitable chat platform",
+      "notes": "Telegram primary, web UI optional",
+      "status": "not_started",
+      "covered_by": [
+        "T-030",
+        "T-031"
+      ]
+    },
+    {
+      "id": "R-02",
+      "text": "All trading analysis: indicators, technical analysis, news analysis",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-040",
+        "T-044"
+      ]
+    },
+    {
+      "id": "R-03",
+      "text": "Learn, identify and validate strategies; find the most reliable and efficient",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-050",
+        "T-051",
+        "T-052",
+        "T-054"
+      ]
+    },
+    {
+      "id": "R-04",
+      "text": "Detect profitable patterns, validate them, promote to strategies if suitable",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-053",
+        "T-054"
+      ]
+    },
+    {
+      "id": "R-05",
+      "text": "Use HistData historical data to validate strategies",
+      "notes": "HistData is M1, bid-only, EST without DST",
+      "status": "not_started",
+      "covered_by": [
+        "C-003",
+        "T-012",
+        "T-014",
+        "T-017",
+        "T-050"
+      ]
+    },
+    {
+      "id": "R-06",
+      "text": "Identify least-risky trades and execute them",
+      "notes": "Trade quality score plus Risk Guardian",
+      "status": "not_started",
+      "covered_by": [
+        "T-020",
+        "T-022"
+      ]
+    },
+    {
+      "id": "R-07",
+      "text": "Know when markets are open and closed",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "C-003",
+        "T-015",
+        "T-044"
+      ]
+    },
+    {
+      "id": "R-08",
+      "text": "Understand P&L, risk, lot sizing relative to account size",
+      "notes": "Account size means account equity",
+      "status": "not_started",
+      "covered_by": [
+        "C-002",
+        "C-003",
+        "T-020",
+        "T-021",
+        "T-025"
+      ]
+    },
+    {
+      "id": "R-09",
+      "text": "Timeframes 1M, 3M, 5M; extensible",
+      "notes": "Capital.com has no 3M resolution: resample from 1M",
+      "status": "not_started",
+      "covered_by": [
+        "T-013",
+        "T-014"
+      ]
+    },
+    {
+      "id": "R-10",
+      "text": "Capital.com integration; other brokers later",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "C-003",
+        "T-010",
+        "T-011",
+        "T-024"
+      ]
+    },
+    {
+      "id": "R-11",
+      "text": "Paper trading / demo account first",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-023",
+        "T-024"
+      ]
+    },
+    {
+      "id": "R-12",
+      "text": "Handle requests: research, graphs, stop trading; act as kill switch",
+      "notes": "Stop path must not depend on the LLM",
+      "status": "not_started",
+      "covered_by": [
+        "T-027",
+        "T-031",
+        "T-034"
+      ]
+    },
+    {
+      "id": "R-13",
+      "text": "Visual graphs for validation, analysis and sharing on request",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-032"
+      ]
+    },
+    {
+      "id": "R-14",
+      "text": "Automatic backup of everything to GitHub and HuggingFace",
+      "notes": "No secrets in backups",
+      "status": "not_started",
+      "covered_by": [
+        "T-005",
+        "T-060"
+      ]
+    },
+    {
+      "id": "R-15",
+      "text": "API integrations: Capital.com, Telegram, others",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-010"
+      ]
+    },
+    {
+      "id": "R-16",
+      "text": "Integrate any resource to request, validate and identify data/searches",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-041"
+      ]
+    },
+    {
+      "id": "R-17",
+      "text": "Self-research through APIs or web portals",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-041"
+      ]
+    },
+    {
+      "id": "R-18",
+      "text": "Telegram alerts; daily, weekly, monthly reports via Telegram or email",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-030",
+        "T-033"
+      ]
+    },
+    {
+      "id": "R-19",
+      "text": "Claude and Codex coordinate through a shared JSON loop",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "C-001",
+        "C-100",
+        "T-005"
+      ]
+    },
+    {
+      "id": "R-20",
+      "text": "Record everything performed so agents avoid repeated discussions and validations",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-004"
+      ]
+    },
+    {
+      "id": "R-21",
+      "text": "Fully autonomous agentic system within hard limits",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "C-002",
+        "C-004",
+        "C-005",
+        "C-040",
+        "T-002",
+        "T-026",
+        "T-043",
+        "T-052"
+      ]
+    },
+    {
+      "id": "R-22",
+      "text": "Expandable; detects overload and adds workers",
+      "notes": "Workers only; core services are singletons",
+      "status": "not_started",
+      "covered_by": [
+        "T-003",
+        "T-070"
+      ]
+    },
+    {
+      "id": "R-23",
+      "text": "Portable Docker container on RunPod, easy to duplicate",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "C-001",
+        "C-100",
+        "T-001",
+        "T-003",
+        "T-006"
+      ]
+    },
+    {
+      "id": "R-24",
+      "text": "NAS100 and Gold now; more instruments later via config",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "T-002",
+        "T-016"
+      ]
+    },
+    {
+      "id": "R-25",
+      "text": "Think, search, plan, and use tools, APIs and systems",
+      "notes": "",
+      "status": "not_started",
+      "covered_by": [
+        "C-040",
+        "T-042",
+        "T-043"
+      ]
+    },
+    {
+      "id": "R-26",
+      "text": "Owner can adjust risk limits and settings through natural language, safely",
+      "notes": "SettingsService with ceilings, confirmation, 2FA for loosening, cooldown",
+      "status": "not_started",
+      "covered_by": [
+        "C-004",
+        "T-034"
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "C-001",
+      "title": "Write detailed Phase 0 spec (repo scaffold, Docker roles, config loader, DB, CI)",
+      "phase": 0,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [
+        "R-19",
+        "R-23"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "docs/specs/phase0.md exists",
+        "every Codex task in phase 0 has acceptance criteria"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "C-002",
+      "title": "Write default config/risk.yaml and config/strategy_lab.yaml with commented thresholds",
+      "phase": 0,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [
+        "R-08",
+        "R-21"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "files exist with comments in plain English",
+        "owner open decisions listed in questions[]"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "C-003",
+      "title": "Write specs for Phases 1 and 2 (data and risk/execution)",
+      "phase": 1,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [
+        "R-05",
+        "R-07",
+        "R-08",
+        "R-10"
+      ],
+      "depends_on": [
+        "C-001"
+      ],
+      "acceptance_criteria": [
+        "docs/specs/phase1.md and phase2.md exist"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-001",
+      "title": "Repo scaffold: pyproject, Makefile, ruff, mypy, pytest, folder layout from ARCHITECTURE.md section 11",
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-23"
+      ],
+      "depends_on": [
+        "C-001"
+      ],
+      "acceptance_criteria": [
+        "make lint test passes on empty skeleton",
+        "folder layout matches ARCHITECTURE.md"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-002",
+      "title": "Config system: pydantic-settings loaders for all config/*.yaml, fail-fast validation, read-only config guard",
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-24",
+        "R-21"
+      ],
+      "depends_on": [
+        "T-001"
+      ],
+      "acceptance_criteria": [
+        "invalid config stops startup with a clear error",
+        "unit tests cover each config file"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-003",
+      "title": "Dockerfile and entrypoint with ROLE=all|core|worker|backtest, supervisord configs, /health",
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-23",
+        "R-22"
+      ],
+      "depends_on": [
+        "T-001"
+      ],
+      "acceptance_criteria": [
+        "image builds",
+        "ROLE=all starts api plus placeholder services",
+        "non-root user"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-004",
+      "title": "Postgres schema and Alembic migrations (cycles, decisions, intents, orders, fills, positions, snapshots, lessons, audit_log, worker_heartbeats)",
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-20"
+      ],
+      "depends_on": [
+        "T-001"
+      ],
+      "acceptance_criteria": [
+        "migrations apply on empty DB",
+        "audit_log is append-only (no update/delete grants or trigger)"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-005",
+      "title": "CI: lint, types, tests, docker build, secret scan, handoff validation",
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-19",
+        "R-14"
+      ],
+      "depends_on": [
+        "T-001"
+      ],
+      "acceptance_criteria": [
+        "CI fails if validate_handoff.py fails",
+        "CI fails on a planted fake secret"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-006",
+      "title": "infra/runpod guide for a non-programmer: create network volume, pod, secrets, deploy ROLE=all",
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-23"
+      ],
+      "depends_on": [
+        "T-003"
+      ],
+      "acceptance_criteria": [
+        "step-by-step guide with no assumed programming knowledge"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-010",
+      "title": "Capital.com REST client: session manager (CST/X-SECURITY-TOKEN), rate limiter (10 rps, 1 session/s), demo/live hosts, market search, market details, price history with pagination",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-10",
+        "R-15"
+      ],
+      "depends_on": [
+        "T-002",
+        "C-003"
+      ],
+      "acceptance_criteria": [
+        "works against demo with real key (owner-supplied)",
+        "rate limiter unit-tested",
+        "tokens never logged"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-011",
+      "title": "Capital.com WebSocket client: OHLC bid/ask subscription, 10-minute ping, auto-reconnect",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-10"
+      ],
+      "depends_on": [
+        "T-010"
+      ],
+      "acceptance_criteria": [
+        "reconnect survives forced disconnect test",
+        "ping loop verified"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-012",
+      "title": "HistData importer: download, unzip, parse, EST(UTC-5 no DST) to UTC, QA, Parquet write; confirm NSXUSD and XAUUSD coverage dates",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-05"
+      ],
+      "depends_on": [
+        "T-002",
+        "C-003"
+      ],
+      "acceptance_criteria": [
+        "timezone test around US DST changes",
+        "QA report per symbol",
+        "coverage dates recorded in validations[]"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "legacy_reference": {
+        "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
+        "commit": "52b4dda",
+        "files": [
+          "agent/data/loader.py",
+          "agent/data/validation.py",
+          "agent/data/anomaly_analyzer.py",
+          "agent/data/discovery.py (no timezone handling: add EST to UTC)"
+        ],
+        "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
+      }
+    },
+    {
+      "id": "T-013",
+      "title": "Resampler 1M to 3M/5M/any, shared by historical and live paths",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-09"
+      ],
+      "depends_on": [
+        "T-012"
+      ],
+      "acceptance_criteria": [
+        "identical output for same minutes from either path",
+        "gap bars flagged"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-014",
+      "title": "Own data recorder: continuous Capital.com 1M bid/ask and spread to Parquet",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-05",
+        "R-09"
+      ],
+      "depends_on": [
+        "T-011",
+        "T-013"
+      ],
+      "acceptance_criteria": [
+        "no gaps across a reconnect",
+        "lineage tag set"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-015",
+      "title": "Market hours service using broker market status, config sessions, holiday calendar, stale-tick check",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-07"
+      ],
+      "depends_on": [
+        "T-010"
+      ],
+      "acceptance_criteria": [
+        "confirm broker market-status field/values and record in validations[]",
+        "closed/break/holiday tests"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "legacy_reference": {
+        "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
+        "commit": "52b4dda",
+        "files": [
+          "scripts/classify_market_gaps.py"
+        ],
+        "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
+      }
+    },
+    {
+      "id": "T-016",
+      "title": "instruments.yaml and mapper (NAS100/US100/NSXUSD, XAUUSD/GOLD); size/margin read from broker details",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-24"
+      ],
+      "depends_on": [
+        "T-010"
+      ],
+      "acceptance_criteria": [
+        "adding an instrument needs config only"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-017",
+      "title": "Basis measurement: HistData vs Capital.com on overlapping windows; spread model calibration",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-05"
+      ],
+      "depends_on": [
+        "T-012",
+        "T-014"
+      ],
+      "acceptance_criteria": [
+        "report with basis and spread stats per instrument/session"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "legacy_reference": {
+        "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
+        "commit": "52b4dda",
+        "files": [
+          "scripts/process_tick_data.py",
+          "scripts/validate_tick_data.py (HistData tick files carry bid and ask)"
+        ],
+        "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
+      }
+    },
+    {
+      "id": "T-020",
+      "title": "Risk Guardian with all rules from ARCHITECTURE.md 5.3, property-based tests",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-06",
+        "R-08"
+      ],
+      "depends_on": [
+        "T-002",
+        "C-002"
+      ],
+      "acceptance_criteria": [
+        "no input yields an order without stop or above limits",
+        "each rule has tests"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-021",
+      "title": "Position sizing with broker size steps, min/max size, margin and leverage checks",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-08"
+      ],
+      "depends_on": [
+        "T-016"
+      ],
+      "acceptance_criteria": [
+        "rounds down to size step",
+        "rejects if min size exceeds risk budget"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-022",
+      "title": "Trade quality score (deterministic) and eligibility threshold",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-06"
+      ],
+      "depends_on": [
+        "T-020"
+      ],
+      "acceptance_criteria": [
+        "score components documented and unit-tested"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-023",
+      "title": "PaperBroker with spread/slippage model and bracket orders",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-11"
+      ],
+      "depends_on": [
+        "T-017"
+      ],
+      "acceptance_criteria": [
+        "BrokerAdapter contract tests pass"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-024",
+      "title": "CapitalComBroker adapter (demo first): place/modify/close with server-side stop, polling of positions and activity",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-10",
+        "R-11"
+      ],
+      "depends_on": [
+        "T-010",
+        "T-020"
+      ],
+      "acceptance_criteria": [
+        "demo order round trip with stop attached",
+        "contract tests pass"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-025",
+      "title": "P&L engine: realized/unrealized, R-multiple, equity, drawdown, reconciled to broker account",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-08"
+      ],
+      "depends_on": [
+        "T-023"
+      ],
+      "acceptance_criteria": [
+        "reconciles with demo account figures"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-026",
+      "title": "Reconciler and order manager with idempotency keys and Redis leader lock",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-21"
+      ],
+      "depends_on": [
+        "T-024"
+      ],
+      "acceptance_criteria": [
+        "duplicate order impossible in chaos test",
+        "mismatch pauses entries and alerts"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-027",
+      "title": "Kill switch and pause (file flag, Redis key, API), deterministic and LLM-free",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-12"
+      ],
+      "depends_on": [
+        "T-026"
+      ],
+      "acceptance_criteria": [
+        "kill takes effect before next order",
+        "works with LLM provider unreachable"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-030",
+      "title": "Telegram channel: owner allow-list, commands, alerts, inline buttons",
+      "phase": 3,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-01",
+        "R-18"
+      ],
+      "depends_on": [
+        "T-027"
+      ],
+      "acceptance_criteria": [
+        "non-owner chats ignored",
+        "all commands tested"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-031",
+      "title": "Chat router: deterministic fast path for stop/kill/status plus LLM intent path",
+      "phase": 3,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-12",
+        "R-01"
+      ],
+      "depends_on": [
+        "T-030"
+      ],
+      "acceptance_criteria": [
+        "natural-language stop phrases halt trading without calling the LLM",
+        "dangerous requests refused"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-032",
+      "title": "Visualization module: candles with trades, equity, drawdown, heatmaps, strategy comparison; PNG and HTML",
+      "phase": 3,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-13"
+      ],
+      "depends_on": [
+        "T-025"
+      ],
+      "acceptance_criteria": [
+        "charts generated from fixtures",
+        "chart request via chat returns an image"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-033",
+      "title": "Reports: daily, weekly, monthly via Telegram and email",
+      "phase": 3,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-18"
+      ],
+      "depends_on": [
+        "T-032"
+      ],
+      "acceptance_criteria": [
+        "sample reports rendered from fixtures",
+        "email delivery configurable"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-040",
+      "title": "Analysis engine: indicators, levels, patterns, regime, multi-timeframe snapshot",
+      "phase": 4,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-02"
+      ],
+      "depends_on": [
+        "T-013"
+      ],
+      "acceptance_criteria": [
+        "snapshot for 1M/3M/5M builds from recorded data",
+        "indicator tests against reference values"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "legacy_reference": {
+        "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
+        "commit": "52b4dda",
+        "files": [
+          "scripts/build_features.py (add no-lookahead tests)"
+        ],
+        "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
+      }
+    },
+    {
+      "id": "T-041",
+      "title": "Research sources and sanitizer: web search, fetch, RSS, FRED, calendar, COT; cache and rate limits",
+      "phase": 4,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-16",
+        "R-17"
+      ],
+      "depends_on": [
+        "T-002"
+      ],
+      "acceptance_criteria": [
+        "prompt-injection fixtures produce no tool call",
+        "provenance stored"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-042",
+      "title": "LLMClient interface with Anthropic/OpenAI/compatible adapters and MockLLM; token/spend budgets",
+      "phase": 4,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-25"
+      ],
+      "depends_on": [
+        "T-002"
+      ],
+      "acceptance_criteria": [
+        "full pipeline runs offline with MockLLM"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-043",
+      "title": "Agent graph: Researcher, Analyst, Strategist, Critic, Orchestrator, tool registry with permissions",
+      "phase": 4,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-21",
+        "R-25"
+      ],
+      "depends_on": [
+        "T-040",
+        "T-041",
+        "T-042",
+        "T-020"
+      ],
+      "acceptance_criteria": [
+        "end-to-end paper cycle with full audit trail",
+        "agents cannot import broker code (test)"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "C-040",
+      "title": "Write agent prompts and tool permission table",
+      "phase": 4,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [
+        "R-21",
+        "R-25"
+      ],
+      "depends_on": [
+        "C-003"
+      ],
+      "acceptance_criteria": [
+        "prompts versioned in src/trader/agents/prompts/",
+        "prompts exist for Technical, News and Macro, Critic and Performance analysts, plus instrument playbooks for NAS100 and Gold"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-050",
+      "title": "Backtest engine with calibrated costs, walk-forward, sealed holdout reader",
+      "phase": 5,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-013",
+        "T-017"
+      ],
+      "acceptance_criteria": [
+        "known-result test reproduces",
+        "cost stress test supported"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "legacy_reference": {
+        "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
+        "commit": "52b4dda",
+        "files": [
+          "agent/research/backtest.py (costs are fixed bps only)"
+        ],
+        "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
+      }
+    },
+    {
+      "id": "T-051",
+      "title": "StrategySpec schema and sandbox engine (no arbitrary code)",
+      "phase": 5,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-040"
+      ],
+      "acceptance_criteria": [
+        "invalid or unsafe spec rejected"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-052",
+      "title": "Validator, ledger, promotion gate, decay monitor, allocator",
+      "phase": 5,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-21"
+      ],
+      "depends_on": [
+        "T-050",
+        "T-051",
+        "C-002"
+      ],
+      "acceptance_criteria": [
+        "random-noise strategy rejected in repeated trials",
+        "holdout unreadable by anything else"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "legacy_reference": {
+        "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
+        "commit": "52b4dda",
+        "files": [
+          "agent/experiment_registry.py",
+          "agent/audit/experiments.py",
+          "agent/experiment_query.py",
+          "agent/strategies/validator.py"
+        ],
+        "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
+      }
+    },
+    {
+      "id": "T-053",
+      "title": "Pattern miner: candidate generation and statistical screening feeding the same gates",
+      "phase": 5,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-04"
+      ],
+      "depends_on": [
+        "T-052"
+      ],
+      "acceptance_criteria": [
+        "patterns promoted only through gates",
+        "multiple-testing counted in ledger"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "legacy_reference": {
+        "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
+        "commit": "52b4dda",
+        "files": [
+          "scripts/build_targets.py",
+          "agent/research/ml_signal_adapter.py"
+        ],
+        "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
+      }
+    },
+    {
+      "id": "T-054",
+      "title": "Idea generator and post-mortem agents",
+      "phase": 5,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04"
+      ],
+      "depends_on": [
+        "T-052",
+        "T-042"
+      ],
+      "acceptance_criteria": [
+        "Lab runs end to end on paper"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-060",
+      "title": "Backup job: GitHub (code/config/state) and HuggingFace (data/results/encrypted dumps), secret scan, restore drill",
+      "phase": 6,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-14"
+      ],
+      "depends_on": [
+        "T-005"
+      ],
+      "acceptance_criteria": [
+        "fresh pod restored from backups",
+        "push aborts on planted secret"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-070",
+      "title": "Queue, workers and autoscaler using RunPod API; priority shedding; singleton protection",
+      "phase": 7,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-22"
+      ],
+      "depends_on": [
+        "T-003",
+        "T-026"
+      ],
+      "acceptance_criteria": [
+        "load test scales up and down",
+        "singletons never scaled"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "C-100",
+      "title": "Review Phase 0 deliverables against specs and write validations",
+      "phase": 0,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [
+        "R-19",
+        "R-23"
+      ],
+      "depends_on": [
+        "T-001",
+        "T-002",
+        "T-003",
+        "T-004",
+        "T-005"
+      ],
+      "acceptance_criteria": [
+        "validations[] updated with pass/fail and evidence"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "C-004",
+      "title": "Spec the SettingsService: settable keys, hard ceilings file, confirmation and 2FA flow, cooldown rules, audit format",
+      "phase": 2,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [
+        "R-26",
+        "R-21"
+      ],
+      "depends_on": [
+        "C-002"
+      ],
+      "acceptance_criteria": [
+        "docs/specs/settings_service.md exists",
+        "config/risk_ceilings.yaml drafted",
+        "every settable key lists direction (tightening/loosening) rule"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-034",
+      "title": "SettingsService: typed change requests, ceilings, confirm button, TOTP for loosening, cooldown, versioned config, audit log, owner notification",
+      "phase": 3,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-26",
+        "R-12"
+      ],
+      "depends_on": [
+        "T-027",
+        "T-030",
+        "C-004"
+      ],
+      "acceptance_criteria": [
+        "LLM agents cannot import or call it (test)",
+        "raising a limit above its ceiling is impossible",
+        "loosening during a loss halt is rejected",
+        "every change appears in audit_log and Telegram"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "C-005",
+      "title": "Audit the earlier project once provided (Q-007): inventory, adopt/adapt/skip decisions, secret scan, rotate any leaked keys",
+      "phase": 0,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [
+        "R-21"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "docs/legacy_audit.md exists",
+        "each item marked adopt, adapt or skip with a reason",
+        "any secrets found are listed for rotation (values never copied)"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/legacy_audit.md"
+      ],
+      "completion_note": "Audited commit 52b4dda, full 5-commit history. No secrets found. Models show no edge. Adopt/adapt/skip table written. Tests could not be run in Claude's workspace."
+    },
+    {
+      "id": "T-044",
+      "title": "Code analysts: Execution Quality Analyst (spread/slippage by session) and Data Quality Analyst (gaps, stale feeds, bad prices) with alerts",
+      "phase": 4,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-02",
+        "R-07"
+      ],
+      "depends_on": [
+        "T-014",
+        "T-017"
+      ],
+      "acceptance_criteria": [
+        "stale-feed and gap simulations raise alerts",
+        "per-session spread statistics feed the cost model"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D-001",
+      "statement": "The LLM never has broker access. Proposals go through the deterministic Risk Guardian, then the Execution Service.",
+      "status": "final",
+      "decided_by": "architecture",
+      "date": "2026-10-02T00:00:00Z",
+      "do_not_reopen": true
+    },
+    {
+      "id": "D-002",
+      "statement": "Stop/pause/kill must work without the LLM (deterministic fast path).",
+      "status": "final",
+      "decided_by": "architecture",
+      "date": "2026-10-02T00:00:00Z",
+      "do_not_reopen": true
+    },
+    {
+      "id": "D-003",
+      "statement": "3M candles are produced by resampling 1M because Capital.com has no 3-minute resolution.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-02T00:00:00Z",
+      "do_not_reopen": true
+    },
+    {
+      "id": "D-004",
+      "statement": "HistData is used for hypothesis generation; Capital.com demo forward testing is used for confirmation. HistData is bid-only, M1, EST without DST; convert to UTC on import.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-02T00:00:00Z",
+      "do_not_reopen": true
+    },
+    {
+      "id": "D-005",
+      "statement": "Start with one RunPod pod (ROLE=all, CPU only); split into core and worker, and move to managed Postgres/Redis, before live trading.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-02T00:00:00Z",
+      "do_not_reopen": true
+    },
+    {
+      "id": "D-006",
+      "statement": "Telegram is the primary natural-language channel; the web UI is optional and sits behind the same ChatChannel interface. Decided by Claude on the owner's delegation: Telegram is the interface, with a web chat added later if wanted.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-02T00:00:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-007",
+      "statement": "Strategies are declarative specs run in a sandbox; no LLM-written executable code runs in core or execution processes.",
+      "status": "final",
+      "decided_by": "architecture",
+      "date": "2026-10-02T00:00:00Z",
+      "do_not_reopen": true
+    },
+    {
+      "id": "D-008",
+      "statement": "Backups: GitHub for code/config/state, HuggingFace for data and results. Never back up secrets.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-02T00:00:00Z",
+      "do_not_reopen": true
+    },
+    {
+      "id": "D-009",
+      "statement": "Account size for risk sizing means account equity (balance plus open P&L).",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-02T00:00:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-010",
+      "statement": "Starting risk limits: 0.5% risk per trade, 2% max daily loss, 10% max drawdown, 3 concurrent live strategies.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-02T14:55:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-011",
+      "statement": "Risk limits and Lab gates can be changed by the owner through natural language, but only via the deterministic SettingsService: allow-listed owner chat, confirmation, hard ceilings baked into the image, tightening immediate, loosening needs a second factor and a cooldown, no loosening while a loss halt is active. LLM agents cannot call or edit it.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-02T14:55:00Z",
+      "do_not_reopen": true
+    },
+    {
+      "id": "D-012",
+      "statement": "GitHub namespace Tarek-Assaf; private repos. Proposed names: ai-trader (GitHub) and ai-trader-data (HuggingFace dataset). HuggingFace username confirmed as Tarek-Assaf.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-02T14:55:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-013",
+      "statement": "Reports and alerts go through Telegram plus email (address and method pending, Q-006).",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-02T14:55:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-014",
+      "statement": "The earlier project is reference material. Fresh repo with the new architecture; audit the old project first (C-005) and adopt pieces selectively. Nothing is adopted without passing this project's tests and safety invariants, and any model or signal from it enters only through the Strategy Lab gates.",
+      "status": "final",
+      "decided_by": "claude (delegated by owner)",
+      "date": "2026-10-02T14:55:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-015",
+      "statement": "v1 timeframes: 1M, 3M and 5M. 3M is resampled from 1M; 15M can be added later through config.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-02T15:05:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-016",
+      "statement": "Email reports use SMTP with an app password held as a RunPod Secret (REPORT_EMAIL_TO holds the recipient). Telegram stays the primary channel.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-02T15:05:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-017",
+      "statement": "Hard ceilings in config/risk_ceilings.yaml: risk per trade 1.0%, daily loss 4%, drawdown 15%, concurrent live strategies 5.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-02T15:05:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-018",
+      "statement": "Reuse of the earlier project follows docs/legacy_audit.md: adapt data QA, tick/spread handling, experiment logging, backtest structure and tests; skip its models, risk manager, paper engine, paper trades and requirements.txt. Models re-enter only through Strategy Lab gates.",
+      "status": "final",
+      "decided_by": "claude (delegated by owner)",
+      "date": "2026-10-02T15:20:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-019",
+      "statement": "Strategy Lab gates use the stricter minimums: Gate 1 at least 300 simulated trades (100 out-of-sample), 5 walk-forward windows, 3 validation periods; Gate 2 at least 4 weeks and 200 demo trades; Gate 3 at least 4 weeks and 100 micro-live trades. Other gate criteria unchanged.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-02T15:30:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-020",
+      "statement": "Analyst roster v1 as in ARCHITECTURE.md section 5.2: AI analysts (Technical, News and Macro, Critic, Performance) plus code analysts (indicator/pattern engine, execution quality, data quality, Risk Guardian). Instrument knowledge lives in config playbooks.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-02T15:40:00Z",
+      "do_not_reopen": false
+    }
+  ],
+  "validations": [
+    {
+      "id": "V-001",
+      "subject": "Capital.com price resolutions exclude 3 minutes",
+      "method": "Read public API docs and client library docs",
+      "result": "pass",
+      "evidence": "ARCHITECTURE.md section 2",
+      "validated_by": "claude",
+      "date": "2026-10-02T00:00:00Z",
+      "reverify_if": "Capital.com publishes a new API version"
+    },
+    {
+      "id": "V-002",
+      "subject": "Capital.com rate limits: 10 req/s, 1 session/s, demo 1000 position requests/hour, WebSocket 10 min and 40 instruments",
+      "method": "Read public API general information page",
+      "result": "pass",
+      "evidence": "ARCHITECTURE.md section 2",
+      "validated_by": "claude",
+      "date": "2026-10-02T00:00:00Z",
+      "reverify_if": "429 errors seen at lower rates than documented"
+    },
+    {
+      "id": "V-003",
+      "subject": "HistData provides M1 and tick only, bid-based bars, EST without DST",
+      "method": "Read HistData FAQ and file specification",
+      "result": "pass",
+      "evidence": "ARCHITECTURE.md section 2",
+      "validated_by": "claude",
+      "date": "2026-10-02T00:00:00Z",
+      "reverify_if": "Imported timestamps look offset by a market-open mismatch"
+    },
+    {
+      "id": "V-004",
+      "subject": "HistData coverage dates for Nasdaq-100 (NSXUSD) and XAUUSD",
+      "method": "Pending: Codex confirms during T-012",
+      "result": "pending",
+      "evidence": "",
+      "validated_by": "",
+      "date": "",
+      "reverify_if": ""
+    },
+    {
+      "id": "V-005",
+      "subject": "Capital.com epics for NAS100/US100 and Gold, and market-status field values",
+      "method": "Pending: Codex confirms during T-010 and T-015 against the demo API",
+      "result": "pending",
+      "evidence": "",
+      "validated_by": "",
+      "date": "",
+      "reverify_if": ""
+    },
+    {
+      "id": "V-006",
+      "subject": "Earlier repo contains no committed secrets (current files and all 5 commits)",
+      "method": "Pattern scan of files and full history diffs, values redacted",
+      "result": "pass",
+      "evidence": "docs/legacy_audit.md section 2",
+      "validated_by": "claude",
+      "date": "2026-10-02T15:20:00Z",
+      "reverify_if": "New commits are pushed to the earlier repo before anything is imported"
+    },
+    {
+      "id": "V-007",
+      "subject": "Earlier models have no usable trading edge (accuracy about 50 to 53%, ROC-AUC about 0.50 to 0.53; frozen test often below 50%)",
+      "method": "Read training, evaluation and ablation outputs",
+      "result": "pass",
+      "evidence": "docs/legacy_audit.md section 3",
+      "validated_by": "claude",
+      "date": "2026-10-02T15:20:00Z",
+      "reverify_if": "Models are retrained on substantially more data"
+    },
+    {
+      "id": "V-008",
+      "subject": "HistData tick files include bid and ask quotes",
+      "method": "Read scripts/process_tick_data.py in the earlier repo (columns bid, ask, volume; ask<bid check)",
+      "result": "pass",
+      "evidence": "docs/legacy_audit.md section 4",
+      "validated_by": "claude",
+      "date": "2026-10-02T15:20:00Z",
+      "reverify_if": "Importing a new HistData file format"
+    },
+    {
+      "id": "V-009",
+      "subject": "Earlier project's 87 tests pass",
+      "method": "Pending: Codex runs them when adapting modules",
+      "result": "pending",
+      "evidence": "",
+      "validated_by": "",
+      "date": "",
+      "reverify_if": ""
+    }
+  ],
+  "blockers": [
+    {
+      "id": "B-001",
+      "text": "C-005 (audit of the earlier project) is blocked: github.com/Tarek-Assaf/AI-Agent-Trading is not reachable (404 on the public page; GitHub account not linked to Claude). Waiting on Q-009.",
+      "raised_by": "claude",
+      "status": "resolved"
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q-001",
+      "to": "human",
+      "from": "claude",
+      "text": "Which risk limits do you want (risk per trade %, max daily loss %, max drawdown %, max concurrent live strategies)? Suggested starting point: 0.5%, 2%, 10%, 3.",
+      "status": "answered",
+      "options": [
+        "accept suggested defaults",
+        "provide own numbers"
+      ],
+      "answer": "Accepted as starting values: 0.5% risk per trade, 2% max daily loss, 10% max drawdown, 3 concurrent live strategies. Owner wants to modify them later through natural language (see D-011)."
+    },
+    {
+      "id": "Q-002",
+      "to": "human",
+      "from": "claude",
+      "text": "Do you have a Capital.com demo account with 2FA enabled and an API key generated?",
+      "status": "answered",
+      "options": [
+        "yes",
+        "not yet"
+      ],
+      "answer": "Yes. Demo account with 2FA and API key is ready. Key must go into RunPod Secrets only, never into chat, code or this file."
+    },
+    {
+      "id": "Q-003",
+      "to": "human",
+      "from": "claude",
+      "text": "How should reports be emailed (SMTP details or an email API such as Resend/SendGrid) and to which address?",
+      "status": "answered",
+      "options": [],
+      "answer": "Owner has an email to use alongside the Telegram integration. Address and sending method still needed: see Q-006."
+    },
+    {
+      "id": "Q-004",
+      "to": "human",
+      "from": "claude",
+      "text": "Names for the private GitHub repo and private HuggingFace dataset repo?",
+      "status": "answered",
+      "options": [],
+      "answer": "GitHub account/namespace: Tarek-Assaf. Proposed repo names, accepted unless owner objects: Tarek-Assaf/ai-trader (private, code/config/state) and a private HuggingFace dataset Tarek-Assaf/ai-trader-data (assumes the same HuggingFace username; Q-007b to confirm)."
+    },
+    {
+      "id": "Q-005",
+      "to": "human",
+      "from": "claude",
+      "text": "Confirm v1 timeframes: 1M, 5M and 15M (native Capital.com candles), dropping 3M.",
+      "status": "answered",
+      "options": [
+        "confirm 1M, 5M, 15M",
+        "keep 1M, 3M, 5M (3M derived from 1M)",
+        "other"
+      ],
+      "answer": "Keep 1M, 3M and 5M. 3M is built from 1M (Capital.com has no native 3M). 15M is not in v1 but can be added through config."
+    },
+    {
+      "id": "Q-006",
+      "to": "human",
+      "from": "claude",
+      "text": "Which email address should receive reports, and which sending method: SMTP from the mailbox (needs an app password, set as a RunPod Secret) or an email API service? Do not paste passwords in chat.",
+      "status": "answered",
+      "options": [],
+      "answer": "Owner supplied the report address in chat. It is stored as the REPORT_EMAIL_TO secret on RunPod, not in this file. Default sending method: SMTP with an app password stored as a RunPod Secret (an email API service is the alternative)."
+    },
+    {
+      "id": "Q-007",
+      "to": "human",
+      "from": "claude",
+      "text": "Where is the earlier similar project (GitHub repo link, or upload a zip), and what are the 'models' in it (machine-learning models, LLM prompts/agents, or strategy models)? Also confirm your HuggingFace username is Tarek-Assaf.",
+      "status": "answered",
+      "options": [],
+      "answer": "Earlier project: github.com/Tarek-Assaf/AI-Agent-Trading (returned 404 to Claude, so it is private or the name differs). HuggingFace username Tarek-Assaf confirmed. The nature of its 'models' is still undescribed: see Q-009."
+    },
+    {
+      "id": "Q-008",
+      "to": "human",
+      "from": "claude",
+      "text": "Hard ceilings that cannot be raised from chat (only by a redeploy). Suggested: risk per trade 1.0%, daily loss 4%, drawdown 15%, concurrent live strategies 5. Accept?",
+      "status": "answered",
+      "options": [
+        "accept suggested ceilings",
+        "provide own numbers"
+      ],
+      "answer": "Confirmed hard ceilings: 1.0% risk per trade, 4% daily loss, 15% drawdown, 5 concurrent live strategies."
+    },
+    {
+      "id": "Q-009",
+      "to": "human",
+      "from": "claude",
+      "text": "Claude cannot read the earlier repo. How do you want to share it, and what are its 'models' (machine learning, prompts/agents, or strategy models)?",
+      "status": "answered",
+      "options": [
+        "Download the repo as a zip and upload it here after deleting any .env or key files (recommended)",
+        "Link your GitHub account to Claude in its settings",
+        "Describe the contents briefly instead"
+      ],
+      "answer": "Owner made the repo reachable (reported public). Claude audited it: see docs/legacy_audit.md. Models are joblib-saved direction classifiers (dependencies suggest LightGBM, XGBoost and scikit-learn) with no usable edge."
+    }
+  ],
+  "log": [
+    {
+      "revision": 1,
+      "ts": "2026-10-02T00:00:00Z",
+      "agent": "claude",
+      "action": "seed",
+      "task_ids": [],
+      "files_changed": [
+        "ARCHITECTURE.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Created blueprint v3 and seeded requirements, tasks, decisions, validations and open questions."
+    },
+    {
+      "revision": 1,
+      "ts": "2026-10-02T14:55:00Z",
+      "agent": "claude",
+      "action": "owner_input",
+      "task_ids": [
+        "C-004",
+        "T-034",
+        "C-005"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "ARCHITECTURE.md",
+        "AGENTS.md"
+      ],
+      "summary": "Recorded owner answers Q-001 to Q-004, added D-010 to D-014, Q-005 to Q-008, requirement R-26 and tasks C-004, T-034, C-005. No hand-over: turn stays with claude."
+    },
+    {
+      "revision": 1,
+      "ts": "2026-10-02T15:05:00Z",
+      "agent": "claude",
+      "action": "owner_input",
+      "task_ids": [
+        "C-005"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "ARCHITECTURE.md"
+      ],
+      "summary": "Recorded answers Q-005 to Q-008, D-015 to D-017. Earlier repo not reachable: added Q-009 and blocker B-001; C-005 set to blocked. No hand-over."
+    },
+    {
+      "revision": 1,
+      "ts": "2026-10-02T15:20:00Z",
+      "agent": "claude",
+      "action": "audit",
+      "task_ids": [
+        "C-005"
+      ],
+      "files_changed": [
+        "docs/legacy_audit.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Audited earlier repo; resolved B-001, answered Q-009; added D-018, V-006 to V-009 and legacy_reference notes on affected tasks. No hand-over."
+    },
+    {
+      "revision": 1,
+      "ts": "2026-10-02T15:30:00Z",
+      "agent": "claude",
+      "action": "owner_input",
+      "task_ids": [],
+      "files_changed": [
+        "ARCHITECTURE.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner agreed to a fresh build and to stricter gates. Recorded D-019 and updated ARCHITECTURE.md to v3.1. No hand-over."
+    },
+    {
+      "revision": 1,
+      "ts": "2026-10-02T15:40:00Z",
+      "agent": "claude",
+      "action": "owner_input",
+      "task_ids": [
+        "T-044",
+        "C-040"
+      ],
+      "files_changed": [
+        "ARCHITECTURE.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Added analyst roster (D-020), task T-044 and prompt/playbook acceptance on C-040. No hand-over."
+    }
+  ]
+}
