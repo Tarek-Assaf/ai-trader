@@ -83,15 +83,23 @@ def load_config_file(path: Path, *, schema_path: Path | None = None) -> BaseMode
 def _check_risk_ceilings(risk: dict[str, Any], ceilings: dict[str, Any]) -> None:
     """Reject proposed risk values above baked maxima or below baked floors."""
     for key, ceiling in ceilings.get("max", {}).items():
-        value = risk.get(key)
-        if value is not None and value > ceiling:
+        if key not in risk:
+            raise ConfigLoadError(
+                f"Invalid risk.yaml: missing key '{key}' required by risk_ceilings.yaml"
+            )
+        value = risk[key]
+        if value > ceiling:
             raise ConfigLoadError(
                 f"Invalid risk.yaml: {key}={value} exceeds baked ceiling {ceiling}"
             )
     for key, floor in ceilings.get("min", {}).items():
         risk_key = key.removesuffix("_floor")
-        value = risk.get(risk_key)
-        if value is not None and value < floor:
+        if risk_key not in risk:
+            raise ConfigLoadError(
+                f"Invalid risk.yaml: missing key '{risk_key}' required by risk_ceilings.yaml"
+            )
+        value = risk[risk_key]
+        if value < floor:
             raise ConfigLoadError(
                 f"Invalid risk.yaml: {risk_key}={value} is below baked floor {floor}"
             )

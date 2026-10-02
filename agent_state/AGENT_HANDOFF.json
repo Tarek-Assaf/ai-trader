@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 4,
+  "turn": "claude",
+  "revision": 5,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,12 +34,9 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Phase 0 code review round 1: T-002 changes requested (log redaction). CI lint failure was Claude's old seed script, now removed. Other Phase 0 tasks await a green CI run (Docker, Postgres) before approval. Q-010 still open for owner.",
+    "summary": "Codex addressed T-002 review round 1: secret redaction now runs on root and Uvicorn handlers, child logger interpolation and SecretStr extras are covered, and missing risk ceiling keys fail closed. Local Ruff, format, mypy, secret scan and 25 tests pass; one Postgres integration test is skipped without DATABASE_URL. Docker and Postgres runtime checks remain pending GitHub Actions. Tasks T-001 through T-006 remain in review pending green CI; handed back to Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
-    "known_failing": [
-      "T-002 log redaction only on root logger.",
-      "CI has not yet run past the lint step: Type check, tests, migrations, Docker build and ROLE=all health are unverified."
-    ],
+    "known_failing": [],
     "environment": {
       "runtime": "RunPod Docker",
       "python": "3.12",
@@ -458,7 +455,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-24",
         "R-21"
@@ -481,7 +478,7 @@
         "tests/unit/test_secret_redaction.py",
         "tests/invariants/test_config_write_boundary.py"
       ],
-      "completion_note": "Added immutable strict YAML validation, baked risk ceiling and Strategy Lab floor checks, environment-only secret settings and log redaction. Config and invariant tests pass. CLAUDE REVIEW 1 (changes requested): (1) src/trader/core/logging.py attaches SecretRedactionFilter to the ROOT LOGGER. Python logger filters do not run for records created by child loggers (uvicorn, sqlalchemy, trader.*), so secrets in those records are NOT redacted. Attach the filter to every handler on the root logger (and to uvicorn/uvicorn.access/uvicorn.error handlers), instead of or in addition to the logger. (2) Add a test in tests/unit/test_secret_redaction.py that logs a secret through logging.getLogger('trader.child') and through a message with %-args and asserts the emitted handler output contains [REDACTED] and not the secret. (3) Also redact SecretStr-valued extra fields if structlog is used. (4) Minor, non-blocking: in config._check_risk_ceilings, fail with a clear error if a ceilings key has no matching risk.yaml key, so a typo cannot silently disable a ceiling; add a test. Rest of T-002 (frozen/extra=forbid models, baked ceilings path, floors, env defaults) passes review."
+      "completion_note": "Added immutable strict YAML validation, baked risk ceiling and Strategy Lab floor checks, environment-only secret settings and log redaction. Config and invariant tests pass. CLAUDE REVIEW 1 (changes requested): (1) src/trader/core/logging.py attaches SecretRedactionFilter to the ROOT LOGGER. Python logger filters do not run for records created by child loggers (uvicorn, sqlalchemy, trader.*), so secrets in those records are NOT redacted. Attach the filter to every handler on the root logger (and to uvicorn/uvicorn.access/uvicorn.error handlers), instead of or in addition to the logger. (2) Add a test in tests/unit/test_secret_redaction.py that logs a secret through logging.getLogger('trader.child') and through a message with %-args and asserts the emitted handler output contains [REDACTED] and not the secret. (3) Also redact SecretStr-valued extra fields if structlog is used. (4) Minor, non-blocking: in config._check_risk_ceilings, fail with a clear error if a ceilings key has no matching risk.yaml key, so a typo cannot silently disable a ceiling; add a test. Rest of T-002 (frozen/extra=forbid models, baked ceilings path, floors, env defaults) passes review. CODEX RESPONSE TO REVIEW 1: moved redaction to root and Uvicorn handlers, added recursive SecretStr/structured-field redaction and child logger %-args coverage, and made missing max/floor keys fail with a clear ConfigLoadError. Local checks pass (25 passed; 1 Postgres integration test skipped without DATABASE_URL). GitHub Actions checks remain unverified."
     },
     {
       "id": "T-003",
@@ -1790,7 +1787,7 @@
       "subject": "Phase 0 Postgres migration and Docker runtime validation",
       "method": "CI workflow applies Alembic migration against PostgreSQL 16, runs integration tests, builds the image, and checks ROLE=all /health",
       "result": "pending",
-      "evidence": ".github/workflows/ci.yml (workflow not yet triggered on GitHub)",
+      "evidence": ".github/workflows/ci.yml; no Actions workflow runs are returned for commit 52d64e7827858458412e193cf12adc151e688429; Postgres/Docker verification pending.",
       "validated_by": "",
       "date": "",
       "reverify_if": "CI workflow completes"
@@ -1874,6 +1871,16 @@
       "validated_by": "claude",
       "date": "2026-10-02T17:30:00Z",
       "reverify_if": "Codex pushes fixes or CI result changes"
+    },
+    {
+      "id": "V-020",
+      "subject": "T-002 review fixes: child logger secret redaction and unknown risk-ceiling keys",
+      "method": "Ruff check/format, mypy, targeted child logger/SecretStr output test, config ceiling-key test, and full pytest suite",
+      "result": "pass",
+      "evidence": "src/trader/core/logging.py; src/trader/core/config.py; tests/unit/test_secret_redaction.py; tests/unit/test_config_loader.py; local checks: Ruff and mypy pass, 25 passed and 1 Postgres integration test skipped",
+      "validated_by": "codex",
+      "date": "2026-10-02T17:03:30Z",
+      "reverify_if": "Source changes"
     }
   ],
   "blockers": [
@@ -2176,6 +2183,23 @@
         "agent_state/build_handoff.py"
       ],
       "summary": "Diagnosed CI lint failure (Claude's own seed script, removed). Requested changes on T-002 (redaction filter must be on handlers, add child-logger test). Other tasks held for a green CI run. Handing back to Codex."
+    },
+    {
+      "revision": 5,
+      "ts": "2026-10-02T17:03:30Z",
+      "agent": "codex",
+      "action": "address_t002_review",
+      "task_ids": [
+        "T-002"
+      ],
+      "files_changed": [
+        "src/trader/core/logging.py",
+        "src/trader/core/config.py",
+        "tests/unit/test_secret_redaction.py",
+        "tests/unit/test_config_loader.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude's T-002 review: handler-based redaction covers child/Uvicorn logs and structured SecretStr extras; unknown ceiling keys fail closed. Local checks pass (25 tests; PostgreSQL integration skipped). GitHub Actions has not reported migration/Docker results; handed back to Claude."
     }
   ]
 }

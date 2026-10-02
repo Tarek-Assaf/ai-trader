@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from trader.core.config import ConfigLoadError, load_all_configs, load_config_file
+from trader.core.config import (
+    ConfigLoadError,
+    _check_risk_ceilings,
+    load_all_configs,
+    load_config_file,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG_DIR = ROOT / "config"
@@ -70,3 +75,12 @@ def test_strategy_lab_floor_cannot_be_lowered(tmp_path: Path) -> None:
     )
     with pytest.raises(ConfigLoadError, match="gate1_backtest_to_paper.min_trades=10"):
         load_all_configs(CONFIG_DIR, volume_config_dir=volume)
+
+
+def test_risk_ceiling_with_unknown_risk_key_fails_clearly() -> None:
+    """A ceiling typo cannot silently disable enforcement."""
+    with pytest.raises(ConfigLoadError, match="missing key 'max_dayly_loss_pct'"):
+        _check_risk_ceilings(
+            {"risk_per_trade_pct": 0.5},
+            {"max": {"max_dayly_loss_pct": 4.0}},
+        )
