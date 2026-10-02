@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 14,
+  "turn": "codex",
+  "revision": 15,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "PR #1 (T-009) merged and its main CI published the image. Owner confirmed /health healthy with role all, paper mode, demo broker, live disabled, and DB/Redis reachable (Q-012). T-018's durable paper-mode PostgreSQL implementation and container-replacement CI test are in review on PR #2; CI run 37058629455 passed. Live trading still requires managed PostgreSQL/Redis (D-005). Handing T-018 to Claude for review.",
+    "summary": "Phase 0 health check passed on RunPod (owner, V-032). T-018 (durable paper Postgres) reviewed: two small fixes requested on PR #2 (test the SIGTERM backup, restore entrypoint exec bit). After approval the owner merges PR #2, then Phase 1 (T-010) starts. T-019 (health visibility) queued. Q-010 open.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -293,7 +293,8 @@
         "T-007",
         "T-008",
         "T-009",
-        "T-018"
+        "T-018",
+        "T-019"
       ]
     },
     {
@@ -1613,7 +1614,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-23"
       ],
@@ -1632,12 +1633,12 @@
         ".github/workflows/ci.yml",
         "infra/runpod/README.md"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "PR #2",
         "GitHub Actions run 37058629455"
       ],
-      "completion_note": "Moved the ROLE=all PostgreSQL data directory to the pod container disk by default; backups are validated, atomically published to /workspace/backups every five minutes and on graceful shutdown, and the newest valid snapshot is restored before API startup with audit-chain verification. The end-to-end CI test passed backup rotation, corrupt-newest fallback, SIGTERM backup, full container replacement and restoration of audit/decision rows. RunPod guide documents the five-minute hard-reset loss window, Redis as a rebuildable cache, and managed PostgreSQL/Redis before live trading. Ready for Claude review.",
+      "completion_note": "Moved the ROLE=all PostgreSQL data directory to the pod container disk by default; backups are validated, atomically published to /workspace/backups every five minutes and on graceful shutdown, and the newest valid snapshot is restored before API startup with audit-chain verification. The end-to-end CI test passed backup rotation, corrupt-newest fallback, SIGTERM backup, full container replacement and restoration of audit/decision rows. RunPod guide documents the five-minute hard-reset loss window, Redis as a rebuildable cache, and managed PostgreSQL/Redis before live trading. Ready for Claude review. CLAUDE REVIEW 1 (changes requested, two small items; everything else approved): (1) scripts/test_postgres_backup_restore.sh does not actually prove the SIGTERM backup. The 'second' rows are inserted and then backed up manually BEFORE docker stop, so a missing shutdown dump would still pass. Insert a third marker pair (audit_log and decisions) AFTER the last manual backup_postgres.sh call and before docker stop, then assert after replacement that all three audit markers and all three decision markers exist (counts 3 and 3). (2) docker/entrypoint.sh changed mode from 100755 to 100644 in this PR. Restore the executable bit (git update-index --chmod=+x docker/entrypoint.sh). The image still works because the Dockerfile chmods it, but the repo mode must not regress. Reviewed and approved: container-disk default data dir, atomic temp-file plus rename dumps with pg_restore --list validation, 48 retention, newest-first restore with fallback, refusal to start empty when backups exist but none restore (fail closed), audit-chain verification after restore, API waits for restore marker, stopwaitsecs=300, loopback-only trust auth, backups created with umask 077. Non-blocking, tracked as T-019 (do after this PR merges).",
       "id": "T-018",
       "title": "Durable paper-mode PostgreSQL on RunPod: container-disk database with periodic dump to the network volume and automatic restore",
       "acceptance_criteria": [
@@ -1647,6 +1648,30 @@
         "CI test: start ROLE=all, insert audit and decision rows, wait for or trigger a dump, then remove the container AND its container disk but keep the volume, start a new container on the same volume and assert rows and hash chain are intact",
         "RunPod guide updated: no env override needed, explain the 5 minute loss window, and state that live trading requires managed PostgreSQL (D-005)",
         "Redis data dir behaviour on the network volume verified in the same CI test or documented as non-durable cache"
+      ]
+    },
+    {
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-23"
+      ],
+      "depends_on": [
+        "T-018"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "id": "T-019",
+      "title": "Operational visibility: backup freshness and build version in /health",
+      "acceptance_criteria": [
+        "/health reports version as the git SHA (the owner's response showed 'unknown'): pass GIT_SHA as a Docker build arg in CI and the publish job and bake it into an environment variable",
+        "/health includes last_backup_at and last_backup_age_seconds read from the newest valid file name or mtime in /workspace/backups, and status becomes 'degraded' when the newest backup is older than 15 minutes in ROLE=all",
+        "Unit test for the age and status logic; RunPod guide mentions the new fields",
+        "Failures of the backup loop are written to a visible log line that names the cause without secrets"
       ]
     }
   ],
@@ -2148,6 +2173,16 @@
       "validated_by": "codex",
       "date": "2026-10-02",
       "reverify_if": "RunPod pod is redeployed or the /health response contract changes"
+    },
+    {
+      "id": "V-033",
+      "subject": "T-018 durable paper PostgreSQL review",
+      "method": "Read all new shell scripts, entrypoint, Dockerfile, supervisord and CI diffs; checked CI check-runs on PR head (quality success)",
+      "result": "fail",
+      "evidence": "scripts/test_postgres_backup_restore.sh does not isolate the SIGTERM backup; docker/entrypoint.sh lost its executable bit. Both small; all other criteria pass.",
+      "validated_by": "claude",
+      "date": "2026-10-02T20:40:00Z",
+      "reverify_if": "Codex pushes fixes for review 1"
     }
   ],
   "blockers": [
@@ -2671,6 +2706,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented container-disk PostgreSQL with validated atomic five-minute and SIGTERM backups, 48-snapshot retention, restore fallback and audit-chain verification. Added full container-replacement CI coverage and updated RunPod guidance. CI run 37058629455 passed. Recorded the owner's healthy /health response, resolved B-003 for paper mode, and handed over T-018 for Claude review."
+    },
+    {
+      "revision": 15,
+      "ts": "2026-10-02T20:40:00Z",
+      "agent": "claude",
+      "action": "review_t018",
+      "task_ids": [
+        "T-018",
+        "T-019"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed T-018: design approved, two small changes requested (SIGTERM backup test, entrypoint exec bit). Added T-019. Turn to Codex."
     }
   ]
 }
