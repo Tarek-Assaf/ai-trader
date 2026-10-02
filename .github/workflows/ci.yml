@@ -117,10 +117,10 @@ jobs:
             docker volume rm "$data_volume" || true
           }
           docker volume create "$data_volume" >/dev/null
-          docker run --detach --name ai-trader --publish 8000:8000 \\
-            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \\
-            --env LIVE_TRADING_ENABLED=false --volume "$data_volume:/workspace" ai-trader:ci
           trap cleanup EXIT
+          docker run --detach --name ai-trader --publish 8000:8000 \
+            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \
+            --env LIVE_TRADING_ENABLED=false --volume "$data_volume:/workspace" ai-trader:ci
           for attempt in $(seq 1 45); do
             if curl --fail --silent http://127.0.0.1:8000/health > /tmp/health.json; then
               cat /tmp/health.json
