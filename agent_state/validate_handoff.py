@@ -139,13 +139,11 @@ def logic_errors(d: dict) -> list[str]:
 def append_only_errors(old: dict, new: dict) -> list[str]:
     errs: list[str] = []
     if new["revision"] < old["revision"]:
-        errs.append(
-            f"revision cannot decrease (old {old['revision']}, new {new['revision']})"
-        )
+        errs.append(f"revision cannot decrease (old {old['revision']}, new {new['revision']})")
     if new["log"][: len(old["log"])] != old["log"]:
         errs.append("log is append-only: earlier entries were changed or removed")
     else:
-        appended = new["log"][len(old["log"]):]
+        appended = new["log"][len(old["log"]) :]
         revision_delta = new["revision"] - old["revision"]
         if revision_delta != len(appended):
             errs.append(
