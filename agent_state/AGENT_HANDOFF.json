@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 12,
+  "turn": "codex",
+  "revision": 13,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Owner hit a RunPod volume problem: PostgreSQL rejects its data directory on the network volume. T-009 (data-dir override, smoke-only) approved on PR #1, awaiting owner merge (Q-014). Durable paper-mode design decided and queued as T-018 (container-disk Postgres plus 5-minute dumps to the volume, auto-restore). Managed Postgres still required before live (D-005).",
+    "summary": "PR #1 (T-009) merged; CI green and image 8aa9e2f published. Owner is redeploying the pod with POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata to confirm /health (Q-012 still open). Codex: build T-018 (durable paper Postgres via container disk plus dumps), then Phase 1 from T-010. Q-010 open.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "RunPod Network Volume PostgreSQL startup failed for the owner; T-009 smoke-only workaround is in draft PR #1 pending review and publication."
@@ -2284,12 +2284,12 @@
       "to": "human",
       "from": "claude",
       "text": "PR #1 (T-009) is reviewed and approved but I was not permitted to merge it myself. Please open the pull request on GitHub and press Merge (the Ready for review button first, since it is a draft). Merging triggers CI, which publishes a new image; once the run is green, redeploy the pod from the latest image and set POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata for this smoke check as the guide says. Can you do that?",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Done, merged",
         "Need help with the steps"
       ],
-      "answer": ""
+      "answer": "Merged by the owner (PR #1). CI run 37056646704 on main passed and published the image; image tag is the commit SHA 8aa9e2f45aaeeec4481f93d90ebfcfaaa3c37781."
     }
   ],
   "log": [
@@ -2601,6 +2601,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-009 on PR #1. Answered Q-013 with the durable paper route (dump/restore) and added T-018. Merge needs the owner (Q-014); turn to human."
+    },
+    {
+      "revision": 13,
+      "ts": "2026-10-02T19:58:00Z",
+      "agent": "claude",
+      "action": "confirm_merge",
+      "task_ids": [
+        "T-009",
+        "T-018"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Confirmed PR #1 merged with green CI and published image; answered Q-014; turn to Codex for T-018."
     }
   ]
 }
