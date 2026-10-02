@@ -32,9 +32,9 @@ You will need a RunPod account, access to the private `ai-trader` container imag
 3. Set the size to **100 GB** and choose an available Secure Cloud data center.
 4. Save the volume ID and its data center. Keep the pod in the same data center: a network volume is attached when the pod is created and is not moved automatically between data centers.
 
-By default, the container writes PostgreSQL data, Redis data and logs under `/workspace`, so they survive container replacement when the volume supports the needed filesystem behavior. RunPod charges for persistent storage while the pod is stopped too; deleting a pod does not delete its network volume. Check the current [network volume documentation](https://docs.runpod.io/storage/network-volumes) for current prices and behavior.
+PostgreSQL's active data directory is on the pod's container disk at `/var/lib/ai-trader/pgdata`. A backup job writes compressed database snapshots to `/workspace/backups` every five minutes and when the container receives a graceful SIGTERM. Keep the network volume mounted at `/workspace`: it holds those backups, Redis's rebuildable AOF cache, logs and other durable files. Treat Redis as a non-authoritative cache; trading records must not exist only in Redis. The application retains the newest 48 database backups and checks each one before restoring it. If a replacement pod starts with an empty PostgreSQL directory, it restores the newest valid backup and verifies the audit hash chain before starting the API.
 
-**PostgreSQL permission compatibility:** PostgreSQL requires its data directory to have mode `0700` or `0750`. On the initial owner deployment, PostgreSQL on a RunPod Network Volume repeatedly failed with “data directory … has invalid permissions,” including after `chmod 700`; `stat` showed `700` between retries. RunPod's [PostgreSQL-on-RunPod guide](https://www.runpod.io/articles/guides/self-host-n8n-on-runpod) likewise advises moving PostgreSQL data when the mounted filesystem does not preserve the required mode. For a one-time startup/`/health` smoke check only, set `POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata` as described in step 6. This puts the database on the pod's container disk and is not durable across a pod replacement or reset. Do not use this workaround for ongoing trading or data retention. Before any live trading, move to storage that preserves PostgreSQL permissions or a managed PostgreSQL service (per decision D-005).
+A hard reset or abrupt loss of the pod can lose up to five minutes of database changes. This is suitable for paper-mode continuity only. Per D-005, move to managed PostgreSQL and Redis before enabling any live trading. RunPod charges for persistent storage while the pod is stopped too; deleting a pod does not delete its network volume. Check the current [network volume documentation](https://docs.runpod.io/storage/network-volumes) for current prices and behavior.
 
 ## 5. Add private values as RunPod Secrets
 
@@ -61,7 +61,7 @@ RunPod templates can reference a saved secret in an environment variable using t
    | `BROKER_ENV` | `demo` |
    | `LIVE_TRADING_ENABLED` | `false` |
 
-For the initial RunPod smoke check only, add `POSTGRES_DATA_DIR` = `/tmp/ai-trader-pgdata` if PostgreSQL reports invalid data-directory permissions on the Network Volume. The data in this path is temporary and must not be used for ongoing operation. Leave this variable unset when using storage verified to preserve PostgreSQL's required `0700`/`0750` permissions.
+Leave `POSTGRES_DATA_DIR` unset for normal paper-mode use. The image default stores PostgreSQL on the pod's container disk and backs it up to the attached network volume. Keep live trading disabled. A custom data directory must be on container-disk storage that supports PostgreSQL's `0700`/`0750` permissions.
 
 7. Add only the saved RunPod Secrets that the owner has confirmed are required. Never type their secret values into ordinary environment fields.
 8. Expose the container's **8000** port as HTTP so the health page can be checked. Do not expose database or Redis ports.
@@ -78,9 +78,9 @@ If the service is not healthy, use the pod's **Logs** view and see Troubleshooti
 
 ## 8. Stop and restart safely
 
-- To pause compute, use **Stop** in the pod actions menu. Compute billing stops or changes according to the current RunPod plan, but network-volume storage charges continue while the volume exists. Confirm current terms in the console and [pricing documentation](https://docs.runpod.io/pods/pricing).
+- To pause compute, use **Stop** in the pod actions menu. The container disk is temporary; PostgreSQL will recover from the latest valid database dump on the mounted `/workspace` volume when a replacement pod starts. A hard reset can lose up to five minutes of recent database changes. Compute billing stops or changes according to the current RunPod plan, but network-volume storage charges continue while the volume exists. Confirm current terms in the console and [pricing documentation](https://docs.runpod.io/pods/pricing).
 - To resume, use **Start** on the same pod and wait for `/health` to become healthy. Keep the attached network volume in place.
-- Do not delete the network volume when deleting or replacing the pod if you need the database and Redis data. The container disk is temporary; only `/workspace` is intended for persistent data.
+- Do not delete the network volume when deleting or replacing the pod; it holds database backups and other persistent data.
 - Before changing an image tag or deleting a volume, ask the project owner to confirm a backup exists.
 
 ## 9. Rotate the registry token
@@ -97,7 +97,7 @@ If the service is not healthy, use the pod's **Logs** view and see Troubleshooti
 | Image pull or authorization error | Check the exact image name/tag and private registry credentials with the project owner. |
 | Pod cannot attach the volume | Confirm the volume and pod use the same Secure Cloud data center and that the volume is not attached elsewhere. |
 | `/health` does not open | Check that the pod is running and HTTP port 8000 is exposed; then inspect the pod logs for startup errors. |
-| PostgreSQL reports invalid data-directory permissions | Stop retrying. For a one-time smoke check, set `POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata` in a build that supports the override; its database is temporary. For durable operation, use storage that preserves PostgreSQL's required `0700`/`0750` mode or managed PostgreSQL. Keep the network volume until its contents are no longer needed. |
+| PostgreSQL reports invalid data-directory permissions | The default PostgreSQL directory is on the pod's container disk. If you set `POSTGRES_DATA_DIR` manually, ensure it points to a directory that supports the required `0700`/`0750` POSIX modes. Do not put PostgreSQL's active data directory on a RunPod Network Volume. |
 | Database or Redis is unreachable | Restart the pod once. If health remains degraded, stop it and ask the owner to review logs before changing or deleting storage. |
 | Invalid configuration | Ask the owner to review the named config error. Do not edit risk limits or the baked risk ceilings on the pod. |
 | Unexpected cost | Stop the pod, then review both compute and persistent-volume storage charges in RunPod billing. |

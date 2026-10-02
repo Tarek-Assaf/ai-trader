@@ -5,6 +5,14 @@ ROLE=${ROLE:-all}
 if [ "$ROLE" = "all" ]; then
     export DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://trader@127.0.0.1:5432/trader}
     export REDIS_URL=${REDIS_URL:-redis://127.0.0.1:6379/0}
+    for _ in $(seq 1 600); do
+        [ -f /workspace/.postgres-restore-ready ] && break
+        sleep 1
+    done
+    if [ ! -f /workspace/.postgres-restore-ready ]; then
+        echo "PostgreSQL restore did not finish before API startup" >&2
+        exit 1
+    fi
 fi
 
 if [ "$ROLE" = "all" ] || [ "$ROLE" = "core" ]; then

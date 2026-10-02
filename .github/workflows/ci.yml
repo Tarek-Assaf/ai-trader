@@ -146,6 +146,8 @@ jobs:
           grep --quiet '"status":"healthy"' /tmp/health.json
           docker exec ai-trader test -f /workspace/persistence-check
           docker exec ai-trader test -s /tmp/ai-trader-pgdata/PG_VERSION
+      - name: Verify ROLE=all PostgreSQL backup and restore across container replacement
+        run: bash scripts/test_postgres_backup_restore.sh
       - name: Verify ROLE=core and ROLE=worker compose services
         env:
           POSTGRES_HOST_PORT: "15432"
