@@ -138,15 +138,33 @@ def logic_errors(d: dict) -> list[str]:
 
 def append_only_errors(old: dict, new: dict) -> list[str]:
     errs: list[str] = []
-    if new["revision"] != old["revision"] + 1 and new["revision"] != old["revision"]:
+    if new["revision"] < old["revision"]:
         errs.append(
-            "revision must increase by exactly 1 per handover "
-            f"(old {old['revision']}, new {new['revision']})"
+            f"revision cannot decrease (old {old['revision']}, new {new['revision']})"
         )
-    if new["revision"] == old["revision"] + 1 and new["turn"] == old["turn"]:
-        errs.append("turn must change when revision is incremented (hand over to the other agent)")
     if new["log"][: len(old["log"])] != old["log"]:
         errs.append("log is append-only: earlier entries were changed or removed")
+    else:
+        appended = new["log"][len(old["log"]):]
+        revision_delta = new["revision"] - old["revision"]
+        if revision_delta != len(appended):
+            errs.append(
+                "revision increase must match the number of appended handoff entries "
+                f"(delta {revision_delta}, entries {len(appended)})"
+            )
+        expected_revisions = list(range(old["revision"] + 1, new["revision"] + 1))
+        if [entry["revision"] for entry in appended] != expected_revisions:
+            errs.append("appended log revisions must be contiguous")
+        expected_turn = old["turn"]
+        for entry in appended:
+            if entry["agent"] != expected_turn:
+                errs.append(
+                    f"log revision {entry['revision']}: expected handoff agent {expected_turn}, "
+                    f"found {entry['agent']}"
+                )
+            expected_turn = "claude" if expected_turn == "codex" else "codex"
+        if revision_delta and new["turn"] != expected_turn:
+            errs.append("turn does not match the appended handoff sequence")
     old_dec = {x["id"]: x for x in old["decisions"]}
     for x in new["decisions"]:
         o = old_dec.get(x["id"])
