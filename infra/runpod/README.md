@@ -4,15 +4,28 @@ This guide explains how to start the paper-trading container. You do not need to
 
 ## Before you start
 
-You will need a RunPod account, access to the private `ai-trader` container image, and the image tag supplied by the project owner. The image must be published to a registry RunPod can access before creating the pod. This repository does not publish or deploy the image automatically yet.
+You will need a RunPod account, access to the private `ai-trader` container image, and the image tag supplied by the project owner. The image is published to the private GitHub Container Registry package `ghcr.io/tarek-assaf/ai-trader` after a successful CI run on `main`. Use the git SHA tag for a specific build or `latest` for the newest successful main build.
 
-## 1. Create your account and add credit
+## 1. Create a read-only GitHub Container Registry token
+
+1. In GitHub, open **Settings → Developer settings → Personal access tokens → Tokens (classic)** and choose **Generate new token (classic)**.
+2. Give it a recognizable name such as `RunPod image pull`, set an expiration, and grant only the `read:packages` scope.
+3. Generate the token and copy it once. Do not paste it into this repository, a pod environment variable, or chat.
+4. If GitHub requires it for your account or organization, authorize the token for SSO before using it.
+
+## 2. Create your account and add credit
 
 1. Open [RunPod](https://www.runpod.io/) and create an account or sign in.
 2. Open the billing or credits page in the account menu.
 3. Add the amount of credit you want to use. Review the displayed billing terms before confirming.
 
-## 2. Create a persistent network volume
+## 3. Add the registry credentials in RunPod
+
+1. In RunPod, open **Settings → Container Registry Credentials** (the menu name can vary).
+2. Add a credential for `ghcr.io` using your GitHub username and the token from step 1 as the password.
+3. Save the credential. Keep the token only in RunPod's registry credential store.
+
+## 4. Create a persistent network volume
 
 1. In the RunPod console, open **Storage** and choose **Network Volumes**.
 2. Choose **Create Network Volume**.
@@ -21,7 +34,7 @@ You will need a RunPod account, access to the private `ai-trader` container imag
 
 The container writes database files, Redis data and logs under `/workspace`. The network volume is mounted there so these files survive replacement of the container. RunPod charges for persistent storage while the pod is stopped too; deleting a pod does not delete its network volume. Check the current [network volume documentation](https://docs.runpod.io/storage/network-volumes) for current prices and behavior.
 
-## 3. Add private values as RunPod Secrets
+## 5. Add private values as RunPod Secrets
 
 1. Open **Settings** and then **Secrets** (the exact menu label can change).
 2. Create a secret for each credential the project owner tells you is needed. Names are listed in the repository's `.env.example`; examples include `CAPITAL_API_KEY`, `CAPITAL_IDENTIFIER`, and `CAPITAL_API_PASSWORD`.
@@ -30,10 +43,10 @@ The container writes database files, Redis data and logs under `/workspace`. The
 
 RunPod templates can reference a saved secret in an environment variable using the form `NAME={{ RUNPOD_SECRET_name }}`. See [RunPod's environment variable guide](https://docs.runpod.io/pods/templates/environment-variables). Secret names and required credentials should be confirmed with the project owner before starting.
 
-## 4. Create a CPU pod
+## 6. Create a CPU pod
 
 1. Open **Pods** and choose **Deploy Pod**.
-2. Select the project image and the exact tag supplied by the owner. If the image is private, configure the registry credentials in RunPod's supported image credentials field.
+2. Enter `ghcr.io/tarek-assaf/ai-trader` as the image and select the git SHA tag for the build you want (or `latest`). Select the `ghcr.io` registry credential you added above so RunPod can pull the private image.
 3. Select a CPU option with **8 vCPU** and **32 GB RAM**.
 4. Select the same data center as the network volume.
 5. Attach the network volume created above and set its mount path to `/workspace`.
@@ -50,7 +63,7 @@ RunPod templates can reference a saved secret in an environment variable using t
 8. Expose the container's **8000** port as HTTP so the health page can be checked. Do not expose database or Redis ports.
 9. Review the hourly compute and storage costs shown by RunPod, then choose **Deploy**.
 
-## 5. Check that the pod is healthy
+## 7. Check that the pod is healthy
 
 1. Wait for the pod status to show **Running**.
 2. Open its **Connect** or **HTTP Service** link for port 8000.
@@ -59,12 +72,19 @@ RunPod templates can reference a saved secret in an environment variable using t
 
 If the service is not healthy, use the pod's **Logs** view and see Troubleshooting below. Do not copy log output that might contain private account information into a public issue.
 
-## 6. Stop and restart safely
+## 8. Stop and restart safely
 
 - To pause compute, use **Stop** in the pod actions menu. Compute billing stops or changes according to the current RunPod plan, but network-volume storage charges continue while the volume exists. Confirm current terms in the console and [pricing documentation](https://docs.runpod.io/pods/pricing).
 - To resume, use **Start** on the same pod and wait for `/health` to become healthy. Keep the attached network volume in place.
 - Do not delete the network volume when deleting or replacing the pod if you need the database and Redis data. The container disk is temporary; only `/workspace` is intended for persistent data.
 - Before changing an image tag or deleting a volume, ask the project owner to confirm a backup exists.
+
+## 9. Rotate the registry token
+
+1. Create a replacement GitHub token with `read:packages` and an expiration.
+2. Update the saved `ghcr.io` registry credential in RunPod with the replacement token.
+3. Confirm RunPod can pull the image and the pod's `/health` endpoint is healthy.
+4. Revoke the old token in GitHub only after the replacement works. Repeat this process before the replacement token expires.
 
 ## Troubleshooting
 

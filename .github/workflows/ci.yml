@@ -68,14 +68,22 @@ jobs:
             printf '::error title=Type check failed::%s\n' "$failure_summary"
             exit "$command_status"
           fi
-      - name: Apply migrations
+      - name: Verify migrations are reversible
         run: |
           set +e
           uv run alembic upgrade head 2>&1 | tee /tmp/migrations.log
           command_status=${PIPESTATUS[0]}
+          if [ "$command_status" -eq 0 ]; then
+            uv run alembic downgrade base 2>&1 | tee -a /tmp/migrations.log
+            command_status=${PIPESTATUS[0]}
+          fi
+          if [ "$command_status" -eq 0 ]; then
+            uv run alembic upgrade head 2>&1 | tee -a /tmp/migrations.log
+            command_status=${PIPESTATUS[0]}
+          fi
           if [ "$command_status" -ne 0 ]; then
             failure_summary="$(tail -n 30 /tmp/migrations.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
-            printf '::error title=Apply migrations failed::%s\n' "$failure_summary"
+            printf '::error title=Migration reversibility failed::%s\n' "$failure_summary"
             exit "$command_status"
           fi
       - name: Run tests
@@ -99,24 +107,90 @@ jobs:
         run: uv run python scripts/secret_scan.py
       - name: Build container image
         run: docker build --tag ai-trader:ci --file docker/Dockerfile .
-      - name: Verify ROLE=all health
+      - name: Verify ROLE=all health, non-root processes, and persistent data
         run: |
+          data_volume="ai-trader-data-${GITHUB_RUN_ID}"
           cleanup() {
             docker logs ai-trader || true
-            docker exec ai-trader sh -c 'for file in /workspace/logs/*; do [ -f "$file" ] || continue; printf "%s\n" "--- $file ---"; cat "$file"; done' || true
-            docker rm --force ai-trader
+            docker exec ai-trader sh -c 'for file in /workspace/logs/*; do [ -f "$file" ] || continue; printf "%s\\n" "--- $file ---"; cat "$file"; done' || true
+            docker rm --force ai-trader || true
+            docker volume rm "$data_volume" || true
           }
-          docker run --detach --name ai-trader --publish 8000:8000 \
-            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \
-            --env LIVE_TRADING_ENABLED=false --volume ai-trader-data:/workspace ai-trader:ci
+          docker volume create "$data_volume" >/dev/null
+          docker run --detach --name ai-trader --publish 8000:8000 \\
+            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \\
+            --env LIVE_TRADING_ENABLED=false --volume "$data_volume:/workspace" ai-trader:ci
           trap cleanup EXIT
           for attempt in $(seq 1 45); do
             if curl --fail --silent http://127.0.0.1:8000/health > /tmp/health.json; then
               cat /tmp/health.json
-              grep --quiet '"status":"healthy"' /tmp/health.json
-              grep --quiet '"role":"all"' /tmp/health.json
-              exit 0
+              grep --quiet '"status":"healthy"' /tmp/health.json &&
+                grep --quiet '"role":"all"' /tmp/health.json && break
             fi
             sleep 2
           done
-          exit 1
+          grep --quiet '"status":"healthy"' /tmp/health.json
+          grep --quiet '"role":"all"' /tmp/health.json
+          docker top ai-trader -eo user,comm | awk 'NR > 1 && $1 == "root" { failed = 1 } END { if (NR < 2 || failed) exit 1 }'
+          docker inspect --format='{{if (index .NetworkSettings.Ports "5432/tcp")}}published{{else}}internal{{end}}' ai-trader | grep --quiet '^internal$'
+          docker inspect --format='{{if (index .NetworkSettings.Ports "6379/tcp")}}published{{else}}internal{{end}}' ai-trader | grep --quiet '^internal$'
+          docker exec ai-trader sh -c 'touch /workspace/persistence-check'
+          docker restart ai-trader
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8000/health > /tmp/health.json; then
+              grep --quiet '"status":"healthy"' /tmp/health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/health.json
+          docker exec ai-trader test -f /workspace/persistence-check
+      - name: Verify ROLE=core and ROLE=worker compose services
+        run: |
+          cleanup() {
+            docker compose --file docker/docker-compose.dev.yml down --volumes --remove-orphans || true
+          }
+          trap cleanup EXIT
+          docker compose --file docker/docker-compose.dev.yml up --detach --build api worker
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8000/health > /tmp/core-health.json; then
+              grep --quiet '"status":"healthy"' /tmp/core-health.json &&
+                grep --quiet '"role":"core"' /tmp/core-health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/core-health.json
+          grep --quiet '"role":"core"' /tmp/core-health.json
+          worker_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet worker)"
+          test "$(docker inspect --format='{{.State.Health.Status}}' "$worker_id")" = healthy
+          for service in api worker; do
+            container_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet "$service")"
+            if docker top "$container_id" -eo comm | grep --extended-regexp --quiet '^(postgres|redis-server)$'; then
+              echo "$service unexpectedly started embedded PostgreSQL or Redis" >&2
+              exit 1
+            fi
+          done
+  publish-image:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/tarek-assaf/ai-trader:${{ github.sha }}
+            ghcr.io/tarek-assaf/ai-trader:latest

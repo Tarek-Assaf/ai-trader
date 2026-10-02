@@ -42,7 +42,26 @@ services:
       redis:
         condition: service_started
 
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    environment:
+      ROLE: worker
+      TRADING_MODE: paper
+      BROKER_ENV: demo
+      LIVE_TRADING_ENABLED: "false"
+    volumes:
+      - worker_data:/workspace
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, time; p='/workspace/worker.heartbeat'; assert time.time() - os.path.getmtime(p) < 30"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
 volumes:
   postgres_data:
   redis_data:
+  worker_data:
 
