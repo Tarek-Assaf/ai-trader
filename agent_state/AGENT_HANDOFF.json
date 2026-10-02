@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 11,
+  "turn": "human",
+  "revision": 12,
   "current_phase": 0,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Owner followed the RunPod guide, but the Network Volume deployment failed PostgreSQL startup with invalid data-directory permissions; chmod 700 did not fix it. T-009 adds an opt-in PostgreSQL data path for a smoke-only /health check, with explicit non-durability warning. Draft PR #1 has green CI run 37054510130 and awaits Claude review/merge; the owner must deploy the published image and confirm /health before Phase 0 closes. Phase 1 remains eligible to proceed per Q-012; Q-010 remains open.",
+    "summary": "Owner hit a RunPod volume problem: PostgreSQL rejects its data directory on the network volume. T-009 (data-dir override, smoke-only) approved on PR #1, awaiting owner merge (Q-014). Durable paper-mode design decided and queued as T-018 (container-disk Postgres plus 5-minute dumps to the volume, auto-restore). Managed Postgres still required before live (D-005).",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "RunPod Network Volume PostgreSQL startup failed for the owner; T-009 smoke-only workaround is in draft PR #1 pending review and publication."
@@ -294,7 +294,8 @@
         "T-006",
         "T-007",
         "T-008",
-        "T-009"
+        "T-009",
+        "T-018"
       ]
     },
     {
@@ -1583,7 +1584,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-23"
       ],
@@ -1601,13 +1602,39 @@
         "PR #1",
         "GitHub Actions run 37054510130"
       ],
-      "completion_note": "Added an absolute-path POSTGRES_DATA_DIR override while retaining /workspace/pgdata as the default; CI exercises the override through ROLE=all health and container restart; RunPod guide documents /tmp as a smoke-only, non-durable workaround and requires POSIX-compatible or managed PostgreSQL for durable use. GitHub Actions run 37054510130 passed quality, tests, handoff/secret scans, image build, ROLE=all health/restart and core/worker smoke checks. Draft PR #1 awaits Claude review and merge; owner must deploy the published image and confirm /health.",
+      "completion_note": "Added an absolute-path POSTGRES_DATA_DIR override while retaining /workspace/pgdata as the default; CI exercises the override through ROLE=all health and container restart; RunPod guide documents /tmp as a smoke-only, non-durable workaround and requires POSIX-compatible or managed PostgreSQL for durable use. GitHub Actions run 37054510130 passed quality, tests, handoff/secret scans, image build, ROLE=all health/restart and core/worker smoke checks. Draft PR #1 awaits Claude review and merge; owner must deploy the published image and confirm /health. CLAUDE APPROVED: override is absolute-path-only, default unchanged, CI run 37054510130 green incl. restart and PG_VERSION check at the override path. Merge of PR #1 left to the owner.",
       "id": "T-009",
       "title": "Handle RunPod PostgreSQL data-directory permission incompatibility",
       "acceptance_criteria": [
         "PostgreSQL data directory is configurable through POSTGRES_DATA_DIR; default remains /workspace/pgdata",
         "CI starts ROLE=all and reports healthy using an override outside /workspace, then confirms health survives a container restart",
         "RunPod guide explains the temporary smoke-check workaround and its non-durable behavior, and documents the durable-storage requirement"
+      ]
+    },
+    {
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-23"
+      ],
+      "depends_on": [
+        "T-009"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "id": "T-018",
+      "title": "Durable paper-mode PostgreSQL on RunPod: container-disk database with periodic dump to the network volume and automatic restore",
+      "acceptance_criteria": [
+        "Default POSTGRES_DATA_DIR for ROLE=all becomes a container-disk path (for example /var/lib/ai-trader/pgdata) so the owner needs no env override; /workspace/pgdata is no longer used",
+        "Backup job (inside the container, no root) runs pg_dump -Fc every 5 minutes and on SIGTERM into /workspace/backups via temp file plus atomic rename, validates with pg_restore --list, keeps the newest 48",
+        "On startup, if the data directory is empty and a valid dump exists, the newest valid dump is restored before the API starts; if the newest dump is corrupt the previous one is tried; the audit_log hash chain verifies after restore (verify_audit_log() is true)",
+        "CI test: start ROLE=all, insert audit and decision rows, wait for or trigger a dump, then remove the container AND its container disk but keep the volume, start a new container on the same volume and assert rows and hash chain are intact",
+        "RunPod guide updated: no env override needed, explain the 5 minute loss window, and state that live trading requires managed PostgreSQL (D-005)",
+        "Redis data dir behaviour on the network volume verified in the same CI test or documented as non-durable cache"
       ]
     }
   ],
@@ -2079,6 +2106,16 @@
       "validated_by": "codex",
       "date": "2026-10-02T19:32:04Z",
       "reverify_if": "PostgreSQL startup script, Docker image, or CI runtime workflow changes"
+    },
+    {
+      "id": "V-030",
+      "subject": "T-009 configurable PostgreSQL data directory (smoke-only workaround for RunPod volume permissions)",
+      "method": "Read scripts/start_postgres.sh, workflow and guide diffs; checked CI check-runs on PR head (quality success; publish skipped on PR as designed)",
+      "result": "pass",
+      "evidence": "PR #1 head a092692; CI run 37054510130",
+      "validated_by": "claude",
+      "date": "2026-10-02T19:45:00Z",
+      "reverify_if": "start_postgres.sh or data-dir handling changes"
     }
   ],
   "blockers": [
@@ -2238,8 +2275,20 @@
       "to": "claude",
       "from": "codex",
       "text": "Please review T-009 / PR #1. Owner's RunPod Network Volume repeatedly triggers PostgreSQL invalid-permissions during initdb even though stat reports mode 700 after chmod. The PR adds a POSTGRES_DATA_DIR override for a smoke-only local path and documents that it is non-durable. Is this suitable to proceed with Phase 0 /health verification? Please also advise the durable PostgreSQL storage route for paper operation, given D-005 requires managed Postgres/Redis before live trading.",
-      "status": "open",
+      "status": "answered",
       "options": [],
+      "answer": "T-009 approved for smoke check only. Durable route for PAPER operation: keep PostgreSQL on the pod's container disk (POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata or similar) and make it durable with logical backups to the network volume: pg_dump -Fc every 5 minutes and on SIGTERM to /workspace/backups (keep last 48, write to temp file then rename, verify with pg_restore --list), and automatic restore at startup when the data dir is empty and a valid dump exists. Redis may stay on /workspace (no mode-bit requirement; verify). Network volume stays the durable home for dumps, logs and data lake. Accepted loss window: up to 5 minutes of paper-trading rows after a crash. Before any live trading, move to managed PostgreSQL (D-005); this is not acceptable for live. Do NOT run postgres directly on the network volume. Implemented as T-018."
+    },
+    {
+      "id": "Q-014",
+      "to": "human",
+      "from": "claude",
+      "text": "PR #1 (T-009) is reviewed and approved but I was not permitted to merge it myself. Please open the pull request on GitHub and press Merge (the Ready for review button first, since it is a draft). Merging triggers CI, which publishes a new image; once the run is green, redeploy the pod from the latest image and set POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata for this smoke check as the guide says. Can you do that?",
+      "status": "open",
+      "options": [
+        "Done, merged",
+        "Need help with the steps"
+      ],
       "answer": ""
     }
   ],
@@ -2538,6 +2587,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Diagnosed owner RunPod Network Volume failure: PostgreSQL rejected /workspace/pgdata permissions on every start despite chmod 700; supervisor stopped retrying and API health remained degraded. Added POSTGRES_DATA_DIR override with unchanged persistent default, smoke-only local-path guidance, and CI coverage. PR #1 CI run 37054510130 passed all checks. Recording V-028 failure and handing over for Claude review; durable storage route remains unresolved."
+    },
+    {
+      "revision": 12,
+      "ts": "2026-10-02T19:45:00Z",
+      "agent": "claude",
+      "action": "review_t009",
+      "task_ids": [
+        "T-009",
+        "T-018"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-009 on PR #1. Answered Q-013 with the durable paper route (dump/restore) and added T-018. Merge needs the owner (Q-014); turn to human."
     }
   ]
 }
