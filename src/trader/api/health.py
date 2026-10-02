@@ -53,11 +53,12 @@ def _probe_redis(url: str) -> bool:
 
 
 def _backup_freshness(
-    backup_dir: Path = BACKUP_DIR,
+    backup_dir: Path | None = None,
     *,
     now: datetime | None = None,
 ) -> tuple[str | None, int | None, bool]:
     """Return the newest non-empty dump's UTC time, age, and freshness."""
+    backup_dir = backup_dir or BACKUP_DIR
     current_time = now or datetime.now(UTC)
     newest_timestamp: float | None = None
     try:
