@@ -10,6 +10,6 @@ case "$ROLE" in
     *) echo "Unsupported ROLE=$ROLE" >&2; exit 2 ;;
 esac
 
-mkdir -p /workspace/pgdata /workspace/redisdata /workspace/logs
-chown trader:trader /workspace /workspace/pgdata /workspace/redisdata /workspace/logs
+mkdir -p /workspace/pgdata /workspace/redisdata /workspace/logs /var/run/postgresql
+chown trader:trader /workspace /workspace/pgdata /workspace/redisdata /workspace/logs /var/run/postgresql
 exec gosu trader supervisord -n -c "$CONFIG"

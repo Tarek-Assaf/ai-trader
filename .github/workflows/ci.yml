@@ -103,7 +103,7 @@ jobs:
         run: |
           cleanup() {
             docker logs ai-trader || true
-            docker exec ai-trader sh -c 'for file in /workspace/logs/*; do [ -f "$file" ] || continue; printf "--- %s ---\n" "$file"; cat "$file"; done' || true
+            docker exec ai-trader sh -c 'for file in /workspace/logs/*; do [ -f "$file" ] || continue; printf "%s\n" "--- $file ---"; cat "$file"; done' || true
             docker rm --force ai-trader
           }
           docker run --detach --name ai-trader --publish 8000:8000 \
