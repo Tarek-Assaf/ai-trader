@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 19,
+  "turn": "human",
+  "revision": 20,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Phase 0 is complete and merged (PR #2). T-019 health visibility is implemented and CI green on PR #3; awaiting Claude review. Owner should redeploy the merged image without POSTGRES_DATA_DIR and confirm /health reports the Git SHA and fresh backup fields. T-010 follows after C-003 Phase 1 specs are marked done; demo credentials belong only in RunPod Secrets. Q-010 remains open.",
+    "summary": "T-019 approved on PR #3 awaiting owner merge (Q-016). Q-010 accepted (start with proposed limits). D-023 records the mixed-tier LLM cost strategy for Phase 4, folded into T-042/T-043 criteria. Next: Codex starts Phase 1 (T-010). Owner has Capital.com and Telegram secrets in RunPod.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1144,7 +1144,11 @@
         "T-002"
       ],
       "acceptance_criteria": [
-        "full pipeline runs offline with MockLLM"
+        "full pipeline runs offline with MockLLM",
+        "Per-role model tiers (cheap, mid, strong) are set in config/llm.yaml, never in code; changing a role's model needs no code change (D-023)",
+        "Every call logs role, model, input and output tokens and cost; a hard daily and monthly spend cap (configurable, testing default about 3 to 5 USD per day) stops model calls when reached and the system then takes no new trades",
+        "Scheduled health probe per configured model with circuit breaker: on failure, slowness or invalid output, switch to the fallback model or block new entries; the deterministic Risk Guardian, stop and kill paths keep working",
+        "Provider-agnostic: Anthropic, OpenAI-compatible hosted endpoints (including open-weight hosts) and a local OpenAI-compatible server (vLLM/Ollama) all work through the same interface"
       ],
       "deliverables": [],
       "review_cycles": 0,
@@ -1170,7 +1174,8 @@
       ],
       "acceptance_criteria": [
         "end-to-end paper cycle with full audit trail",
-        "agents cannot import broker code (test)"
+        "agents cannot import broker code (test)",
+        "Agents are invoked event-driven (signal, news, level reached, position event), not on a fixed timer; batch mode and prompt caching used where applicable"
       ],
       "deliverables": [],
       "review_cycles": 0,
@@ -1655,7 +1660,7 @@
       "phase": 0,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-23"
       ],
@@ -1668,7 +1673,7 @@
         "PR #3",
         "GitHub Actions run 37063741550"
       ],
-      "completion_note": "Added baked GIT_SHA metadata to local CI and GHCR image builds; /health now includes version, last_backup_at, and last_backup_age_seconds, and ROLE=all degrades when no snapshot exists or the newest snapshot is older than 15 minutes. The backup loop creates an initial snapshot at startup and reports labeled pg_dump, validation, and publish failures in the container logs. Updated the RunPod guide and added unit coverage for latest snapshot age, stale snapshots, and missing snapshots. CI run 37063741550 passed all quality, handoff, secret scan, Docker, ROLE=all, PostgreSQL restore, and core/worker checks. Ready for Claude review.",
+      "completion_note": "Added baked GIT_SHA metadata to local CI and GHCR image builds; /health now includes version, last_backup_at, and last_backup_age_seconds, and ROLE=all degrades when no snapshot exists or the newest snapshot is older than 15 minutes. The backup loop creates an initial snapshot at startup and reports labeled pg_dump, validation, and publish failures in the container logs. Updated the RunPod guide and added unit coverage for latest snapshot age, stale snapshots, and missing snapshots. CI run 37063741550 passed all quality, handoff, secret scan, Docker, ROLE=all, PostgreSQL restore, and core/worker checks. Ready for Claude review. CLAUDE APPROVED: version from GIT_SHA build arg verified in CI by exact-SHA grep; freshness derived from newest non-empty dump mtime; degraded after 15 minutes in ROLE=all; labelled failure logs; unit tests cover fresh, stale and missing cases. Follow-up noted for T-060: 48 five-minute snapshots only cover about 4 hours, so keep additional hourly/daily snapshots so a silently corrupted database cannot overwrite every good copy.",
       "id": "T-019",
       "title": "Operational visibility: backup freshness and build version in /health",
       "acceptance_criteria": [
@@ -1855,6 +1860,14 @@
       "do_not_reopen": false,
       "decided_by": "owner via T-008 task authorization",
       "date": "2026-10-02T18:28:00Z"
+    },
+    {
+      "id": "D-023",
+      "statement": "Testing-phase LLM strategy (no live trading): mixed tiers. Cheap tier (small in-pod model or Haiku 4.5) for news sorting, summaries and tagging; mid tier (Haiku 4.5 or Sonnet 5.5) for researcher, analyst and critic; Sonnet 5.5 for the final decision; strongest tier (Opus 5.5 or Fable 5.1) unused until the system is profitable. Event-driven invocation, prompt caching, batch mode for Lab and reports, hard daily spend cap. Provider and exact models remain swappable by config and are to be compared in a bake-off before live trading. No GPU role in v1.",
+      "status": "proposed",
+      "decided_by": "claude",
+      "date": "2026-10-02T21:15:00Z",
+      "do_not_reopen": false
     }
   ],
   "validations": [
@@ -2217,6 +2230,16 @@
       "validated_by": "codex",
       "date": "2026-10-02",
       "reverify_if": "Health payload, backup freshness checks, backup scripts, or image build metadata changes"
+    },
+    {
+      "id": "V-037",
+      "subject": "T-019 backup freshness and build version in /health",
+      "method": "Read diff, tests and CI check-runs on PR head (quality success)",
+      "result": "pass",
+      "evidence": "src/trader/api/health.py; tests/unit/test_health.py; .github/workflows/ci.yml exact-SHA assertion; CI run 37064184756",
+      "validated_by": "claude",
+      "date": "2026-10-02T21:15:00Z",
+      "reverify_if": "health.py or backup scripts change"
     }
   ],
   "blockers": [
@@ -2343,12 +2366,12 @@
       "to": "human",
       "from": "claude",
       "text": "Besides the four limits you confirmed, I proposed starting values and ceilings for others in config/risk.yaml and config/risk_ceilings.yaml (weekly loss 5% with ceiling 8%, 3 open positions with ceiling 5, margin use 40% with ceiling 60%, leverage 5x with ceiling 10x, minimum reward-to-risk 1.5, and similar). Do you accept them for now? They can be changed later from Telegram within the ceilings. Not blocking Phase 0.",
-      "status": "open",
+      "status": "answered",
       "options": [
         "accept for now",
         "I want to review each one"
       ],
-      "answer": ""
+      "answer": "Owner: start with the proposed values and modify them if they prove unreliable (2026-10-02)."
     },
     {
       "id": "Q-011",
@@ -2403,6 +2426,18 @@
         "Need help with the steps"
       ],
       "answer": "Merged by the owner (PR #2). CI on main run 37061602737 passed and published the image; commit 71c0a16."
+    },
+    {
+      "id": "Q-016",
+      "to": "human",
+      "from": "claude",
+      "text": "PR #3 (T-019, health page shows version and backup freshness) is approved. Please open it on GitHub and click Merge pull request, then Confirm merge. After CI on main is green you may redeploy the pod from the new image (optional, the health page will then show the real version and backup age). Then tell Codex 'your turn' to start Phase 1 (T-010).",
+      "status": "open",
+      "options": [
+        "Done, merged",
+        "Need help with the steps"
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -2830,6 +2865,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented /health build SHA and backup freshness fields, a 15-minute ROLE=all freshness gate, immediate initial snapshot and labeled backup failure logs. Added unit coverage and RunPod documentation. GitHub Actions run 37063741550 passed all checks. T-019 is ready for Claude review; handed over."
+    },
+    {
+      "revision": 20,
+      "ts": "2026-10-02T21:15:00Z",
+      "agent": "claude",
+      "action": "approve_t019",
+      "task_ids": [
+        "T-019",
+        "T-042",
+        "T-043"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-019. Recorded Q-010 acceptance and D-023 mixed-tier LLM strategy; extended T-042/T-043 criteria. Owner to merge PR #3; turn to human."
     }
   ]
 }
