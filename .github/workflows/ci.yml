@@ -106,7 +106,7 @@ jobs:
       - name: Scan for secrets
         run: uv run python scripts/secret_scan.py
       - name: Build container image
-        run: docker build --tag ai-trader:ci --file docker/Dockerfile .
+        run: docker build --build-arg GIT_SHA="${GITHUB_SHA}" --tag ai-trader:ci --file docker/Dockerfile .
       - name: Verify ROLE=all health, non-root processes, and persistent data
         run: |
           data_volume="ai-trader-data-${GITHUB_RUN_ID}"
@@ -132,6 +132,8 @@ jobs:
           done
           grep --quiet '"status":"healthy"' /tmp/health.json
           grep --quiet '"role":"all"' /tmp/health.json
+          grep --quiet "\"version\":\"$GITHUB_SHA\"" /tmp/health.json
+          grep --quiet '"last_backup_age_seconds":' /tmp/health.json
           docker top ai-trader -eo pid,user,comm | awk 'NR > 1 && $2 == "root" { failed = 1 } END { if (NR < 2 || failed) exit 1 }'
           docker inspect --format='{{if (index .NetworkSettings.Ports "5432/tcp")}}published{{else}}internal{{end}}' ai-trader | grep --quiet '^internal$'
           docker inspect --format='{{if (index .NetworkSettings.Ports "6379/tcp")}}published{{else}}internal{{end}}' ai-trader | grep --quiet '^internal$'
@@ -198,6 +200,8 @@ jobs:
         with:
           context: .
           file: docker/Dockerfile
+          build-args: |
+            GIT_SHA=${{ github.sha }}
           push: true
           tags: |
             ghcr.io/tarek-assaf/ai-trader:${{ github.sha }}

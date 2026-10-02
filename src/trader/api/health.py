@@ -4,9 +4,13 @@ from __future__ import annotations
 
 import os
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import create_engine, text
+
+BACKUP_DIR = Path("/workspace/backups")
+BACKUP_MAX_AGE_SECONDS = 15 * 60
 
 from trader.core.settings import EnvironmentSettings
 
@@ -48,16 +52,46 @@ def _probe_redis(url: str) -> bool:
         return False
 
 
+def _backup_freshness(
+    backup_dir: Path = BACKUP_DIR,
+    *,
+    now: datetime | None = None,
+) -> tuple[str | None, int | None, bool]:
+    """Return the newest non-empty dump's UTC time, age, and freshness."""
+    current_time = now or datetime.now(UTC)
+    newest_timestamp: float | None = None
+    try:
+        for backup in backup_dir.glob("trader-*.dump"):
+            try:
+                if backup.is_file() and backup.stat().st_size > 0:
+                    modified_at = backup.stat().st_mtime
+                    newest_timestamp = max(newest_timestamp or modified_at, modified_at)
+            except OSError:
+                continue
+    except OSError:
+        pass
+
+    if newest_timestamp is None:
+        return None, None, False
+    backup_time = datetime.fromtimestamp(newest_timestamp, UTC)
+    age_seconds = max(0, int((current_time - backup_time).total_seconds()))
+    return backup_time.isoformat(), age_seconds, age_seconds <= BACKUP_MAX_AGE_SECONDS
+
+
 def health_payload() -> dict[str, Any]:
     """Return deployment metadata and dependency reachability without secrets."""
     settings = EnvironmentSettings()
     database_url, redis_url = _service_urls()
     database_ok = _probe_database(database_url)
     redis_ok = _probe_redis(redis_url)
+    last_backup_at, backup_age, backup_fresh = _backup_freshness()
+    backup_ok = settings.role != "all" or backup_fresh
     return {
-        "status": "healthy" if database_ok and redis_ok else "degraded",
+        "status": "healthy" if database_ok and redis_ok and backup_ok else "degraded",
         "role": settings.role,
         "version": os.getenv("GIT_SHA", "unknown"),
+        "last_backup_at": last_backup_at,
+        "last_backup_age_seconds": backup_age,
         "mode": settings.trading_mode,
         "broker_env": settings.broker_env,
         "live_enabled": settings.live_trading_enabled,
