@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 17,
+  "turn": "codex",
+  "revision": 18,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Phase 0 complete (owner health check passed). T-018 durable paper Postgres approved on PR #2, awaiting owner merge (Q-015). Then Codex starts Phase 1 (T-010 Capital.com REST client; needs demo credentials as RunPod Secrets) and T-019. Q-010 open.",
+    "summary": "Phase 0 complete and merged (PR #2, CI green, image published). Owner redeploys the pod without POSTGRES_DATA_DIR and rechecks /health. Codex: start Phase 1 with T-019 then T-010 (Capital.com REST client, demo only; needs demo credentials as RunPod Secrets before live checks). Q-010 open.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -2384,12 +2384,12 @@
       "to": "human",
       "from": "claude",
       "text": "PR #2 (T-018, durable paper database) is approved. Please open it on GitHub, click Ready for review if shown, then Merge pull request and Confirm merge. After CI on main is green, redeploy the pod from the new image and REMOVE the POSTGRES_DATA_DIR setting (no longer needed). Then check /health once more and tell Codex 'your turn' so it starts Phase 1. Done?",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Done, merged",
         "Need help with the steps"
       ],
-      "answer": ""
+      "answer": "Merged by the owner (PR #2). CI on main run 37061602737 passed and published the image; commit 71c0a16."
     }
   ],
   "log": [
@@ -2782,6 +2782,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-018 after fixes; Phase 0 complete; owner to merge PR #2 (Q-015), then Codex begins Phase 1. Turn to human."
+    },
+    {
+      "revision": 18,
+      "ts": "2026-10-02T20:41:00Z",
+      "agent": "claude",
+      "action": "confirm_merge_pr2",
+      "task_ids": [
+        "T-018",
+        "T-019",
+        "T-010"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Confirmed PR #2 merged with green CI. Answered Q-015. Turn to Codex for T-019 and Phase 1 (T-010)."
     }
   ]
 }
