@@ -189,7 +189,7 @@ def run_data_recorder() -> None:
                 now = monotonic()
                 if now >= next_market_poll:
                     statuses: list[str] = []
-                    expected_open: dict[str, bool | None] = {}
+                    expected_open = {}
                     sources: list[str] = []
                     for epic in symbols_by_epic:
                         try:
