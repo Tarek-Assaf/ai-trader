@@ -8,7 +8,7 @@ import time
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from trader.data.importers.histdata import import_histdata
 from trader.data.importers.histdata_download import download_histdata
@@ -76,7 +76,12 @@ def _verify_or_pin(path: Path, manifest: dict[str, Any], manifest_path: Path) ->
     actual = _sha256(path)
     record = manifest["archives"].get(filename)
     if record is not None:
-        if not isinstance(record, dict) or record.get("sha256") != actual:
+        if (
+            not isinstance(record, dict)
+            or record.get("sha256") != actual
+            or record.get("verification")
+            not in {"trusted_report", "first_seen_cache_integrity"}
+        ):
             raise ValueError(f"archive checksum mismatch for {filename}")
         return str(record["verification"])
     manifest["archives"][filename] = {
@@ -121,7 +126,7 @@ def _summary_reports(reports: list[dict[str, object]]) -> dict[str, object]:
     for report in reports:
         report_gaps = report.get("gaps", [])
         if isinstance(report_gaps, list):
-            gaps.extend(gap for gap in report_gaps if isinstance(gap, dict))
+            gaps.extend(cast(dict[str, object], gap) for gap in report_gaps if isinstance(gap, dict))
     return {
         "rows_read": sum(int(report.get("rows_read", 0)) for report in reports),
         "rows_written": sum(int(report.get("rows_written", 0)) for report in reports),
@@ -160,7 +165,7 @@ def import_histdata_range(
     manifest = _load_manifest(manifest_file)
     _atomic_json(manifest_file, manifest)
 
-    result: dict[str, object] = {
+    result: dict[str, Any] = {
         "status": "ok",
         "symbol": symbol,
         "start_year": start_year,
@@ -184,7 +189,7 @@ def import_histdata_range(
         try:
             _check_cached_archives(raw, symbol, year, month, manifest, manifest_file)
             if isinstance(completed, dict) and completed.get("status") == "ok":
-                result["skipped_months"].append(month_id)  # type: ignore[union-attr]
+                result["skipped_months"].append(month_id)
                 continue
 
             m1_path = _archive_path(raw, symbol, year, month, "M1")
