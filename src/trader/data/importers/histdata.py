@@ -271,4 +271,3 @@ def import_histdata(
         )
         reports.append(asdict(report))
     return reports
-
