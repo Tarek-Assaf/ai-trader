@@ -7,7 +7,7 @@ import os
 import signal
 import threading
 import time
-from datetime import date, time
+from datetime import UTC, date, datetime, time as dt_time
 from pathlib import Path
 from typing import Any
 
@@ -91,11 +91,11 @@ def _session_settings(path: Path) -> dict[str, dict[str, Any]]:
         if not isinstance(holidays_raw, list) or not isinstance(early_raw, dict):
             raise ValueError("instrument holiday overrides are invalid")
         holidays: list[date] = []
-        early_closes: dict[date, time] = {}
+        early_closes: dict[date, dt_time] = {}
         try:
             holidays = [date.fromisoformat(value) for value in holidays_raw]
             early_closes = {
-                date.fromisoformat(day): time.fromisoformat(value) for day, value in early_raw.items()
+                date.fromisoformat(day): dt_time.fromisoformat(value) for day, value in early_raw.items()
             }
         except (TypeError, ValueError) as exc:
             raise ValueError("instrument holiday override date or time is invalid") from exc
@@ -167,6 +167,8 @@ def run_data_recorder() -> None:
             )
             stream_thread.start()
             market_status = "unknown"
+            market_status_source = "unknown"
+            expected_open: dict[str, bool | None] = {}
             next_market_poll = 0.0
             while not stop.is_set():
                 heartbeat_path.touch()
