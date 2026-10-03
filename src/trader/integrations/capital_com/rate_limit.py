@@ -99,7 +99,7 @@ class RedisRateLimiter:
                 )
             except Exception:  # Redis must fail closed; do not expose its URL.
                 raise RateLimitError("Capital.com rate limiter is unavailable") from None
-            if not isinstance(delay_ms, (int, float, str, bytes)):
+            if not isinstance(delay_ms, int | float | str | bytes):
                 raise RateLimitError("Capital.com rate limiter returned an invalid delay")
             try:
                 delay = int(delay_ms)
