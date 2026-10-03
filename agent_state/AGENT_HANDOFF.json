@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 30,
+  "turn": "claude",
+  "revision": 31,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-010 and T-011 merged and verified on the demo account (V-046: stream check passed). T-012 HistData importer approved (PR #7, auto-merge); real August 2026 NSXUSD and XAUUSD bid candles were rebuilt from ticks, the owner then runs the import on the pod. Next: T-014 data recorder, then T-013, T-015, T-016, T-017.",
+    "summary": "T-010/T-011 are merged and verified (V-046); T-012 is approved. The full local HistData history is imported and tick-rebuilt conflict QA passes (V-049); data artifacts remain local. T-014 recorder is implemented on PR #8 with green Full CI (V-048), awaiting Claude Full-tier review. After review/merge, owner can deploy and observe recorder reconnect counts over hours; next phase order per D-025 is T-014, then T-013, T-015, T-016, T-017.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -762,7 +762,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-05",
         "R-09"
@@ -781,8 +781,18 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "PR #8: https://github.com/Tarek-Assaf/ai-trader/pull/8",
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/api/health.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_health.py",
+        "GitHub Actions CI run 37138844167"
+      ],
+      "completion_note": "Implemented the continuous Capital.com 1M bid/ask recorder with daily atomic Parquet partitions, closed-minute buffering, REST gap reconciliation and precedence, lineage/spread fields, persisted watermarks, ping/market-status liveness, reconnect reason/count health, and worker heartbeat. Full CI run 37138844167 passed, including lint/format, typecheck, unit/integration tests, migrations, secret scan, container build, ROLE=all runtime and core/worker compose checks. Full-tier Claude review is pending; RunPod reconnect-rate observation remains after merge/deploy."
     },
     {
       "id": "T-015",
@@ -2413,6 +2423,26 @@
       "validated_by": "claude",
       "date": "2026-10-03",
       "reverify_if": "importer modules or HistData archive layout change"
+    },
+    {
+      "id": "V-048",
+      "subject": "T-014 Capital.com Parquet recorder: CI implementation validation",
+      "method": "Local Python compilation and recorder smoke checks, plus GitHub Actions CI run 37138844167 on PR #8.",
+      "result": "pass",
+      "evidence": "CI run 37138844167 passed lint/format, mypy, unit/integration tests, migrations, handoff validation, secret scan, image build, ROLE=all runtime/backup checks and ROLE=core/worker compose checks. Recorder smoke passed buffering, idempotent upserts, REST precedence, spread, status, watermarks and partition writes.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "recorder implementation or its acceptance criteria change"
+    },
+    {
+      "id": "V-049",
+      "subject": "Full local HistData history import and tick-rebuilt conflict validation",
+      "method": "Ran the local full-history importer across all downloaded M1 archives, then reran the independent tick validator against the rebuilt outputs.",
+      "result": "pass",
+      "evidence": "All 51 expected archives imported with 11,368,050 rows and no failed archives. Tick validation covered all 1,070 conflicting minutes, found zero conflicts without tick data and zero rebuilt mismatches. ZIPs, Parquet data and QA artifacts remain in the local workspace and were not uploaded to GitHub.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "source archives, importer, tick reconstruction logic, or local dataset changes"
     }
   ],
   "blockers": [
@@ -3271,6 +3301,33 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-012 approved after review cycle 2 (V-047). Recorded the owner's T-011 live stream check as V-046 and answered Q-019. Added a reconnect-reason criterion to T-014. Claude enables auto-merge on PR #7. Codex next: T-014 recorder (Full tier, new branch from main); owner imports HistData on the pod with the documented commands."
+    },
+    {
+      "revision": 31,
+      "ts": "2026-10-03T17:02:00Z",
+      "agent": "codex",
+      "action": "implement_t014_capital_data_recorder_and_import_full_histdata",
+      "task_ids": [
+        "T-014",
+        "T-012"
+      ],
+      "files_changed": [
+        ".env.example",
+        "docker/entrypoint.sh",
+        "docker/supervisord.all.conf",
+        "docker/supervisord.worker.conf",
+        "infra/runpod/README.md",
+        "src/trader/api/health.py",
+        "src/trader/data/recorder.py",
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/main.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_health.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed full local HistData import and tick QA (51 archives, 11,368,050 rows; 1,070 conflicts tick-covered, zero rebuilt mismatches; V-049). Implemented T-014 recorder on PR #8 and passed Full CI run 37138844167 (V-048). Recorded Full-tier review handoff; turn to Claude."
     }
   ]
 }
