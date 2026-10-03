@@ -15,14 +15,10 @@ from trader.data.importers.histdata_download import download_histdata
 from trader.data.importers.histdata_ticks import rebuild_histdata_ticks
 
 _TRUSTED_SEEDS = {
-    "DAT_ASCII_NSXUSD_M1_202608.zip":
-        "b8d8cf3f1599ac2ae018883995df88ad552b790dd2a64c14c11d63b8883b8b8e",
-    "DAT_ASCII_XAUUSD_M1_202608.zip":
-        "b6bdb6989098437df2df11cb2e0f16d145c138f66425b0848bd6ce575626fd77",
-    "DAT_ASCII_NSXUSD_T_202608.zip":
-        "2a86cb3bbcb84e5c62c5ea3f19cd0d43fdaed45ef54bf7ed7ae8366f63bdbcd2",
-    "DAT_ASCII_XAUUSD_T_202608.zip":
-        "2dea6c1f5ad0ece8d7f34b5838b952f4e65ea556265833ab36a24f0223aa03cc",
+    "DAT_ASCII_NSXUSD_M1_202608.zip": "b8d8cf3f1599ac2ae018883995df88ad552b790dd2a64c14c11d63b8883b8b8e",
+    "DAT_ASCII_XAUUSD_M1_202608.zip": "b6bdb6989098437df2df11cb2e0f16d145c138f66425b0848bd6ce575626fd77",
+    "DAT_ASCII_NSXUSD_T_202608.zip": "2a86cb3bbcb84e5c62c5ea3f19cd0d43fdaed45ef54bf7ed7ae8366f63bdbcd2",
+    "DAT_ASCII_XAUUSD_T_202608.zip": "2dea6c1f5ad0ece8d7f34b5838b952f4e65ea556265833ab36a24f0223aa03cc",
 }
 _ALLOWED_SYMBOLS = {"NSXUSD", "XAUUSD"}
 
@@ -83,8 +79,7 @@ def _verify_or_pin(path: Path, manifest: dict[str, Any], manifest_path: Path) ->
         if (
             not isinstance(record, dict)
             or record.get("sha256") != actual
-            or record.get("verification")
-            not in {"trusted_report", "first_seen_cache_integrity"}
+            or record.get("verification") not in {"trusted_report", "first_seen_cache_integrity"}
         ):
             raise ValueError(f"archive checksum mismatch for {filename}")
         return str(record["verification"])
@@ -145,9 +140,7 @@ def _summary_reports(reports: list[dict[str, object]]) -> dict[str, Any]:
         report_gaps = report.get("gaps", [])
         if isinstance(report_gaps, list):
             gaps.extend(
-                cast(dict[str, object], gap)
-                for gap in report_gaps
-                if isinstance(gap, dict)
+                cast(dict[str, object], gap) for gap in report_gaps if isinstance(gap, dict)
             )
     return {
         "rows_read": sum(int(report.get("rows_read", 0)) for report in reports),
