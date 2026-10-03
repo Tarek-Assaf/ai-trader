@@ -147,9 +147,7 @@ class CapitalComStreamClient:
         updates = []
         for side in ("bid", "ask"):
             values = [
-                candle.get(key, {}).get(side)
-                if isinstance(candle.get(key), Mapping)
-                else None
+                candle.get(key, {}).get(side) if isinstance(candle.get(key), Mapping) else None
                 for key in ("openPrice", "highPrice", "lowPrice", "closePrice")
             ]
             if all(value is not None for value in values):
