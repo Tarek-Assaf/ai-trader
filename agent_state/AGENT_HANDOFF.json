@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 33,
+  "turn": "codex",
+  "revision": 34,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-013/T-014 Claude cycle-1 requests are addressed on PR #9; Full-tier GitHub Actions run 37144293108 passed every quality, security, container, and runtime check. Returned to Claude for cycle-2 review. The owner-run multi-hour demo soak remains pending Q-022; T-080 pod-side historical import is still todo.",
+    "summary": "T-010 to T-014 are done and verified or merged (T-014 recorder and T-013 resampler on PR #9, auto-merge). After the merge the owner redeploys the pod so the recorder starts collecting bid/ask data (starts the clock for T-017) and runs the multi-hour soak (Q-022). Next for Codex: T-080 pod-side history import, then T-015 market hours, T-016 instrument mapper, T-017 basis measurement. Phase 2 (risk and execution) follows.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -741,7 +741,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-09"
       ],
@@ -772,7 +772,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-05",
         "R-09"
@@ -2533,6 +2533,16 @@
       "validated_by": "codex",
       "date": "2026-10-03",
       "reverify_if": "resampling implementation or property test changes."
+    },
+    {
+      "id": "V-053",
+      "subject": "T-013 resampler and T-014 Capital.com recorder: Claude Full-tier review (PR #9, cycle 2)",
+      "method": "Claude static review of resample.py, recorder.py, workers/recorder.py, health.py, stream.py changes and the cycle-1 additions (dependencies cannot be installed in Claude's workspace), plus Full CI run 37144293108.",
+      "result": "pass",
+      "evidence": "Recorder: partial minutes held until rollover, REST wins, atomic daily Parquet partitions, side watermarks seeded for restart backfill, no secrets in logs, idle mode without credentials, fail-closed market status. Health: recorder goes degraded when its status is missing or older than 30 seconds in ROLE=all with credentials. Cycle-1 fixes verified: tests/unit/test_recorder_reconnect.py (every minute exactly once per side across a disconnect and REST backfill), tests/invariants/test_module_boundaries.py (no order, position or settings methods on CapitalComClient or the recorder; agents cannot import the recorder), Hypothesis OHLC and no-look-ahead properties for resample_ohlc. Not yet shown: reconnect frequency over hours (owner soak, Q-022). Known: status file is written on every update (optional throttle); unfinished minute dropped on SIGTERM and refilled by backfill.",
+      "validated_by": "claude",
+      "date": "2026-10-03",
+      "reverify_if": "recorder, resampler or stream client change"
     }
   ],
   "blockers": [
@@ -3462,6 +3472,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude's cycle-1 PR #9 review: added recorder-level disconnect/REST-recovery verification with exactly-once per-side Parquet assertions, a static read-only broker/recorder and agent-import boundary invariant, and Hypothesis OHLC/no-look-ahead properties. Full-tier GitHub Actions run 37144293108 passed all quality, security, image, and role runtime checks. Owner's multi-hour demo soak remains Q-022. Returning PR #9 for Claude cycle-2 review."
+    },
+    {
+      "revision": 34,
+      "ts": "2026-10-03T18:50:00Z",
+      "agent": "claude",
+      "action": "review_t013_t014_cycle2_approve",
+      "task_ids": [
+        "T-013",
+        "T-014"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-013 and T-014 approved after review cycle 2 on PR #9 (V-053). Claude enables auto-merge. PR #8 was closed as superseded. Codex next, one session only: T-080 (pod-side history import), then T-015, T-016, T-017. Owner redeploys the pod after the merge and runs the soak test (Q-022)."
     }
   ]
 }
