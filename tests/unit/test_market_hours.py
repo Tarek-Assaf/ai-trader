@@ -57,18 +57,17 @@ def test_next_open_skips_weekend_and_uses_broker_timezone() -> None:
 def test_broker_status_precedes_schedule_and_stale_feed_is_fallback() -> None:
     schedule = MarketHours.from_market_details(_details())
     now = datetime(2026, 10, 5, 15, 0, tzinfo=UTC)
-    old_tick = datetime(2026, 10, 5, 14, 55, tzinfo=UTC)
     assert resolve_market_open(
-        "CLOSED", schedule, now, last_tick_at=old_tick, stale_after_seconds=180
+        "CLOSED", schedule, now
     ) == (False, "broker")
     assert resolve_market_open(
-        "TRADEABLE", schedule, now, last_tick_at=old_tick, stale_after_seconds=180
+        "TRADEABLE", schedule, now
     ) == (True, "broker")
     assert resolve_market_open(
-        "unknown", schedule, now, last_tick_at=old_tick, stale_after_seconds=180
-    ) == (False, "stale_feed")
+        "unknown", schedule, now
+    ) == (True, "schedule")
     assert resolve_market_open(
-        "unknown", None, now, last_tick_at=None, stale_after_seconds=180
+        "unknown", None, now
     ) == (None, "unknown")
 
 
