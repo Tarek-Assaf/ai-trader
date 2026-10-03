@@ -375,4 +375,3 @@ class CapitalComStreamClient:
             if not stop_event.is_set():
                 self._sleep(backoff)
                 backoff = min(backoff * 2, self._reconnect_max)
-

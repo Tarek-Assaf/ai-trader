@@ -92,4 +92,3 @@ def test_recorder_health_exposes_reconnect_reason_and_market_liveness(tmp_path: 
         "last_update_at": None,
         "last_closed_bar_at": None,
     }
-

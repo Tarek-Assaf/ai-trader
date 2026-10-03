@@ -100,4 +100,3 @@ def test_startup_watermarks_and_liveness_use_ping_and_market_status(tmp_path: Pa
     assert value["market_status"] == "CLOSED"
     assert value["reconnect_count"] == 2
     assert value["last_reconnect_reason"] == "ConnectionClosed"
-

@@ -25,4 +25,3 @@ if [ "$ROLE" = "all" ]; then
 fi
 chown trader:trader /workspace /workspace/redisdata /workspace/logs /workspace/backups /workspace/data /workspace/data/lake /var/run/postgresql
 exec gosu trader supervisord -n -c "$CONFIG"
-

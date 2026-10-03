@@ -161,4 +161,3 @@ def health_payload() -> dict[str, Any]:
         "data_recorder": recorder,
         "time": datetime.now(UTC).isoformat(),
     }
-

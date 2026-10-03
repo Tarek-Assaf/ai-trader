@@ -138,4 +138,3 @@ Screenshots are intentionally placeholders until the owner supplies approved acc
 - `[Screenshot: Pod HTTP service showing /health]`
 
 Never include account IDs, secret values, API keys, or billing details in screenshots.
-

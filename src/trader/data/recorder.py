@@ -117,7 +117,7 @@ class ParquetCandleStore:
                         "lineage_tag": "capital_com_1m_recorder_v1",
                     }
                     changed_keys.add(key)
-                for epic, minute, side in changed_keys:
+                for epic, minute, _side in changed_keys:
                     bid = rows.get((epic, minute, "bid"))
                     ask = rows.get((epic, minute, "ask"))
                     spread = ask["close"] - bid["close"] if bid and ask else None
@@ -283,4 +283,3 @@ class CapitalDataRecorder:
                 for side in ("bid", "ask"):
                     latest.setdefault((epic, side), watermark)
         return latest
-
