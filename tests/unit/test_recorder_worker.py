@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from trader.workers.recorder import _combined_market_status, _market_status
+from trader.workers.recorder import _combined_market_status, _market_status, _session_settings
 
 
 @pytest.mark.parametrize(
