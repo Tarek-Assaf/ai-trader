@@ -42,15 +42,15 @@ def test_holiday_and_early_close_overrides() -> None:
     assert schedule.upcoming_holidays(datetime(2026, 10, 4, tzinfo=UTC), 2) == [date(2026, 10, 5)]
     assert schedule.is_open(datetime(2026, 10, 9, 18, 30, tzinfo=UTC))
     assert not schedule.is_open(datetime(2026, 10, 9, 20, 30, tzinfo=UTC))
-    assert schedule.next_close(datetime(2026, 10, 9, 16, 30, tzinfo=UTC)) == datetime(
-        2026, 10, 9, 17, 0, tzinfo=UTC
+    assert schedule.next_close(datetime(2026, 10, 9, 19, 0, tzinfo=UTC)) == datetime(
+        2026, 10, 9, 20, 0, tzinfo=UTC
     )
 
 
 def test_next_open_skips_weekend_and_uses_broker_timezone() -> None:
     schedule = MarketHours.from_market_details(_details())
     assert schedule.next_open(datetime(2026, 10, 3, 15, 0, tzinfo=UTC)) == datetime(
-        2026, 10, 4, 3, 0, tzinfo=UTC
+        2026, 10, 5, 3, 0, tzinfo=UTC
     )
 
 
