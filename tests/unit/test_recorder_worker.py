@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from datetime import date, time
+from pathlib import Path
+
 import pytest
 
 from trader.workers.recorder import _combined_market_status, _market_status
@@ -42,3 +45,27 @@ def test_market_status_reads_capital_com_snapshot_shape() -> None:
     assert _market_status({"snapshot": {"marketStatus": "TRADEABLE"}}) == "TRADEABLE"
     assert _market_status({"snapshot": {"marketStatus": "CLOSED"}}) == "CLOSED"
     assert _market_status({"snapshot": {"marketStatus": "UNRECOGNIZED"}}) == "unknown"
+
+
+
+def test_session_settings_loads_verified_date_overrides_and_stale_limit(tmp_path: Path) -> None:
+    config = tmp_path / "instruments.yaml"
+    config.write_text(
+        """instruments:
+  NAS100:
+    capital_epic: US100
+    session:
+      timezone: America/New_York
+      holiday_dates: ["2026-11-26"]
+      early_closes:
+        "2026-11-27": "13:00"
+      stale_after_seconds: 120
+""",
+        encoding="utf-8",
+    )
+
+    result = _session_settings(config)
+
+    assert result["US100"]["holidays"] == (date(2026, 11, 26),)
+    assert result["US100"]["early_closes"] == {date(2026, 11, 27): time(13, 0)}
+    assert result["US100"]["stale_after_seconds"] == 120.0
