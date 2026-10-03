@@ -39,9 +39,7 @@ def test_holiday_and_early_close_overrides() -> None:
         early_closes={date(2026, 10, 9): time(13, 0)},
     )
     assert not schedule.is_open(datetime(2026, 10, 5, 15, 0, tzinfo=UTC))
-    assert schedule.upcoming_holidays(datetime(2026, 10, 4, tzinfo=UTC), 2) == [
-        date(2026, 10, 5)
-    ]
+    assert schedule.upcoming_holidays(datetime(2026, 10, 4, tzinfo=UTC), 2) == [date(2026, 10, 5)]
     assert schedule.is_open(datetime(2026, 10, 9, 16, 30, tzinfo=UTC))
     assert not schedule.is_open(datetime(2026, 10, 9, 17, 30, tzinfo=UTC))
     assert schedule.next_close(datetime(2026, 10, 9, 16, 30, tzinfo=UTC)) == datetime(
@@ -78,7 +76,6 @@ def test_invalid_broker_hours_fail_closed() -> None:
     payload = {"instrument": {"openingHours": {"mon": "09:00 - 17:00"}}}
     with pytest.raises(ValueError, match="openingHours.mon"):
         MarketHours.from_market_details(payload)
-
 
 
 def test_capital_com_opening_hours_minute_boundaries() -> None:
