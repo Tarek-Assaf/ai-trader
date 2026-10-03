@@ -35,3 +35,10 @@ def test_combined_status_fails_closed_for_missing_or_oversized_values() -> None:
 
 def test_combined_status_reports_each_configured_epic() -> None:
     assert _combined_market_status(["TRADEABLE", "CLOSED"]) == "TRADEABLE,CLOSED"
+
+
+
+def test_market_status_reads_capital_com_snapshot_shape() -> None:
+    assert _market_status({"snapshot": {"marketStatus": "TRADEABLE"}}) == "TRADEABLE"
+    assert _market_status({"snapshot": {"marketStatus": "CLOSED"}}) == "CLOSED"
+    assert _market_status({"snapshot": {"marketStatus": "UNRECOGNIZED"}}) == "unknown"
