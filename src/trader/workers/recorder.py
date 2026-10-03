@@ -65,6 +65,8 @@ def run_data_recorder() -> None:
     status_path = Path(
         os.getenv("RECORDER_STATUS_PATH", str(workspace / "data" / "recorder-status.json"))
     )
+    heartbeat_path = workspace / "worker.heartbeat"
+    heartbeat_path.parent.mkdir(parents=True, exist_ok=True)
     symbols_by_epic = _symbols_by_epic(_config_path())
     recorder = CapitalDataRecorder(ParquetCandleStore(lake_root), symbols_by_epic, status_path)
     secrets = (
@@ -78,7 +80,9 @@ def run_data_recorder() -> None:
     if any(value is None or not value.get_secret_value() for value in secrets):
         recorder.set_unconfigured()
         _LOG.warning("Capital.com recorder is idle because credentials are not configured")
-        stop.wait()
+        while not stop.is_set():
+            heartbeat_path.touch()
+            stop.wait(_STATUS_POLL_SECONDS)
         signal.signal(signal.SIGTERM, original_handler)
         return
 
@@ -106,6 +110,7 @@ def run_data_recorder() -> None:
             market_status = "unknown"
             next_market_poll = 0.0
             while not stop.is_set():
+                heartbeat_path.touch()
                 now = time.monotonic()
                 if now >= next_market_poll:
                     statuses: list[str] = []
@@ -132,3 +137,4 @@ def run_data_recorder() -> None:
 
 if __name__ == "__main__":
     run_data_recorder()
+
