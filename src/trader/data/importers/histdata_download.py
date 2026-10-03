@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -90,9 +91,16 @@ def _validate_archive(
 
 
 def download_histdata(
-    symbol: str, year: int, month: int, raw_root: str | Path, timeframe: str = "M1"
+    symbol: str,
+    year: int,
+    month: int,
+    raw_root: str | Path,
+    timeframe: str = "M1",
+    pause_seconds: float = 0.0,
 ) -> Path:
     """Cache a verified archive atomically; valid cached files need no new request."""
+    if pause_seconds < 0 or pause_seconds > 3600:
+        raise ValueError("pause_seconds must be between 0 and 3600")
     if symbol not in {"NSXUSD", "XAUUSD"}:
         raise ValueError("unsupported HistData symbol")
     if timeframe not in {"M1", "T"}:
@@ -115,6 +123,8 @@ def download_histdata(
     )
     parser = _FormParser()
     parser.feed(_request(page).decode("utf-8"))
+    if pause_seconds:
+        time.sleep(pause_seconds)
     fields = parser.fields
     required = {
         "fxpair": symbol,
