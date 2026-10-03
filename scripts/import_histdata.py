@@ -11,6 +11,7 @@ from pathlib import Path
 from trader.data.importers.histdata import import_histdata
 from trader.data.importers.histdata_download import download_histdata
 from trader.data.importers.histdata_ticks import rebuild_histdata_ticks
+from trader.data.importers.histdata_range import import_histdata_range
 
 
 def main() -> int:
@@ -21,6 +22,10 @@ def main() -> int:
     parser.add_argument("--symbol", required=True, choices=("NSXUSD", "XAUUSD"))
     parser.add_argument("--download", action="store_true", help="Download a completed month")
     parser.add_argument("--year", type=int)
+    parser.add_argument("--from-year", type=int, help="First year in an inclusive batch range")
+    parser.add_argument("--through-year", type=int, help="Last year in an inclusive batch range")
+    parser.add_argument("--pause-seconds", type=float, default=1.0)
+    parser.add_argument("--manifest", type=Path, help="SHA-256 manifest path for batch imports")
     parser.add_argument("--month", type=int)
     parser.add_argument("--raw", type=Path, default=Path("data/raw/histdata"))
     parser.add_argument(
@@ -29,6 +34,37 @@ def main() -> int:
     parser.add_argument("--lake", type=Path, default=Path("data/lake"))
     parser.add_argument("--lineage", type=Path, default=Path("data_lineage"))
     args = parser.parse_args()
+    if args.from_year is not None or args.through_year is not None:
+        if (
+            args.from_year is None
+            or args.through_year is None
+            or args.source is not None
+            or args.download
+            or args.year is not None
+            or args.month is not None
+            or args.from_ticks
+        ):
+            parser.error(
+                "batch mode needs --from-year and --through-year; omit source, --download, "
+                "--year, --month and --from-ticks"
+            )
+        try:
+            summary = import_histdata_range(
+                args.symbol,
+                args.from_year,
+                args.through_year,
+                args.raw,
+                args.lake,
+                args.lineage,
+                args.manifest,
+                args.pause_seconds,
+            )
+        except (ValueError, OSError):
+            print(json.dumps({"status": "error", "reason": "HistData range import failed"}))
+            return 1
+        print(json.dumps(summary, indent=2, default=str))
+        return 0 if summary["status"] == "ok" else 1
+
     if args.download:
         if args.source or args.year is None or args.month is None:
             parser.error("--download needs --year and --month, with no local source")
