@@ -3,22 +3,20 @@
 from __future__ import annotations
 
 import csv
-import io
 import json
 import re
 import zipfile
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterable, TypedDict, cast
+from typing import TypedDict, cast
 
 import pyarrow as pa
 import pyarrow.parquet as pq
 
 UTC_MINUS_FIVE = timezone(timedelta(hours=-5), name="HistData EST (fixed UTC-5)")
-OUTPUT_COLUMNS = [
-    "ts_utc", "open", "high", "low", "close", "volume", "price_basis", "source"
-]
+OUTPUT_COLUMNS = ["ts_utc", "open", "high", "low", "close", "volume", "price_basis", "source"]
 _DATE_RE = re.compile(r"^\d{8}$")
 
 
@@ -66,7 +64,7 @@ def parse_histdata_timestamp(date_text: str, time_text: str | None = None) -> da
         local = datetime.strptime(date_text + time_text, "%Y%m%d%H%M%S")
     else:
         local = datetime.strptime(f"{date_text} {time_text}", "%Y.%m.%d %H:%M")
-    return local.replace(tzinfo=UTC_MINUS_FIVE).astimezone(timezone.utc)
+    return local.replace(tzinfo=UTC_MINUS_FIVE).astimezone(UTC)
 
 
 def _decode(raw: bytes) -> str:
@@ -202,12 +200,17 @@ def import_histdata(
             if new_rows:
                 report.coverage_start_utc = new_rows[0]["ts_utc"].isoformat()
                 report.coverage_end_utc = new_rows[-1]["ts_utc"].isoformat()
-            for prev, cur in zip(new_rows, new_rows[1:]):
+            for prev, cur in zip(new_rows, new_rows[1:], strict=False):
                 gap = int((cur["ts_utc"] - prev["ts_utc"]).total_seconds() // 60) - 1
                 if gap > 0:
-                    report.gaps.append({"after": prev["ts_utc"].isoformat(),
-                                        "before": cur["ts_utc"].isoformat(), "missing_minutes": gap,
-                                        "classification": _gap_kind(prev["ts_utc"], cur["ts_utc"])})
+                    report.gaps.append(
+                        {
+                            "after": prev["ts_utc"].isoformat(),
+                            "before": cur["ts_utc"].isoformat(),
+                            "missing_minutes": gap,
+                            "classification": _gap_kind(prev["ts_utc"], cur["ts_utc"]),
+                        }
+                    )
                 prior_close = float(prev["close"])
                 if abs(float(cur["close"]) / prior_close - 1.0) > 0.20:
                     report.outliers += 1
@@ -219,11 +222,18 @@ def import_histdata(
                 for row in new_rows:
                     ts = row["ts_utc"]
                     by_partition.setdefault((ts.year, ts.month), []).append(row)
-            schema = pa.schema([
-                ("ts_utc", pa.timestamp("us", tz="UTC")), ("open", pa.float64()),
-                ("high", pa.float64()), ("low", pa.float64()), ("close", pa.float64()),
-                ("volume", pa.float64()), ("price_basis", pa.string()), ("source", pa.string()),
-            ])
+            schema = pa.schema(
+                [
+                    ("ts_utc", pa.timestamp("us", tz="UTC")),
+                    ("open", pa.float64()),
+                    ("high", pa.float64()),
+                    ("low", pa.float64()),
+                    ("close", pa.float64()),
+                    ("volume", pa.float64()),
+                    ("price_basis", pa.string()),
+                    ("source", pa.string()),
+                ]
+            )
             for (year, month), rows in by_partition.items():
                 out = lake / symbol / "1m" / f"{year:04d}" / f"{month:02d}.parquet"
                 prior: list[dict[str, object]] = []
@@ -256,7 +266,8 @@ def import_histdata(
         lineage.mkdir(parents=True, exist_ok=True)
         report_stem = Path(source_name.replace(":", "_")).stem
         report_path = lineage / f"{symbol}_{report_stem}_qa.json"
-        report_path.write_text(json.dumps(asdict(report), indent=2, default=str) + "\n", encoding="utf-8")
+        report_path.write_text(
+            json.dumps(asdict(report), indent=2, default=str) + "\n", encoding="utf-8"
+        )
         reports.append(asdict(report))
-    return reports
-
+    return reports\n
