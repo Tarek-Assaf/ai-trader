@@ -79,5 +79,22 @@ existing valid timestamps are preserved on repeated imports. Empty responses
 are never reported as success. Tick processing keeps one aggregate per minute,
 avoiding loading all quotes into memory.
 
+
+## Pod-side multi-year imports
+
+T-080 adds year-range mode to `scripts/import_histdata.py`. It processes completed months serially, stops at the previous month, uses M1 archives when valid, and rebuilds an M1 month from raw ticks when its M1 archive has conflicting timestamps. It records rows, QA issues, gaps, rejected months, and each completed month in an atomic JSON manifest on the mounted pod volume.
+
+The manifest seeds the four August archive checksums listed by this report and the tick reconstruction report. Hashes for later months are pinned on first download and checked on reuse. Those first-seen hashes provide cache integrity only; they do not independently attest the downloaded source. A mismatch fails closed for that month. Successful months are skipped on reruns after any cached archives for them are checked. Failed or rejected months remain eligible for retry. Use a one-second pause and run one symbol at a time on the same pod volume; do not run two importers concurrently.
+
+Example (set the first year to the earliest one HistData offers for the symbol):
+
+```sh
+python scripts/import_histdata.py --symbol NSXUSD --from-year 2000 --through-year 2026 --pause-seconds 1 \
+  --raw /workspace/data/raw/histdata --lake /workspace/data/lake \
+  --lineage /workspace/data_lineage
+```
+
+Run again with `--symbol XAUUSD`. A `partial` status lists months that could not be fetched or passed QA and exits nonzero; inspect those months before claiming full coverage. The command prints a concise JSON summary without credentials.
+
 Sources: [HistData NSXUSD August archive](https://www.histdata.com/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/nsxusd/2026/8)
 and [HistData XAUUSD August archive](https://www.histdata.com/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/xauusd/2026/8).
