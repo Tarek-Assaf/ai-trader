@@ -10,8 +10,8 @@ from pathlib import Path
 
 from trader.data.importers.histdata import import_histdata
 from trader.data.importers.histdata_download import download_histdata
-from trader.data.importers.histdata_ticks import rebuild_histdata_ticks
 from trader.data.importers.histdata_range import import_histdata_range
+from trader.data.importers.histdata_ticks import rebuild_histdata_ticks
 
 
 def main() -> int:
