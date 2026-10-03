@@ -72,7 +72,7 @@ def _load_manifest(path: Path) -> dict[str, Any]:
         if existing is not None and existing != record:
             raise ValueError(f"trusted checksum entry conflicts for {filename}")
         manifest["archives"][filename] = record
-    return manifest
+    return cast(dict[str, Any], manifest)
 
 
 def _verify_or_pin(path: Path, manifest: dict[str, Any], manifest_path: Path) -> str:
@@ -138,6 +138,13 @@ def _check_cached_archives(
                 raise ValueError(f"archive checksum mismatch for {archive.name}")
 
 
+def _report_count(report: dict[str, object], key: str) -> int:
+    value = report.get(key, 0)
+    if not isinstance(value, int):
+        raise ValueError(f"HistData QA metric {key} is not an integer")
+    return value
+
+
 def _summary_reports(reports: list[dict[str, object]]) -> dict[str, Any]:
     gaps: list[dict[str, object]] = []
     for report in reports:
@@ -147,11 +154,11 @@ def _summary_reports(reports: list[dict[str, object]]) -> dict[str, Any]:
                 cast(dict[str, object], gap) for gap in report_gaps if isinstance(gap, dict)
             )
     return {
-        "rows_read": sum(int(report.get("rows_read", 0)) for report in reports),
-        "rows_written": sum(int(report.get("rows_written", 0)) for report in reports),
-        "invalid_rows": sum(int(report.get("invalid_rows", 0)) for report in reports),
+        "rows_read": sum(_report_count(report, "rows_read") for report in reports),
+        "rows_written": sum(_report_count(report, "rows_written") for report in reports),
+        "invalid_rows": sum(_report_count(report, "invalid_rows") for report in reports),
         "conflicting_duplicates": sum(
-            int(report.get("conflicting_duplicates", 0)) for report in reports
+            _report_count(report, "conflicting_duplicates") for report in reports
         ),
         "gaps": len(gaps),
         "gap_examples": gaps[:20],
@@ -278,7 +285,7 @@ def import_histdata_range(
             result["gap_examples"].extend(totals["gap_examples"])
         except (OSError, ValueError, zipfile.BadZipFile, KeyError) as exc:
             result["status"] = "partial"
-            result["rejected_months"].append(  # type: ignore[union-attr]
+            result["rejected_months"].append(
                 {"month": month_id, "reason": str(exc)[:240]}
             )
 
