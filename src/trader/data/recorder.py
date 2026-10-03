@@ -301,7 +301,13 @@ class CapitalDataRecorder:
             self._status["ping_reply_ok"] = ping_reply_ok
             self._status["market_status"] = market_status
             self._status["market_status_source"] = market_status_source
-            self._status["expected_open"] = True if any_open else False if all_known_closed else None
+            if any_open:
+                expected_open = True
+            elif all_known_closed:
+                expected_open = False
+            else:
+                expected_open = None
+            self._status["expected_open"] = expected_open
             self._status["stale_epics"] = sorted(stale_epics)
             self._status["last_liveness_at"] = now.isoformat()
             self._status["status"] = (
