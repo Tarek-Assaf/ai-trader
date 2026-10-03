@@ -8,7 +8,7 @@ import logging
 import sys
 import threading
 import time
-from datetime import UTC, datetime
+from datetime import UTC
 from typing import Any
 
 from trader.core.settings import EnvironmentSettings
@@ -17,7 +17,9 @@ from trader.integrations.capital_com import CapitalComClient, CapitalComStreamCl
 
 def _arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--epic", default="US100", help="Capital.com epic to observe (default: US100)")
+    parser.add_argument(
+        "--epic", default="US100", help="Capital.com epic to observe (default: US100)"
+    )
     parser.add_argument(
         "--seconds", type=int, default=90, help="stream duration from 1 to 3600 seconds"
     )
@@ -59,6 +61,7 @@ def main() -> int:
     try:
         with CapitalComClient(settings) as rest:
             stream = CapitalComStreamClient(rest, [args.epic], on_update)
+
             def run_stream() -> None:
                 try:
                     assert stream is not None
