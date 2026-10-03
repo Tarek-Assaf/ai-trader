@@ -14,23 +14,15 @@ from trader.data.importers.histdata import import_histdata
 from trader.data.importers.histdata_download import download_histdata
 from trader.data.importers.histdata_ticks import rebuild_histdata_ticks
 
+_NSXUSD_M1_SHA256 = "b8d8cf3f1599ac2ae018883995df88ad552b790dd2a64c14c11d63b8883b8b8e"
+_XAUUSD_M1_SHA256 = "b6bdb6989098437df2df11cb2e0f16d145c138f66425b0848bd6ce575626fd77"
+_NSXUSD_TICK_SHA256 = "2a86cb3bbcb84e5c62c5ea3f19cd0d43fdaed45ef54bf7ed7ae8366f63bdbcd2"
+_XAUUSD_TICK_SHA256 = "2dea6c1f5ad0ece8d7f34b5838b952f4e65ea556265833ab36a24f0223aa03cc"
 _TRUSTED_SEEDS = {
-    "DAT_ASCII_NSXUSD_M1_202608.zip": (
-        "b8d8cf3f1599ac2ae018883995df88ad"
-        "552b790dd2a64c14c11d63b8883b8b8e"
-    ),
-    "DAT_ASCII_XAUUSD_M1_202608.zip": (
-        "b6bdb6989098437df2df11cb2e0f16d1"
-        "45c138f66425b0848bd6ce575626fd77"
-    ),
-    "DAT_ASCII_NSXUSD_T_202608.zip": (
-        "2a86cb3bbcb84e5c62c5ea3f19cd0d43"
-        "fdaed45ef54bf7ed7ae8366f63bdbcd2"
-    ),
-    "DAT_ASCII_XAUUSD_T_202608.zip": (
-        "2dea6c1f5ad0ece8d7f34b5838b952f4"
-        "e65ea556265833ab36a24f0223aa03cc"
-    ),
+    "DAT_ASCII_NSXUSD_M1_202608.zip": _NSXUSD_M1_SHA256,
+    "DAT_ASCII_XAUUSD_M1_202608.zip": _XAUUSD_M1_SHA256,
+    "DAT_ASCII_NSXUSD_T_202608.zip": _NSXUSD_TICK_SHA256,
+    "DAT_ASCII_XAUUSD_T_202608.zip": _XAUUSD_TICK_SHA256,
 }
 _ALLOWED_SYMBOLS = {"NSXUSD", "XAUUSD"}
 
