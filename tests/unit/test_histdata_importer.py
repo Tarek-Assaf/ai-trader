@@ -81,4 +81,3 @@ def test_mt4_layout_is_detected(tmp_path: Path) -> None:
     report = import_histdata(source, "NSXUSD", tmp_path / "lake", tmp_path / "lineage")[0]
     assert report["format"] == "mt4"
     assert report["invalid_rows"] == 0
-
