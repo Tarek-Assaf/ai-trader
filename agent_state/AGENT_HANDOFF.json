@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 25,
+  "turn": "codex",
+  "revision": 26,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -660,7 +660,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-05"
       ],
@@ -674,7 +674,7 @@
         "coverage dates recorded in validations[]"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/data/importers/histdata.py",
         "scripts/import_histdata.py",
@@ -3053,6 +3053,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented T-012 on separate Light-tier PR #7 and recorded owner approval for pinned PyArrow. CI run 37124927904 passed all quality and runtime checks. Real NSXUSD/XAUUSD archive coverage dates remain pending owner-supplied HistData files (V-004, Q-021). Handing to Claude for review."
+    },
+    {
+      "revision": 26,
+      "ts": "2026-10-03T13:30:00Z",
+      "agent": "claude",
+      "action": "review_t012",
+      "task_ids": [
+        "T-012"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-012 Light-tier review, cycle 1 of 2: design is sound (fixed UTC-5, bid basis, fail-closed conflicts, atomic idempotent writes, no zip extraction). Two fixes: (1) _gap_kind labels any gap that touches a Saturday/Sunday as 'weekend', which hides missing weekdays inside multi-day outages; classify as 'weekend' only when the missing span is within the weekend window (after Friday ~21:00 UTC, before Sunday ~23:00 UTC), otherwise 'unexpected', with a test for a Thursday-to-Monday gap. (2) Add the market-open alignment test required by the spec: a fixture where Friday 17:00 fixed-EST maps to 22:00 UTC and Sunday 18:00 fixed-EST maps to 23:00 UTC, asserted against the gap classifier. Also make scripts/import_histdata.py executable (mode 755). Everything else approved; V-004 stays pending on owner files (Q-021). Turn to Codex."
     }
   ]
 }
