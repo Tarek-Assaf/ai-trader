@@ -12,11 +12,10 @@ from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TypedDict, cast
 
-import pyarrow as pa
-import pyarrow.parquet as pq
+import pyarrow as pa  # type: ignore[import-untyped]
+import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 UTC_MINUS_FIVE = timezone(timedelta(hours=-5), name="HistData EST (fixed UTC-5)")
-OUTPUT_COLUMNS = ["ts_utc", "open", "high", "low", "close", "volume", "price_basis", "source"]
 _DATE_RE = re.compile(r"^\d{8}$")
 
 
@@ -157,10 +156,10 @@ def import_histdata(
             report.format = layout
             unique: dict[datetime, tuple[float, float, float, float, float]] = {}
             conflicted: set[datetime] = set()
-            for line_number, row in parsed:
+            for line_number, raw_fields in parsed:
                 report.rows_read += 1
                 try:
-                    ts, op, hi, lo, close, vol = _parse_row(row, layout)
+                    ts, op, hi, lo, close, vol = _parse_row(raw_fields, layout)
                 except (ValueError, OverflowError) as exc:
                     report.invalid_rows += 1
                     if len(report.invalid_examples) < 20:
@@ -219,9 +218,9 @@ def import_histdata(
             # Conflicts fail closed: the source file is not partially committed.
             by_partition: dict[tuple[int, int], list[BarRow]] = {}
             if not report.conflicting_duplicates:
-                for row in new_rows:
-                    ts = row["ts_utc"]
-                    by_partition.setdefault((ts.year, ts.month), []).append(row)
+                for bar in new_rows:
+                    ts = bar["ts_utc"]
+                    by_partition.setdefault((ts.year, ts.month), []).append(bar)
             schema = pa.schema(
                 [
                     ("ts_utc", pa.timestamp("us", tz="UTC")),
@@ -236,23 +235,37 @@ def import_histdata(
             )
             for (year, month), rows in by_partition.items():
                 out = lake / symbol / "1m" / f"{year:04d}" / f"{month:02d}.parquet"
-                prior: list[dict[str, object]] = []
+                prior: list[BarRow] = []
                 if out.exists():
                     prior.extend(cast(BarRow, row) for row in pq.read_table(out).to_pylist())
                 # Existing timestamps are stable on repeat imports. Changed source data
                 # at a previously imported timestamp is reported and left untouched.
                 merged: dict[datetime, BarRow] = {r["ts_utc"]: r for r in prior}
                 added = 0
-                for row in rows:
-                    existing = merged.get(row["ts_utc"])
+                for bar in rows:
+                    existing = merged.get(bar["ts_utc"])
                     if existing is None:
-                        merged[row["ts_utc"]] = row
+                        merged[bar["ts_utc"]] = bar
                         added += 1
-                    elif any(existing[key] != row[key] for key in OUTPUT_COLUMNS[1:7]):
+                    elif (
+                        existing["open"],
+                        existing["high"],
+                        existing["low"],
+                        existing["close"],
+                        existing["volume"],
+                        existing["price_basis"],
+                    ) != (
+                        bar["open"],
+                        bar["high"],
+                        bar["low"],
+                        bar["close"],
+                        bar["volume"],
+                        bar["price_basis"],
+                    ):
                         report.conflicting_duplicates += 1
                         report.status = "conflicting_duplicates"
                         if len(report.conflict_examples) < 20:
-                            report.conflict_examples.append(row["ts_utc"].isoformat())
+                            report.conflict_examples.append(bar["ts_utc"].isoformat())
                 table = pa.Table.from_pylist([merged[k] for k in sorted(merged)], schema=schema)
                 out.parent.mkdir(parents=True, exist_ok=True)
                 tmp = out.with_suffix(".parquet.tmp")
