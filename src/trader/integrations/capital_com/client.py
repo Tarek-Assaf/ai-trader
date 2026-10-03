@@ -179,7 +179,7 @@ class CapitalComClient:
         method: str,
         path: str,
         *,
-        params: Mapping[str, object] | None = None,
+        params: Mapping[str, str | int | float | bool | None] | None = None,
         history: bool = False,
     ) -> Any:
         for auth_attempt in range(2):
