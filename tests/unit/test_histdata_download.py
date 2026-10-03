@@ -135,3 +135,33 @@ def test_unexpected_http_status_and_oversized_response_are_rejected(
     monkeypatch.setattr(hd, "MAX_BYTES", 4)
     with pytest.raises(ValueError):
         hd._request(hd.BASE + "/get.php")
+
+
+def test_range_download_pauses_between_form_and_archive_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[str] = []
+    pauses: list[float] = []
+
+    def request(url: str, data: bytes | None = None, referer: str | None = None) -> bytes:
+        calls.append(url)
+        return _form() if data is None else _archive()
+
+    monkeypatch.setattr(hd, "_request", request)
+    monkeypatch.setattr(hd.time, "sleep", pauses.append)
+
+    hd.download_histdata("NSXUSD", 2026, 8, tmp_path, pause_seconds=0.75)
+
+    assert len(calls) == 2
+    assert pauses == [0.75]
+
+
+def test_invalid_pause_is_rejected_before_network_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        hd, "_request", lambda *args, **kwargs: pytest.fail("invalid pause must not request")
+    )
+
+    with pytest.raises(ValueError, match="pause_seconds"):
+        hd.download_histdata("NSXUSD", 2026, 8, tmp_path, pause_seconds=-1)
