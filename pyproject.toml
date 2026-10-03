@@ -21,6 +21,7 @@ dependencies = [
   "SQLAlchemy==2.0.38",
   "structlog==25.1.0",
   "uvicorn[standard]==0.34.0",
+  "websockets==17.1",
 ]
 
 [project.optional-dependencies]
@@ -63,4 +64,3 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 addopts = "-ra"
-

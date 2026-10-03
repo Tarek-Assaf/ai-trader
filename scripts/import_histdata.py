@@ -5,24 +5,56 @@ from __future__ import annotations
 
 import argparse
 import json
+import zipfile
 from pathlib import Path
 
 from trader.data.importers.histdata import import_histdata
+from trader.data.importers.histdata_download import download_histdata
+from trader.data.importers.histdata_ticks import rebuild_histdata_ticks
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Read a local HistData ZIP/CSV/TXT file and write bid M1 Parquet plus QA JSON."
+        description="Download or read HistData data and write bid M1 Parquet plus QA JSON."
     )
-    parser.add_argument("source", type=Path, help="Downloaded ZIP, CSV/TXT, or directory")
+    parser.add_argument("source", nargs="?", type=Path, help="Local ZIP, CSV/TXT, or directory")
     parser.add_argument("--symbol", required=True, choices=("NSXUSD", "XAUUSD"))
+    parser.add_argument("--download", action="store_true", help="Download a completed month")
+    parser.add_argument("--year", type=int)
+    parser.add_argument("--month", type=int)
+    parser.add_argument("--raw", type=Path, default=Path("data/raw/histdata"))
+    parser.add_argument(
+        "--from-ticks", action="store_true", help="Rebuild bid M1 from timestamp-ordered raw quotes"
+    )
     parser.add_argument("--lake", type=Path, default=Path("data/lake"))
     parser.add_argument("--lineage", type=Path, default=Path("data_lineage"))
     args = parser.parse_args()
-    reports = import_histdata(args.source, args.symbol, args.lake, args.lineage)
+    if args.download:
+        if args.source or args.year is None or args.month is None:
+            parser.error("--download needs --year and --month, with no local source")
+        try:
+            source = download_histdata(
+                args.symbol, args.year, args.month, args.raw, "T" if args.from_ticks else "M1"
+            )
+        except (ValueError, OSError):
+            print(json.dumps({"status": "error", "reason": "HistData download failed"}))
+            return 1
+    else:
+        if args.source is None or args.year is not None or args.month is not None:
+            parser.error("provide a local source, or use --download --year --month")
+        source = args.source
+    try:
+        reports = (
+            rebuild_histdata_ticks(source, args.symbol, args.lake, args.lineage)
+            if args.from_ticks
+            else import_histdata(source, args.symbol, args.lake, args.lineage)
+        )
+    except (ValueError, OSError, zipfile.BadZipFile, KeyError):
+        print(json.dumps({"status": "error", "reason": "HistData source validation failed"}))
+        return 1
     # Reports contain source names and QA metadata only, never credentials.
     print(json.dumps(reports, indent=2, default=str))
-    return 1 if any(report["status"] == "error" for report in reports) else 0
+    return 1 if not reports or any(report["status"] != "ok" for report in reports) else 0
 
 
 if __name__ == "__main__":

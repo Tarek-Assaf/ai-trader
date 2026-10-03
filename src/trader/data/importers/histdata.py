@@ -122,6 +122,11 @@ def _input_files(path: Path) -> Iterable[tuple[str, bytes]]:
     elif zipfile.is_zipfile(path):
         with zipfile.ZipFile(path) as archive:
             for name in sorted(archive.namelist()):
+                # HistData bundles a TXT status report alongside its ASCII CSV.
+                if name.lower().endswith(".txt") and any(
+                    other.lower() == name[:-4].lower() + ".csv" for other in archive.namelist()
+                ):
+                    continue
                 if not name.endswith("/") and Path(name).suffix.lower() in {".csv", ".txt"}:
                     yield f"{path.name}:{name}", archive.read(name)
     else:
@@ -129,11 +134,14 @@ def _input_files(path: Path) -> Iterable[tuple[str, bytes]]:
 
 
 def _gap_kind(previous: datetime, current: datetime) -> str:
-    cursor = previous.date()
-    while cursor <= current.date():
-        if cursor.weekday() >= 5:
-            return "weekend"
-        cursor += timedelta(days=1)
+    # Only spans inside the coarse Friday 21:00 to Sunday 23:00 UTC
+    # weekend window qualify. A multi-day outage crossing weekdays does not.
+    friday = (previous - timedelta(days=(previous.weekday() - 4) % 7)).replace(
+        hour=21, minute=0, second=0, microsecond=0
+    )
+    sunday = friday + timedelta(days=2, hours=2)
+    if friday <= previous < current <= sunday:
+        return "weekend"
     # Exact session breaks require a confirmed instrument calendar; avoid guessing.
     return "unexpected"
 
@@ -154,6 +162,8 @@ def import_histdata(
         try:
             layout, parsed = _rows(_decode(raw))
             report.format = layout
+            if not parsed:
+                raise ValueError("no price rows in source")
             unique: dict[datetime, tuple[float, float, float, float, float]] = {}
             conflicted: set[datetime] = set()
             for line_number, raw_fields in parsed:
@@ -199,6 +209,8 @@ def import_histdata(
             if new_rows:
                 report.coverage_start_utc = new_rows[0]["ts_utc"].isoformat()
                 report.coverage_end_utc = new_rows[-1]["ts_utc"].isoformat()
+            elif not report.conflicting_duplicates:
+                raise ValueError("no valid price rows in source")
             for prev, cur in zip(new_rows, new_rows[1:], strict=False):
                 gap = int((cur["ts_utc"] - prev["ts_utc"]).total_seconds() // 60) - 1
                 if gap > 0:

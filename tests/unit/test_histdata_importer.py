@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pyarrow.parquet as pq
 
-from trader.data.importers.histdata import import_histdata, parse_histdata_timestamp
+from trader.data.importers.histdata import _gap_kind, import_histdata, parse_histdata_timestamp
 
 
 def test_fixed_est_conversion_around_us_dst_boundaries() -> None:
@@ -81,3 +81,37 @@ def test_mt4_layout_is_detected(tmp_path: Path) -> None:
     report = import_histdata(source, "NSXUSD", tmp_path / "lake", tmp_path / "lineage")[0]
     assert report["format"] == "mt4"
     assert report["invalid_rows"] == 0
+
+
+def test_weekday_outage_crossing_weekend_is_unexpected() -> None:
+    thursday = datetime(2024, 3, 7, 22, tzinfo=UTC)
+    monday = datetime(2024, 3, 11, 1, tzinfo=UTC)
+    assert _gap_kind(thursday, monday) == "unexpected"
+
+
+def test_market_open_alignment_uses_fixed_est_weekend_window() -> None:
+    friday = parse_histdata_timestamp("20240308 170000")
+    sunday = parse_histdata_timestamp("20240310 180000")
+    assert friday == datetime(2024, 3, 8, 22, tzinfo=UTC)
+    assert sunday == datetime(2024, 3, 10, 23, tzinfo=UTC)
+    assert _gap_kind(friday, sunday) == "weekend"
+
+
+def test_ascii_zip_status_report_is_not_imported_as_prices(tmp_path: Path) -> None:
+    archive = tmp_path / "histdata.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("DAT_ASCII_XAUUSD_M1_202401.csv", "20240102 120000;100;101;99;100;1\n")
+        zf.writestr("DAT_ASCII_XAUUSD_M1_202401.txt", "HistData.com Status Report\n")
+    reports = import_histdata(archive, "XAUUSD", tmp_path / "lake", tmp_path / "lineage")
+    assert len(reports) == 1
+    assert reports[0]["rows_read"] == 1
+    assert reports[0]["invalid_rows"] == 0
+
+
+def test_empty_or_invalid_source_is_not_success(tmp_path: Path) -> None:
+    for name, body in (("empty.csv", ""), ("invalid.csv", "not a candle\n")):
+        source = tmp_path / name
+        source.write_text(body)
+        report = import_histdata(source, "XAUUSD", tmp_path / "lake", tmp_path / "lineage")[0]
+        assert report["status"] == "error"
+        assert not list((tmp_path / "lake").rglob("*.parquet"))
