@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -59,3 +60,36 @@ def test_health_is_degraded_when_role_all_has_no_backup(tmp_path: Path, monkeypa
     assert payload["status"] == "degraded"
     assert payload["last_backup_at"] is None
     assert payload["last_backup_age_seconds"] is None
+
+
+def test_recorder_health_exposes_reconnect_reason_and_market_liveness(tmp_path: Path) -> None:
+    """Health uses ping and market status; a quiet but open price feed is not inspected."""
+    status_file = tmp_path / "recorder.json"
+    status_file.write_text(
+        json.dumps(
+            {
+                "configured": True,
+                "status": "reconnecting",
+                "ping_reply_ok": False,
+                "market_status": "TRADEABLE",
+                "reconnect_count": 3,
+                "last_reconnect_reason": "ConnectionClosed",
+                "secret": "must-not-be-exposed",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    value = health._data_recorder_status(status_file)
+
+    assert value == {
+        "configured": True,
+        "status": "reconnecting",
+        "ping_reply_ok": False,
+        "market_status": "TRADEABLE",
+        "reconnect_count": 3,
+        "last_reconnect_reason": "ConnectionClosed",
+        "last_update_at": None,
+        "last_closed_bar_at": None,
+    }
+

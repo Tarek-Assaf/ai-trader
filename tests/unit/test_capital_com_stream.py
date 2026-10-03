@@ -127,6 +127,7 @@ def test_rest_parser_treats_naive_snapshot_time_utc() -> None:
 def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
     rest = FakeRest()
     updates: list[OhlcUpdate] = []
+    reconnects: list[tuple[int, str]] = []
     stop = threading.Event()
     sockets = [
         FakeSocket(
@@ -155,6 +156,7 @@ def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
         rest,
         ["US100"],
         updates.append,
+        on_reconnect=lambda count, reason: reconnects.append((count, reason)),
         connection_factory=factory,
         reconnect_min_seconds=0.01,
         reconnect_max_seconds=0.02,
@@ -174,6 +176,7 @@ def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
         for update in updates
     )
     assert client.reconnect_count == 1
+    assert reconnects == [(1, "OSError")]
     assert client.ping_reply_ok is True
     requests = [json.loads(message) for socket in sockets for message in socket.sent]
     assert all(
@@ -296,3 +299,4 @@ def test_stream_sends_keepalive_ping_before_ten_minutes() -> None:
 
     messages = [json.loads(message) for message in socket.sent]
     assert sum(message["destination"] == "ping" for message in messages) == 2
+

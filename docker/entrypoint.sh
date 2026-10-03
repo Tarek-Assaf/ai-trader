@@ -18,10 +18,11 @@ if [ "$ROLE" = "all" ]; then
     esac
     mkdir -p "$POSTGRES_DATA_DIR"
 fi
-mkdir -p /workspace/redisdata /workspace/logs /workspace/backups /var/run/postgresql
+mkdir -p /workspace/redisdata /workspace/logs /workspace/backups /workspace/data/lake /var/run/postgresql
 if [ "$ROLE" = "all" ]; then
     rm -f /workspace/.postgres-restore-ready
     chown trader:trader "$POSTGRES_DATA_DIR"
 fi
-chown trader:trader /workspace /workspace/redisdata /workspace/logs /workspace/backups /var/run/postgresql
+chown trader:trader /workspace /workspace/redisdata /workspace/logs /workspace/backups /workspace/data /workspace/data/lake /var/run/postgresql
 exec gosu trader supervisord -n -c "$CONFIG"
+

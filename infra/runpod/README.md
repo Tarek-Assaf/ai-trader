@@ -74,6 +74,8 @@ Leave `POSTGRES_DATA_DIR` unset for normal paper-mode use. The image default sto
 3. Add `/health` to the end of that address.
 4. Confirm the page returns JSON with a healthy status, role `all`, paper mode, demo broker, `live_enabled` set to `false`, and database and Redis reported reachable. It also shows the image Git SHA as `version`, plus `last_backup_at` and `last_backup_age_seconds`. For `ROLE=all`, health is degraded if no backup is present or the newest backup is more than 15 minutes old. The container creates a first snapshot at startup, then backs up every five minutes and on graceful shutdown.
 
+When Capital.com credentials are configured, the recorder writes closed bid/ask M1 bars and close spread as Parquet under `/workspace/data/lake/{symbol}/1m_capital/{year}/{month}.parquet`. The same page includes `data_recorder` with ping reply, broker market status, reconnect count/reason, and last update/closed-bar times. A quiet price feed alone does not mark the recorder unhealthy; market status and ping replies drive that check. Without Capital.com credentials, `data_recorder.status` is `not_configured` and the rest of `/health` remains usable.
+
 If the service is not healthy, use the pod's **Logs** view and see Troubleshooting below. Do not copy log output that might contain private account information into a public issue.
 
 
@@ -136,3 +138,4 @@ Screenshots are intentionally placeholders until the owner supplies approved acc
 - `[Screenshot: Pod HTTP service showing /health]`
 
 Never include account IDs, secret values, API keys, or billing details in screenshots.
+

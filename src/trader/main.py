@@ -14,9 +14,9 @@ def main() -> None:
         print("Backtest runner is a Phase 0 placeholder.")
         return
     if role == "worker":
-        from trader.workers.placeholder import run_placeholder
+        from trader.workers.recorder import run_data_recorder
 
-        run_placeholder()
+        run_data_recorder()
         return
     import uvicorn
 
@@ -25,3 +25,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
