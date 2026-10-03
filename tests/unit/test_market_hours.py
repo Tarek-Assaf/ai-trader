@@ -78,3 +78,26 @@ def test_invalid_broker_hours_fail_closed() -> None:
     payload = {"instrument": {"openingHours": {"mon": "09:00 - 17:00"}}}
     with pytest.raises(ValueError, match="openingHours.mon"):
         MarketHours.from_market_details(payload)
+
+
+
+def test_capital_com_opening_hours_minute_boundaries() -> None:
+    payload = {
+        "instrument": {
+            "openingHours": {
+                "mon": ["00:00 - 21:59", "23:05 - 00:00"],
+                "tue": ["00:00 - 21:59", "23:05 - 00:00"],
+                "wed": ["00:00 - 21:59", "23:05 - 00:00"],
+                "thu": ["00:00 - 21:59", "23:05 - 00:00"],
+                "fri": ["00:00 - 21:59"],
+                "sat": [],
+                "sun": ["23:05 - 00:00"],
+                "zone": "UTC",
+            }
+        }
+    }
+    schedule = MarketHours.from_market_details(payload)
+
+    assert schedule.is_open(datetime(2026, 10, 5, 21, 59, 30, tzinfo=UTC))
+    assert not schedule.is_open(datetime(2026, 10, 5, 22, 0, tzinfo=UTC))
+    assert schedule.is_open(datetime(2026, 10, 5, 23, 5, tzinfo=UTC))
