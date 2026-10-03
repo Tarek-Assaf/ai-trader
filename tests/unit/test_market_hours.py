@@ -54,21 +54,13 @@ def test_next_open_skips_weekend_and_uses_broker_timezone() -> None:
     )
 
 
-def test_broker_status_precedes_schedule_and_stale_feed_is_fallback() -> None:
+def test_broker_status_precedes_schedule_for_expected_open_state() -> None:
     schedule = MarketHours.from_market_details(_details())
     now = datetime(2026, 10, 5, 15, 0, tzinfo=UTC)
-    assert resolve_market_open(
-        "CLOSED", schedule, now
-    ) == (False, "broker")
-    assert resolve_market_open(
-        "TRADEABLE", schedule, now
-    ) == (True, "broker")
-    assert resolve_market_open(
-        "unknown", schedule, now
-    ) == (True, "schedule")
-    assert resolve_market_open(
-        "unknown", None, now
-    ) == (None, "unknown")
+    assert resolve_market_open("CLOSED", schedule, now) == (False, "broker")
+    assert resolve_market_open("TRADEABLE", schedule, now) == (True, "broker")
+    assert resolve_market_open("unknown", schedule, now) == (True, "schedule")
+    assert resolve_market_open("unknown", None, now) == (None, "unknown")
 
 
 def test_invalid_broker_hours_fail_closed() -> None:
