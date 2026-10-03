@@ -213,8 +213,6 @@ def run_data_recorder() -> None:
                                 broker_status,
                                 schedule,
                                 datetime.datetime.now(datetime.UTC),
-                                last_tick_at=recorder.last_tick_at(epic),
-                                stale_after_seconds=config["stale_after_seconds"],
                             )
                             expected_open[epic] = is_open
                             statuses.append(_resolved_market_status(broker_status, is_open))
