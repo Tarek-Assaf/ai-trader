@@ -143,7 +143,7 @@ class InstrumentMapper:
                 display_name, epic, histdata_code, asset_class
             )):
                 raise InstrumentDataError(f"instrument {symbol} has invalid identity fields")
-            if not isinstance(aliases_raw, list) or any(
+            if not isinstance(aliases_raw, (list, tuple)) or any(
                 not isinstance(value, str) or not value.strip() for value in aliases_raw
             ):
                 raise InstrumentDataError(f"instrument {symbol} aliases must be non-empty strings")
