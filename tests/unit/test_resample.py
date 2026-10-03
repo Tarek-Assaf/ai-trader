@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from hypothesis import given, settings, strategies as st
 import pytest
 
 from trader.data.resample import Candle, resample_ohlc
@@ -106,3 +107,61 @@ def test_identical_normalized_minutes_produce_identical_historical_and_live_outp
     live = resample_ohlc(list(source_minutes), 5)
 
     assert historical == live
+
+
+@settings(max_examples=100, deadline=None)
+@given(
+    samples=st.lists(
+        st.tuples(
+            st.floats(min_value=0, max_value=1000, allow_nan=False, allow_infinity=False),
+            st.floats(min_value=0, max_value=1000, allow_nan=False, allow_infinity=False),
+            st.floats(min_value=0, max_value=5, allow_nan=False, allow_infinity=False),
+            st.floats(min_value=0, max_value=100, allow_nan=False, allow_infinity=False),
+        ),
+        min_size=1,
+        max_size=20,
+    )
+)
+def test_ohlc_resampling_properties_and_no_lookahead(
+    samples: list[tuple[float, float, float, float]],
+) -> None:
+    """Property-check OHLC invariants and isolation from the next timeframe bin."""
+    timeframe = len(samples)
+    anchor = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    epoch_minute = int(anchor.timestamp() // 60)
+    bucket_minute = epoch_minute - epoch_minute % timeframe
+    start = datetime.fromtimestamp(bucket_minute * 60, UTC)
+    bars = [
+        Candle(
+            ts_utc=start + timedelta(minutes=minute),
+            open=open_price,
+            high=max(open_price, close) + wick,
+            low=min(open_price, close) - wick,
+            close=close,
+            volume=volume,
+        )
+        for minute, (open_price, close, wick, volume) in enumerate(samples)
+    ]
+
+    result = resample_ohlc(list(reversed(bars)), timeframe)
+
+    assert len(result) == 1
+    aggregate = result[0]
+    assert aggregate.complete is True
+    assert aggregate.n_minutes == timeframe
+    assert aggregate.open == bars[0].open
+    assert aggregate.high == max(bar.high for bar in bars)
+    assert aggregate.low == min(bar.low for bar in bars)
+    assert aggregate.close == bars[-1].close
+    assert aggregate.volume == pytest.approx(sum(bar.volume for bar in bars))
+
+    future = Candle(
+        ts_utc=start + timedelta(minutes=timeframe),
+        open=5000,
+        high=5002,
+        low=4998,
+        close=5001,
+        volume=500,
+    )
+    extended = resample_ohlc([*bars, future], timeframe)
+    assert extended[0] == aggregate
