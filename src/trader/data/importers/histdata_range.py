@@ -125,6 +125,10 @@ def _summary_reports(reports: list[dict[str, object]]) -> dict[str, object]:
     return {
         "rows_read": sum(int(report.get("rows_read", 0)) for report in reports),
         "rows_written": sum(int(report.get("rows_written", 0)) for report in reports),
+        "invalid_rows": sum(int(report.get("invalid_rows", 0)) for report in reports),
+        "conflicting_duplicates": sum(
+            int(report.get("conflicting_duplicates", 0)) for report in reports
+        ),
         "gaps": len(gaps),
         "gap_examples": gaps[:20],
     }
@@ -163,6 +167,8 @@ def import_histdata_range(
         "through_year": through_year,
         "rows_read": 0,
         "rows_written": 0,
+        "invalid_rows": 0,
+        "conflicting_duplicates": 0,
         "gaps": 0,
         "gap_examples": [],
         "imported_months": [],
@@ -187,7 +193,7 @@ def import_histdata_range(
                 if elapsed < pause_seconds:
                     time.sleep(pause_seconds - elapsed)
             was_cached = m1_path.exists()
-            m1_path = download_histdata(symbol, year, month, raw, "M1")
+            m1_path = download_histdata(symbol, year, month, raw, "M1", pause_seconds)
             if not was_cached:
                 last_download_at = time.monotonic()
             m1_verification = _verify_or_pin(m1_path, manifest, manifest_file)
@@ -201,7 +207,7 @@ def import_histdata_range(
                     if elapsed < pause_seconds:
                         time.sleep(pause_seconds - elapsed)
                 was_cached = tick_path.exists()
-                tick_path = download_histdata(symbol, year, month, raw, "T")
+                tick_path = download_histdata(symbol, year, month, raw, "T", pause_seconds)
                 if not was_cached:
                     last_download_at = time.monotonic()
                 tick_verification = _verify_or_pin(tick_path, manifest, manifest_file)
@@ -228,7 +234,13 @@ def import_histdata_range(
             manifest["completed_months"][key] = imported
             _atomic_json(manifest_file, manifest)
             result["imported_months"].append(month_id)  # type: ignore[union-attr]
-            for metric in ("rows_read", "rows_written", "gaps"):
+            for metric in (
+                "rows_read",
+                "rows_written",
+                "invalid_rows",
+                "conflicting_duplicates",
+                "gaps",
+            ):
                 result[metric] = int(result[metric]) + int(totals[metric])
             result["gap_examples"].extend(totals["gap_examples"])  # type: ignore[union-attr]
         except (OSError, ValueError, zipfile.BadZipFile, KeyError) as exc:
