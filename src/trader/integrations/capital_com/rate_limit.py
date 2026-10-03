@@ -97,7 +97,7 @@ class RedisRateLimiter:
                     uuid.uuid4().hex,
                     *limits,
                 )
-            except Exception as exc:  # Redis must fail closed; do not expose its URL.
+            except Exception:  # Redis must fail closed; do not expose its URL.
                 raise RateLimitError("Capital.com rate limiter is unavailable") from None
             try:
                 delay = int(delay_ms)

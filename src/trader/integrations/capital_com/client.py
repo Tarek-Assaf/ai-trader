@@ -6,7 +6,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable, Iterator, Mapping
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any
 from urllib.parse import quote
@@ -75,9 +75,7 @@ class CapitalComClient:
         self._limiter = limiter
         if self._limiter is None:
             redis_url = (
-                settings.redis_url.get_secret_value()
-                if settings.redis_url is not None
-                else None
+                settings.redis_url.get_secret_value() if settings.redis_url is not None else None
             )
             self._limiter = limiter_from_settings(
                 redis_url, api_key, embedded_redis=settings.role == "all"
@@ -139,7 +137,11 @@ class CapitalComClient:
                 return response
             if response.status_code != 429 or attempt == 2:
                 if response.status_code >= 400:
-                    _LOG.warning("Capital.com request failed: %s returned HTTP %s", path, response.status_code)
+                    _LOG.warning(
+                        "Capital.com request failed: %s returned HTTP %s",
+                        path,
+                        response.status_code,
+                    )
                     raise CapitalComError(response.status_code, path)
                 return response
             retry_after = response.headers.get("Retry-After", "")
@@ -228,7 +230,7 @@ class CapitalComClient:
     def _timestamp(value: datetime) -> str:
         if value.tzinfo is None:
             raise ValueError("price history timestamps must be timezone-aware")
-        return value.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+        return value.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%S")
 
     def iter_price_history(
         self,
@@ -249,10 +251,10 @@ class CapitalComClient:
         if max_pages < 1:
             raise ValueError("max_pages must be positive")
         cursor = start
-        end_utc = end.astimezone(timezone.utc) if end.tzinfo else None
+        end_utc = end.astimezone(UTC) if end.tzinfo else None
         if end_utc is None or start.tzinfo is None:
             raise ValueError("price history timestamps must be timezone-aware")
-        if cursor.astimezone(timezone.utc) > end_utc:
+        if cursor.astimezone(UTC) > end_utc:
             raise ValueError("start must not be after end")
         seen: set[str] = set()
         path = f"prices/{quote(epic, safe='')}"
@@ -285,8 +287,8 @@ class CapitalComClient:
                 except ValueError:
                     raise CapitalComError(200, path) from None
                 if stamp.tzinfo is None:
-                    stamp = stamp.replace(tzinfo=timezone.utc)
-                stamp = stamp.astimezone(timezone.utc)
+                    stamp = stamp.replace(tzinfo=UTC)
+                stamp = stamp.astimezone(UTC)
                 last_stamp = stamp if last_stamp is None or stamp > last_stamp else last_stamp
                 key = stamp.isoformat()
                 if key not in seen:
@@ -297,7 +299,7 @@ class CapitalComClient:
             if last_stamp is None:
                 return
             next_cursor = last_stamp + timedelta(seconds=1)
-            if next_cursor <= cursor.astimezone(timezone.utc):
+            if next_cursor <= cursor.astimezone(UTC):
                 raise CapitalComError(200, path)
             cursor = next_cursor
             if cursor > end_utc:

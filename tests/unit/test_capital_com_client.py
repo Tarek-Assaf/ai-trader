@@ -54,7 +54,10 @@ def test_session_and_market_search_use_authenticated_demo_host() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request)
         if request.url.path.endswith("/session") and request.method == "POST":
-            return response(request, headers={"CST": "cst-private", "X-SECURITY-TOKEN": "token-private"})
+            return response(
+                request,
+                headers={"CST": "cst-private", "X-SECURITY-TOKEN": "token-private"},
+            )
         if request.url.path.endswith("/markets"):
             return response(request, {"markets": [{"epic": "US100"}]})
         raise AssertionError(f"unexpected request: {request.method} {request.url.path}")
@@ -123,15 +126,15 @@ def test_price_history_pages_forward_and_uses_documented_resolution() -> None:
 
     limiter = AllowAllLimiter()
     http = httpx.Client(transport=httpx.MockTransport(handler))
-    from datetime import datetime, timezone
+    from datetime import UTC, datetime
 
     with CapitalComClient(make_settings(), limiter=limiter, http_client=http) as client:
         candles = list(
             client.iter_price_history(
                 "US100",
                 Resolution.MINUTE,
-                datetime(2026, 1, 1, tzinfo=timezone.utc),
-                datetime(2026, 1, 1, 0, 2, tzinfo=timezone.utc),
+                datetime(2026, 1, 1, tzinfo=UTC),
+                datetime(2026, 1, 1, 0, 2, tzinfo=UTC),
                 page_size=2,
                 max_pages=3,
             )
@@ -155,7 +158,9 @@ def test_live_host_is_selected_only_by_explicit_environment() -> None:
         assert client.environment == "live"
 
 
-def test_errors_never_include_api_credentials_or_response_body(caplog: pytest.LogCaptureFixture) -> None:
+def test_errors_never_include_api_credentials_or_response_body(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         if request.method == "POST":
             return response(request, headers={"CST": "cst", "X-SECURITY-TOKEN": "token"})
@@ -187,8 +192,8 @@ def test_invalid_history_arguments_fail_before_request() -> None:
                 client.iter_price_history(
                     "US100",
                     "MINUTE_3",
-                    datetime(2026, 1, 1, tzinfo=timezone.utc),
-                    datetime(2026, 1, 2, tzinfo=timezone.utc),
+                    datetime(2026, 1, 1, tzinfo=UTC),
+                    datetime(2026, 1, 2, tzinfo=UTC),
                 )
             )
 
