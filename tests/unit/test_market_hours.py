@@ -36,12 +36,12 @@ def test_holiday_and_early_close_overrides() -> None:
     schedule = MarketHours.from_market_details(
         _details(),
         holidays=(date(2026, 10, 5),),
-        early_closes={date(2026, 10, 9): time(13, 0)},
+        early_closes={date(2026, 10, 9): time(16, 0)},
     )
     assert not schedule.is_open(datetime(2026, 10, 5, 15, 0, tzinfo=UTC))
     assert schedule.upcoming_holidays(datetime(2026, 10, 4, tzinfo=UTC), 2) == [date(2026, 10, 5)]
-    assert schedule.is_open(datetime(2026, 10, 9, 16, 30, tzinfo=UTC))
-    assert not schedule.is_open(datetime(2026, 10, 9, 17, 30, tzinfo=UTC))
+    assert schedule.is_open(datetime(2026, 10, 9, 18, 30, tzinfo=UTC))
+    assert not schedule.is_open(datetime(2026, 10, 9, 20, 30, tzinfo=UTC))
     assert schedule.next_close(datetime(2026, 10, 9, 16, 30, tzinfo=UTC)) == datetime(
         2026, 10, 9, 17, 0, tzinfo=UTC
     )
