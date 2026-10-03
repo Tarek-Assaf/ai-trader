@@ -185,12 +185,19 @@ def run_data_recorder() -> None:
                             details = rest.market_details(epic)
                             broker_status = _market_status(details)
                             config = session_settings[epic]
-                            schedule = MarketHours.from_market_details(
-                                details,
-                                holidays=config["holidays"],
-                                early_closes=config["early_closes"],
-                                fallback_zone=config["fallback_zone"],
-                            )
+                            try:
+                                schedule = MarketHours.from_market_details(
+                                    details,
+                                    holidays=config["holidays"],
+                                    early_closes=config["early_closes"],
+                                    fallback_zone=config["fallback_zone"],
+                                )
+                            except ValueError as exc:
+                                schedule = None
+                                _LOG.warning(
+                                    "Capital.com opening hours unavailable (%s)",
+                                    type(exc).__name__,
+                                )
                             is_open, source = resolve_market_open(
                                 broker_status,
                                 schedule,
