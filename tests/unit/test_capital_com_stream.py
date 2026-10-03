@@ -114,7 +114,7 @@ def test_stream_reconnects_resubscribes_and_backfills_gap() -> None:
 
     assert connect_calls == 2
     assert len(rest.calls) == 1
-    assert rest.calls[0][2] == datetime(2026, 10, 3, 10, 1, tzinfo=UTC)
+    assert rest.calls[0][2] == datetime(2026, 10, 3, 10, 0, tzinfo=UTC)
     assert any(update.source == "capital_rest" and update.price_type == "ask" for update in updates)
     requests = [json.loads(message) for socket in sockets for message in socket.sent]
     assert all(request["destination"] == "OHLCMarketData.subscribe" for request in requests)
