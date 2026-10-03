@@ -133,8 +133,6 @@ def test_stream_limits_epics_to_forty() -> None:
 def test_stream_sends_keepalive_ping_before_ten_minutes() -> None:
     rest = FakeRest()
     stop = threading.Event()
-    socket = FakeSocket([])
-
     class StopAfterTwoTimeouts(FakeSocket):
         def __init__(self) -> None:
             super().__init__([])
