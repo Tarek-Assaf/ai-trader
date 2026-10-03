@@ -103,14 +103,30 @@ python scripts/verify_capital_stream.py
 The script observes the demo stream for 90 seconds and prints one redacted JSON result with bid/ask update counts, first and last update times, ping status, reconnect count and epic. It refuses to run unless `BROKER_ENV=demo` and `LIVE_TRADING_ENABLED=false`. For a weekend connectivity check, run `python scripts/verify_capital_stream.py --epic BTCUSD`; BTCUSD is test-only and must never be added to `config/instruments.yaml` or traded. Paste only the resulting JSON to the project owner.
 
 
-## 8. Stop and restart safely
+
+## 8. Import HistData history
+
+After the image containing `scripts/import_histdata.py` is deployed, run one symbol at a time in the pod terminal. Replace `2000` with the earliest year offered for that symbol by HistData. The importer ends at the last completed month even when the current year is selected:
+
+```sh
+cd /app
+python scripts/import_histdata.py --symbol NSXUSD --from-year 2000 --through-year 2026 --pause-seconds 1 \
+  --raw /workspace/data/raw/histdata --lake /workspace/data/lake \
+  --lineage /workspace/data_lineage
+```
+
+Run the same command again with `--symbol XAUUSD`. Do not run multiple import commands at the same time against the same volume. The process downloads one archive at a time, pauses between HTTP requests and uncached archives, reuses verified cached ZIPs, and saves its checksum and completed-month manifest under `/workspace/data/raw/histdata/sha256-manifest.json`. A rerun verifies cached ZIPs against the manifest, skips completed months, and leaves existing Parquet rows unchanged.
+
+The two August 2026 M1 checksums and two tick checksums in the manifest come from the reviewed HistData QA evidence. For other months, the importer pins the archive's SHA-256 when first downloaded and checks it on later runs. This catches cache corruption or replacement; it is not independent verification of HistData's source file. The summary reports imported and skipped months, rows read/written, invalid/conflicting rows, gaps, and rejected months. A partial result exits with status 1. Review rejected months and rerun after correcting the year range or a temporary download problem. Share the redacted JSON summary with the project owner; never share pod secrets.
+
+## 9. Stop and restart safely
 
 - To pause compute, use **Stop** in the pod actions menu. The container disk is temporary; PostgreSQL will recover from the latest valid database dump on the mounted `/workspace` volume when a replacement pod starts. A hard reset can lose up to five minutes of recent database changes. Compute billing stops or changes according to the current RunPod plan, but network-volume storage charges continue while the volume exists. Confirm current terms in the console and [pricing documentation](https://docs.runpod.io/pods/pricing).
 - To resume, use **Start** on the same pod and wait for `/health` to become healthy. Keep the attached network volume in place.
 - Do not delete the network volume when deleting or replacing the pod; it holds database backups and other persistent data.
 - Before changing an image tag or deleting a volume, ask the project owner to confirm a backup exists.
 
-## 9. Rotate the registry token
+## 10. Rotate the registry token
 
 1. Create a replacement GitHub token with `read:packages` and an expiration.
 2. Update the saved `ghcr.io` registry credential in RunPod with the replacement token.
