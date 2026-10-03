@@ -18,8 +18,19 @@ from websockets.sync.client import ClientConnection, connect
 from trader.integrations.capital_com.client import CapitalComClient, Resolution
 
 _LOG = logging.getLogger(__name__)
+logging.getLogger("websockets").setLevel(logging.WARNING)
 _STREAM_URL = "wss://api-streaming-capital.backend-capital.com/connect"
 _PING_INTERVAL = timedelta(minutes=8)
+_REPLY_TIMEOUT_SECONDS = 30.0
+
+
+class StreamProtocolError(RuntimeError):
+    """The streaming service did not acknowledge a request as expected."""
+
+
+class _ConsumerCallbackFailure(Exception):
+    def __init__(self, original: Exception) -> None:
+        self.original = original
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,12 +52,7 @@ UpdateHandler = Callable[[OhlcUpdate], None]
 
 
 class CapitalComStreamClient:
-    """Subscribe to configured minute OHLC and fill reconnect gaps via REST.
-
-    The WebSocket session uses the authenticated REST client's current tokens.
-    Callbacks receive normalized updates; this class never logs auth messages or
-    market payloads.
-    """
+    """Subscribe to minute OHLC, validate liveness, and REST-backfill reconnect gaps."""
 
     def __init__(
         self,
@@ -79,6 +85,18 @@ class CapitalComStreamClient:
         self._sleep = sleep
         self._last_seen: dict[tuple[str, str], datetime] = {}
         self._correlation = 0
+        self._reconnect_count = 0
+        self._ping_reply_ok: bool | None = None
+
+    @property
+    def reconnect_count(self) -> int:
+        """Number of disconnects after the stream was successfully established."""
+        return self._reconnect_count
+
+    @property
+    def ping_reply_ok(self) -> bool | None:
+        """Whether the most recent WebSocket keepalive received an OK reply."""
+        return self._ping_reply_ok
 
     def _message(self, destination: str, payload: Mapping[str, Any] | None = None) -> str:
         self._correlation += 1
@@ -93,13 +111,81 @@ class CapitalComStreamClient:
             message["payload"] = dict(payload)
         return json.dumps(message, separators=(",", ":"))
 
+    def _send_request(
+        self,
+        socket: ClientConnection,
+        destination: str,
+        payload: Mapping[str, Any] | None = None,
+    ) -> str:
+        message = self._message(destination, payload)
+        correlation_id = str(json.loads(message)["correlationId"])
+        socket.send(message)
+        return correlation_id
+
+    def _await_reply(
+        self,
+        socket: ClientConnection,
+        correlation_id: str,
+        destination: str,
+        *,
+        timeout: float = _REPLY_TIMEOUT_SECONDS,
+    ) -> Mapping[str, Any]:
+        deadline = time.monotonic() + timeout
+        while True:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise StreamProtocolError(f"Capital.com {destination} reply timed out")
+            try:
+                raw = socket.recv(timeout=remaining)
+            except TimeoutError:
+                raise StreamProtocolError(f"Capital.com {destination} reply timed out") from None
+            try:
+                message = json.loads(raw)
+            except (TypeError, json.JSONDecodeError):
+                _LOG.warning("Ignoring malformed Capital.com WebSocket reply")
+                continue
+            if not isinstance(message, Mapping):
+                continue
+            if message.get("destination") == "ohlc.event":
+                self._handle(raw)
+                continue
+            if str(message.get("correlationId", "")) != correlation_id:
+                continue
+            status = message.get("status")
+            if status != "OK" or message.get("destination") != destination:
+                _LOG.warning(
+                    "Capital.com WebSocket request failed: destination=%s status=%s",
+                    destination,
+                    status if isinstance(status, str) else "missing",
+                )
+                raise StreamProtocolError(f"Capital.com {destination} reply was not OK")
+            return message
+
     def _subscribe(self, socket: ClientConnection) -> None:
-        socket.send(
-            self._message(
-                "OHLCMarketData.subscribe",
-                {"epics": list(self._epics), "resolutions": ["MINUTE"], "type": "classic"},
-            )
+        correlation_id = self._send_request(
+            socket,
+            "OHLCMarketData.subscribe",
+            {"epics": list(self._epics), "resolutions": ["MINUTE"], "type": "classic"},
         )
+        reply = self._await_reply(socket, correlation_id, "OHLCMarketData.subscribe")
+        payload = reply.get("payload")
+        subscriptions = payload.get("subscriptions") if isinstance(payload, Mapping) else None
+        if not isinstance(subscriptions, Mapping):
+            raise StreamProtocolError("Capital.com subscribe reply is missing subscriptions")
+        expected = {f"{epic}:MINUTE:classic" for epic in self._epics}
+        confirmed = {key for key, status in subscriptions.items() if status == "PROCESSED"}
+        missing = sorted(expected - confirmed)
+        if missing:
+            _LOG.warning(
+                "Capital.com OHLC subscription incomplete: epics=%s status=OK",
+                [item.split(":", maxsplit=1)[0] for item in missing],
+            )
+            raise StreamProtocolError("Capital.com did not confirm every OHLC subscription")
+
+    def _ping(self, socket: ClientConnection) -> None:
+        correlation_id = self._send_request(socket, "ping")
+        self._await_reply(socket, correlation_id, "ping")
+        self._ping_reply_ok = True
 
     @staticmethod
     def _number(value: object) -> float:
@@ -143,7 +229,7 @@ class CapitalComStreamClient:
             raise ValueError("REST candle is missing snapshotTimeUTC")
         stamp = datetime.fromisoformat(stamp_text.replace("Z", "+00:00"))
         if stamp.tzinfo is None:
-            raise ValueError("REST candle timestamp must include a timezone")
+            stamp = stamp.replace(tzinfo=UTC)
         updates = []
         for side in ("bid", "ask"):
             values = [
@@ -167,25 +253,36 @@ class CapitalComStreamClient:
             raise ValueError("REST candle has no bid or ask OHLC values")
         return updates
 
+    def _emit(self, update: OhlcUpdate) -> None:
+        try:
+            self._on_update(update)
+        except Exception as exc:
+            _LOG.error("Capital.com stream consumer failed (%s)", type(exc).__name__)
+            raise _ConsumerCallbackFailure(exc) from exc
+
     def _backfill(self) -> None:
         end = self._clock().astimezone(UTC)
         for epic in self._epics:
-            seen = [stamp for (item, _), stamp in self._last_seen.items() if item == epic]
+            seen = {
+                side: stamp
+                for (item, side), stamp in self._last_seen.items()
+                if item == epic
+            }
             if not seen:
                 continue
-            # Re-fetch the last observed minute: it may have been incomplete at disconnect.
-            start = min(seen).replace(second=0, microsecond=0)
+            start = min(seen.values()).replace(second=0, microsecond=0)
             if start >= end:
                 continue
             for candle in self._rest.iter_price_history(
                 epic, Resolution.MINUTE, start, end, max_pages=100
             ):
                 for update in self._parse_rest_candle(epic, candle):
-                    self._on_update(update)
-                    key = (epic, update.price_type)
-                    previous = self._last_seen.get(key)
-                    if previous is None or update.timestamp > previous:
-                        self._last_seen[key] = update.timestamp
+                    watermark = seen.get(update.price_type)
+                    if watermark is not None and update.timestamp <= watermark:
+                        continue
+                    self._emit(update)
+                    seen[update.price_type] = update.timestamp
+                    self._last_seen[(epic, update.price_type)] = update.timestamp
 
     def _handle(self, raw: str | bytes) -> None:
         try:
@@ -198,22 +295,26 @@ class CapitalComStreamClient:
         update = self._parse_stream_update(message)
         if update is None or update.epic not in self._epics:
             return
-        self._on_update(update)
+        self._emit(update)
         key = (update.epic, update.price_type)
         previous = self._last_seen.get(key)
         if previous is None or update.timestamp > previous:
             self._last_seen[key] = update.timestamp
 
     def run_forever(self, stop_event: threading.Event) -> None:
-        """Run until stopped; reconnect, re-subscribe, and REST-backfill gaps."""
+        """Run until stopped; validate replies, reconnect, and REST-backfill gaps."""
         backoff = self._reconnect_min
+        established = False
         while not stop_event.is_set():
             try:
+                self._rest.ping()
                 with self._connect(
                     _STREAM_URL, open_timeout=10, close_timeout=2, ping_interval=None
                 ) as socket:
                     self._subscribe(socket)
+                    self._ping(socket)
                     self._backfill()
+                    established = True
                     backoff = self._reconnect_min
                     last_ping = self._clock()
                     while not stop_event.is_set():
@@ -225,9 +326,14 @@ class CapitalComStreamClient:
                             self._handle(raw)
                         now = self._clock()
                         if not stop_event.is_set() and now - last_ping >= self._ping_interval:
-                            socket.send(self._message("ping"))
+                            self._ping(socket)
                             last_ping = now
-            except (ConnectionClosed, OSError, TimeoutError) as exc:
+            except _ConsumerCallbackFailure as exc:
+                raise exc.original
+            except (ConnectionClosed, OSError, TimeoutError, StreamProtocolError) as exc:
+                self._ping_reply_ok = False
+                if established:
+                    self._reconnect_count += 1
                 if stop_event.is_set():
                     break
                 _LOG.warning("Capital.com WebSocket disconnected (%s)", type(exc).__name__)
