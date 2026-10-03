@@ -169,6 +169,9 @@ def run_data_recorder() -> None:
             market_status = "unknown"
             market_status_source = "unknown"
             expected_open: dict[str, bool | None] = {}
+            stale_after_by_epic = {
+                epic: config["stale_after_seconds"] for epic, config in session_settings.items()
+            }
             next_market_poll = 0.0
             while not stop.is_set():
                 heartbeat_path.touch()
@@ -219,6 +222,7 @@ def run_data_recorder() -> None:
                     market_status=market_status[:40] if market_status else "unknown",
                     expected_open_by_epic=expected_open,
                     market_status_source=market_status_source,
+                    stale_after_seconds_by_epic=stale_after_by_epic,
                 )
                 stop.wait(_STATUS_POLL_SECONDS)
             stop.set()
