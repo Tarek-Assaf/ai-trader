@@ -91,6 +91,7 @@ def run_data_recorder() -> None:
                 on_reconnect=recorder.on_reconnect,
             )
             stream.seed_watermarks(recorder.watermarks())
+
             def run_stream() -> None:
                 try:
                     stream.run_forever(stop)

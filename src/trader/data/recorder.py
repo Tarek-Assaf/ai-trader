@@ -59,13 +59,14 @@ class ParquetCandleStore:
             / symbol
             / "1m_capital"
             / f"{minute.year:04d}"
-            / f"{minute.month:02d}.parquet"
+            / f"{minute.month:02d}"
+            / f"{minute.day:02d}.parquet"
         )
 
     def latest_watermarks(self, epics: set[str]) -> dict[tuple[str, str], datetime]:
         """Read the latest persisted minute for each epic and side at process startup."""
         latest: dict[tuple[str, str], datetime] = {}
-        for path in self._root.glob("*/1m_capital/*/*.parquet"):
+        for path in self._root.glob("*/1m_capital/*/*/*.parquet"):
             try:
                 rows = pq.read_table(path, columns=["epic", "ts_utc", "side"]).to_pylist()
             except (OSError, pa.ArrowException):

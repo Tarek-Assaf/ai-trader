@@ -39,7 +39,7 @@ def test_partial_minute_waits_for_rollover_and_writes_spread_once_closed(tmp_pat
 
     recorder.on_update(_update(current + timedelta(minutes=1), "bid", close=100.2))
 
-    output = tmp_path / "lake" / "NAS100" / "1m_capital" / "2026" / "10.parquet"
+    output = tmp_path / "lake" / "NAS100" / "1m_capital" / "2026" / "10" / "03.parquet"
     rows = pq.read_table(output).to_pylist()
     closed = [row for row in rows if row["ts_utc"] == current]
     assert {row["side"] for row in closed} == {"bid", "ask"}
@@ -56,7 +56,7 @@ def test_upsert_is_idempotent_and_rest_wins_for_same_minute(tmp_path: Path) -> N
     store.upsert_many([("NAS100", rest)])
     store.upsert_many([("NAS100", ws), ("NAS100", rest)])
 
-    output = tmp_path / "lake" / "NAS100" / "1m_capital" / "2026" / "10.parquet"
+    output = tmp_path / "lake" / "NAS100" / "1m_capital" / "2026" / "10" / "03.parquet"
     rows = pq.read_table(output).to_pylist()
     assert len(rows) == 1
     assert rows[0]["close"] == 100.5
@@ -76,7 +76,7 @@ def test_live_websocket_update_replaces_rest_reconciliation_before_close(tmp_pat
     recorder.on_update(_update(current, "bid", source="capital_ws", close=100.5))
     recorder.on_update(_update(current + timedelta(minutes=1), "bid", close=101.0))
 
-    output = tmp_path / "lake" / "NAS100" / "1m_capital" / "2026" / "10.parquet"
+    output = tmp_path / "lake" / "NAS100" / "1m_capital" / "2026" / "10" / "03.parquet"
     rows = pq.read_table(output).to_pylist()
     closed = next(row for row in rows if row["ts_utc"] == current and row["side"] == "bid")
     assert closed["close"] == 100.5
