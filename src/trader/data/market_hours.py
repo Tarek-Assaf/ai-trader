@@ -74,6 +74,8 @@ class MarketHours:
                 start_text, end_text = raw_interval.split(" - ", maxsplit=1)
                 start = _minute_of_day(start_text)
                 end = _minute_of_day(end_text)
+                if end_text.strip() != "00:00" and end < _MINUTES_PER_DAY:
+                    end += 1
                 if start == end == 0:
                     end = _MINUTES_PER_DAY
                 elif end == 0:
