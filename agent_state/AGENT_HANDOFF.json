@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 36,
+  "turn": "claude",
+  "revision": 37,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-013/T-014 are approved on PR #9. T-080 implementation is ready for Claude Light review on PR #11 after full CI pass; the owner still must run the full NSXUSD/XAUUSD historical import on the pod and share its summaries (Q-024) before T-080 is complete. Next for Codex after review: T-015, T-016, T-017. The owner must redeploy and run the T-014 soak (Q-022). Phase 2 follows.",
+    "summary": "T-015 is ready for Full Claude review on PR #13; T-016 is ready for Full Claude review on PR #14. T-020 implementation and PostgreSQL audit integration are ready for Full Claude review on PR #15. T-080 still awaits owner pod import/idempotence summaries (Q-024), and the T-014 soak remains pending (Q-022). The next independent pod-free queue task is T-021 after the T-016 interface review. Phase 2 is underway.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -906,7 +906,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-06",
         "R-08"
@@ -921,8 +921,16 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/risk/guardian.py",
+        "src/trader/core/audit.py",
+        "tests/unit/test_risk_guardian.py",
+        "tests/unit/test_audit_writer.py",
+        "tests/invariants/test_risk_guardian_boundary.py",
+        "tests/integration/test_postgres_migrations.py",
+        "GitHub Actions run 37153167043 on 61898525c456e62d7902e0359f03e1b1fc9b842c passed all quality/runtime steps, including PostgreSQL integration tests"
+      ],
+      "completion_note": "Implemented the deterministic 20-rule Guardian. It requires an external T-021 SizingEstimate, and receives the stage cap and T-022 quality score from trusted services outside TradeIntent; missing values reject. Approved and rejected decisions are persisted through the append-only audit writer; audit failures reject. Drawdown breaches signal halt_system and require the caller to persist the halt until an explicit owner reset. Local checks: Ruff, mypy, secret scan, 133 tests passed/2 PostgreSQL tests skipped without local DATABASE_URL. GitHub CI run 37153167043 passed all steps, including both PostgreSQL integration tests. Full Claude review pending on PR #15."
     },
     {
       "id": "T-021",
@@ -2570,6 +2578,16 @@
       "validated_by": "claude",
       "date": "2026-10-03",
       "reverify_if": "importer, download or tests change, or the pod run shows an issue"
+    },
+    {
+      "id": "V-057",
+      "subject": "T-020 deterministic Risk Guardian and append-only audit writes",
+      "method": "GitHub Actions run 37153167043 checked lint/format, mypy, all unit/invariant and PostgreSQL integration tests, handoff validation, secret scan, image build, and ROLE runtime checks.",
+      "result": "pass",
+      "evidence": "PR #15 head 61898525c456e62d7902e0359f03e1b1fc9b842c; run 37153167043 passed. Hypothesis properties reject missing stops and risk above budget; PostgreSQL writer integration verifies a valid trigger-maintained audit chain.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Claude requests changes, or Guardian, audit writer, or their tests change."
     }
   ],
   "blockers": [
@@ -2850,6 +2868,18 @@
       "options": [
         "Run the full-range import after merge",
         "Need help with the command"
+      ],
+      "answer": ""
+    },
+    {
+      "id": "Q-025",
+      "to": "claude",
+      "from": "codex",
+      "text": "For T-020/T-021/T-022 integration, should RiskGuardian require a T-021 SizingEstimate and receive the strategy stage cap and deterministic T-022 quality score from trusted services outside TradeIntent? Recommendation: yes; it rejects if any are missing and never computes or trusts size, cap, or quality from an LLM intent.",
+      "status": "open",
+      "options": [
+        "Keep the trusted injected inputs (recommended)",
+        "Request a different interface"
       ],
       "answer": ""
     }
@@ -3569,6 +3599,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-080 (Light review, no changes). T-080 set to blocked until the owner pod run (Q-024). Codex may continue with T-015, T-016, T-017. Turn to Codex."
+    },
+    {
+      "revision": 37,
+      "ts": "2026-10-03T21:00:00Z",
+      "agent": "codex",
+      "action": "implement_t020_fail_closed_risk_guardian",
+      "task_ids": [
+        "T-020"
+      ],
+      "files_changed": [
+        "src/trader/risk/guardian.py",
+        "src/trader/core/audit.py",
+        "tests/unit/test_risk_guardian.py",
+        "tests/unit/test_audit_writer.py",
+        "tests/invariants/test_risk_guardian_boundary.py",
+        "tests/integration/test_postgres_migrations.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented all 20 fail-closed rules, trusted sizing/stage/quality inputs, and append-only audited decisions. Full CI run 37153167043 passed, including PostgreSQL audit-chain integration. Opened independent PR #15 for Full Claude review; handing over."
     }
   ]
 }
