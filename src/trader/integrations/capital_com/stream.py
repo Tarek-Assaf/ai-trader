@@ -87,6 +87,7 @@ class CapitalComStreamClient:
         self._correlation = 0
         self._reconnect_count = 0
         self._ping_reply_ok: bool | None = None
+        self._reply_status = "missing"
 
     @property
     def reconnect_count(self) -> int:
@@ -152,6 +153,7 @@ class CapitalComStreamClient:
             if str(message.get("correlationId", "")) != correlation_id:
                 continue
             status = message.get("status")
+            self._reply_status = status if isinstance(status, str) else "missing"
             if status != "OK" or message.get("destination") != destination:
                 _LOG.warning(
                     "Capital.com WebSocket request failed: destination=%s status=%s",
@@ -167,7 +169,15 @@ class CapitalComStreamClient:
             "OHLCMarketData.subscribe",
             {"epics": list(self._epics), "resolutions": ["MINUTE"], "type": "classic"},
         )
-        reply = self._await_reply(socket, correlation_id, "OHLCMarketData.subscribe")
+        try:
+            reply = self._await_reply(socket, correlation_id, "OHLCMarketData.subscribe")
+        except StreamProtocolError:
+            _LOG.warning(
+                "Capital.com OHLC subscription failed: epics=%s status=%s",
+                self._epics,
+                self._reply_status,
+            )
+            raise
         payload = reply.get("payload")
         subscriptions = payload.get("subscriptions") if isinstance(payload, Mapping) else None
         if not isinstance(subscriptions, Mapping):
@@ -311,6 +321,8 @@ class CapitalComStreamClient:
                 with self._connect(
                     _STREAM_URL, open_timeout=10, close_timeout=2, ping_interval=None
                 ) as socket:
+                    self._correlation = 0
+                    self._reply_status = "missing"
                     self._subscribe(socket)
                     self._ping(socket)
                     self._backfill()
