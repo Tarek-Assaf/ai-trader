@@ -106,7 +106,6 @@ def test_startup_watermarks_and_liveness_use_ping_and_market_status(tmp_path: Pa
     assert value["last_reconnect_reason"] == "ConnectionClosed"
 
 
-
 def test_closed_market_suppresses_stale_tick_alarm(tmp_path: Path) -> None:
     now = [datetime(2026, 10, 3, 12, 0, tzinfo=UTC)]
     recorder = CapitalDataRecorder(
