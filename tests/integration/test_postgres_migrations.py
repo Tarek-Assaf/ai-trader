@@ -62,7 +62,7 @@ def test_migrations_create_tables_and_audit_log_is_append_only() -> None:
 def test_sql_audit_writer_serializes_and_chains_risk_decisions() -> None:
     """The production writer uses the DB lock and trigger for a valid chain."""
     engine = create_engine(DATABASE_URL or "")
-    cycle_id = f"t020-{uuid4()}"
+    cycle_id = str(uuid4())
     writer = SqlAuditWriter(engine)
 
     writer.append(
