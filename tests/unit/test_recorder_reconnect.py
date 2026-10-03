@@ -167,9 +167,5 @@ def test_recorder_persists_each_side_once_across_disconnect_and_rest_backfill(
     assert all(counts[key] == 1 for key in expected)
     assert len(rows) == len(expected)
     assert rest.history_calls == 2
-    assert all(
-        row["source"] == "capital_rest"
-        for row in rows
-        if row["ts_utc"] in minutes[1:]
-    )
+    assert all(row["source"] == "capital_rest" for row in rows if row["ts_utc"] in minutes[1:])
     assert client.reconnect_count == 1
