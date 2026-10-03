@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 24,
+  "turn": "claude",
+  "revision": 25,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-010 merged (PR #4) and verified live on the demo account: session ok, epics US100 and GOLD confirmed (V-005 pass; trading-hours details still to verify with T-015 during market hours). Next for Codex: T-011 (WebSocket client) with T-010 follow-ups, T-012 (HistData importer), T-015/T-016. Weekend note: crypto epics (BTCUSD) are tradeable on weekends and may be used only as a test stream for the WebSocket client, never as a traded instrument. Pod runs on a GPU-pod type (A4000) at the same price; GPU unused. Q-010 accepted; D-023 records the LLM plan.",
+    "summary": "T-010 merged and verified live on demo (V-005 pass for US100 and GOLD epics; market-hour details remain for T-015). T-011 implemented with green full CI and is awaiting Claude review in PR #5. Next Codex task after review: T-012 (HistData importer), then T-015/T-016. Weekend crypto streams are test-only, never traded. RunPod remains paper/demo with live trading disabled.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -638,7 +638,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-10"
       ],
@@ -651,8 +651,14 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/integrations/capital_com/__init__.py",
+        "tests/unit/test_capital_com_stream.py",
+        "pyproject.toml",
+        "uv.lock"
+      ],
+      "completion_note": "Implemented authenticated Capital.com minute OHLC subscriptions for configured epics, bid/ask update normalization, eight-minute WebSocket keepalive, bounded reconnect, and REST backfill beginning at the last observed minute to recover incomplete candles. Forced-disconnect, resubscription, gap-fill, ping, and epic-limit tests pass in GitHub Actions run 37119657855. Ready for Claude review in PR #5."
     },
     {
       "id": "T-012",
@@ -2267,6 +2273,16 @@
       "validated_by": "claude",
       "date": "2026-10-03T06:40:00Z",
       "reverify_if": "client.py or rate_limit.py changes, or order endpoints are added"
+    },
+    {
+      "id": "V-040",
+      "subject": "Capital.com OHLC WebSocket subscription, keepalive and reconnect recovery",
+      "method": "Verified subscription and ping message formats against the official Capital.com API docs; GitHub Actions validated lint, typecheck, migrations, tests, handoff, secret scan, Docker/runtime and backup/restore checks.",
+      "result": "pass",
+      "evidence": "https://open-api.capital.com/ WebSocket API; PR #5, CI run 37119657855 on 2026-10-03 (all quality-job steps succeeded), including forced-disconnect, REST gap-fill and keepalive tests.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "The Capital.com streaming protocol changes, or stream.py and its tests change."
     }
   ],
   "blockers": [
@@ -2992,6 +3008,24 @@
         "config/instruments.yaml"
       ],
       "summary": "Recorded owner's live demo check (V-005 pass for epics), marked epics VERIFIED in instruments.yaml, answered Q-017/Q-018. Turn to Codex for T-011/T-012."
+    },
+    {
+      "revision": 25,
+      "ts": "2026-10-03T11:30:00Z",
+      "agent": "codex",
+      "action": "implement_t011_capital_com_websocket",
+      "task_ids": [
+        "T-011"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/integrations/capital_com/__init__.py",
+        "tests/unit/test_capital_com_stream.py",
+        "pyproject.toml",
+        "uv.lock",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented Capital.com OHLC WebSocket subscriptions, bid/ask normalization, eight-minute keepalive, bounded reconnect and REST backfill of the last observed minute. Forced-disconnect, gap-fill and ping coverage passed full CI run 37119657855. Opened PR #5 for Claude review; handing over."
     }
   ]
 }
