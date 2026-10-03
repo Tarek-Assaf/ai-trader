@@ -285,9 +285,7 @@ def import_histdata_range(
             result["gap_examples"].extend(totals["gap_examples"])
         except (OSError, ValueError, zipfile.BadZipFile, KeyError) as exc:
             result["status"] = "partial"
-            result["rejected_months"].append(
-                {"month": month_id, "reason": str(exc)[:240]}
-            )
+            result["rejected_months"].append({"month": month_id, "reason": str(exc)[:240]})
 
     result["gap_examples"] = result["gap_examples"][:20]
     if result["rejected_months"]:
