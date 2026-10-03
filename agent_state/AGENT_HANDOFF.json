@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 26,
+  "turn": "claude",
+  "revision": 27,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-011 (WebSocket feed, PR #5) reviewed: four required changes (validate subscribe/ping replies, stop websockets DEBUG token leak, propagate consumer exceptions, add owner-run stream verify script). T-014/T-015 criteria extended. After approval the owner merges PR #5 and runs the stream check on the pod. Phase 1 is about 25-35% done.",
+    "summary": "T-011 review-cycle-1 changes implemented on PR #5; full CI is green and code is ready for Claude re-review. Owner-run live stream verification remains pending (Q-019) after merge and redeploy. Next Codex task after T-011 review/verification: T-012 HistData importer; T-015/T-016 remain in Phase 1. BTCUSD may be used only as a weekend stream test and is never added as a traded instrument.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -638,7 +638,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-10"
       ],
@@ -651,16 +651,24 @@
         "subscribe and ping replies are validated; stale tokens, missing or error replies cause reconnect with a fresh session",
         "owner-run verify_capital_stream.py shows both bid and ask updates arriving on the demo stream"
       ],
-      "deliverables": [],
-      "review_cycles": 1,
+      "deliverables": [
+        "src/trader/integrations/capital_com/stream.py",
+        "scripts/verify_capital_stream.py",
+        "tests/unit/test_capital_com_stream.py",
+        "infra/runpod/README.md"
+      ],
+      "review_cycles": 2,
       "evidence": [
         "src/trader/integrations/capital_com/stream.py",
         "src/trader/integrations/capital_com/__init__.py",
         "tests/unit/test_capital_com_stream.py",
         "pyproject.toml",
-        "uv.lock"
+        "uv.lock",
+        "src/trader/core/logging.py",
+        "scripts/verify_capital_stream.py",
+        "infra/runpod/README.md"
       ],
-      "completion_note": "Implemented authenticated Capital.com minute OHLC subscriptions for configured epics, bid/ask update normalization, eight-minute WebSocket keepalive, bounded reconnect, and REST backfill beginning at the last observed minute to recover incomplete candles. Forced-disconnect, resubscription, gap-fill, ping, and epic-limit tests pass in GitHub Actions run 37119657855. Ready for Claude review in PR #5. CLAUDE REVIEW 1 (changes requested). Approved as written: epic cap 40, token-bearing messages never logged by this module, 8-minute ping, bounded reconnect backoff, REST backfill from the last observed minute, strict numeric validation, bid and ask both captured, offline tests with forced disconnect. Required changes: (1) Silent-failure risk. Subscribe and ping replies are ignored, so a subscription made with stale session tokens (REST session idle more than 10 minutes) fails without any signal and the socket just sits open. Do all three: (a) call the REST client's ping() before every connection attempt so the tokens are fresh; (b) read the subscribe reply and treat any non-OK status, or any requested epic not confirmed, as a failure that closes the socket and reconnects with a fresh session (log epic names and status only); (c) require a reply to each ping within 30 seconds and treat a missing or non-OK reply as a dead connection. Liveness must rest on ping replies, not on price flow, because markets are legitimately silent when closed. Add tests for stale-token subscribe error, missing ping reply and non-OK ping reply. (2) websockets DEBUG logging prints frames, including the cst and securityToken fields. Force logging.getLogger('websockets') to WARNING at import of this module (and in configure_logging) and add a test that DEBUG records from it cannot be emitted. (3) Exceptions raised inside the on_update callback are currently caught by the generic reconnect handler and look like network errors. Let consumer exceptions propagate out of run_forever (log type only) so a bug in the recorder is visible and supervised, not hidden in a reconnect loop. Add a test. (4) Add scripts/verify_capital_stream.py for the owner to run on the pod: demo-only guard as in verify_capital_demo.py, argument --epic (default US100) and --seconds (default 90), prints redacted JSON only: counts of bid and ask updates, first and last update time, whether ping reply was OK, number of reconnects, and the epic. No tokens, no account data. Document in infra/runpod/README.md that on weekends the owner can pass --epic BTCUSD as a test-only stream (BTCUSD is never added to instruments.yaml and never traded). Live verification on the pod is the acceptance for this task."
+      "completion_note": "Implemented authenticated Capital.com minute OHLC subscriptions for configured epics, bid/ask update normalization, eight-minute WebSocket keepalive, bounded reconnect, and REST backfill beginning at the last observed minute to recover incomplete candles. Forced-disconnect, resubscription, gap-fill, ping, and epic-limit tests pass in GitHub Actions run 37119657855. Ready for Claude review in PR #5. CLAUDE REVIEW 1 (changes requested). Approved as written: epic cap 40, token-bearing messages never logged by this module, 8-minute ping, bounded reconnect backoff, REST backfill from the last observed minute, strict numeric validation, bid and ask both captured, offline tests with forced disconnect. Required changes: (1) Silent-failure risk. Subscribe and ping replies are ignored, so a subscription made with stale session tokens (REST session idle more than 10 minutes) fails without any signal and the socket just sits open. Do all three: (a) call the REST client's ping() before every connection attempt so the tokens are fresh; (b) read the subscribe reply and treat any non-OK status, or any requested epic not confirmed, as a failure that closes the socket and reconnects with a fresh session (log epic names and status only); (c) require a reply to each ping within 30 seconds and treat a missing or non-OK reply as a dead connection. Liveness must rest on ping replies, not on price flow, because markets are legitimately silent when closed. Add tests for stale-token subscribe error, missing ping reply and non-OK ping reply. (2) websockets DEBUG logging prints frames, including the cst and securityToken fields. Force logging.getLogger('websockets') to WARNING at import of this module (and in configure_logging) and add a test that DEBUG records from it cannot be emitted. (3) Exceptions raised inside the on_update callback are currently caught by the generic reconnect handler and look like network errors. Let consumer exceptions propagate out of run_forever (log type only) so a bug in the recorder is visible and supervised, not hidden in a reconnect loop. Add a test. (4) Add scripts/verify_capital_stream.py for the owner to run on the pod: demo-only guard as in verify_capital_demo.py, argument --epic (default US100) and --seconds (default 90), prints redacted JSON only: counts of bid and ask updates, first and last update time, whether ping reply was OK, number of reconnects, and the epic. No tokens, no account data. Document in infra/runpod/README.md that on weekends the owner can pass --epic BTCUSD as a test-only stream (BTCUSD is never added to instruments.yaml and never traded). Live verification on the pod is the acceptance for this task. CODEX REVIEW-CYCLE 1 FIXES: validates REST session before each connection; checks subscribe acknowledgements for OK status and each configured epic; validates immediate and periodic ping acknowledgements with a 30-second timeout; logs websockets at WARNING; logs callback exception type and propagates the original exception; adds the demo-only owner verification script and RunPod instructions. Also addresses automated PR review: naive snapshotTimeUTC is interpreted as UTC and REST gap-fill starts at the earliest side watermark while suppressing per-side duplicates. Full CI run 37120689237 passed (lint, typecheck, migrations, tests, handoff validation, secret scan, Docker/runtime and backup/restore). Code is ready for Claude re-review; live pod verification remains pending under Q-019."
     },
     {
       "id": "T-012",
@@ -2307,6 +2315,16 @@
       "validated_by": "claude",
       "date": "2026-10-03T11:50:00Z",
       "reverify_if": "Codex pushes fixes for review 1"
+    },
+    {
+      "id": "V-042",
+      "subject": "T-011 review-cycle-1 fixes and demo verification tooling",
+      "method": "Full GitHub Actions quality workflow, including lint/format, typecheck, migrations, unit/integration tests, handoff validation, secret scan, Docker image build, role runtime and backup/restore; tests cover failed/incomplete subscribe acknowledgements, missing/non-OK ping acknowledgements, reconnect gap fill per side, callback errors and WebSocket logger level.",
+      "result": "pass",
+      "evidence": "PR #5 head 3a695230a9b299a212db3ef090c10e02fd6f60ec; CI run 37120689237 passed all quality-job steps. Live RunPod stream verification has not yet been run; see Q-019.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Claude requests changes, the stream implementation or CI workflow changes, or owner-run verification produces an unexpected result."
     }
   ],
   "blockers": [
@@ -2526,6 +2544,17 @@
         "Need help with the steps"
       ],
       "answer": "Owner merged PR #4, redeployed, ran the verify script on the pod and pasted its output (2026-10-03): session ok, account_count 1, US100 'US Tech 100' CLOSED, GOLD 'Gold' CLOSED (weekend); BTCUSD and XRPUSD TRADEABLE."
+    },
+    {
+      "id": "Q-019",
+      "to": "human",
+      "from": "codex",
+      "text": "After Claude approves PR #5 and you merge it, wait for CI on main to pass and redeploy the RunPod pod from the new image. In the pod terminal run `cd /app && python scripts/verify_capital_stream.py` (or `python scripts/verify_capital_stream.py --epic BTCUSD` on a weekend; BTCUSD is test-only and never traded). Paste only the redacted JSON output so we can record both bid and ask updates, ping status and reconnect count. Do not paste credentials or account data.",
+      "status": "open",
+      "options": [
+        "Run the demo stream check after redeploy",
+        "Need help with the steps"
+      ]
     }
   ],
   "log": [
@@ -3065,6 +3094,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-011 changes requested (review cycle 1): liveness validation, websockets log redaction, consumer exceptions, verify script. Extended T-014/T-015 criteria, recorded D-024. Turn to Codex."
+    },
+    {
+      "revision": 27,
+      "ts": "2026-10-03T11:50:00Z",
+      "agent": "codex",
+      "action": "address_t011_review_cycle_1",
+      "task_ids": [
+        "T-011"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/core/logging.py",
+        "tests/unit/test_capital_com_stream.py",
+        "scripts/verify_capital_stream.py",
+        "infra/runpod/README.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude's review cycle 1: validate subscribe and ping acknowledgements, refresh REST session before reconnects, suppress websockets DEBUG frame logging, propagate callback failures, and add a demo-only RunPod verification script. Fixed naive REST snapshotTimeUTC parsing and side-specific reconnect backfill. CI run 37120689237 passed all quality/runtime checks. Owner live verification is Q-019. Returning PR #5 for Claude re-review."
     }
   ]
 }
