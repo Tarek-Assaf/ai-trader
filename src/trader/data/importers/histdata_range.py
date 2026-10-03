@@ -113,12 +113,26 @@ def _archive_path(raw_root: Path, symbol: str, year: int, month: int, timeframe:
 
 
 def _check_cached_archives(
-    raw_root: Path, symbol: str, year: int, month: int, manifest: dict[str, Any], manifest_path: Path
+    raw_root: Path,
+    symbol: str,
+    year: int,
+    month: int,
+    manifest: dict[str, Any],
+    manifest_path: Path,
+    completed: dict[str, Any] | None,
 ) -> None:
     for timeframe in ("M1", "T"):
         archive = _archive_path(raw_root, symbol, year, month, timeframe)
-        if archive.exists():
+        if not archive.exists():
+            continue
+        record = manifest["archives"].get(archive.name)
+        if record is not None:
             _verify_or_pin(archive, manifest, manifest_path)
+        elif completed is not None:
+            key = "m1_sha256" if timeframe == "M1" else "tick_sha256"
+            expected = completed.get(key)
+            if expected is not None and _sha256(archive) != expected:
+                raise ValueError(f"archive checksum mismatch for {archive.name}")
 
 
 def _summary_reports(reports: list[dict[str, object]]) -> dict[str, object]:
@@ -187,7 +201,10 @@ def import_histdata_range(
         month_id = f"{year:04d}{month:02d}"
         completed = manifest["completed_months"].get(key)
         try:
-            _check_cached_archives(raw, symbol, year, month, manifest, manifest_file)
+            is_complete = isinstance(completed, dict) and completed.get("status") == "ok"
+            _check_cached_archives(
+                raw, symbol, year, month, manifest, manifest_file, completed if is_complete else None
+            )
             if isinstance(completed, dict) and completed.get("status") == "ok":
                 result["skipped_months"].append(month_id)
                 continue
