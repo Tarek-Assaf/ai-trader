@@ -128,7 +128,10 @@ class MarketHours:
         if len(intervals) < 2:
             return False
         minute = local.hour * 60 + local.minute
-        return not any(start <= minute < end for start, end in self._intervals(local.date()))
+        for (_, prior_end), (next_start, _next_end) in zip(intervals, intervals[1:]):
+            if prior_end <= minute < next_start:
+                return True
+        return False
 
     def next_open(self, stamp: datetime) -> datetime:
         if stamp.tzinfo is None or stamp.utcoffset() is None:
