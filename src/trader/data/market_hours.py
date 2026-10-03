@@ -60,9 +60,7 @@ class MarketHours:
         except ZoneInfoNotFoundError as exc:
             raise ValueError("broker opening-hours timezone is unknown") from exc
 
-        weekly_parts: dict[int, list[tuple[int, int]]] = {
-            weekday: [] for weekday in range(7)
-        }
+        weekly_parts: dict[int, list[tuple[int, int]]] = {weekday: [] for weekday in range(7)}
         for weekday, day_name in enumerate(_DAY_NAMES):
             raw_intervals = opening.get(day_name)
             if not isinstance(raw_intervals, list):
@@ -87,9 +85,7 @@ class MarketHours:
                     next_weekday = (weekday + 1) % 7
                     weekly_parts[next_weekday].append((0, end))
             weekly_parts[weekday].extend(intervals)
-        weekly = {
-            weekday: tuple(sorted(intervals)) for weekday, intervals in weekly_parts.items()
-        }
+        weekly = {weekday: tuple(sorted(intervals)) for weekday, intervals in weekly_parts.items()}
         return cls(
             zone=zone,
             weekly=weekly,
@@ -106,9 +102,7 @@ class MarketHours:
             return intervals
         close_minute = close_time.hour * 60 + close_time.minute
         return tuple(
-            (start, min(end, close_minute))
-            for start, end in intervals
-            if start < close_minute
+            (start, min(end, close_minute)) for start, end in intervals if start < close_minute
         )
 
     def is_open(self, stamp: datetime) -> bool:
