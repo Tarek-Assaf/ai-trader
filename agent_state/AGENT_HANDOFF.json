@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 21,
+  "turn": "human",
+  "revision": 23,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-019 merged (PR #3, CI green). Owner confirmed the merge and asked for the turn to pass to Codex. Codex: start Phase 1 with T-010 (Capital.com REST client, demo only). Owner has Capital.com and Telegram secrets in RunPod; live checks run on the pod through a redacted verify script whose output the owner pastes back. Phase 4 LLM plan is D-023.",
+    "summary": "T-010 (read-only Capital.com REST client) approved on PR #4, awaiting owner merge (Q-018) and the redacted demo check on the pod (Q-017, closes V-005). Codex can start T-011/T-012 after the merge. Q-010 accepted. D-023 LLM tiering recorded for Phase 4.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -403,7 +403,7 @@
       "phase": 1,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-05",
         "R-07",
@@ -425,7 +425,7 @@
         "docs/specs/phase1.md",
         "docs/specs/phase2.md"
       ],
-      "completion_note": "Phase 1 and Phase 2 specs written with believed-correct Capital.com details flagged VERIFY."
+      "completion_note": "Codex reviewed both specs and confirmed the acceptance criterion. Current official docs support the documented session, market search, accounts and price-history endpoints and request limits; demo-account epics and market-status values remain pending under V-005."
     },
     {
       "id": "T-001",
@@ -606,7 +606,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-10",
         "R-15"
@@ -622,8 +622,15 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/integrations/capital_com/client.py",
+        "src/trader/integrations/capital_com/rate_limit.py",
+        "tests/unit/test_capital_com_client.py",
+        "scripts/verify_capital_demo.py",
+        "infra/runpod/README.md",
+        "GitHub Actions run 37102456670"
+      ],
+      "completion_note": "Read-only Capital.com client and Redis-shared rate limiter are implemented. GitHub Actions run 37102456670 passed all CI, test, secret-scan and container checks on PR #4. The owner must still run the redacted demo verification on RunPod to confirm account-specific epics/status and complete acceptance. CLAUDE APPROVED (code): read-only by construction (no order endpoints), SecretStr credentials, sanitized errors without bodies or headers, Redis-backed shared limiter that fails closed (10/s all, 5/s history, 1/s session), bounded 429 retry, one re-login on 401, paged history with bounds, demo/live base URL from BROKER_ENV, redacted verify script that refuses unless BROKER_ENV=demo and LIVE_TRADING_ENABLED=false. CI run 37102678299 green. V-005 (real epics, status values) stays pending until the owner runs the script on the pod. Follow-ups for the next Capital.com task (T-011), non-blocking: (a) give redis.Redis.from_url socket_timeout and socket_connect_timeout (about 2 s) so a stalled Redis cannot hang the limiter; (b) document that iter_price_history raises after max_pages (default 100 pages is about 69 days of 1M candles) so callers must chunk ranges; (c) add a test that the httpx logger never emits headers or the request body."
     },
     {
       "id": "T-011",
@@ -1484,7 +1491,7 @@
       "phase": 0,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-21"
       ],
@@ -1499,7 +1506,7 @@
       "evidence": [
         "docs/legacy_audit.md"
       ],
-      "completion_note": "Audited commit 52b4dda, full 5-commit history. No secrets found. Models show no edge. Adopt/adapt/skip table written. Tests could not be run in Claude's workspace."
+      "completion_note": "Codex reviewed docs/legacy_audit.md; the adopt/adapt/skip inventory includes reasons and the secret review reports findings without copying values. The earlier project's tests will be run when its modules are adapted."
     },
     {
       "id": "T-044",
@@ -2240,6 +2247,26 @@
       "validated_by": "claude",
       "date": "2026-10-02T21:15:00Z",
       "reverify_if": "health.py or backup scripts change"
+    },
+    {
+      "id": "V-038",
+      "subject": "Capital.com REST auth, endpoints, price-history limits and request limits",
+      "method": "Checked the current public Capital.com API documentation for demo/live hosts, POST /session with CST/X-SECURITY-TOKEN, GET /markets searchTerm, GET /accounts, GET /prices/{epic} max=1000 and published request limits.",
+      "result": "pass",
+      "evidence": "https://open-api.capital.com/",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Capital.com publishes a new API version or the API rejects requests within documented limits."
+    },
+    {
+      "id": "V-039",
+      "subject": "T-010 Capital.com REST client code review against safety posture",
+      "method": "Read client.py, rate_limit.py, verify_capital_demo.py; checked CI on PR head",
+      "result": "pass",
+      "evidence": "src/trader/integrations/capital_com/*, scripts/verify_capital_demo.py, tests/unit/test_capital_com_client.py; CI run 37102678299. Not run: live demo calls (V-005 pending owner).",
+      "validated_by": "claude",
+      "date": "2026-10-03T06:40:00Z",
+      "reverify_if": "client.py or rate_limit.py changes, or order endpoints are added"
     }
   ],
   "blockers": [
@@ -2438,6 +2465,27 @@
         "Need help with the steps"
       ],
       "answer": "Merged by the owner (PR #3). CI on main run 37064879085 passed."
+    },
+    {
+      "id": "Q-017",
+      "to": "human",
+      "from": "codex",
+      "text": "After PR #4 is reviewed and merged and its main image is deployed, run the read-only demo check in the RunPod terminal: `cd /app && python scripts/verify_capital_demo.py`. Paste only its JSON output so we can confirm the NAS100/Gold epics and market-status values for V-005. Do not paste credentials, balances, or account details.",
+      "status": "open",
+      "options": [],
+      "answer": ""
+    },
+    {
+      "id": "Q-018",
+      "to": "human",
+      "from": "claude",
+      "text": "PR #4 (T-010, read-only Capital.com demo connection) is approved. Please (1) merge it on GitHub (Merge pull request, Confirm merge); (2) when CI on main is green, redeploy the pod from the new image; (3) answer Q-017: in the pod terminal run `cd /app && python scripts/verify_capital_demo.py` and paste only its JSON output here (it contains no credentials). Then tell the agent whose turn it is. Done?",
+      "status": "open",
+      "options": [
+        "Done, merged",
+        "Need help with the steps"
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -2894,6 +2942,40 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner confirmed PR #3 merged and asked to pass the turn on; recorded Q-016 answer and set turn to Codex for Phase 1 (T-010). No other changes."
+    },
+    {
+      "revision": 22,
+      "ts": "2026-10-03T06:18:48Z",
+      "agent": "codex",
+      "action": "implement_t010_capital_com_rest_client",
+      "task_ids": [
+        "C-003",
+        "C-005",
+        "T-010"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/client.py",
+        "src/trader/integrations/capital_com/rate_limit.py",
+        "src/trader/integrations/capital_com/__init__.py",
+        "tests/unit/test_capital_com_client.py",
+        "scripts/verify_capital_demo.py",
+        "infra/runpod/README.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed and closed C-003 and C-005. Implemented the read-only Capital.com REST client, shared Redis limiter, pagination, tests and redacted RunPod demo verification. CI run 37102456670 passed all checks on PR #4. V-005 and live demo acceptance await the owner running the script after merge/deploy; handing over to Claude for review."
+    },
+    {
+      "revision": 23,
+      "ts": "2026-10-03T06:40:00Z",
+      "agent": "claude",
+      "action": "approve_t010",
+      "task_ids": [
+        "T-010"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-010 code. Follow-ups listed for T-011. Owner to merge PR #4, redeploy and run the redacted demo verification (Q-017, Q-018). Turn to human."
     }
   ]
 }
