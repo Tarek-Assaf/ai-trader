@@ -7,7 +7,7 @@ instruments:
   NAS100:
     display_name: Nasdaq-100
     aliases: [NAS100, US100, NSXUSD, NASDAQ100]
-    capital_epic: US100              # VERIFY with the market search endpoint
+    capital_epic: US100              # VERIFIED 2026-10-03 on demo: name "US Tech 100" (V-005)
     histdata_code: NSXUSD            # VERIFY coverage dates (V-004)
     asset_class: index
     # Read from the broker at startup and cached; leave empty here:
@@ -27,7 +27,7 @@ instruments:
   XAUUSD:
     display_name: Gold
     aliases: [XAUUSD, GOLD, XAU]
-    capital_epic: GOLD               # VERIFY with the market search endpoint
+    capital_epic: GOLD               # VERIFIED 2026-10-03 on demo: name "Gold" (V-005)
     histdata_code: XAUUSD
     asset_class: commodity
     tick_size: null

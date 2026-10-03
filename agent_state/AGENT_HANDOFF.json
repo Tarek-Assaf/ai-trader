@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 23,
+  "turn": "codex",
+  "revision": 24,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-010 (read-only Capital.com REST client) approved on PR #4, awaiting owner merge (Q-018) and the redacted demo check on the pod (Q-017, closes V-005). Codex can start T-011/T-012 after the merge. Q-010 accepted. D-023 LLM tiering recorded for Phase 4.",
+    "summary": "T-010 merged (PR #4) and verified live on the demo account: session ok, epics US100 and GOLD confirmed (V-005 pass; trading-hours details still to verify with T-015 during market hours). Next for Codex: T-011 (WebSocket client) with T-010 follow-ups, T-012 (HistData importer), T-015/T-016. Weekend note: crypto epics (BTCUSD) are tradeable on weekends and may be used only as a test stream for the WebSocket client, never as a traded instrument. Pod runs on a GPU-pod type (A4000) at the same price; GPU unused. Q-010 accepted; D-023 records the LLM plan.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1922,11 +1922,11 @@
       "id": "V-005",
       "subject": "Capital.com epics for NAS100/US100 and Gold, and market-status field values",
       "method": "Pending: Codex confirms during T-010 and T-015 against the demo API",
-      "result": "pending",
-      "evidence": "",
-      "validated_by": "",
-      "date": "",
-      "reverify_if": ""
+      "result": "pass",
+      "evidence": "Owner-run scripts/verify_capital_demo.py on the pod, 2026-10-03: session ok, 1 account, demo environment. Epic US100 = 'US Tech 100' and epic GOLD = 'Gold' confirmed. Both marketStatus CLOSED at the time (Saturday). Still to verify during trading hours via T-015: session times, daily break and holiday behaviour; dealing rules (tick, min/max size, margin) via market_details in T-016.",
+      "validated_by": "claude",
+      "date": "2026-10-03T11:05:00Z",
+      "reverify_if": "Capital.com changes epics or the demo account changes"
     },
     {
       "id": "V-006",
@@ -2471,21 +2471,21 @@
       "to": "human",
       "from": "codex",
       "text": "After PR #4 is reviewed and merged and its main image is deployed, run the read-only demo check in the RunPod terminal: `cd /app && python scripts/verify_capital_demo.py`. Paste only its JSON output so we can confirm the NAS100/Gold epics and market-status values for V-005. Do not paste credentials, balances, or account details.",
-      "status": "open",
+      "status": "answered",
       "options": [],
-      "answer": ""
+      "answer": "Owner merged PR #4, redeployed, ran the verify script on the pod and pasted its output (2026-10-03): session ok, account_count 1, US100 'US Tech 100' CLOSED, GOLD 'Gold' CLOSED (weekend); BTCUSD and XRPUSD TRADEABLE."
     },
     {
       "id": "Q-018",
       "to": "human",
       "from": "claude",
       "text": "PR #4 (T-010, read-only Capital.com demo connection) is approved. Please (1) merge it on GitHub (Merge pull request, Confirm merge); (2) when CI on main is green, redeploy the pod from the new image; (3) answer Q-017: in the pod terminal run `cd /app && python scripts/verify_capital_demo.py` and paste only its JSON output here (it contains no credentials). Then tell the agent whose turn it is. Done?",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Done, merged",
         "Need help with the steps"
       ],
-      "answer": ""
+      "answer": "Owner merged PR #4, redeployed, ran the verify script on the pod and pasted its output (2026-10-03): session ok, account_count 1, US100 'US Tech 100' CLOSED, GOLD 'Gold' CLOSED (weekend); BTCUSD and XRPUSD TRADEABLE."
     }
   ],
   "log": [
@@ -2976,6 +2976,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-010 code. Follow-ups listed for T-011. Owner to merge PR #4, redeploy and run the redacted demo verification (Q-017, Q-018). Turn to human."
+    },
+    {
+      "revision": 24,
+      "ts": "2026-10-03T11:05:00Z",
+      "agent": "claude",
+      "action": "record_demo_verification",
+      "task_ids": [
+        "T-010",
+        "T-011",
+        "T-016"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "config/instruments.yaml"
+      ],
+      "summary": "Recorded owner's live demo check (V-005 pass for epics), marked epics VERIFIED in instruments.yaml, answered Q-017/Q-018. Turn to Codex for T-011/T-012."
     }
   ]
 }
