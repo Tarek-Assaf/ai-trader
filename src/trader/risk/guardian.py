@@ -142,8 +142,6 @@ class TradeIntent:
     entry_price: Decimal
     stop_loss: Decimal | None
     take_profit: Decimal | None
-    stage_size_cap: Decimal | None
-    trade_quality_score: Decimal
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,6 +230,8 @@ class _Context:
     account: AccountState
     positions: Sequence[OpenPosition]
     sizing: SizingEstimate | None
+    stage_size_cap: Decimal | None
+    trade_quality_score: Decimal | None
     limits: RiskLimits
     now: datetime
 
@@ -497,7 +497,7 @@ def _order_rate(ctx: _Context) -> _RuleResult:
 
 
 def _stage_cap(ctx: _Context) -> _RuleResult:
-    sizing, cap = ctx.sizing, ctx.intent.stage_size_cap
+    sizing, cap = ctx.sizing, ctx.stage_size_cap
     if (
         sizing is None
         or cap is None
@@ -509,8 +509,8 @@ def _stage_cap(ctx: _Context) -> _RuleResult:
 
 
 def _trade_quality(ctx: _Context) -> _RuleResult:
-    score = ctx.intent.trade_quality_score
-    if not score.is_finite() or score < 0 or score > 1:
+    score = ctx.trade_quality_score
+    if score is None or not score.is_finite() or score < 0 or score > 1:
         return _RuleResult(False, "trade_quality_score_invalid")
     return _result(score >= ctx.limits.min_trade_quality_score, "trade_quality_below_minimum")
 
@@ -576,6 +576,8 @@ class RiskGuardian:
         open_positions: Sequence[OpenPosition],
         sizing: SizingEstimate | None,
         *,
+        stage_size_cap: Decimal | None,
+        trade_quality_score: Decimal | None,
         now: datetime,
         cycle_id: str | None = None,
     ) -> RiskDecision:
@@ -586,6 +588,8 @@ class RiskGuardian:
             account=account,
             positions=open_positions,
             sizing=sizing,
+            stage_size_cap=stage_size_cap,
+            trade_quality_score=trade_quality_score,
             limits=self._limits,
             now=now,
         )

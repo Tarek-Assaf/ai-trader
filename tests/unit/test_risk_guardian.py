@@ -70,8 +70,6 @@ def _intent(**changes: Any) -> TradeIntent:
         "entry_price": Decimal("100"),
         "stop_loss": Decimal("99"),
         "take_profit": Decimal("102"),
-        "stage_size_cap": Decimal("2"),
-        "trade_quality_score": Decimal("0.9"),
     }
     values.update(changes)
     return TradeIntent(**values)
@@ -127,6 +125,8 @@ def _evaluate(
     positions: tuple[OpenPosition, ...] = (),
     sizing: SizingEstimate | None = None,
     audit: Any | None = None,
+    stage_size_cap: Decimal | None = Decimal("2"),
+    trade_quality_score: Decimal | None = Decimal("0.9"),
 ) -> tuple[RiskDecision, _Audit]:
     writer = audit or _Audit()
     decision = RiskGuardian(_limits(), writer).evaluate(
@@ -135,6 +135,8 @@ def _evaluate(
         account or _account(),
         positions,
         _sizing() if sizing is None and audit is None else sizing,
+        stage_size_cap=stage_size_cap,
+        trade_quality_score=trade_quality_score,
         now=NOW,
         cycle_id="cycle-test",
     )
@@ -318,17 +320,19 @@ def test_spread_ratio_and_instrument_spread_ceiling_reject() -> None:
 
 def test_order_rate_and_stage_size_caps_reject() -> None:
     order_rate, _ = _evaluate(account=_account(orders_last_hour=600), sizing=_sizing())
-    stage_cap, _ = _evaluate(
-        sizing=_sizing(size=Decimal("2.01")),
-    )
+    stage_cap, _ = _evaluate(sizing=_sizing(size=Decimal("2.01")))
+    missing_cap, _ = _evaluate(stage_size_cap=None)
     assert any(reason.startswith("order_rate:") for reason in order_rate.reasons)
     assert any(reason.startswith("stage_cap:") for reason in stage_cap.reasons)
+    assert any(reason.startswith("stage_cap:") for reason in missing_cap.reasons)
 
 
 def test_quality_and_reward_risk_reject() -> None:
-    quality, _ = _evaluate(intent=_intent(trade_quality_score=Decimal("0.69")), sizing=_sizing())
+    quality, _ = _evaluate(trade_quality_score=Decimal("0.69"), sizing=_sizing())
+    missing_quality, _ = _evaluate(trade_quality_score=None, sizing=_sizing())
     reward_risk, _ = _evaluate(intent=_intent(take_profit=Decimal("100.5")), sizing=_sizing())
     assert any(reason.startswith("trade_quality:") for reason in quality.reasons)
+    assert any(reason.startswith("trade_quality:") for reason in missing_quality.reasons)
     assert any(reason.startswith("reward_risk:") for reason in reward_risk.reasons)
 
 
