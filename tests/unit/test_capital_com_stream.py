@@ -12,7 +12,6 @@ from trader.core.logging import configure_logging
 from trader.integrations.capital_com.stream import (
     CapitalComStreamClient,
     OhlcUpdate,
-    StreamProtocolError,
 )
 
 
