@@ -95,9 +95,9 @@ def test_unauthorized_request_recreates_session_once() -> None:
         return response(request, {"markets": []})
 
     with CapitalComClient(
-        make_settings(), limiter=AllowAllLimiter(), http_client=httpx.Client(
-            transport=httpx.MockTransport(handler)
-        )
+        make_settings(),
+        limiter=AllowAllLimiter(),
+        http_client=httpx.Client(transport=httpx.MockTransport(handler)),
     ) as client:
         assert client.search_markets("Gold") == []
 
@@ -185,7 +185,7 @@ def test_invalid_history_arguments_fail_before_request() -> None:
     with CapitalComClient(
         make_settings(), limiter=AllowAllLimiter(), http_client=httpx.Client()
     ) as client:
-        from datetime import datetime, timezone
+        from datetime import UTC, datetime
 
         with pytest.raises(ValueError, match="unsupported"):
             list(
