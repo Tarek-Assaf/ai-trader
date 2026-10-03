@@ -312,11 +312,7 @@ class CapitalDataRecorder:
             self._status["last_liveness_at"] = now.isoformat()
             self._status["status"] = (
                 "healthy"
-                if (
-                    ping_reply_ok is True
-                    and market_status != "unknown"
-                    and not stale_epics
-                )
+                if (ping_reply_ok is True and market_status != "unknown" and not stale_epics)
                 else "degraded"
             )
             self._write_status()
