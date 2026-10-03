@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 28,
+  "turn": "claude",
+  "revision": 29,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-011 approved (PR #5): owner still runs scripts/verify_capital_stream.py on the pod (Q-019). T-012 HistData importer is in changes_requested (PR #7, cycle 1; V-004 waits on owner HistData files, Q-021). Next: T-014 recorder, then T-013, T-015, T-016, T-017.",
+    "summary": "T-011 merged and code approved; owner demo stream check Q-019 remains pending. T-012 automatic download and bid M1 reconstruction are ready for Claude Light review in PR #7: representative August archives for both symbols imported locally with source/coverage evidence; no manual ZIP upload needed. Canonical handoff history from main revision 28 is preserved. Next data work follows D-025/process_fastlane.md and task dependencies: T-013 prerequisite for T-014 recorder; Capital.com basis/spread calibration remains T-017. Paper/demo defaults remain in effect.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -676,7 +676,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-05"
       ],
@@ -689,10 +689,39 @@
         "QA report per symbol",
         "coverage dates recorded in validations[]"
       ],
-      "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "deliverables": [
+        "src/trader/data/importers/histdata.py",
+        "src/trader/data/importers/histdata_download.py",
+        "src/trader/data/importers/histdata_ticks.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_importer.py",
+        "tests/unit/test_histdata_download.py",
+        "tests/unit/test_histdata_ticks.py",
+        "docs/reports/histdata_qa.md",
+        "docs/reports/histdata_coverage.json",
+        "pyproject.toml",
+        "uv.lock",
+        "src/trader/data/importers/__init__.py"
+      ],
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/data/importers/histdata.py",
+        "src/trader/data/importers/histdata_download.py",
+        "src/trader/data/importers/histdata_ticks.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_importer.py",
+        "tests/unit/test_histdata_download.py",
+        "tests/unit/test_histdata_ticks.py",
+        "docs/reports/histdata_qa.md",
+        "docs/reports/histdata_coverage.json",
+        "pyproject.toml",
+        "uv.lock",
+        "src/trader/data/importers/__init__.py",
+        "Local ruff/format and mypy pass; 25 focused tests pass.",
+        "Real August 2026 reconstruction: 28,395 NSXUSD and 29,340 XAUUSD UTC bid minute candles; all 135 M1 conflict minutes validated against raw quotes; repeat imports write zero new rows.",
+        "GitHub Actions run 37127760366 on 5b9c4c7e8ccdf737c116f7cc5b99eb4684debd2e: all quality, migration, tests, handoff, secret scan, Docker/runtime and backup/restore checks passed."
+      ],
+      "completion_note": "Light-tier T-012: automatic bounded public downloads and verified ZIP caching; strict M1 importer with fixed UTC-5 conversion; optional tick-based reconstruction orders quotes by timestamp and retains original archive sequence on ties, marking bid basis and preserving source SHA-256/provenance. Validated 13,172,627 raw quotes and all 135 conflicted minutes, then imported both August 2026 datasets locally with zero invalid rows/conflicts. Re-imports wrote zero rows. Corrected weekday outages incorrectly labeled weekend, added market-open alignment and failure-path tests, and excluded TXT status reports from price parsing. Owner approved exact PyArrow 23.0.1 (Q-020). Self-review checklist checked remote shape/limits, error handling, no secrets, idempotent writes, UTC/bid basis, meaningful failure tests and scoped Light changes. Canonical main revision 28 is preserved; previous T-012 review history remains in merge parent 88a78c6f. Pod execution and broker-price calibration are not claimed. Full GitHub Actions run 37127760366 passed.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -1947,12 +1976,12 @@
     {
       "id": "V-004",
       "subject": "HistData coverage dates for Nasdaq-100 (NSXUSD) and XAUUSD",
-      "method": "Pending: Codex confirms during T-012",
-      "result": "pending",
-      "evidence": "",
-      "validated_by": "",
-      "date": "",
-      "reverify_if": ""
+      "method": "Automatically downloaded August 2026 M1 and tick archives for NSXUSD/XAUUSD; checked per-file QA and reconstructed complete bid M1 candles from timestamp-ordered source quotes.",
+      "result": "pass",
+      "evidence": "docs/reports/histdata_qa.md and docs/reports/histdata_coverage.json. Both sampled archives cover 2026-08-02T23:00:00Z through 2026-09-01T04:59:00Z after reconstruction. This establishes coverage for these representative monthly archives only, not the extent of the full historical catalog.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "A different archive, symbol, file format or timezone policy is imported."
     },
     {
       "id": "V-005",
@@ -2343,6 +2372,26 @@
       "validated_by": "claude",
       "date": "2026-10-03",
       "reverify_if": "stream.py, client.py auth headers, or the Capital.com WebSocket protocol changes"
+    },
+    {
+      "id": "V-044",
+      "subject": "T-012 automatic download, tick reconstruction, review fixes and repository checks",
+      "method": "Local ruff/format and mypy; 25 focused tests cover ZIP/format/QA, DST and market-open alignment, stable quote ordering, duplicate/corrupt/empty/oversized sources, network errors and idempotence. Full GitHub Actions workflow ran migrations, all tests, handoff/schema/base validation, secret scan, Docker build, ROLE=all health/persistence/backup-restore, and core/worker runtime checks.",
+      "result": "pass",
+      "evidence": "PR #7, commit 5b9c4c7e8ccdf737c116f7cc5b99eb4684debd2e, GitHub Actions run 37127760366: every required step passed. Local ruff/format and mypy pass; 25 focused tests pass.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Importer, downloader, tick reconstruction or Parquet writing code changes."
+    },
+    {
+      "id": "V-045",
+      "subject": "HistData conflicting M1 minutes validated against raw bid quotes",
+      "method": "Read 7,959,579 NSXUSD and 5,213,048 XAUUSD raw quotes; compare every reconstructed conflicting minute against a separate investigator reconstruction; run repeat imports.",
+      "result": "pass",
+      "evidence": "docs/reports/histdata_qa.md and histdata_coverage.json: all 37 Nasdaq and 98 Gold conflicting minutes match the raw quote reconstruction; 28,395 and 29,340 valid bid minute candles imported locally, no invalid rows/conflicts; repeated import adds zero rows. Archive sequence is the declared tie rule. This validates source-feed reconstruction, not an independent exchange or broker price.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Source archive hashes or reconstruction method change; cross-provider calibration remains T-017."
     }
   ],
   "blockers": [
@@ -2574,6 +2623,22 @@
         "Need help with the steps"
       ],
       "answer": ""
+    },
+    {
+      "id": "Q-020",
+      "to": "human",
+      "from": "codex",
+      "text": "May T-012 add a pinned PyArrow dependency for Parquet output?",
+      "status": "answered",
+      "answer": "Approved by owner in chat on 2026-10-03: yes, add PyArrow. Implemented as pyarrow==23.0.1."
+    },
+    {
+      "id": "Q-021",
+      "to": "human",
+      "from": "codex",
+      "text": "Please provide one representative monthly HistData ZIP for NSXUSD and one for XAUUSD (or place them in the pod's data directory) so the actual coverage dates and per-symbol QA can be confirmed.",
+      "status": "answered",
+      "answer": "Owner requested automatic import and further price validation in chat. Codex retrieved both public August 2026 M1 archives and underlying tick exports without an upload; confirmed sampled coverage and rebuilt/validated all conflicting minutes. No owner files are needed for this representative check."
     }
   ],
   "log": [
@@ -3145,6 +3210,31 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-011 approved after review cycle 2 (V-043); recorded D-025 (fast-lane process, owner-instructed auto-merge). Claude enables auto-merge on PR #5. Codex next: fix T-012 (PR #7), then build T-014 recorder. Retracting one T-012 note: scripts in this repo are run via 'python', so file mode 755 is not required."
+    },
+    {
+      "revision": 29,
+      "ts": "2026-10-03T13:57:44Z",
+      "agent": "codex",
+      "action": "complete_t012_automatic_download_and_source_price_validation",
+      "task_ids": [
+        "T-012"
+      ],
+      "files_changed": [
+        "src/trader/data/importers/histdata.py",
+        "src/trader/data/importers/histdata_download.py",
+        "src/trader/data/importers/histdata_ticks.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_importer.py",
+        "tests/unit/test_histdata_download.py",
+        "tests/unit/test_histdata_ticks.py",
+        "docs/reports/histdata_qa.md",
+        "docs/reports/histdata_coverage.json",
+        "pyproject.toml",
+        "uv.lock",
+        "src/trader/data/importers/__init__.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude review cycle 1 and owner's automatic import/price-validation request. Retrieved monthly M1 and raw tick archives, rebuilt 135 conflicting minutes using timestamp order with archive-order ties, imported 28,395 NSXUSD and 29,340 XAUUSD bid candles locally, and confirmed repeat imports add zero rows. Recorded source hashes, sampled UTC coverage, reconstruction limits and owner-approved PyArrow. Integrated canonical main revision 28; original T-012 review remains preserved in merge parent 88a78c6f. Local 25-test/ruff/mypy checks and full GitHub Actions run 37127760366 pass. Returning to Claude for Light review."
     }
   ]
 }
