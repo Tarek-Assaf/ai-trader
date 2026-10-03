@@ -32,7 +32,11 @@ def main() -> int:
     if args.seconds < 1 or args.seconds > 3600:
         print(json.dumps({"status": "error", "error": "seconds_out_of_range"}, sort_keys=True))
         return 2
-    settings = EnvironmentSettings()
+    try:
+        settings = EnvironmentSettings()
+    except Exception as exc:
+        print(json.dumps({"status": "error", "error": type(exc).__name__}, sort_keys=True))
+        return 1
     if settings.broker_env != "demo" or settings.live_trading_enabled:
         print(json.dumps({"status": "refused", "reason": "demo_mode_required"}, sort_keys=True))
         return 2
@@ -72,7 +76,7 @@ def main() -> int:
 
             worker = threading.Thread(target=run_stream, name="capital-stream-check", daemon=True)
             worker.start()
-            time.sleep(args.seconds)
+            stop.wait(args.seconds)
             stop.set()
             worker.join(timeout=35)
     except Exception as exc:
