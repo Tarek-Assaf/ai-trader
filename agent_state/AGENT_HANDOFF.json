@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 31,
+  "turn": "codex",
+  "revision": 32,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -97,7 +97,8 @@
         "T-012",
         "T-014",
         "T-017",
-        "T-050"
+        "T-050",
+        "T-080"
       ]
     },
     {
@@ -740,7 +741,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-09"
       ],
@@ -755,7 +756,7 @@
         "src/trader/data/resample.py",
         "tests/unit/test_resample.py"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/data/resample.py",
         "tests/unit/test_resample.py",
@@ -769,7 +770,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-05",
         "R-09"
@@ -797,7 +798,7 @@
         "infra/runpod/README.md",
         "docker/supervisord.all.conf"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/data/recorder.py",
         "src/trader/workers/recorder.py",
@@ -1765,6 +1766,43 @@
         "Unit test for the age and status logic; RunPod guide mentions the new fields",
         "Failures of the backup loop are written to a visible log line that names the cause without secrets"
       ]
+    },
+    {
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "requirements": [
+        "R-05"
+      ],
+      "depends_on": [
+        "T-012"
+      ],
+      "deliverables": [
+        "src/trader/data/importers/histdata.py",
+        "src/trader/data/importers/histdata_download.py",
+        "src/trader/data/importers/histdata_ticks.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_importer.py",
+        "tests/unit/test_histdata_download.py",
+        "tests/unit/test_histdata_ticks.py",
+        "docs/reports/histdata_qa.md",
+        "docs/reports/histdata_coverage.json",
+        "pyproject.toml",
+        "uv.lock",
+        "src/trader/data/importers/__init__.py"
+      ],
+      "id": "T-080",
+      "title": "Pod-side historical import: batch range importer with sha256 manifest so the full NSXUSD and XAUUSD M1 history is rebuilt on the pod's /workspace volume",
+      "status": "todo",
+      "acceptance_criteria": [
+        "one command imports a symbol and year range, downloading politely (one request at a time, pause between requests, cached archives reused) and verifying archives against the sha256 manifest from V-049",
+        "months with conflicting M1 minutes are rebuilt from ticks, other months use plain M1; run summary lists rows, rejected months and gaps",
+        "resumable and idempotent: rerunning skips finished months and adds zero rows",
+        "pod run completes for NSXUSD and XAUUSD, summary pasted by the owner and recorded in validations"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -2716,7 +2754,8 @@
       "options": [
         "Run the demo soak after redeploy",
         "Need help with the steps"
-      ]
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -3355,6 +3394,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented T-013/T-014 in Full-tier PR #9, including shared UTC resampling, the persistent reconnect-aware Capital.com recorder, health/worker integration, and fail-closed validation of remote market status. Full GitHub Actions run 37142677955 passed all quality, security, container, and runtime checks. Added Q-022 for the owner-run multi-hour demo soak; live reconnect frequency is not yet claimed. Handing the branch to Claude for review."
+    },
+    {
+      "revision": 32,
+      "ts": "2026-10-03T18:20:00Z",
+      "agent": "claude",
+      "action": "review_t013_t014_pr9_cycle1",
+      "task_ids": [
+        "T-013",
+        "T-014",
+        "T-080"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Two Codex sessions built T-014 in parallel (PR #8 and PR #9). PR #9 is the one to keep: it already has the 30-second recorder liveness freshness, fail-closed market status and the T-013 resampler. PR #8 must be closed without merging (its cycle-1 review is in its history). Review of PR #9, cycle 1 of 2, Full tier: design approved. Remaining fixes. T-014: (1) a recorder-level test for 'no gaps across a reconnect' (fake stream drops, REST backfill returns the missing minutes, every minute exactly once per side in the lake); (2) a static test that CapitalComClient and the recorder expose no order, position or settings methods and that nothing under trader.agents imports them. T-013: (3) add hypothesis property tests (OHLC invariants: high is max, low is min, open is first, close is last, volume is the sum; no look-ahead) as the spec requires. Optional: throttle status-file writes to one per second. Carried over from the PR #8 review: T-080 (pod-side historical import). Process rule: only one Codex session works on a task at a time; check open pull requests and the handoff before starting. Turn to Codex."
     }
   ]
 }
