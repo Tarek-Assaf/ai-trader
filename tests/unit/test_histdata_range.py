@@ -83,12 +83,24 @@ def test_range_import_is_resumable_and_idempotent(
     as_of = datetime(2026, 3, 15, tzinfo=UTC)
 
     first = histdata_range.import_histdata_range(
-        "NSXUSD", 2026, 2026, raw, tmp_path / "lake", tmp_path / "lineage",
-        pause_seconds=0, as_of=as_of,
+        "NSXUSD",
+        2026,
+        2026,
+        raw,
+        tmp_path / "lake",
+        tmp_path / "lineage",
+        pause_seconds=0,
+        as_of=as_of,
     )
     second = histdata_range.import_histdata_range(
-        "NSXUSD", 2026, 2026, raw, tmp_path / "lake", tmp_path / "lineage",
-        pause_seconds=0, as_of=as_of,
+        "NSXUSD",
+        2026,
+        2026,
+        raw,
+        tmp_path / "lake",
+        tmp_path / "lineage",
+        pause_seconds=0,
+        as_of=as_of,
     )
 
     assert first["status"] == "ok"
@@ -182,7 +194,5 @@ def test_failed_month_is_reported_and_not_marked_complete(
     manifest = json.loads((raw / "sha256-manifest.json").read_text(encoding="utf-8"))
 
     assert summary["status"] == "partial"
-    assert summary["rejected_months"] == [
-        {"month": "202601", "reason": "archive unavailable"}
-    ]
+    assert summary["rejected_months"] == [{"month": "202601", "reason": "archive unavailable"}]
     assert manifest["completed_months"] == {}
