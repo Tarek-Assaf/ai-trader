@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 37,
+  "turn": "codex",
+  "revision": 38,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-015 is ready for Full Claude review on PR #13; T-016 is ready for Full Claude review on PR #14. T-020 implementation and PostgreSQL audit integration are ready for Full Claude review on PR #15. T-080 still awaits owner pod import/idempotence summaries (Q-024), and the T-014 soak remains pending (Q-022). The next independent pod-free queue task is T-021 after the T-016 interface review. Phase 2 is underway.",
+    "summary": "T-015 is ready for Full Claude review on PR #13; T-016 is ready for Full Claude review on PR #14. T-020 needs one fix (canonical instrument check) on PR #15. T-080 still awaits owner pod import/idempotence summaries (Q-024), and the T-014 soak remains pending (Q-022). The next independent pod-free queue task is T-021 after the T-016 interface review. Phase 2 is underway.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -906,7 +906,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-06",
         "R-08"
@@ -920,7 +920,7 @@
         "each rule has tests"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/risk/guardian.py",
         "src/trader/core/audit.py",
@@ -930,7 +930,7 @@
         "tests/integration/test_postgres_migrations.py",
         "GitHub Actions run 37153167043 on 61898525c456e62d7902e0359f03e1b1fc9b842c passed all quality/runtime steps, including PostgreSQL integration tests"
       ],
-      "completion_note": "Implemented the deterministic 20-rule Guardian. It requires an external T-021 SizingEstimate, and receives the stage cap and T-022 quality score from trusted services outside TradeIntent; missing values reject. Approved and rejected decisions are persisted through the append-only audit writer; audit failures reject. Drawdown breaches signal halt_system and require the caller to persist the halt until an explicit owner reset. Local checks: Ruff, mypy, secret scan, 133 tests passed/2 PostgreSQL tests skipped without local DATABASE_URL. GitHub CI run 37153167043 passed all steps, including both PostgreSQL integration tests. Full Claude review pending on PR #15."
+      "completion_note": "Implemented the deterministic 20-rule Guardian. It requires an external T-021 SizingEstimate, and receives the stage cap and T-022 quality score from trusted services outside TradeIntent; missing values reject. Approved and rejected decisions are persisted through the append-only audit writer; audit failures reject. Drawdown breaches signal halt_system and require the caller to persist the halt until an explicit owner reset. Local checks: Ruff, mypy, secret scan, 133 tests passed/2 PostgreSQL tests skipped without local DATABASE_URL. GitHub CI run 37153167043 passed all steps, including both PostgreSQL integration tests. Full Claude review pending on PR #15. Claude Full review cycle 1: changes requested. Guardian accepts any instrument string, so an alias or typo (for example US100, GOLD) is not counted in the NAS100+XAUUSD combined-exposure cap and splits the per-instrument position count, which fails open. Fix: (1) add a rule-level check (inside has_stop or a new reject reason on an existing rule, keeping the 20 rule names) that rejects any intent or open position whose instrument is not in a canonical symbol set supplied to RiskGuardian/RiskLimits by the caller from config/instruments.yaml symbols (T-016 mapper resolves aliases before the Guardian); (2) derive the combined-exposure set from config or keep it as a constant but compare only canonical symbols; (3) add tests: alias 'US100' and unknown 'DAX' are rejected, open position with alias is rejected, canonical NAS100+XAUUSD still counted. Everything else in the review passed: no broker/LLM imports, size/stage cap/quality outside TradeIntent, all 20 rules fail closed, audit failure rejects, drawdown halt, CI green."
     },
     {
       "id": "T-021",
@@ -2588,6 +2588,16 @@
       "validated_by": "codex",
       "date": "2026-10-03",
       "reverify_if": "Claude requests changes, or Guardian, audit writer, or their tests change."
+    },
+    {
+      "id": "V-059",
+      "subject": "T-020 Claude Full review (cycle 1)",
+      "method": "Read guardian.py, audit.py, boundary and unit tests against ARCHITECTURE 5.3 and the safety posture; CI quality green on PR #15 head.",
+      "result": "fail",
+      "evidence": "PR #15: all 20 rules present and fail closed on invalid/missing inputs; rule exceptions and audit failures reject; no broker/LLM imports; sizing, stage cap and quality score are not LLM-supplied. Blocking finding: instrument strings are not validated against canonical symbols (see T-020 completion_note).",
+      "validated_by": "claude",
+      "date": "2026-10-03",
+      "reverify_if": "guardian, audit writer or their tests change"
     }
   ],
   "blockers": [
@@ -3618,6 +3628,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented all 20 fail-closed rules, trusted sizing/stage/quality inputs, and append-only audited decisions. Full CI run 37153167043 passed, including PostgreSQL audit-chain integration. Opened independent PR #15 for Full Claude review; handing over."
+    },
+    {
+      "revision": 38,
+      "ts": "2026-10-03T21:45:00Z",
+      "agent": "claude",
+      "action": "review_t020_changes_requested",
+      "task_ids": [
+        "T-020"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Full review of T-020: one blocking fail-open gap (non-canonical instrument aliases bypass combined-exposure and per-instrument caps). Changes requested, cycle 1 of 2 (V-059). Turn to Codex."
     }
   ]
 }
