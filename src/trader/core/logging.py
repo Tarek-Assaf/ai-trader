@@ -48,6 +48,7 @@ class SecretRedactionFilter(logging.Filter):
 
 def configure_logging(secrets: Iterable[str] = ()) -> None:
     """Apply secret redaction to handlers so propagated child-logger records are covered."""
+    logging.getLogger("websockets").setLevel(logging.WARNING)
     root_logger = logging.getLogger()
     redactor = SecretRedactionFilter(secrets)
     if not root_logger.handlers:
