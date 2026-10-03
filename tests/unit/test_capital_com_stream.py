@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import threading
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from trader.integrations.capital_com.stream import CapitalComStreamClient, OhlcUpdate
@@ -128,3 +128,41 @@ def test_stream_limits_epics_to_forty() -> None:
         assert "40" in str(exc)
     else:
         raise AssertionError("expected the subscription limit to be enforced")
+
+
+def test_stream_sends_keepalive_ping_before_ten_minutes() -> None:
+    rest = FakeRest()
+    stop = threading.Event()
+    socket = FakeSocket([])
+
+    class StopAfterTwoTimeouts(FakeSocket):
+        def __init__(self) -> None:
+            super().__init__([])
+            self.calls = 0
+
+        def recv(self, *, timeout: float) -> str:
+            self.calls += 1
+            if self.calls == 2:
+                stop.set()
+            raise TimeoutError
+
+    socket = StopAfterTwoTimeouts()
+    current = datetime(2026, 10, 3, 10, 0, tzinfo=UTC)
+
+    def clock() -> datetime:
+        nonlocal current
+        value = current
+        current += timedelta(minutes=9)
+        return value
+
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        lambda _update: None,
+        connection_factory=lambda *_args, **_kwargs: socket,
+        clock=clock,
+    )
+    client.run_forever(stop)
+
+    messages = [json.loads(message) for message in socket.sent]
+    assert any(message["destination"] == "ping" for message in messages)
