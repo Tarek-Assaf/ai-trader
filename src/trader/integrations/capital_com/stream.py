@@ -193,6 +193,7 @@ class CapitalComStreamClient:
             raise StreamProtocolError("Capital.com did not confirm every OHLC subscription")
 
     def _ping(self, socket: ClientConnection) -> None:
+        self._ping_reply_ok = False
         correlation_id = self._send_request(socket, "ping")
         self._await_reply(socket, correlation_id, "ping")
         self._ping_reply_ok = True
@@ -339,13 +340,14 @@ class CapitalComStreamClient:
             except _ConsumerCallbackFailure as exc:
                 raise exc.original from None
             except (ConnectionClosed, OSError, TimeoutError, StreamProtocolError) as exc:
-                self._ping_reply_ok = False
                 if established:
                     self._reconnect_count += 1
                 if stop_event.is_set():
                     break
                 _LOG.warning("Capital.com WebSocket disconnected (%s)", type(exc).__name__)
             except Exception as exc:
+                if established:
+                    self._reconnect_count += 1
                 if stop_event.is_set():
                     break
                 _LOG.warning("Capital.com WebSocket reconnecting (%s)", type(exc).__name__)
