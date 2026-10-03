@@ -167,23 +167,12 @@ def resolve_market_open(
     broker_status: str,
     schedule: MarketHours | None,
     stamp: datetime,
-    *,
-    last_tick_at: datetime | None,
-    stale_after_seconds: float,
 ) -> tuple[bool | None, str]:
-    """Use broker status first, then broker hours, then the stale-feed fallback."""
+    """Use broker status first, then broker hours when status is unavailable."""
     if broker_status == "TRADEABLE":
         return True, "broker"
     if broker_status == "CLOSED":
         return False, "broker"
     if schedule is None:
         return None, "unknown"
-    if not schedule.is_open(stamp):
-        return False, "schedule"
-    if last_tick_at is not None:
-        if last_tick_at.tzinfo is None or last_tick_at.utcoffset() is None:
-            raise ValueError("last tick timestamp must be timezone-aware")
-        age = (stamp.astimezone(UTC) - last_tick_at.astimezone(UTC)).total_seconds()
-        if age >= stale_after_seconds:
-            return False, "stale_feed"
-    return True, "schedule"
+    return schedule.is_open(stamp), "schedule"
