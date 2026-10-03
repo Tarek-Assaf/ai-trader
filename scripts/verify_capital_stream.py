@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 import threading
 import time
@@ -25,6 +26,7 @@ def _arguments() -> argparse.Namespace:
 
 def main() -> int:
     args = _arguments()
+    logging.disable(logging.CRITICAL)
     if args.seconds < 1 or args.seconds > 3600:
         print(json.dumps({"status": "error", "error": "seconds_out_of_range"}, sort_keys=True))
         return 2
@@ -69,7 +71,7 @@ def main() -> int:
             worker.start()
             time.sleep(args.seconds)
             stop.set()
-            worker.join(timeout=5)
+            worker.join(timeout=35)
     except Exception as exc:
         failures.append(type(exc).__name__)
         stop.set()
