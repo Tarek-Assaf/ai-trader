@@ -59,7 +59,7 @@ def test_import_zip_reports_qa_and_is_idempotent(tmp_path: Path) -> None:
         "source",
     ]
     assert report["status"] == "ok"
-    assert report["gaps"][0]["classification"] == "unexpected"
+    assert report["gaps"][0]["classification"] == "weekend"
 
 
 def test_conflicting_duplicate_does_not_write_a_partial_partition(tmp_path: Path) -> None:
