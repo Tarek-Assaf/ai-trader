@@ -224,7 +224,7 @@ def test_redis_limiter_waits_and_applies_history_and_global_windows() -> None:
     assert sleeps == [0.15]
     assert redis.calls[0][0] == 2
     assert redis.calls[0][1][:2] == ("capital_com:test:requests", "capital_com:test:history")
-    assert redis.calls[0][1][-2:] == (10, 5)
+    assert redis.calls[0][1][-2:] == ("10", "5")
 
 
 def test_redis_limiter_includes_session_budget_and_fails_closed() -> None:
@@ -234,7 +234,7 @@ def test_redis_limiter_includes_session_budget_and_fails_closed() -> None:
 
     assert redis.calls[0][0] == 2
     assert redis.calls[0][1][:2] == ("capital_com:requests", "capital_com:sessions")
-    assert redis.calls[0][1][-2:] == (10, 1)
+    assert redis.calls[0][1][-2:] == ("10", "1")
 
     def unavailable(*_: object) -> object:
         raise RuntimeError("redis://user:secret@example")

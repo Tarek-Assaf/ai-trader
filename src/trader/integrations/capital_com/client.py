@@ -117,7 +117,7 @@ class CapitalComClient:
         method: str,
         path: str,
         *,
-        params: Mapping[str, object] | None = None,
+        params: Mapping[str, str | int | float | bool | None] | None = None,
         json: Mapping[str, object] | None = None,
         headers: Mapping[str, str] | None = None,
         session_request: bool = False,
@@ -199,7 +199,10 @@ class CapitalComClient:
 
     def ping(self) -> Mapping[str, Any]:
         """Ping the active session and return the server response."""
-        return self._request("GET", "ping")
+        payload = self._request("GET", "ping")
+        if not isinstance(payload, Mapping):
+            raise CapitalComError(200, "ping")
+        return payload
 
     def search_markets(self, search_term: str) -> list[Mapping[str, Any]]:
         """Search market names/symbols and return matching market objects."""

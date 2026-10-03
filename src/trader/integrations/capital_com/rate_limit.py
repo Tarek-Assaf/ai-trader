@@ -22,7 +22,7 @@ class RateLimiter(Protocol):
 
 
 class _RedisEval(Protocol):
-    def eval(self, script: str, numkeys: int, *keys_and_args: object) -> object: ...
+    def eval(self, script: str, numkeys: int, *keys_and_args: str) -> object: ...
 
 
 _ACQUIRE_SCRIPT = """
@@ -93,12 +93,14 @@ class RedisRateLimiter:
                     _ACQUIRE_SCRIPT,
                     len(keys),
                     *keys,
-                    now_ms,
+                    str(now_ms),
                     uuid.uuid4().hex,
-                    *limits,
+                    *(str(limit) for limit in limits),
                 )
             except Exception:  # Redis must fail closed; do not expose its URL.
                 raise RateLimitError("Capital.com rate limiter is unavailable") from None
+            if not isinstance(delay_ms, (int, float, str, bytes)):
+                raise RateLimitError("Capital.com rate limiter returned an invalid delay")
             try:
                 delay = int(delay_ms)
             except (TypeError, ValueError) as exc:
