@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 30,
+  "revision": 34,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-010 and T-011 merged and verified on the demo account (V-046: stream check passed). T-012 HistData importer approved (PR #7, auto-merge); real August 2026 NSXUSD and XAUUSD bid candles were rebuilt from ticks, the owner then runs the import on the pod. Next: T-014 data recorder, then T-013, T-015, T-016, T-017.",
+    "summary": "T-010 to T-014 are done and verified or merged (T-014 recorder and T-013 resampler on PR #9, auto-merge). After the merge the owner redeploys the pod so the recorder starts collecting bid/ask data (starts the clock for T-017) and runs the multi-hour soak (Q-022). Next for Codex: T-080 pod-side history import, then T-015 market hours, T-016 instrument mapper, T-017 basis measurement. Phase 2 (risk and execution) follows.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -97,7 +97,8 @@
         "T-012",
         "T-014",
         "T-017",
-        "T-050"
+        "T-050",
+        "T-080"
       ]
     },
     {
@@ -740,7 +741,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-09"
       ],
@@ -751,10 +752,19 @@
         "identical output for same minutes from either path",
         "gap bars flagged"
       ],
-      "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "deliverables": [
+        "src/trader/data/resample.py",
+        "tests/unit/test_resample.py"
+      ],
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/data/resample.py",
+        "tests/unit/test_resample.py",
+        "test_identical_normalized_minutes_produce_identical_historical_and_live_output and test_missing_minutes_are_flagged_and_never_synthesized.",
+        "Hypothesis property test test_ohlc_resampling_properties_and_no_lookahead checks open-first, high-max, low-min, close-last, volume-sum, completeness and isolation from later bins.",
+        "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; GitHub Actions run 37144293108 passed all checks."
+      ],
+      "completion_note": "Addressed Claude cycle-1 request by adding Hypothesis properties for OHLC invariants and no look-ahead. The shared UTC resampler still provides historical/live parity and explicit incomplete-bin flags. PR #9 Full-tier CI run 37144293108 passed; returning for cycle-2 review."
     },
     {
       "id": "T-014",
@@ -762,7 +772,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-05",
         "R-09"
@@ -779,10 +789,33 @@
         "recorder liveness is judged from ping replies and market status (T-015), never from price silence alone",
         "log the exception type of every reconnect and expose the reconnect count in health; the T-011 live demo check showed 1 reconnect in 90 seconds, so the recorder must show whether reconnects stay rare over hours"
       ],
-      "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "deliverables": [
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "src/trader/api/health.py",
+        "src/trader/integrations/capital_com/stream.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_recorder_worker.py",
+        "tests/unit/test_capital_com_stream.py",
+        "infra/runpod/README.md",
+        "docker/supervisord.all.conf",
+        "tests/invariants/test_module_boundaries.py",
+        "tests/unit/test_recorder_reconnect.py"
+      ],
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "src/trader/api/health.py",
+        "src/trader/integrations/capital_com/stream.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_recorder_reconnect.py",
+        "tests/unit/test_recorder_worker.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/invariants/test_module_boundaries.py",
+        "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; GitHub Actions run 37144293108 passed lint/format, typecheck, migrations, unit/integration and handoff/base checks, secret scan, image build, ROLE=all health/persistence/backup-restore, and ROLE=core/worker runtime checks."
+      ],
+      "completion_note": "Addressed Claude cycle-1 requests: a recorder-level fake disconnect/reconnect test leaves the initial REST backfill empty, then verifies REST fills both sides for every missing minute exactly once; static invariants prevent trading/settings methods on CapitalComClient/CapitalDataRecorder and prevent trader.agents from importing broker/recorder modules. Optional status-write throttling was not required. Full-tier CI run 37144293108 passed. The owner-run multi-hour demo reconnect observation remains pending Q-022; live frequency is not claimed."
     },
     {
       "id": "T-015",
@@ -1739,6 +1772,43 @@
         "Unit test for the age and status logic; RunPod guide mentions the new fields",
         "Failures of the backup loop are written to a visible log line that names the cause without secrets"
       ]
+    },
+    {
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "requirements": [
+        "R-05"
+      ],
+      "depends_on": [
+        "T-012"
+      ],
+      "deliverables": [
+        "src/trader/data/importers/histdata.py",
+        "src/trader/data/importers/histdata_download.py",
+        "src/trader/data/importers/histdata_ticks.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_importer.py",
+        "tests/unit/test_histdata_download.py",
+        "tests/unit/test_histdata_ticks.py",
+        "docs/reports/histdata_qa.md",
+        "docs/reports/histdata_coverage.json",
+        "pyproject.toml",
+        "uv.lock",
+        "src/trader/data/importers/__init__.py"
+      ],
+      "id": "T-080",
+      "title": "Pod-side historical import: batch range importer with sha256 manifest so the full NSXUSD and XAUUSD M1 history is rebuilt on the pod's /workspace volume",
+      "status": "todo",
+      "acceptance_criteria": [
+        "one command imports a symbol and year range, downloading politely (one request at a time, pause between requests, cached archives reused) and verifying archives against the sha256 manifest from V-049",
+        "months with conflicting M1 minutes are rebuilt from ticks, other months use plain M1; run summary lists rows, rejected months and gaps",
+        "resumable and idempotent: rerunning skips finished months and adds zero rows",
+        "pod run completes for NSXUSD and XAUUSD, summary pasted by the owner and recorded in validations"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -2413,6 +2483,66 @@
       "validated_by": "claude",
       "date": "2026-10-03",
       "reverify_if": "importer modules or HistData archive layout change"
+    },
+    {
+      "id": "V-048",
+      "subject": "T-013 shared UTC OHLC resampler",
+      "method": "GitHub Actions run 37144293108 exercised lint/format, type checking, and unit tests including normalized historical/live parity, incomplete-gap flags, chronological aggregation, duplicate/malformed input rejection, and Hypothesis properties for OHLC invariants and no look-ahead.",
+      "result": "pass",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed. test_ohlc_resampling_properties_and_no_lookahead checks high=max, low=min, open=first, close=last, volume=sum, and unchanged earlier output after adding a later-bin candle.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "resample.py or its tests change."
+    },
+    {
+      "id": "V-049",
+      "subject": "T-014 Capital.com recorder implementation and container integration",
+      "method": "GitHub Actions run 37144293108 checked lint/format, type checking, unit/integration tests, handoff/base validation, secret scan, Docker build, ROLE=all health/non-root/persistence/backup-restore, and ROLE=core/worker runtime checks. Tests include recorder-level disconnect gap recovery and static broker/agent boundary checks.",
+      "result": "pass",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed all quality-job steps. The multi-hour live demo soak has not run and remains tracked by Q-022.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "recorder, stream, health, worker or their tests change."
+    },
+    {
+      "id": "V-050",
+      "subject": "T-014 recorder persists gap-free bars across stream disconnect and REST backfill",
+      "method": "A recorder-level integration test seeds persisted watermarks, forces both stream sides to update then disconnect, returns no candles on the initial backfill and missing minutes on reconnect, and reads the resulting Parquet lake.",
+      "result": "pass",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed. test_recorder_persists_each_side_once_across_disconnect_and_rest_backfill verifies each minute/side appears exactly once and reconciled minutes have REST source priority.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "CapitalComStreamClient backfill or recorder persistence logic changes."
+    },
+    {
+      "id": "V-051",
+      "subject": "T-014 broker read-only and agent import boundary",
+      "method": "Static invariant scans trader.agents/research/lab/chat/analysis for Capital.com and recorder imports and inspects public CapitalComClient and CapitalDataRecorder names for order, position, or settings surfaces.",
+      "result": "pass",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed. tests/invariants/test_module_boundaries.py checks both import paths and public method names.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Broker-client/recorder public APIs or agent-side module imports change."
+    },
+    {
+      "id": "V-052",
+      "subject": "T-013 Hypothesis OHLC and no-look-ahead properties",
+      "method": "Hypothesis generates valid minute bars with shuffled input and verifies aggregate open/high/low/close/volume, completeness and independence from a later timeframe bin.",
+      "result": "pass",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed test_ohlc_resampling_properties_and_no_lookahead.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "resampling implementation or property test changes."
+    },
+    {
+      "id": "V-053",
+      "subject": "T-013 resampler and T-014 Capital.com recorder: Claude Full-tier review (PR #9, cycle 2)",
+      "method": "Claude static review of resample.py, recorder.py, workers/recorder.py, health.py, stream.py changes and the cycle-1 additions (dependencies cannot be installed in Claude's workspace), plus Full CI run 37144293108.",
+      "result": "pass",
+      "evidence": "Recorder: partial minutes held until rollover, REST wins, atomic daily Parquet partitions, side watermarks seeded for restart backfill, no secrets in logs, idle mode without credentials, fail-closed market status. Health: recorder goes degraded when its status is missing or older than 30 seconds in ROLE=all with credentials. Cycle-1 fixes verified: tests/unit/test_recorder_reconnect.py (every minute exactly once per side across a disconnect and REST backfill), tests/invariants/test_module_boundaries.py (no order, position or settings methods on CapitalComClient or the recorder; agents cannot import the recorder), Hypothesis OHLC and no-look-ahead properties for resample_ohlc. Not yet shown: reconnect frequency over hours (owner soak, Q-022). Known: status file is written on every update (optional throttle); unfinished minute dropped on SIGTERM and refilled by backfill.",
+      "validated_by": "claude",
+      "date": "2026-10-03",
+      "reverify_if": "recorder, resampler or stream client change"
     }
   ],
   "blockers": [
@@ -2660,6 +2790,18 @@
       "text": "Please provide one representative monthly HistData ZIP for NSXUSD and one for XAUUSD (or place them in the pod's data directory) so the actual coverage dates and per-symbol QA can be confirmed.",
       "status": "answered",
       "answer": "Owner requested automatic import and further price validation in chat. Codex retrieved both public August 2026 M1 archives and underlying tick exports without an upload; confirmed sampled coverage and rebuilt/validated all conflicting minutes. No owner files are needed for this representative check."
+    },
+    {
+      "id": "Q-022",
+      "to": "human",
+      "from": "codex",
+      "text": "After PR #9 is approved and merged, let the recorder run on the redeployed demo pod for at least two hours, then share only the redacted /health data_recorder fields (configured, status, ping_reply_ok, market_status, reconnect_count, last_reconnect_reason, last_closed_bar_at). This confirms the multi-hour reconnect behavior required by T-014. Do not paste credentials or account details.",
+      "status": "open",
+      "options": [
+        "Run the demo soak after redeploy",
+        "Need help with the steps"
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -3271,6 +3413,79 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-012 approved after review cycle 2 (V-047). Recorded the owner's T-011 live stream check as V-046 and answered Q-019. Added a reconnect-reason criterion to T-014. Claude enables auto-merge on PR #7. Codex next: T-014 recorder (Full tier, new branch from main); owner imports HistData on the pod with the documented commands."
+    },
+    {
+      "revision": 31,
+      "ts": "2026-10-03T17:59:38Z",
+      "agent": "codex",
+      "action": "implement_t013_t014_shared_resampler_and_recorder",
+      "task_ids": [
+        "T-013",
+        "T-014"
+      ],
+      "files_changed": [
+        "docker/supervisord.all.conf",
+        "infra/runpod/README.md",
+        "src/trader/api/health.py",
+        "src/trader/data/recorder.py",
+        "src/trader/data/resample.py",
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/main.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_health.py",
+        "tests/unit/test_recorder_worker.py",
+        "tests/unit/test_resample.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-013/T-014 in Full-tier PR #9, including shared UTC resampling, the persistent reconnect-aware Capital.com recorder, health/worker integration, and fail-closed validation of remote market status. Full GitHub Actions run 37142677955 passed all quality, security, container, and runtime checks. Added Q-022 for the owner-run multi-hour demo soak; live reconnect frequency is not yet claimed. Handing the branch to Claude for review."
+    },
+    {
+      "revision": 32,
+      "ts": "2026-10-03T18:20:00Z",
+      "agent": "claude",
+      "action": "review_t013_t014_pr9_cycle1",
+      "task_ids": [
+        "T-013",
+        "T-014",
+        "T-080"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Two Codex sessions built T-014 in parallel (PR #8 and PR #9). PR #9 is the one to keep: it already has the 30-second recorder liveness freshness, fail-closed market status and the T-013 resampler. PR #8 must be closed without merging (its cycle-1 review is in its history). Review of PR #9, cycle 1 of 2, Full tier: design approved. Remaining fixes. T-014: (1) a recorder-level test for 'no gaps across a reconnect' (fake stream drops, REST backfill returns the missing minutes, every minute exactly once per side in the lake); (2) a static test that CapitalComClient and the recorder expose no order, position or settings methods and that nothing under trader.agents imports them. T-013: (3) add hypothesis property tests (OHLC invariants: high is max, low is min, open is first, close is last, volume is the sum; no look-ahead) as the spec requires. Optional: throttle status-file writes to one per second. Carried over from the PR #8 review: T-080 (pod-side historical import). Process rule: only one Codex session works on a task at a time; check open pull requests and the handoff before starting. Turn to Codex."
+    },
+    {
+      "revision": 33,
+      "ts": "2026-10-03T18:30:55Z",
+      "agent": "codex",
+      "action": "address_t013_t014_review_cycle_1",
+      "task_ids": [
+        "T-013",
+        "T-014"
+      ],
+      "files_changed": [
+        "tests/invariants/test_module_boundaries.py",
+        "tests/unit/test_recorder_reconnect.py",
+        "tests/unit/test_resample.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude's cycle-1 PR #9 review: added recorder-level disconnect/REST-recovery verification with exactly-once per-side Parquet assertions, a static read-only broker/recorder and agent-import boundary invariant, and Hypothesis OHLC/no-look-ahead properties. Full-tier GitHub Actions run 37144293108 passed all quality, security, image, and role runtime checks. Owner's multi-hour demo soak remains Q-022. Returning PR #9 for Claude cycle-2 review."
+    },
+    {
+      "revision": 34,
+      "ts": "2026-10-03T18:50:00Z",
+      "agent": "claude",
+      "action": "review_t013_t014_cycle2_approve",
+      "task_ids": [
+        "T-013",
+        "T-014"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-013 and T-014 approved after review cycle 2 on PR #9 (V-053). Claude enables auto-merge. PR #8 was closed as superseded. Codex next, one session only: T-080 (pod-side history import), then T-015, T-016, T-017. Owner redeploys the pod after the merge and runs the soak test (Q-022)."
     }
   ]
 }
