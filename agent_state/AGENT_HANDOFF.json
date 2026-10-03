@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 27,
+  "turn": "codex",
+  "revision": 28,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-011 review-cycle-1 changes implemented on PR #5; full CI is green and code is ready for Claude re-review. Owner-run live stream verification remains pending (Q-019) after merge and redeploy. Next Codex task after T-011 review/verification: T-012 HistData importer; T-015/T-016 remain in Phase 1. BTCUSD may be used only as a weekend stream test and is never added as a traded instrument.",
+    "summary": "T-011 approved (PR #5): owner still runs scripts/verify_capital_stream.py on the pod (Q-019). T-012 HistData importer is in changes_requested (PR #7, cycle 1; V-004 waits on owner HistData files, Q-021). Next: T-014 recorder, then T-013, T-015, T-016, T-017.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -638,7 +638,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-10"
       ],
@@ -1903,6 +1903,14 @@
       "decided_by": "claude",
       "date": "2026-10-03T11:50:00Z",
       "do_not_reopen": false
+    },
+    {
+      "id": "D-025",
+      "statement": "Fast-lane process per docs/process_fastlane.md: Full vs Light review tiers, batching of related small tasks, Light tasks may start before a Full review finishes (never building on unreviewed Full code), recorder T-014 first after T-011 then T-012, T-013, T-015, T-016, T-017. Owner also instructs that Claude enables GitHub auto-merge on each pull request after recording its approval on the branch; main is protected by ruleset protect-main (pull request plus quality check). Safety posture and the 2-cycle limit are unchanged.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-03T13:40:00Z",
+      "do_not_reopen": false
     }
   ],
   "validations": [
@@ -2325,6 +2333,16 @@
       "validated_by": "codex",
       "date": "2026-10-03",
       "reverify_if": "Claude requests changes, the stream implementation or CI workflow changes, or owner-run verification produces an unexpected result."
+    },
+    {
+      "id": "V-043",
+      "subject": "T-011 review cycle 2: Capital.com OHLC WebSocket client",
+      "method": "Claude static review of stream.py, logging.py, tests and verify script (dependencies cannot be installed in Claude's workspace) plus CI run 37120689237 (lint, typecheck, tests, secret scan).",
+      "result": "pass",
+      "evidence": "Subscribe and ping replies validated by correlationId/status/destination and per-epic PROCESSED check; REST session refreshed before each reconnect; websockets DEBUG frame logging capped at WARNING in stream.py and core/logging.py with a test; consumer exceptions propagate unmasked (test); naive REST timestamps handled and bid/ask backfill watermarks tracked per side; verify_capital_stream.py is demo-only, redacted, refuses non-demo. Owner live check on the pod remains Q-019.",
+      "validated_by": "claude",
+      "date": "2026-10-03",
+      "reverify_if": "stream.py, client.py auth headers, or the Capital.com WebSocket protocol changes"
     }
   ],
   "blockers": [
@@ -2554,7 +2572,8 @@
       "options": [
         "Run the demo stream check after redeploy",
         "Need help with the steps"
-      ]
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -3112,6 +3131,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude's review cycle 1: validate subscribe and ping acknowledgements, refresh REST session before reconnects, suppress websockets DEBUG frame logging, propagate callback failures, and add a demo-only RunPod verification script. Fixed naive REST snapshotTimeUTC parsing and side-specific reconnect backfill. CI run 37120689237 passed all quality/runtime checks. Owner live verification is Q-019. Returning PR #5 for Claude re-review."
+    },
+    {
+      "revision": 28,
+      "ts": "2026-10-03T13:40:00Z",
+      "agent": "claude",
+      "action": "review_t011_cycle2_approve",
+      "task_ids": [
+        "T-011",
+        "T-014"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-011 approved after review cycle 2 (V-043); recorded D-025 (fast-lane process, owner-instructed auto-merge). Claude enables auto-merge on PR #5. Codex next: fix T-012 (PR #7), then build T-014 recorder. Retracting one T-012 note: scripts in this repo are run via 'python', so file mode 755 is not required."
     }
   ]
 }
