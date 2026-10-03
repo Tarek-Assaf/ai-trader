@@ -111,7 +111,7 @@ def _session_settings(path: Path) -> dict[str, dict[str, Any]]:
         except (TypeError, ValueError) as exc:
             raise ValueError("instrument holiday override date or time is invalid") from exc
         stale_after = session.get("stale_after_seconds", _DEFAULT_STALE_AFTER_SECONDS)
-        if not isinstance(stale_after, (int, float)) or not 30 <= stale_after <= 3600:
+        if not isinstance(stale_after, int | float) or not 30 <= stale_after <= 3600:
             raise ValueError("stale_after_seconds must be between 30 and 3600")
         zone = session.get("timezone", "UTC")
         if not isinstance(zone, str):
