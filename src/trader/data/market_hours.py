@@ -128,7 +128,7 @@ class MarketHours:
         if len(intervals) < 2:
             return False
         minute = local.hour * 60 + local.minute
-        for (_, prior_end), (next_start, _next_end) in zip(intervals, intervals[1:]):
+        for (_, prior_end), (next_start, _next_end) in zip(intervals, intervals[1:], strict=False):
             if prior_end <= minute < next_start:
                 return True
         return False
