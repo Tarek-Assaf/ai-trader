@@ -164,12 +164,17 @@ class CapitalDataRecorder:
         self._status_path = Path(status_path)
         self._clock = clock
         self._pending: dict[tuple[str, datetime, str], _BufferedUpdate] = {}
+        self._last_tick_by_epic: dict[str, datetime] = {}
+        self._started_at = self._clock().astimezone(UTC)
         self._lock = threading.RLock()
         self._status: dict[str, Any] = {
             "configured": True,
             "status": "starting",
             "ping_reply_ok": None,
             "market_status": "unknown",
+            "market_status_source": "unknown",
+            "expected_open": None,
+            "stale_epics": [],
             "reconnect_count": 0,
             "last_reconnect_reason": None,
             "last_update_at": None,
@@ -218,7 +223,9 @@ class CapitalDataRecorder:
         minute = self._key(update)[1]
         current_minute = self._clock().astimezone(UTC).replace(second=0, microsecond=0)
         with self._lock:
-            self._status["last_update_at"] = self._clock().astimezone(UTC).isoformat()
+            updated_at = self._clock().astimezone(UTC)
+            self._status["last_update_at"] = updated_at.isoformat()
+            self._last_tick_by_epic[update.epic] = updated_at
             closed: list[_BufferedUpdate] = []
             for key, buffered in list(self._pending.items()):
                 if key[0] == update.epic and key[1] < minute:
@@ -258,16 +265,53 @@ class CapitalDataRecorder:
             self._status["status"] = "not_configured"
             self._write_status()
 
-    def update_liveness(self, *, ping_reply_ok: bool | None, market_status: str) -> None:
-        """Record independent protocol and broker market signals; price silence is ignored."""
+    def last_tick_at(self, epic: str) -> datetime | None:
+        """Return the latest observed stream update for one broker epic."""
+        with self._lock:
+            return self._last_tick_by_epic.get(epic)
+
+    def update_liveness(
+        self,
+        *,
+        ping_reply_ok: bool | None,
+        market_status: str,
+        expected_open_by_epic: dict[str, bool | None] | None = None,
+        market_status_source: str = "broker",
+        stale_after_seconds_by_epic: dict[str, float] | None = None,
+    ) -> None:
+        """Flag stale prices only for epics currently expected to publish updates."""
         if not market_status or len(market_status) > 40:
             raise ValueError("market status must be a non-empty short string")
+        if not market_status_source or len(market_status_source) > 120:
+            raise ValueError("market status source must be a non-empty short string")
+        now = self._clock().astimezone(UTC)
+        expected = expected_open_by_epic or {}
+        stale_after = stale_after_seconds_by_epic or {}
+        stale_epics: list[str] = []
         with self._lock:
+            for epic, is_open in expected.items():
+                if is_open is not True:
+                    continue
+                last_tick = self._last_tick_by_epic.get(epic, self._started_at)
+                threshold = stale_after.get(epic, 180.0)
+                if (now - last_tick).total_seconds() >= threshold:
+                    stale_epics.append(epic)
+            any_open = any(value is True for value in expected.values())
+            all_known_closed = bool(expected) and all(value is False for value in expected.values())
             self._status["ping_reply_ok"] = ping_reply_ok
             self._status["market_status"] = market_status
-            self._status["last_liveness_at"] = self._clock().astimezone(UTC).isoformat()
+            self._status["market_status_source"] = market_status_source
+            self._status["expected_open"] = True if any_open else False if all_known_closed else None
+            self._status["stale_epics"] = sorted(stale_epics)
+            self._status["last_liveness_at"] = now.isoformat()
             self._status["status"] = (
-                "healthy" if ping_reply_ok is True and market_status != "unknown" else "degraded"
+                "healthy"
+                if (
+                    ping_reply_ok is True
+                    and market_status != "unknown"
+                    and not stale_epics
+                )
+                else "degraded"
             )
             self._write_status()
 
