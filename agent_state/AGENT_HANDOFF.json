@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 32,
+  "turn": "claude",
+  "revision": 33,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-013 shared resampling and T-014 Capital.com recording are implemented together in Full-tier PR #9; GitHub Actions run 37142677955 passed all quality, security, container, and role checks. Claude review is next. Owner's multi-hour demo reconnect soak remains pending Q-022. HistData source archives and Parquet imports remain in the local workspace, outside the GitHub source repository.",
+    "summary": "T-013/T-014 Claude cycle-1 requests are addressed on PR #9; Full-tier GitHub Actions run 37144293108 passed every quality, security, container, and runtime check. Returned to Claude for cycle-2 review. The owner-run multi-hour demo soak remains pending Q-022; T-080 pod-side historical import is still todo.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -741,7 +741,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-09"
       ],
@@ -760,9 +760,11 @@
       "evidence": [
         "src/trader/data/resample.py",
         "tests/unit/test_resample.py",
-        "test_identical_normalized_minutes_produce_identical_historical_and_live_output and test_missing_minutes_are_flagged_and_never_synthesized passed in CI run 37142677955."
+        "test_identical_normalized_minutes_produce_identical_historical_and_live_output and test_missing_minutes_are_flagged_and_never_synthesized.",
+        "Hypothesis property test test_ohlc_resampling_properties_and_no_lookahead checks open-first, high-max, low-min, close-last, volume-sum, completeness and isolation from later bins.",
+        "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; GitHub Actions run 37144293108 passed all checks."
       ],
-      "completion_note": "Implemented the shared UTC-aligned OHLC resampler for historical and live normalized minute candles. It groups series independently, rejects duplicate/malformed input, never synthesizes missing minutes, marks incomplete bars with the observed-minute count, and preserves chronological open/close without look-ahead. Full-tier PR #9 CI passed; Claude review is pending."
+      "completion_note": "Addressed Claude cycle-1 request by adding Hypothesis properties for OHLC invariants and no look-ahead. The shared UTC resampler still provides historical/live parity and explicit incomplete-bin flags. PR #9 Full-tier CI run 37144293108 passed; returning for cycle-2 review."
     },
     {
       "id": "T-014",
@@ -770,7 +772,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-05",
         "R-09"
@@ -796,7 +798,9 @@
         "tests/unit/test_recorder_worker.py",
         "tests/unit/test_capital_com_stream.py",
         "infra/runpod/README.md",
-        "docker/supervisord.all.conf"
+        "docker/supervisord.all.conf",
+        "tests/invariants/test_module_boundaries.py",
+        "tests/unit/test_recorder_reconnect.py"
       ],
       "review_cycles": 1,
       "evidence": [
@@ -805,11 +809,13 @@
         "src/trader/api/health.py",
         "src/trader/integrations/capital_com/stream.py",
         "tests/unit/test_data_recorder.py",
+        "tests/unit/test_recorder_reconnect.py",
         "tests/unit/test_recorder_worker.py",
         "tests/unit/test_capital_com_stream.py",
-        "PR #9, head 4f2a3cac9364fd96fb49b6a4c9066d72930afc82; GitHub Actions run 37142677955 passed lint/format, typecheck, migrations, tests, handoff/base validation, secret scan, image build, ROLE=all health/backup/restore and ROLE=core/worker checks."
+        "tests/invariants/test_module_boundaries.py",
+        "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; GitHub Actions run 37144293108 passed lint/format, typecheck, migrations, unit/integration and handoff/base checks, secret scan, image build, ROLE=all health/persistence/backup-restore, and ROLE=core/worker runtime checks."
       ],
-      "completion_note": "Full-tier T-014 implementation buffers partial WebSocket bars until rollover or REST reconciliation, atomically upserts monthly Parquet keyed by epic/UTC minute/side, prioritizes REST data, computes close spread, tags lineage, seeds reconnect watermarks, backfills gaps, and exposes ping/market liveness plus reconnect count/reason through /health. Remote market-status shapes now fail closed when missing or malformed. The full CI workflow passed. Owner-run multi-hour demo reconnect observation after merge/deploy remains pending Q-022, so live reconnect frequency is not claimed."
+      "completion_note": "Addressed Claude cycle-1 requests: a recorder-level fake disconnect/reconnect test leaves the initial REST backfill empty, then verifies REST fills both sides for every missing minute exactly once; static invariants prevent trading/settings methods on CapitalComClient/CapitalDataRecorder and prevent trader.agents from importing broker/recorder modules. Optional status-write throttling was not required. Full-tier CI run 37144293108 passed. The owner-run multi-hour demo reconnect observation remains pending Q-022; live frequency is not claimed."
     },
     {
       "id": "T-015",
@@ -2481,9 +2487,9 @@
     {
       "id": "V-048",
       "subject": "T-013 shared UTC OHLC resampler",
-      "method": "Full GitHub Actions run exercised lint/format, type checking and unit tests including normalized historical/live parity, incomplete-gap flags, chronological aggregation, duplicate and malformed input rejection.",
+      "method": "GitHub Actions run 37144293108 exercised lint/format, type checking, and unit tests including normalized historical/live parity, incomplete-gap flags, chronological aggregation, duplicate/malformed input rejection, and Hypothesis properties for OHLC invariants and no look-ahead.",
       "result": "pass",
-      "evidence": "PR #9 head 4f2a3cac9364fd96fb49b6a4c9066d72930afc82; run 37142677955 passed. Tests include test_identical_normalized_minutes_produce_identical_historical_and_live_output and test_missing_minutes_are_flagged_and_never_synthesized.",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed. test_ohlc_resampling_properties_and_no_lookahead checks high=max, low=min, open=first, close=last, volume=sum, and unchanged earlier output after adding a later-bin candle.",
       "validated_by": "codex",
       "date": "2026-10-03",
       "reverify_if": "resample.py or its tests change."
@@ -2491,12 +2497,42 @@
     {
       "id": "V-049",
       "subject": "T-014 Capital.com recorder implementation and container integration",
-      "method": "GitHub Actions checked lint/format, type checking, all unit/integration tests, handoff/base validation, secret scan, Docker build, ROLE=all health/non-root/persistence/backup-restore, and ROLE=core/worker runtime checks. Self-review found and fixed malformed multi-epic market status handling; negative-path tests verify unknown and oversized responses fail closed.",
+      "method": "GitHub Actions run 37144293108 checked lint/format, type checking, unit/integration tests, handoff/base validation, secret scan, Docker build, ROLE=all health/non-root/persistence/backup-restore, and ROLE=core/worker runtime checks. Tests include recorder-level disconnect gap recovery and static broker/agent boundary checks.",
       "result": "pass",
-      "evidence": "PR #9 head 4f2a3cac9364fd96fb49b6a4c9066d72930afc82; GitHub Actions run 37142677955 passed all quality-job steps. Multi-hour live demo soak has not run; tracked in Q-022.",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed all quality-job steps. The multi-hour live demo soak has not run and remains tracked by Q-022.",
       "validated_by": "codex",
       "date": "2026-10-03",
       "reverify_if": "recorder, stream, health, worker or their tests change."
+    },
+    {
+      "id": "V-050",
+      "subject": "T-014 recorder persists gap-free bars across stream disconnect and REST backfill",
+      "method": "A recorder-level integration test seeds persisted watermarks, forces both stream sides to update then disconnect, returns no candles on the initial backfill and missing minutes on reconnect, and reads the resulting Parquet lake.",
+      "result": "pass",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed. test_recorder_persists_each_side_once_across_disconnect_and_rest_backfill verifies each minute/side appears exactly once and reconciled minutes have REST source priority.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "CapitalComStreamClient backfill or recorder persistence logic changes."
+    },
+    {
+      "id": "V-051",
+      "subject": "T-014 broker read-only and agent import boundary",
+      "method": "Static invariant scans trader.agents/research/lab/chat/analysis for Capital.com and recorder imports and inspects public CapitalComClient and CapitalDataRecorder names for order, position, or settings surfaces.",
+      "result": "pass",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed. tests/invariants/test_module_boundaries.py checks both import paths and public method names.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Broker-client/recorder public APIs or agent-side module imports change."
+    },
+    {
+      "id": "V-052",
+      "subject": "T-013 Hypothesis OHLC and no-look-ahead properties",
+      "method": "Hypothesis generates valid minute bars with shuffled input and verifies aggregate open/high/low/close/volume, completeness and independence from a later timeframe bin.",
+      "result": "pass",
+      "evidence": "PR #9 head 76ad0ee5c2308a6d0c10b990e5b4866b779bde65; run 37144293108 passed test_ohlc_resampling_properties_and_no_lookahead.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "resampling implementation or property test changes."
     }
   ],
   "blockers": [
@@ -3409,6 +3445,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Two Codex sessions built T-014 in parallel (PR #8 and PR #9). PR #9 is the one to keep: it already has the 30-second recorder liveness freshness, fail-closed market status and the T-013 resampler. PR #8 must be closed without merging (its cycle-1 review is in its history). Review of PR #9, cycle 1 of 2, Full tier: design approved. Remaining fixes. T-014: (1) a recorder-level test for 'no gaps across a reconnect' (fake stream drops, REST backfill returns the missing minutes, every minute exactly once per side in the lake); (2) a static test that CapitalComClient and the recorder expose no order, position or settings methods and that nothing under trader.agents imports them. T-013: (3) add hypothesis property tests (OHLC invariants: high is max, low is min, open is first, close is last, volume is the sum; no look-ahead) as the spec requires. Optional: throttle status-file writes to one per second. Carried over from the PR #8 review: T-080 (pod-side historical import). Process rule: only one Codex session works on a task at a time; check open pull requests and the handoff before starting. Turn to Codex."
+    },
+    {
+      "revision": 33,
+      "ts": "2026-10-03T18:30:55Z",
+      "agent": "codex",
+      "action": "address_t013_t014_review_cycle_1",
+      "task_ids": [
+        "T-013",
+        "T-014"
+      ],
+      "files_changed": [
+        "tests/invariants/test_module_boundaries.py",
+        "tests/unit/test_recorder_reconnect.py",
+        "tests/unit/test_resample.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude's cycle-1 PR #9 review: added recorder-level disconnect/REST-recovery verification with exactly-once per-side Parquet assertions, a static read-only broker/recorder and agent-import boundary invariant, and Hypothesis OHLC/no-look-ahead properties. Full-tier GitHub Actions run 37144293108 passed all quality, security, image, and role runtime checks. Owner's multi-hour demo soak remains Q-022. Returning PR #9 for Claude cycle-2 review."
     }
   ]
 }
