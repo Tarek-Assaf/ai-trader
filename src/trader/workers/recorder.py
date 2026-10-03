@@ -7,8 +7,8 @@ import logging
 import os
 import signal
 import threading
-from time import monotonic
 from pathlib import Path
+from time import monotonic
 from typing import Any
 
 import yaml
@@ -100,12 +100,12 @@ def _session_settings(path: Path) -> dict[str, dict[str, Any]]:
         early_raw = session.get("early_closes", {})
         if not isinstance(holidays_raw, list) or not isinstance(early_raw, dict):
             raise ValueError("instrument holiday overrides are invalid")
-        holidays: list[date] = []
+        holidays: list[datetime.date] = []
         early_closes: dict[datetime.date, datetime.time] = {}
         try:
             holidays = [datetime.date.fromisoformat(value) for value in holidays_raw]
             early_closes = {
-                date.fromisoformat(day): datetime.time.fromisoformat(value)
+                datetime.date.fromisoformat(day): datetime.time.fromisoformat(value)
                 for day, value in early_raw.items()
             }
         except (TypeError, ValueError) as exc:
