@@ -53,7 +53,18 @@ def _market_status(payload: Any) -> str:
     status = payload.get("marketStatus")
     if status is None and isinstance(market, dict):
         status = market.get("marketStatus")
-    return status if isinstance(status, str) and status else "unknown"
+    if not isinstance(status, str):
+        return "unknown"
+    normalized = status.strip()
+    return normalized if normalized and len(normalized) <= 30 else "unknown"
+
+
+def _combined_market_status(statuses: list[str]) -> str:
+    """Fail closed when any required epic status is missing or malformed."""
+    if not statuses or any(status == "unknown" for status in statuses):
+        return "unknown"
+    combined = ",".join(statuses)
+    return combined if len(combined) <= 40 else "unknown"
 
 
 def run_data_recorder() -> None:
@@ -122,7 +133,7 @@ def run_data_recorder() -> None:
                                 "Capital.com market status unavailable (%s)", type(exc).__name__
                             )
                             statuses.append("unknown")
-                    market_status = ",".join(statuses) if statuses and all(statuses) else "unknown"
+                    market_status = _combined_market_status(statuses)
                     next_market_poll = now + _MARKET_POLL_SECONDS
                 recorder.update_liveness(
                     ping_reply_ok=stream.ping_reply_ok,
