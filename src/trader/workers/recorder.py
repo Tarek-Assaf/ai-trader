@@ -73,6 +73,16 @@ def _combined_market_status(statuses: list[str]) -> str:
     return combined if len(combined) <= 40 else "unknown"
 
 
+def _resolved_market_status(broker_status: str, is_open: bool | None) -> str:
+    if broker_status != "unknown":
+        return broker_status
+    if is_open is True:
+        return "TRADEABLE"
+    if is_open is False:
+        return "CLOSED"
+    return "unknown"
+
+
 def _session_settings(path: Path) -> dict[str, dict[str, Any]]:
     payload = yaml.safe_load(path.read_text(encoding="utf-8"))
     instruments = payload.get("instruments") if isinstance(payload, dict) else None
@@ -95,7 +105,8 @@ def _session_settings(path: Path) -> dict[str, dict[str, Any]]:
         try:
             holidays = [date.fromisoformat(value) for value in holidays_raw]
             early_closes = {
-                date.fromisoformat(day): dt_time.fromisoformat(value) for day, value in early_raw.items()
+                date.fromisoformat(day): dt_time.fromisoformat(value)
+                for day, value in early_raw.items()
             }
         except (TypeError, ValueError) as exc:
             raise ValueError("instrument holiday override date or time is invalid") from exc
@@ -206,13 +217,7 @@ def run_data_recorder() -> None:
                                 stale_after_seconds=config["stale_after_seconds"],
                             )
                             expected_open[epic] = is_open
-                            statuses.append(
-                                broker_status
-                                if broker_status != "unknown"
-                                else "TRADEABLE" if is_open is True
-                                else "CLOSED" if is_open is False
-                                else "unknown"
-                            )
+                            statuses.append(_resolved_market_status(broker_status, is_open))
                             sources.append(source)
                         except Exception as exc:
                             _LOG.warning(
