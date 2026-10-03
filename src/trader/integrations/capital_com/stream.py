@@ -187,7 +187,7 @@ class CapitalComStreamClient:
                     if previous is None or update.timestamp > previous:
                         self._last_seen[key] = update.timestamp
 
-    def _handle(self, raw: str) -> None:
+    def _handle(self, raw: str | bytes) -> None:
         try:
             message = json.loads(raw)
         except (TypeError, json.JSONDecodeError):
