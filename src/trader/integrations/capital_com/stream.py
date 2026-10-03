@@ -173,7 +173,8 @@ class CapitalComStreamClient:
             seen = [stamp for (item, _), stamp in self._last_seen.items() if item == epic]
             if not seen:
                 continue
-            start = max(seen).replace(second=0, microsecond=0) + timedelta(minutes=1)
+            # Re-fetch the last observed minute: it may have been incomplete at disconnect.
+            start = min(seen).replace(second=0, microsecond=0)
             if start >= end:
                 continue
             for candle in self._rest.iter_price_history(
