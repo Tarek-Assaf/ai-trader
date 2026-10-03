@@ -48,7 +48,16 @@ def test_import_zip_reports_qa_and_is_idempotent(tmp_path: Path) -> None:
     assert first["coverage_end_utc"] == "2024-03-10T07:30:00+00:00"
     assert second["rows_written"] == 0
     assert table.num_rows == 3
-    assert table.schema.names == ["ts_utc", "open", "high", "low", "close", "volume", "price_basis", "source"]
+    assert table.schema.names == [
+        "ts_utc",
+        "open",
+        "high",
+        "low",
+        "close",
+        "volume",
+        "price_basis",
+        "source",
+    ]
     assert report["status"] == "ok"
     assert report["gaps"][0]["classification"] == "unexpected"
 
@@ -71,4 +80,5 @@ def test_mt4_layout_is_detected(tmp_path: Path) -> None:
     source.write_text("2024.03.10,02:30,100,101,99,100,4\n", encoding="utf-8")
     report = import_histdata(source, "NSXUSD", tmp_path / "lake", tmp_path / "lineage")[0]
     assert report["format"] == "mt4"
-    assert report["invalid_rows"] == 0\n
+    assert report["invalid_rows"] == 0
+
