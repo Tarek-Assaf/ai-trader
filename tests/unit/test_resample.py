@@ -4,10 +4,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+import hypothesis
 import pytest
-from hypothesis import given, settings, strategies as st
 
 from trader.data.resample import Candle, resample_ohlc
+
+st = hypothesis.strategies
 
 
 def _candle(stamp: datetime, close: float, *, series: tuple[str, ...] = ()) -> Candle:
@@ -109,8 +111,8 @@ def test_identical_normalized_minutes_produce_identical_historical_and_live_outp
     assert historical == live
 
 
-@settings(max_examples=100, deadline=None)
-@given(
+@hypothesis.settings(max_examples=100, deadline=None)
+@hypothesis.given(
     samples=st.lists(
         st.tuples(
             st.floats(min_value=0, max_value=1000, allow_nan=False, allow_infinity=False),
