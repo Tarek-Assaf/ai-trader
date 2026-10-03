@@ -76,6 +76,19 @@ Leave `POSTGRES_DATA_DIR` unset for normal paper-mode use. The image default sto
 
 If the service is not healthy, use the pod's **Logs** view and see Troubleshooting below. Do not copy log output that might contain private account information into a public issue.
 
+
+### Optional Capital.com demo API check
+
+After deploying a build that includes `scripts/verify_capital_demo.py`, open the pod's **Connect → Start Terminal** page and run:
+
+```sh
+cd /app
+python scripts/verify_capital_demo.py
+```
+
+The check is read-only and refuses to run unless `BROKER_ENV=demo` and `LIVE_TRADING_ENABLED=false`. It uses the Capital.com API key, identifier and password already saved as RunPod Secrets, plus the pod's Redis limiter. Its JSON output contains only the environment, whether the session worked, the number of accounts, candidate market epics/names and the market-status value. It does not print credentials or account balances. Paste that JSON output to the project owner so the NAS100/Gold epic and market-status validation can be recorded. Never paste secrets or full account data.
+
+
 ## 8. Stop and restart safely
 
 - To pause compute, use **Stop** in the pod actions menu. The container disk is temporary; PostgreSQL will recover from the latest valid database dump on the mounted `/workspace` volume when a replacement pod starts. A hard reset can lose up to five minutes of recent database changes. Compute billing stops or changes according to the current RunPod plan, but network-volume storage charges continue while the volume exists. Confirm current terms in the console and [pricing documentation](https://docs.runpod.io/pods/pricing).
