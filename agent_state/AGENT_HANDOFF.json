@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 24,
+  "turn": "claude",
+  "revision": 25,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-010 merged (PR #4) and verified live on the demo account: session ok, epics US100 and GOLD confirmed (V-005 pass; trading-hours details still to verify with T-015 during market hours). Next for Codex: T-011 (WebSocket client) with T-010 follow-ups, T-012 (HistData importer), T-015/T-016. Weekend note: crypto epics (BTCUSD) are tradeable on weekends and may be used only as a test stream for the WebSocket client, never as a traded instrument. Pod runs on a GPU-pod type (A4000) at the same price; GPU unused. Q-010 accepted; D-023 records the LLM plan.",
+    "summary": "T-010 remains merged and verified on the demo account; T-011 is under Full-tier review on PR #5. T-012 Light-tier HistData importer is ready for Claude review on PR #7 with green CI (run 37124927904). Fixed UTC-5 conversion, bid Parquet output, QA and idempotence are implemented; real NSXUSD/XAUUSD coverage dates still need owner-provided HistData archives (V-004, Q-021).",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -660,7 +660,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-05"
       ],
@@ -675,8 +675,15 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "src/trader/data/importers/histdata.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_importer.py",
+        "pyproject.toml",
+        "uv.lock",
+        "GitHub Actions CI run 37124927904: all quality steps passed"
+      ],
+      "completion_note": "Light-tier implementation is ready for Claude review. The importer reads HistData ZIP/CSV/TXT in generic ASCII or MT4 M1 layouts, converts fixed UTC-5 to UTC, validates rows, reports QA and source coverage boundaries, and writes idempotent monthly bid Parquet partitions. CI run 37124927904 passed lint/format, typecheck, 41 tests, handoff and secret checks, Docker build, and runtime checks. Owner approved the exact-pinned PyArrow dependency (Q-020). Actual NSXUSD/XAUUSD archive coverage dates remain unverified because no HistData archives were available; V-004 remains pending and Q-021 requests representative files.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -1911,9 +1918,9 @@
     {
       "id": "V-004",
       "subject": "HistData coverage dates for Nasdaq-100 (NSXUSD) and XAUUSD",
-      "method": "Pending: Codex confirms during T-012",
+      "method": "Pending until actual monthly ZIP archives for both symbols are imported; importer QA reports capture per-file UTC coverage boundaries.",
       "result": "pending",
-      "evidence": "",
+      "evidence": "No NSXUSD or XAUUSD HistData archive files were available in the workspace during T-012. Coverage metadata is implemented in src/trader/data/importers/histdata.py; owner files needed to record real date ranges.",
       "validated_by": "",
       "date": "",
       "reverify_if": ""
@@ -2267,6 +2274,26 @@
       "validated_by": "claude",
       "date": "2026-10-03T06:40:00Z",
       "reverify_if": "client.py or rate_limit.py changes, or order endpoints are added"
+    },
+    {
+      "id": "V-040",
+      "subject": "T-012 importer behavior and repository quality checks",
+      "method": "CI quality workflow ran lint/format, mypy, unit and integration tests, handoff validation, secret scan, Docker build, ROLE=all health/persistence/backup checks, and ROLE=core/worker smoke checks.",
+      "result": "pass",
+      "evidence": "PR #7, head eb44da7adcf1f4efdda3803daa0e5f8e14f6f058; GitHub Actions run 37124927904. Focused tests cover fixed-UTC-5 DST-boundary conversion, generic ASCII and MT4 layouts, QA, ZIP import, idempotent re-import, and conflicting duplicate rejection.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Importer or Parquet writing code changes"
+    },
+    {
+      "id": "V-041",
+      "subject": "Pinned PyArrow dependency and uv lock consistency",
+      "method": "CI locked dependency verification installed and verified the project dependency set from uv.lock.",
+      "result": "pass",
+      "evidence": "pyproject.toml and uv.lock; GitHub Actions run 37124927904, steps Install locked dependencies and Verify locked dependency versions.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "pyproject.toml or uv.lock changes"
     }
   ],
   "blockers": [
@@ -2486,6 +2513,22 @@
         "Need help with the steps"
       ],
       "answer": "Owner merged PR #4, redeployed, ran the verify script on the pod and pasted its output (2026-10-03): session ok, account_count 1, US100 'US Tech 100' CLOSED, GOLD 'Gold' CLOSED (weekend); BTCUSD and XRPUSD TRADEABLE."
+    },
+    {
+      "id": "Q-020",
+      "to": "human",
+      "from": "codex",
+      "text": "May T-012 add a pinned PyArrow dependency for Parquet output?",
+      "status": "answered",
+      "answer": "Approved by owner in chat on 2026-10-03: yes, add PyArrow. Implemented as pyarrow==23.0.1."
+    },
+    {
+      "id": "Q-021",
+      "to": "human",
+      "from": "codex",
+      "text": "Please provide one representative monthly HistData ZIP for NSXUSD and one for XAUUSD (or place them in the pod's data directory) so the actual coverage dates and per-symbol QA can be confirmed.",
+      "status": "open",
+      "answer": ""
     }
   ],
   "log": [
@@ -2992,6 +3035,24 @@
         "config/instruments.yaml"
       ],
       "summary": "Recorded owner's live demo check (V-005 pass for epics), marked epics VERIFIED in instruments.yaml, answered Q-017/Q-018. Turn to Codex for T-011/T-012."
+    },
+    {
+      "revision": 25,
+      "ts": "2026-10-03T13:06:31Z",
+      "agent": "codex",
+      "action": "implement_t012_histdata_importer",
+      "task_ids": [
+        "T-012"
+      ],
+      "files_changed": [
+        "src/trader/data/importers/histdata.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_importer.py",
+        "pyproject.toml",
+        "uv.lock",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-012 on separate Light-tier PR #7 and recorded owner approval for pinned PyArrow. CI run 37124927904 passed all quality and runtime checks. Real NSXUSD/XAUUSD archive coverage dates remain pending owner-supplied HistData files (V-004, Q-021). Handing to Claude for review."
     }
   ]
 }
