@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 29,
+  "turn": "codex",
+  "revision": 30,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-011 merged and code approved; owner demo stream check Q-019 remains pending. T-012 automatic download and bid M1 reconstruction are ready for Claude Light review in PR #7: representative August archives for both symbols imported locally with source/coverage evidence; no manual ZIP upload needed. Canonical handoff history from main revision 28 is preserved. Next data work follows D-025/process_fastlane.md and task dependencies: T-013 prerequisite for T-014 recorder; Capital.com basis/spread calibration remains T-017. Paper/demo defaults remain in effect.",
+    "summary": "T-010 and T-011 merged and verified on the demo account (V-046: stream check passed). T-012 HistData importer approved (PR #7, auto-merge); real August 2026 NSXUSD and XAUUSD bid candles were rebuilt from ticks, the owner then runs the import on the pod. Next: T-014 data recorder, then T-013, T-015, T-016, T-017.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -676,7 +676,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-05"
       ],
@@ -776,7 +776,8 @@
         "lineage tag set",
         "stream updates are partial candles: persist a minute only after the next minute arrives or after REST reconciliation; keep latest values per (epic, minute, side) until then",
         "writes are idempotent upserts keyed by epic, minute and side; REST and WebSocket may deliver the same minute and REST wins",
-        "recorder liveness is judged from ping replies and market status (T-015), never from price silence alone"
+        "recorder liveness is judged from ping replies and market status (T-015), never from price silence alone",
+        "log the exception type of every reconnect and expose the reconnect count in health; the T-011 live demo check showed 1 reconnect in 90 seconds, so the recorder must show whether reconnects stay rare over hours"
       ],
       "deliverables": [],
       "review_cycles": 0,
@@ -2392,6 +2393,26 @@
       "validated_by": "codex",
       "date": "2026-10-03",
       "reverify_if": "Source archive hashes or reconstruction method change; cross-provider calibration remains T-017."
+    },
+    {
+      "id": "V-046",
+      "subject": "T-011 live demo stream check on RunPod (Q-019)",
+      "method": "Owner ran scripts/verify_capital_stream.py --epic BTCUSD on the pod after redeploying image 02f6344 (weekend, BTCUSD test-only).",
+      "result": "pass",
+      "evidence": "Owner-pasted redacted JSON, 2026-10-03: status ok, environment demo, bid_updates 2, ask_updates 2, first 13:45 and last 13:46 UTC, ping_reply_ok true, reconnects 1. Reconnect cause unknown; T-014 criteria now require reconnect reasons to be logged. US100 not yet checked during market hours.",
+      "validated_by": "owner",
+      "date": "2026-10-03",
+      "reverify_if": "stream.py or the Capital.com WebSocket protocol changes, or reconnects become frequent"
+    },
+    {
+      "id": "V-047",
+      "subject": "T-012 HistData importer, automatic download and tick rebuild: Claude Light-tier review",
+      "method": "Claude static review of histdata.py, histdata_download.py, histdata_ticks.py, scripts/import_histdata.py, tests and QA reports (dependencies cannot be installed in Claude's workspace), plus CI run 37127760366.",
+      "result": "pass",
+      "evidence": "Cycle-1 fixes present: gap classifier limited to the Friday 21:00 to Sunday 23:00 UTC window with a Thursday-to-Monday test; market-open alignment test (Fri 17:00 EST = 22:00 UTC, Sun 18:00 EST = 23:00 UTC). Downloader: fixed host, no redirects, form fields checked against the request, size caps, member-name check, archives never extracted, atomic cache. Conflicting M1 minutes fail closed; the tick path rebuilds minutes from timestamp-ordered bids and records hashes and method. Known limitations: open/close of most minutes depend on archive order for equal timestamps (documented), tick expanded-size cap relies on ZIP header sizes, coverage verified for the August 2026 sample only, and the pod must be able to reach histdata.com.",
+      "validated_by": "claude",
+      "date": "2026-10-03",
+      "reverify_if": "importer modules or HistData archive layout change"
     }
   ],
   "blockers": [
@@ -2617,12 +2638,12 @@
       "to": "human",
       "from": "codex",
       "text": "After Claude approves PR #5 and you merge it, wait for CI on main to pass and redeploy the RunPod pod from the new image. In the pod terminal run `cd /app && python scripts/verify_capital_stream.py` (or `python scripts/verify_capital_stream.py --epic BTCUSD` on a weekend; BTCUSD is test-only and never traded). Paste only the redacted JSON output so we can record both bid and ask updates, ping status and reconnect count. Do not paste credentials or account data.",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Run the demo stream check after redeploy",
         "Need help with the steps"
       ],
-      "answer": ""
+      "answer": "Owner ran scripts/verify_capital_stream.py --epic BTCUSD on the redeployed pod (image 02f6344): status ok, demo, 2 bid and 2 ask updates (13:45 and 13:46 UTC), ping_reply_ok true, reconnects 1."
     },
     {
       "id": "Q-020",
@@ -3235,6 +3256,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude review cycle 1 and owner's automatic import/price-validation request. Retrieved monthly M1 and raw tick archives, rebuilt 135 conflicting minutes using timestamp order with archive-order ties, imported 28,395 NSXUSD and 29,340 XAUUSD bid candles locally, and confirmed repeat imports add zero rows. Recorded source hashes, sampled UTC coverage, reconstruction limits and owner-approved PyArrow. Integrated canonical main revision 28; original T-012 review remains preserved in merge parent 88a78c6f. Local 25-test/ruff/mypy checks and full GitHub Actions run 37127760366 pass. Returning to Claude for Light review."
+    },
+    {
+      "revision": 30,
+      "ts": "2026-10-03T14:25:00Z",
+      "agent": "claude",
+      "action": "review_t012_cycle2_approve",
+      "task_ids": [
+        "T-012",
+        "T-014",
+        "T-011"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-012 approved after review cycle 2 (V-047). Recorded the owner's T-011 live stream check as V-046 and answered Q-019. Added a reconnect-reason criterion to T-014. Claude enables auto-merge on PR #7. Codex next: T-014 recorder (Full tier, new branch from main); owner imports HistData on the pod with the documented commands."
     }
   ]
 }
