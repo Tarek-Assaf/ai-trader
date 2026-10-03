@@ -139,15 +139,18 @@ class InstrumentMapper:
             histdata_code = raw.get("histdata_code")
             asset_class = raw.get("asset_class")
             aliases_raw = raw.get("aliases", [])
-            if not all(isinstance(value, str) and value.strip() for value in (
-                display_name, epic, histdata_code, asset_class
-            )):
+            if not all(
+                isinstance(value, str) and value.strip()
+                for value in (display_name, epic, histdata_code, asset_class)
+            ):
                 raise InstrumentDataError(f"instrument {symbol} has invalid identity fields")
-            if not isinstance(aliases_raw, (list, tuple)) or any(
+            if not isinstance(aliases_raw, list | tuple) or any(
                 not isinstance(value, str) or not value.strip() for value in aliases_raw
             ):
                 raise InstrumentDataError(f"instrument {symbol} aliases must be non-empty strings")
-            aliases = tuple(dict.fromkeys((symbol, *(value.strip().upper() for value in aliases_raw))))
+            aliases = tuple(
+                dict.fromkeys((symbol, *(value.strip().upper() for value in aliases_raw)))
+            )
             definition = InstrumentDefinition(
                 symbol=symbol,
                 display_name=display_name.strip(),
@@ -155,13 +158,17 @@ class InstrumentMapper:
                 capital_epic=epic.strip(),
                 histdata_code=histdata_code.strip().upper(),
                 asset_class=asset_class.strip().lower(),
-                value_per_point=_config_decimal(raw.get("value_per_point"), f"{symbol}.value_per_point"),
+                value_per_point=_config_decimal(
+                    raw.get("value_per_point"), f"{symbol}.value_per_point"
+                ),
             )
             self._definitions[symbol] = definition
             for alias in aliases:
                 owner = self._aliases.get(alias)
                 if owner is not None and owner != symbol:
-                    raise InstrumentDataError(f"instrument alias {alias} is assigned more than once")
+                    raise InstrumentDataError(
+                        f"instrument alias {alias} is assigned more than once"
+                    )
                 self._aliases[alias] = symbol
 
     @property
@@ -210,7 +217,8 @@ class InstrumentMapper:
         ]
         if len(matches) != 1:
             raise InstrumentDataError(
-                f"broker market search returned {len(matches)} exact matches for {definition.capital_epic}"
+                "broker market search returned "
+                f"{len(matches)} exact matches for {definition.capital_epic}"
             )
         search_market = matches[0]
         details = self._client.market_details(definition.capital_epic)
