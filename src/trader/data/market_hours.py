@@ -60,7 +60,9 @@ class MarketHours:
         except ZoneInfoNotFoundError as exc:
             raise ValueError("broker opening-hours timezone is unknown") from exc
 
-        weekly: dict[int, tuple[tuple[int, int], ...]] = {}
+        weekly_parts: dict[int, list[tuple[int, int]]] = {
+            weekday: [] for weekday in range(7)
+        }
         for weekday, day_name in enumerate(_DAY_NAMES):
             raw_intervals = opening.get(day_name)
             if not isinstance(raw_intervals, list):
@@ -81,9 +83,11 @@ class MarketHours:
                 else:
                     intervals.append((start, _MINUTES_PER_DAY))
                     next_weekday = (weekday + 1) % 7
-                    weekly.setdefault(next_weekday, ())
-                    weekly[next_weekday] += ((0, end),)
-            weekly[weekday] = tuple(sorted(intervals))
+                    weekly_parts[next_weekday].append((0, end))
+            weekly_parts[weekday].extend(intervals)
+        weekly = {
+            weekday: tuple(sorted(intervals)) for weekday, intervals in weekly_parts.items()
+        }
         return cls(
             zone=zone,
             weekly=weekly,
