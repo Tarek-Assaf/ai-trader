@@ -270,4 +270,5 @@ def import_histdata(
             json.dumps(asdict(report), indent=2, default=str) + "\n", encoding="utf-8"
         )
         reports.append(asdict(report))
-    return reports\n
+    return reports
+
