@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-from hypothesis import given, settings, strategies as st
 import pytest
+from hypothesis import given, settings, strategies as st
 
 from trader.data.resample import Candle, resample_ohlc
 
