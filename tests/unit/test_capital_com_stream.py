@@ -124,9 +124,30 @@ def test_rest_parser_treats_naive_snapshot_time_utc() -> None:
     assert parsed[0].timestamp == datetime(2026, 10, 3, 10, 1, tzinfo=UTC)
 
 
+def test_backfill_includes_the_watermark_minute_for_rest_reconciliation() -> None:
+    rest = FakeRest()
+    updates: list[OhlcUpdate] = []
+    stamp = datetime(2026, 10, 3, 10, 1, tzinfo=UTC)
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        updates.append,
+        clock=lambda: datetime(2026, 10, 3, 10, 3, tzinfo=UTC),
+    )
+    client.seed_watermarks({("US100", side): stamp for side in ("bid", "ask")})
+
+    client._backfill()
+
+    assert any(
+        item.source == "capital_rest" and item.timestamp == stamp and item.price_type == "bid"
+        for item in updates
+    )
+
+
 def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
     rest = FakeRest()
     updates: list[OhlcUpdate] = []
+    reconnects: list[tuple[int, str]] = []
     stop = threading.Event()
     sockets = [
         FakeSocket(
@@ -155,6 +176,7 @@ def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
         rest,
         ["US100"],
         updates.append,
+        on_reconnect=lambda count, reason: reconnects.append((count, reason)),
         connection_factory=factory,
         reconnect_min_seconds=0.01,
         reconnect_max_seconds=0.02,
@@ -174,6 +196,7 @@ def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
         for update in updates
     )
     assert client.reconnect_count == 1
+    assert reconnects == [(1, "OSError")]
     assert client.ping_reply_ok is True
     requests = [json.loads(message) for socket in sockets for message in socket.sent]
     assert all(

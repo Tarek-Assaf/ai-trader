@@ -49,6 +49,7 @@ class OhlcUpdate:
 
 ConnectionFactory = Callable[..., ClientConnection]
 UpdateHandler = Callable[[OhlcUpdate], None]
+ReconnectHandler = Callable[[int, str], None]
 
 
 class CapitalComStreamClient:
@@ -60,6 +61,7 @@ class CapitalComStreamClient:
         epics: Iterable[str],
         on_update: UpdateHandler,
         *,
+        on_reconnect: ReconnectHandler | None = None,
         connection_factory: ConnectionFactory = connect,
         reconnect_min_seconds: float = 1.0,
         reconnect_max_seconds: float = 30.0,
@@ -77,6 +79,7 @@ class CapitalComStreamClient:
         self._rest = rest_client
         self._epics = normalized
         self._on_update = on_update
+        self._on_reconnect = on_reconnect
         self._connect = connection_factory
         self._reconnect_min = reconnect_min_seconds
         self._reconnect_max = reconnect_max_seconds
@@ -98,6 +101,13 @@ class CapitalComStreamClient:
     def ping_reply_ok(self) -> bool | None:
         """Whether the most recent WebSocket keepalive received an OK reply."""
         return self._ping_reply_ok
+
+    def seed_watermarks(self, watermarks: Mapping[tuple[str, str], datetime]) -> None:
+        """Seed persisted side timestamps so startup REST backfill resumes there."""
+        for (epic, side), stamp in watermarks.items():
+            if epic not in self._epics or side not in {"bid", "ask"} or stamp.tzinfo is None:
+                raise ValueError("invalid persisted OHLC watermark")
+            self._last_seen[(epic, side)] = stamp.astimezone(UTC)
 
     def _message(self, destination: str, payload: Mapping[str, Any] | None = None) -> str:
         self._correlation += 1
@@ -280,16 +290,21 @@ class CapitalComStreamClient:
             start = min(seen.values()).replace(second=0, microsecond=0)
             if start >= end:
                 continue
+            emitted: dict[str, set[datetime]] = {"bid": set(), "ask": set()}
             for candle in self._rest.iter_price_history(
                 epic, Resolution.MINUTE, start, end, max_pages=100
             ):
                 for update in self._parse_rest_candle(epic, candle):
                     watermark = seen.get(update.price_type)
-                    if watermark is not None and update.timestamp <= watermark:
+                    if watermark is not None and update.timestamp < watermark:
+                        continue
+                    if update.timestamp in emitted[update.price_type]:
                         continue
                     self._emit(update)
-                    seen[update.price_type] = update.timestamp
-                    self._last_seen[(epic, update.price_type)] = update.timestamp
+                    emitted[update.price_type].add(update.timestamp)
+                    if watermark is None or update.timestamp > watermark:
+                        seen[update.price_type] = update.timestamp
+                        self._last_seen[(epic, update.price_type)] = update.timestamp
 
     def _handle(self, raw: str | bytes) -> None:
         try:
@@ -340,17 +355,23 @@ class CapitalComStreamClient:
             except _ConsumerCallbackFailure as exc:
                 raise exc.original from None
             except (ConnectionClosed, OSError, TimeoutError, StreamProtocolError) as exc:
+                self._ping_reply_ok = False
                 if established:
                     self._reconnect_count += 1
                 if stop_event.is_set():
                     break
                 _LOG.warning("Capital.com WebSocket disconnected (%s)", type(exc).__name__)
+                if established and self._on_reconnect is not None:
+                    self._on_reconnect(self._reconnect_count, type(exc).__name__)
             except Exception as exc:
+                self._ping_reply_ok = False
                 if established:
                     self._reconnect_count += 1
                 if stop_event.is_set():
                     break
                 _LOG.warning("Capital.com WebSocket reconnecting (%s)", type(exc).__name__)
+                if established and self._on_reconnect is not None:
+                    self._on_reconnect(self._reconnect_count, type(exc).__name__)
             if not stop_event.is_set():
                 self._sleep(backoff)
                 backoff = min(backoff * 2, self._reconnect_max)

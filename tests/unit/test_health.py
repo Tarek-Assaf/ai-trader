@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -59,3 +60,55 @@ def test_health_is_degraded_when_role_all_has_no_backup(tmp_path: Path, monkeypa
     assert payload["status"] == "degraded"
     assert payload["last_backup_at"] is None
     assert payload["last_backup_age_seconds"] is None
+
+
+def test_recorder_health_exposes_reconnect_reason_and_market_liveness(tmp_path: Path) -> None:
+    """Health uses ping and market status; a quiet but open price feed is not inspected."""
+    status_file = tmp_path / "recorder.json"
+    status_file.write_text(
+        json.dumps(
+            {
+                "configured": True,
+                "status": "reconnecting",
+                "ping_reply_ok": False,
+                "market_status": "TRADEABLE",
+                "reconnect_count": 3,
+                "last_reconnect_reason": "ConnectionClosed",
+                "last_liveness_at": "2026-10-03T12:00:00+00:00",
+                "secret": "must-not-be-exposed",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    value = health._data_recorder_status(status_file)
+
+    assert value == {
+        "configured": True,
+        "status": "reconnecting",
+        "ping_reply_ok": False,
+        "market_status": "TRADEABLE",
+        "reconnect_count": 3,
+        "last_reconnect_reason": "ConnectionClosed",
+        "last_update_at": None,
+        "last_closed_bar_at": None,
+        "last_liveness_at": "2026-10-03T12:00:00+00:00",
+    }
+
+
+def test_recorder_health_requires_fresh_ping_and_market_status() -> None:
+    """CLOSED markets stay healthy when protocol heartbeats continue; stale heartbeats fail."""
+    now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    status = {
+        "configured": True,
+        "status": "healthy",
+        "ping_reply_ok": True,
+        "market_status": "CLOSED",
+        "last_liveness_at": now.isoformat(),
+    }
+
+    assert health._recorder_liveness_ok(status, now=now) is True
+    assert health._recorder_liveness_ok(
+        {**status, "last_liveness_at": (now - timedelta(seconds=31)).isoformat()}, now=now
+    ) is False
+    assert health._recorder_liveness_ok({**status, "ping_reply_ok": False}, now=now) is False
