@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 25,
+  "turn": "codex",
+  "revision": 26,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-010 merged and verified live on demo (V-005 pass for US100 and GOLD epics; market-hour details remain for T-015). T-011 implemented with green full CI and is awaiting Claude review in PR #5. Next Codex task after review: T-012 (HistData importer), then T-015/T-016. Weekend crypto streams are test-only, never traded. RunPod remains paper/demo with live trading disabled.",
+    "summary": "T-011 (WebSocket feed, PR #5) reviewed: four required changes (validate subscribe/ping replies, stop websockets DEBUG token leak, propagate consumer exceptions, add owner-run stream verify script). T-014/T-015 criteria extended. After approval the owner merges PR #5 and runs the stream check on the pod. Phase 1 is about 25-35% done.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -638,7 +638,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-10"
       ],
@@ -647,10 +647,12 @@
       ],
       "acceptance_criteria": [
         "reconnect survives forced disconnect test",
-        "ping loop verified"
+        "ping loop verified",
+        "subscribe and ping replies are validated; stale tokens, missing or error replies cause reconnect with a fresh session",
+        "owner-run verify_capital_stream.py shows both bid and ask updates arriving on the demo stream"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/integrations/capital_com/stream.py",
         "src/trader/integrations/capital_com/__init__.py",
@@ -658,7 +660,7 @@
         "pyproject.toml",
         "uv.lock"
       ],
-      "completion_note": "Implemented authenticated Capital.com minute OHLC subscriptions for configured epics, bid/ask update normalization, eight-minute WebSocket keepalive, bounded reconnect, and REST backfill beginning at the last observed minute to recover incomplete candles. Forced-disconnect, resubscription, gap-fill, ping, and epic-limit tests pass in GitHub Actions run 37119657855. Ready for Claude review in PR #5."
+      "completion_note": "Implemented authenticated Capital.com minute OHLC subscriptions for configured epics, bid/ask update normalization, eight-minute WebSocket keepalive, bounded reconnect, and REST backfill beginning at the last observed minute to recover incomplete candles. Forced-disconnect, resubscription, gap-fill, ping, and epic-limit tests pass in GitHub Actions run 37119657855. Ready for Claude review in PR #5. CLAUDE REVIEW 1 (changes requested). Approved as written: epic cap 40, token-bearing messages never logged by this module, 8-minute ping, bounded reconnect backoff, REST backfill from the last observed minute, strict numeric validation, bid and ask both captured, offline tests with forced disconnect. Required changes: (1) Silent-failure risk. Subscribe and ping replies are ignored, so a subscription made with stale session tokens (REST session idle more than 10 minutes) fails without any signal and the socket just sits open. Do all three: (a) call the REST client's ping() before every connection attempt so the tokens are fresh; (b) read the subscribe reply and treat any non-OK status, or any requested epic not confirmed, as a failure that closes the socket and reconnects with a fresh session (log epic names and status only); (c) require a reply to each ping within 30 seconds and treat a missing or non-OK reply as a dead connection. Liveness must rest on ping replies, not on price flow, because markets are legitimately silent when closed. Add tests for stale-token subscribe error, missing ping reply and non-OK ping reply. (2) websockets DEBUG logging prints frames, including the cst and securityToken fields. Force logging.getLogger('websockets') to WARNING at import of this module (and in configure_logging) and add a test that DEBUG records from it cannot be emitted. (3) Exceptions raised inside the on_update callback are currently caught by the generic reconnect handler and look like network errors. Let consumer exceptions propagate out of run_forever (log type only) so a bug in the recorder is visible and supervised, not hidden in a reconnect loop. Add a test. (4) Add scripts/verify_capital_stream.py for the owner to run on the pod: demo-only guard as in verify_capital_demo.py, argument --epic (default US100) and --seconds (default 90), prints redacted JSON only: counts of bid and ask updates, first and last update time, whether ping reply was OK, number of reconnects, and the epic. No tokens, no account data. Document in infra/runpod/README.md that on weekends the owner can pass --epic BTCUSD as a test-only stream (BTCUSD is never added to instruments.yaml and never traded). Live verification on the pod is the acceptance for this task."
     },
     {
       "id": "T-012",
@@ -734,7 +736,10 @@
       ],
       "acceptance_criteria": [
         "no gaps across a reconnect",
-        "lineage tag set"
+        "lineage tag set",
+        "stream updates are partial candles: persist a minute only after the next minute arrives or after REST reconciliation; keep latest values per (epic, minute, side) until then",
+        "writes are idempotent upserts keyed by epic, minute and side; REST and WebSocket may deliver the same minute and REST wins",
+        "recorder liveness is judged from ping replies and market status (T-015), never from price silence alone"
       ],
       "deliverables": [],
       "review_cycles": 0,
@@ -756,7 +761,8 @@
       ],
       "acceptance_criteria": [
         "confirm broker market-status field/values and record in validations[]",
-        "closed/break/holiday tests"
+        "closed/break/holiday tests",
+        "market status drives expected-silence handling for the stream recorder: no stale-data alarm while the market is CLOSED"
       ],
       "deliverables": [],
       "review_cycles": 0,
@@ -1881,6 +1887,14 @@
       "decided_by": "claude",
       "date": "2026-10-02T21:15:00Z",
       "do_not_reopen": false
+    },
+    {
+      "id": "D-024",
+      "statement": "websockets (pinned 17.1) is added as a runtime dependency for the Capital.com streaming client (T-011); it was not on the original allowed list but is required and small.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-03T11:50:00Z",
+      "do_not_reopen": false
     }
   ],
   "validations": [
@@ -2283,6 +2297,16 @@
       "validated_by": "codex",
       "date": "2026-10-03",
       "reverify_if": "The Capital.com streaming protocol changes, or stream.py and its tests change."
+    },
+    {
+      "id": "V-041",
+      "subject": "T-011 Capital.com WebSocket client review",
+      "method": "Read stream.py, tests list, dependency diff; CI green on PR head (quality success). Not run live.",
+      "result": "fail",
+      "evidence": "stream.py: subscribe/ping replies ignored (silent stale-token failure), websockets DEBUG leak risk for tokens, consumer exceptions masked as reconnects, no owner-run verify script. See T-011 completion_note review 1.",
+      "validated_by": "claude",
+      "date": "2026-10-03T11:50:00Z",
+      "reverify_if": "Codex pushes fixes for review 1"
     }
   ],
   "blockers": [
@@ -3026,6 +3050,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented Capital.com OHLC WebSocket subscriptions, bid/ask normalization, eight-minute keepalive, bounded reconnect and REST backfill of the last observed minute. Forced-disconnect, gap-fill and ping coverage passed full CI run 37119657855. Opened PR #5 for Claude review; handing over."
+    },
+    {
+      "revision": 26,
+      "ts": "2026-10-03T11:50:00Z",
+      "agent": "claude",
+      "action": "review_t011",
+      "task_ids": [
+        "T-011",
+        "T-014",
+        "T-015"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-011 changes requested (review cycle 1): liveness validation, websockets log redaction, consumer exceptions, verify script. Extended T-014/T-015 criteria, recorded D-024. Turn to Codex."
     }
   ]
 }
