@@ -139,7 +139,7 @@ def _check_cached_archives(
                 raise ValueError(f"archive checksum mismatch for {archive.name}")
 
 
-def _summary_reports(reports: list[dict[str, object]]) -> dict[str, object]:
+def _summary_reports(reports: list[dict[str, object]]) -> dict[str, Any]:
     gaps: list[dict[str, object]] = []
     for report in reports:
         report_gaps = report.get("gaps", [])
@@ -278,7 +278,7 @@ def import_histdata_range(
                 "gaps",
             ):
                 result[metric] = int(result[metric]) + int(totals[metric])
-            result["gap_examples"].extend(totals["gap_examples"])  # type: ignore[union-attr]
+            result["gap_examples"].extend(totals["gap_examples"])
         except (OSError, ValueError, zipfile.BadZipFile, KeyError) as exc:
             result["status"] = "partial"
             result["rejected_months"].append(  # type: ignore[union-attr]
