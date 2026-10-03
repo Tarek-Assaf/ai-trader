@@ -102,9 +102,7 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
         reconnect_count = 0
     if not isinstance(stale_epics, list):
         stale_epics = []
-    stale_epics = [
-        epic for epic in stale_epics[:10] if isinstance(epic, str) and len(epic) <= 32
-    ]
+    stale_epics = [epic for epic in stale_epics[:10] if isinstance(epic, str) and len(epic) <= 32]
     return {
         "configured": value.get("configured") is True,
         "status": (
