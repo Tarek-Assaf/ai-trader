@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 34,
+  "revision": 36,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-010 to T-014 are done and verified or merged (T-014 recorder and T-013 resampler on PR #9, auto-merge). After the merge the owner redeploys the pod so the recorder starts collecting bid/ask data (starts the clock for T-017) and runs the multi-hour soak (Q-022). Next for Codex: T-080 pod-side history import, then T-015 market hours, T-016 instrument mapper, T-017 basis measurement. Phase 2 (risk and execution) follows.",
+    "summary": "T-013/T-014 are approved on PR #9. T-080 implementation is ready for Claude Light review on PR #11 after full CI pass; the owner still must run the full NSXUSD/XAUUSD historical import on the pod and share its summaries (Q-024) before T-080 is complete. Next for Codex after review: T-015, T-016, T-017. The owner must redeploy and run the T-014 soak (Q-022). Phase 2 follows.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1795,20 +1795,27 @@
         "docs/reports/histdata_coverage.json",
         "pyproject.toml",
         "uv.lock",
-        "src/trader/data/importers/__init__.py"
+        "src/trader/data/importers/__init__.py",
+        "src/trader/data/importers/histdata_range.py",
+        "tests/unit/test_histdata_range.py",
+        "infra/runpod/README.md"
       ],
       "id": "T-080",
       "title": "Pod-side historical import: batch range importer with sha256 manifest so the full NSXUSD and XAUUSD M1 history is rebuilt on the pod's /workspace volume",
-      "status": "todo",
+      "status": "blocked",
       "acceptance_criteria": [
-        "one command imports a symbol and year range, downloading politely (one request at a time, pause between requests, cached archives reused) and verifying archives against the sha256 manifest from V-049",
+        "One command imports a symbol and year range, downloading politely (one request at a time, pauses between requests, cached archives reused); August 2026 archives are checked against the trusted hashes recorded in V-045 and the HistData QA report, while other archives are pinned on first download and checked on reuse as cache integrity only, not independent source verification.",
         "months with conflicting M1 minutes are rebuilt from ticks, other months use plain M1; run summary lists rows, rejected months and gaps",
         "resumable and idempotent: rerunning skips finished months and adds zero rows",
         "pod run completes for NSXUSD and XAUUSD, summary pasted by the owner and recorded in validations"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "PR #11, head 4fda5210b7fcdf18981d1e3753535d87233d5cc0, adds the resumable importer, CLI range options, checksum manifest, serial pauses, M1 conflict fallback to ticks, JSON summaries and RunPod instructions.",
+        "Focused unit coverage added for resumable imports, hash pinning/mismatch detection, tick fallback and downloader pause behavior.",
+        "GitHub Actions run 37146599648 passed the full quality and ROLE runtime workflow, including lint/format, mypy, unit tests, handoff checks, secret scan, image build, health/persistence and backup/restore."
+      ],
+      "completion_note": "Code approved by Claude (Light review, PR #11). Remaining: owner-run pod import for NSXUSD and XAUUSD with summaries and rerun idempotence (Q-024); mark done once recorded."
     }
   ],
   "decisions": [
@@ -2543,6 +2550,26 @@
       "validated_by": "claude",
       "date": "2026-10-03",
       "reverify_if": "recorder, resampler or stream client change"
+    },
+    {
+      "id": "V-054",
+      "subject": "T-080 resumable HistData year-range importer and RunPod workflow",
+      "method": "Full GitHub Actions quality/runtime workflow on PR #11, covering Ruff lint/format, mypy, unit tests, handoff/schema checks, secret scan, container build, ROLE=all health/persistence, PostgreSQL backup/restore, and ROLE=core/worker runtime checks.",
+      "result": "pass",
+      "evidence": "PR #11 head 4fda5210b7fcdf18981d1e3753535d87233d5cc0; GitHub Actions run 37146599648 passed. Pod-side full-range import and owner-provided summaries remain pending Q-024.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Claude requests code changes, T-080 importer/download or its tests change, or the owner run reveals a data/import issue."
+    },
+    {
+      "id": "V-055",
+      "subject": "T-080 Claude Light review",
+      "method": "Read histdata_range.py, CLI batch mode, downloader pause, tests and RunPod README against acceptance criteria; CI quality green.",
+      "result": "pass",
+      "evidence": "PR #11 head 4fda5210: serial downloads with pauses; August seeds trusted, other months first-seen pinned and labeled cache integrity; mismatch fails closed; resumable atomic manifest; conflict months rebuilt from ticks with both hashes; partial status and exit 1; tests cover resume/idempotence, pinning/mismatch, tick fallback, failed month. Non-blocking: no explicit accept-changed-hash option (owner removes the manifest entry); pod run still pending Q-024.",
+      "validated_by": "claude",
+      "date": "2026-10-03",
+      "reverify_if": "importer, download or tests change, or the pod run shows an issue"
     }
   ],
   "blockers": [
@@ -2800,6 +2827,29 @@
       "options": [
         "Run the demo soak after redeploy",
         "Need help with the steps"
+      ],
+      "answer": ""
+    },
+    {
+      "id": "Q-023",
+      "to": "human",
+      "from": "codex",
+      "text": "T-080: only August 2026 has trusted archive hashes. May the importer pin first-seen hashes for other months and verify those hashes on reruns, labeling this as cache integrity rather than independent source verification?",
+      "status": "answered",
+      "options": [
+        "Yes, pin first-seen hashes"
+      ],
+      "answer": "Owner approved in chat on 2026-10-03: yes. First-seen hashes are labeled and used for cache integrity only; August hashes remain the trusted report seeds."
+    },
+    {
+      "id": "Q-024",
+      "to": "human",
+      "from": "codex",
+      "text": "After Claude reviews and you merge PR #11, redeploy the pod from the new image. Run the documented full-range importer for NSXUSD and XAUUSD on /workspace, then paste its redacted JSON summaries and the rerun summary so we can record pod-side completion and idempotence. Do not paste credentials.",
+      "status": "open",
+      "options": [
+        "Run the full-range import after merge",
+        "Need help with the command"
       ],
       "answer": ""
     }
@@ -3486,6 +3536,39 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-013 and T-014 approved after review cycle 2 on PR #9 (V-053). Claude enables auto-merge. PR #8 was closed as superseded. Codex next, one session only: T-080 (pod-side history import), then T-015, T-016, T-017. Owner redeploys the pod after the merge and runs the soak test (Q-022)."
+    },
+    {
+      "revision": 35,
+      "ts": "2026-10-03T19:07:16Z",
+      "agent": "codex",
+      "action": "implement_t080_resumable_histdata_range_import",
+      "task_ids": [
+        "T-080"
+      ],
+      "files_changed": [
+        "src/trader/data/importers/histdata_range.py",
+        "scripts/import_histdata.py",
+        "src/trader/data/importers/histdata_download.py",
+        "tests/unit/test_histdata_range.py",
+        "tests/unit/test_histdata_download.py",
+        "infra/runpod/README.md",
+        "docs/reports/histdata_qa.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-080's serial resumable HistData year-range importer for NSXUSD/XAUUSD, with trusted August seeds, first-seen cache-integrity hashes for other archives per owner approval, conflict-month tick rebuilds, summaries and RunPod instructions. Full GitHub Actions run 37146599648 passed on PR #11 head 4fda5210b7fcdf18981d1e3753535d87233d5cc0. T-080 is ready for Claude Light review; owner pod import and idempotence summaries remain pending Q-024. Turn to Claude."
+    },
+    {
+      "revision": 36,
+      "ts": "2026-10-03T19:14:18Z",
+      "agent": "claude",
+      "action": "review_t080_pass",
+      "task_ids": [
+        "T-080"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-080 (Light review, no changes). T-080 set to blocked until the owner pod run (Q-024). Codex may continue with T-015, T-016, T-017. Turn to Codex."
     }
   ]
 }
