@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 20,
+  "turn": "codex",
+  "revision": 21,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-019 approved on PR #3 awaiting owner merge (Q-016). Q-010 accepted (start with proposed limits). D-023 records the mixed-tier LLM cost strategy for Phase 4, folded into T-042/T-043 criteria. Next: Codex starts Phase 1 (T-010). Owner has Capital.com and Telegram secrets in RunPod.",
+    "summary": "T-019 merged (PR #3, CI green). Owner confirmed the merge and asked for the turn to pass to Codex. Codex: start Phase 1 with T-010 (Capital.com REST client, demo only). Owner has Capital.com and Telegram secrets in RunPod; live checks run on the pod through a redacted verify script whose output the owner pastes back. Phase 4 LLM plan is D-023.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -2432,12 +2432,12 @@
       "to": "human",
       "from": "claude",
       "text": "PR #3 (T-019, health page shows version and backup freshness) is approved. Please open it on GitHub and click Merge pull request, then Confirm merge. After CI on main is green you may redeploy the pod from the new image (optional, the health page will then show the real version and backup age). Then tell Codex 'your turn' to start Phase 1 (T-010).",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Done, merged",
         "Need help with the steps"
       ],
-      "answer": ""
+      "answer": "Merged by the owner (PR #3). CI on main run 37064879085 passed."
     }
   ],
   "log": [
@@ -2880,6 +2880,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-019. Recorded Q-010 acceptance and D-023 mixed-tier LLM strategy; extended T-042/T-043 criteria. Owner to merge PR #3; turn to human."
+    },
+    {
+      "revision": 21,
+      "ts": "2026-10-03T06:05:00Z",
+      "agent": "claude",
+      "action": "pass_turn_on_owner_instruction",
+      "task_ids": [
+        "T-019",
+        "T-010"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner confirmed PR #3 merged and asked to pass the turn on; recorded Q-016 answer and set turn to Codex for Phase 1 (T-010). No other changes."
     }
   ]
 }
