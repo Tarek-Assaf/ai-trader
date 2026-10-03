@@ -139,9 +139,15 @@ class InstrumentMapper:
             histdata_code = raw.get("histdata_code")
             asset_class = raw.get("asset_class")
             aliases_raw = raw.get("aliases", [])
-            if not all(
-                isinstance(value, str) and value.strip()
-                for value in (display_name, epic, histdata_code, asset_class)
+            if (
+                not isinstance(display_name, str)
+                or not display_name.strip()
+                or not isinstance(epic, str)
+                or not epic.strip()
+                or not isinstance(histdata_code, str)
+                or not histdata_code.strip()
+                or not isinstance(asset_class, str)
+                or not asset_class.strip()
             ):
                 raise InstrumentDataError(f"instrument {symbol} has invalid identity fields")
             if not isinstance(aliases_raw, list | tuple) or any(
