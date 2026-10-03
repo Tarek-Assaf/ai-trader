@@ -15,10 +15,14 @@ from trader.data.importers.histdata_download import download_histdata
 from trader.data.importers.histdata_ticks import rebuild_histdata_ticks
 
 _TRUSTED_SEEDS = {
-    "DAT_ASCII_NSXUSD_M1_202608.zip": "b8d8cf3f1599ac2ae018883995df88ad552b790dd2a64c14c11d63b8883b8b8e",
-    "DAT_ASCII_XAUUSD_M1_202608.zip": "b6bdb6989098437df2df11cb2e0f16d145c138f66425b0848bd6ce575626fd77",
-    "DAT_ASCII_NSXUSD_T_202608.zip": "2a86cb3bbcb84e5c62c5ea3f19cd0d43fdaed45ef54bf7ed7ae8366f63bdbcd2",
-    "DAT_ASCII_XAUUSD_T_202608.zip": "2dea6c1f5ad0ece8d7f34b5838b952f4e65ea556265833ab36a24f0223aa03cc",
+    "DAT_ASCII_NSXUSD_M1_202608.zip":
+        "b8d8cf3f1599ac2ae018883995df88ad552b790dd2a64c14c11d63b8883b8b8e",
+    "DAT_ASCII_XAUUSD_M1_202608.zip":
+        "b6bdb6989098437df2df11cb2e0f16d145c138f66425b0848bd6ce575626fd77",
+    "DAT_ASCII_NSXUSD_T_202608.zip":
+        "2a86cb3bbcb84e5c62c5ea3f19cd0d43fdaed45ef54bf7ed7ae8366f63bdbcd2",
+    "DAT_ASCII_XAUUSD_T_202608.zip":
+        "2dea6c1f5ad0ece8d7f34b5838b952f4e65ea556265833ab36a24f0223aa03cc",
 }
 _ALLOWED_SYMBOLS = {"NSXUSD", "XAUUSD"}
 
@@ -140,7 +144,11 @@ def _summary_reports(reports: list[dict[str, object]]) -> dict[str, object]:
     for report in reports:
         report_gaps = report.get("gaps", [])
         if isinstance(report_gaps, list):
-            gaps.extend(cast(dict[str, object], gap) for gap in report_gaps if isinstance(gap, dict))
+            gaps.extend(
+                cast(dict[str, object], gap)
+                for gap in report_gaps
+                if isinstance(gap, dict)
+            )
     return {
         "rows_read": sum(int(report.get("rows_read", 0)) for report in reports),
         "rows_written": sum(int(report.get("rows_written", 0)) for report in reports),
@@ -203,7 +211,13 @@ def import_histdata_range(
         try:
             is_complete = isinstance(completed, dict) and completed.get("status") == "ok"
             _check_cached_archives(
-                raw, symbol, year, month, manifest, manifest_file, completed if is_complete else None
+                raw,
+                symbol,
+                year,
+                month,
+                manifest,
+                manifest_file,
+                completed if is_complete else None,
             )
             if isinstance(completed, dict) and completed.get("status") == "ok":
                 result["skipped_months"].append(month_id)
@@ -255,7 +269,7 @@ def import_histdata_range(
             }
             manifest["completed_months"][key] = imported
             _atomic_json(manifest_file, manifest)
-            result["imported_months"].append(month_id)  # type: ignore[union-attr]
+            result["imported_months"].append(month_id)
             for metric in (
                 "rows_read",
                 "rows_written",
