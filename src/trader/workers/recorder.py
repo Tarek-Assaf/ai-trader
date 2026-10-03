@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+import datetime
 import logging
 import os
 import signal
 import threading
-from datetime import UTC, date, datetime, time
 from time import monotonic
 from pathlib import Path
 from typing import Any
@@ -101,11 +101,11 @@ def _session_settings(path: Path) -> dict[str, dict[str, Any]]:
         if not isinstance(holidays_raw, list) or not isinstance(early_raw, dict):
             raise ValueError("instrument holiday overrides are invalid")
         holidays: list[date] = []
-        early_closes: dict[date, time] = {}
+        early_closes: dict[datetime.date, datetime.time] = {}
         try:
-            holidays = [date.fromisoformat(value) for value in holidays_raw]
+            holidays = [datetime.date.fromisoformat(value) for value in holidays_raw]
             early_closes = {
-                date.fromisoformat(day): time.fromisoformat(value)
+                date.fromisoformat(day): datetime.time.fromisoformat(value)
                 for day, value in early_raw.items()
             }
         except (TypeError, ValueError) as exc:
@@ -212,7 +212,7 @@ def run_data_recorder() -> None:
                             is_open, source = resolve_market_open(
                                 broker_status,
                                 schedule,
-                                datetime.now(UTC),
+                                datetime.datetime.now(datetime.UTC),
                                 last_tick_at=recorder.last_tick_at(epic),
                                 stale_after_seconds=config["stale_after_seconds"],
                             )
