@@ -108,7 +108,10 @@ def test_recorder_health_requires_fresh_ping_and_market_status() -> None:
     }
 
     assert health._recorder_liveness_ok(status, now=now) is True
-    assert health._recorder_liveness_ok(
-        {**status, "last_liveness_at": (now - timedelta(seconds=31)).isoformat()}, now=now
-    ) is False
+    assert (
+        health._recorder_liveness_ok(
+            {**status, "last_liveness_at": (now - timedelta(seconds=31)).isoformat()}, now=now
+        )
+        is False
+    )
     assert health._recorder_liveness_ok({**status, "ping_reply_ok": False}, now=now) is False
