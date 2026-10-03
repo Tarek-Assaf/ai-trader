@@ -210,7 +210,9 @@ class CapitalComStreamClient:
         backoff = self._reconnect_min
         while not stop_event.is_set():
             try:
-                with self._connect(_STREAM_URL, open_timeout=10, close_timeout=2, ping_interval=None) as socket:
+                with self._connect(
+                    _STREAM_URL, open_timeout=10, close_timeout=2, ping_interval=None
+                ) as socket:
                     self._subscribe(socket)
                     self._backfill()
                     backoff = self._reconnect_min
