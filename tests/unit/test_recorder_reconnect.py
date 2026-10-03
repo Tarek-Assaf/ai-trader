@@ -19,6 +19,7 @@ from trader.integrations.capital_com.stream import CapitalComStreamClient, OhlcU
 class _Rest:
     def __init__(self, candles: list[dict[str, Any]]) -> None:
         self.candles = candles
+        self.history_calls = 0
 
     def ping(self) -> dict[str, str]:
         return {"status": "OK"}
@@ -27,7 +28,8 @@ class _Rest:
         return {"CST": "test-cst", "X-SECURITY-TOKEN": "test-security-token"}
 
     def iter_price_history(self, *_args: Any, **_kwargs: Any) -> list[dict[str, Any]]:
-        return self.candles
+        self.history_calls += 1
+        return self.candles if self.history_calls > 1 else []
 
 
 class _Socket:
@@ -164,6 +166,7 @@ def test_recorder_persists_each_side_once_across_disconnect_and_rest_backfill(
     assert set(counts) == expected
     assert all(counts[key] == 1 for key in expected)
     assert len(rows) == len(expected)
+    assert rest.history_calls == 2
     assert all(
         row["source"] == "capital_rest"
         for row in rows
