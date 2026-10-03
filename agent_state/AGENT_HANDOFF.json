@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 31,
+  "turn": "codex",
+  "revision": 32,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -97,7 +97,8 @@
         "T-012",
         "T-014",
         "T-017",
-        "T-050"
+        "T-050",
+        "T-080"
       ]
     },
     {
@@ -762,7 +763,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-05",
         "R-09"
@@ -780,7 +781,7 @@
         "log the exception type of every reconnect and expose the reconnect count in health; the T-011 live demo check showed 1 reconnect in 90 seconds, so the recorder must show whether reconnects stay rare over hours"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "PR #8: https://github.com/Tarek-Assaf/ai-trader/pull/8",
         "src/trader/data/recorder.py",
@@ -1749,6 +1750,43 @@
         "Unit test for the age and status logic; RunPod guide mentions the new fields",
         "Failures of the backup loop are written to a visible log line that names the cause without secrets"
       ]
+    },
+    {
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "requirements": [
+        "R-05"
+      ],
+      "depends_on": [
+        "T-012"
+      ],
+      "deliverables": [
+        "src/trader/data/importers/histdata.py",
+        "src/trader/data/importers/histdata_download.py",
+        "src/trader/data/importers/histdata_ticks.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_importer.py",
+        "tests/unit/test_histdata_download.py",
+        "tests/unit/test_histdata_ticks.py",
+        "docs/reports/histdata_qa.md",
+        "docs/reports/histdata_coverage.json",
+        "pyproject.toml",
+        "uv.lock",
+        "src/trader/data/importers/__init__.py"
+      ],
+      "id": "T-080",
+      "title": "Pod-side historical import: batch range importer with sha256 manifest so the full NSXUSD and XAUUSD M1 history is rebuilt on the pod's /workspace volume",
+      "status": "todo",
+      "acceptance_criteria": [
+        "one command imports a symbol and year range, downloading politely (one request at a time, pause between requests, cached archives reused) and verifying archives against the sha256 manifest from V-049",
+        "months with conflicting M1 minutes are rebuilt from ticks, other months use plain M1; run summary lists rows, rejected months and gaps",
+        "resumable and idempotent: rerunning skips finished months and adds zero rows",
+        "pod run completes for NSXUSD and XAUUSD, summary pasted by the owner and recorded in validations"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -3328,6 +3366,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Completed full local HistData import and tick QA (51 archives, 11,368,050 rows; 1,070 conflicts tick-covered, zero rebuilt mismatches; V-049). Implemented T-014 recorder on PR #8 and passed Full CI run 37138844167 (V-048). Recorded Full-tier review handoff; turn to Claude."
+    },
+    {
+      "revision": 32,
+      "ts": "2026-10-03T17:30:00Z",
+      "agent": "claude",
+      "action": "review_t014_cycle1_changes_requested",
+      "task_ids": [
+        "T-014",
+        "T-080"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-014 Full-tier review, cycle 1 of 2: design is sound (closed-minute buffering, REST wins, atomic daily partitions, side watermarks, no secrets in logs, credentials-missing idle mode, reconnect reasons exposed). Required fixes: (1) /health recorder staleness: add updated_at to the status file and treat a missing or older-than-60s status as degraded in ROLE=all when credentials are configured; today a dead recorder leaves a stale 'healthy' file or None, both reported healthy; test both. (2) Add the acceptance-criterion test 'no gaps across a reconnect' through the recorder itself: fake stream drops, REST backfill returns the missing minutes, the lake ends with every minute exactly once per side. (3) Add a static test that CapitalComClient and the recorder expose no order, position or settings-changing methods and that nothing under trader.agents imports them. Optional: throttle status-file writes to at most one per second in on_update. Noted for later, not blocking: the recorder holds a read-only Capital.com session while Phase 2's Execution Service will hold another (check concurrent sessions on the demo account, consider a separate API key); the last unfinished minute is dropped on SIGTERM and refilled by backfill. Added T-080 so the full history is rebuilt on the pod from public archives (V-049 data stays only in Codex's workspace). Turn to Codex."
     }
   ]
 }
