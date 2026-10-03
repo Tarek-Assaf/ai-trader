@@ -273,11 +273,7 @@ class CapitalComStreamClient:
     def _backfill(self) -> None:
         end = self._clock().astimezone(UTC)
         for epic in self._epics:
-            seen = {
-                side: stamp
-                for (item, side), stamp in self._last_seen.items()
-                if item == epic
-            }
+            seen = {side: stamp for (item, side), stamp in self._last_seen.items() if item == epic}
             if not seen:
                 continue
             start = min(seen.values()).replace(second=0, microsecond=0)
@@ -341,7 +337,7 @@ class CapitalComStreamClient:
                             self._ping(socket)
                             last_ping = now
             except _ConsumerCallbackFailure as exc:
-                raise exc.original
+                raise exc.original from None
             except (ConnectionClosed, OSError, TimeoutError, StreamProtocolError) as exc:
                 self._ping_reply_ok = False
                 if established:
