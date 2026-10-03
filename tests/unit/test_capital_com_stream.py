@@ -4,7 +4,8 @@ import json
 import logging
 import threading
 from datetime import UTC, datetime, timedelta
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 import pytest
 
@@ -175,7 +176,9 @@ def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
     assert client.reconnect_count == 1
     assert client.ping_reply_ok is True
     requests = [json.loads(message) for socket in sockets for message in socket.sent]
-    assert all(request["destination"] in {"OHLCMarketData.subscribe", "ping"} for request in requests)
+    assert all(
+        request["destination"] in {"OHLCMarketData.subscribe", "ping"} for request in requests
+    )
     assert sockets[1].sent
     assert json.loads(sockets[1].sent[0])["cst"] == "fresh-cst"
 
