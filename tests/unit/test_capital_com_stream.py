@@ -134,7 +134,7 @@ def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
                 ping_reply(),
                 event(1791021720000, "bid"),
                 event(1791021660000, "ask"),
-                RuntimeError("forced disconnect"),
+                OSError("forced disconnect"),
             ]
         ),
         FakeSocket(
@@ -180,10 +180,14 @@ def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
     assert json.loads(sockets[1].sent[0])["cst"] == "fresh-cst"
 
 
-def test_stale_subscribe_reply_retries_with_fresh_rest_ping() -> None:
+@pytest.mark.parametrize(
+    "failed_reply",
+    [subscribe_reply(status="ERROR"), subscribe_reply(subscription_status="ERROR")],
+)
+def test_stale_subscribe_reply_retries_with_fresh_rest_ping(failed_reply: str) -> None:
     rest = FakeRest()
     stop = threading.Event()
-    first = FakeSocket([subscribe_reply(status="ERROR")])
+    first = FakeSocket([failed_reply])
     second = FakeSocket(
         [subscribe_reply(), ping_reply(), event(1791021600000)],
         on_message=lambda _raw: stop.set(),
