@@ -224,7 +224,7 @@ class CapitalComStreamClient:
                         if raw is not None:
                             self._handle(raw)
                         now = self._clock()
-                        if now - last_ping >= self._ping_interval:
+                        if not stop_event.is_set() and now - last_ping >= self._ping_interval:
                             socket.send(self._message("ping"))
                             last_ping = now
             except (ConnectionClosed, OSError, TimeoutError) as exc:
