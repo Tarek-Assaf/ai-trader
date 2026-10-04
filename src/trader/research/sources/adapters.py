@@ -118,8 +118,12 @@ class RSSSource(HttpResearchSource):
 
     def parse_response(self, body: bytes, request_url: str) -> list[tuple[str, str]]:
         del request_url
-        upper = body.upper()
-        if b"<!DOCTYPE" in upper or b"<!ENTITY" in upper:
+        try:
+            decoded = body.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            raise InvalidSourceResponse("RSS response must be UTF-8 XML") from None
+        upper = decoded.upper()
+        if "<!DOCTYPE" in upper or "<!ENTITY" in upper:
             raise InvalidSourceResponse("RSS response contains a forbidden declaration")
         try:
             root = ET.fromstring(body)
