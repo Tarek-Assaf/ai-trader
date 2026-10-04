@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 36,
+  "revision": 38,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-013/T-014 are approved on PR #9. T-080 implementation is ready for Claude Light review on PR #11 after full CI pass; the owner still must run the full NSXUSD/XAUUSD historical import on the pod and share its summaries (Q-024) before T-080 is complete. Next for Codex after review: T-015, T-016, T-017. The owner must redeploy and run the T-014 soak (Q-022). Phase 2 follows.",
+    "summary": "T-015 approved by Claude (Full review, PR #13). T-080 remains blocked only on the owner's full RunPod import summaries (Q-024); the T-014 soak (Q-022) is still owner-run. Codex may continue T-016 and T-017.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -823,7 +823,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-07"
       ],
@@ -837,8 +837,21 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "src/trader/data/market_hours.py",
+        "src/trader/workers/recorder.py",
+        "src/trader/data/recorder.py",
+        "src/trader/api/health.py",
+        "config/instruments.yaml",
+        "infra/runpod/README.md",
+        "tests/unit/test_market_hours.py",
+        "tests/unit/test_recorder_worker.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_health.py",
+        "GitHub Actions run 37149284787 (quality green)",
+        "V-057"
+      ],
+      "completion_note": "Implemented broker-first market-state resolution using Capital.com snapshot.marketStatus (TRADEABLE/CLOSED), timezone-aware instrument.openingHours, per-instrument holiday/early-close overrides, and stale thresholds. Closed sessions and daily breaks suppress expected-silence alarms; when broker status is unavailable, scheduled-open instruments remain expected open so stale ticks degrade recorder health. Added schedule/status/health tests and documented behavior. Full review tier (broker-facing). Self-review checklist checked: remote status shape/value allowlist; failure remains unknown; no secrets or sensitive payload logging; scoped T-015 files; closed/open stale paths covered. CI run 37149284787 passed all 23 quality steps. Claude Full review passed (V-057); non-blocking note: after a reopen the feed may show degraded until the first tick arrives.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -2570,6 +2583,26 @@
       "validated_by": "claude",
       "date": "2026-10-03",
       "reverify_if": "importer, download or tests change, or the pod run shows an issue"
+    },
+    {
+      "id": "V-056",
+      "subject": "T-015 Capital.com market status, sessions and expected-silence handling",
+      "method": "Reviewed Capital.com public API market-details schema and owner demo response recorded in V-005/Q-017; CI exercised the broker status parser, session schedule, stale-open and closed-market behavior.",
+      "result": "pass",
+      "evidence": "PR #13, head 3a1f111d16a536b7b90979705bdfdf24634cb88e; snapshot.marketStatus accepts TRADEABLE/CLOSED; instrument.openingHours weekly intervals and zone feed schedule; tests cover session breaks, holiday, early close, weekend, unknown-status schedule fallback, stale open feed degradation and no stale alarm when closed. CI run 37149284787 green.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Capital.com changes market-details schema/status values or session schedule behavior"
+    },
+    {
+      "id": "V-057",
+      "subject": "T-015 Claude Full review (broker-facing)",
+      "method": "Read market_hours.py, recorder worker/recorder/health diffs and config against acceptance criteria and safety posture; checked CI on PR #13 head.",
+      "result": "pass",
+      "evidence": "PR #13 quality check green (run 37149474650). Broker status allowlisted to TRADEABLE/CLOSED, anything else or failure becomes unknown and falls back to broker openingHours schedule; closed/break/holiday/early-close and stale-open tests present; no stale alarm while CLOSED; read-only market_details calls, no order paths, no secrets or payloads logged (exception type only); health output sanitised (length/type limits). Non-blocking: stale clock is not reset at reopen, so a short degraded blip is possible until the first tick; holiday lists are empty pending owner-verified dates.",
+      "validated_by": "claude",
+      "date": "2026-10-03",
+      "reverify_if": "Capital.com market-details schema or status values change, or recorder/market_hours code changes"
     }
   ],
   "blockers": [
@@ -3569,6 +3602,42 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-080 (Light review, no changes). T-080 set to blocked until the owner pod run (Q-024). Codex may continue with T-015, T-016, T-017. Turn to Codex."
+    },
+    {
+      "revision": 37,
+      "ts": "2026-10-03 19:52:25Z",
+      "agent": "codex",
+      "action": "complete_t015_for_review",
+      "task_ids": [
+        "T-015"
+      ],
+      "files_changed": [
+        "config/instruments.yaml",
+        "infra/runpod/README.md",
+        "src/trader/api/health.py",
+        "src/trader/data/market_hours.py",
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_health.py",
+        "tests/unit/test_market_hours.py",
+        "tests/unit/test_recorder_worker.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-015 on PR #13 (Full review tier). CI run 37149284787 passed all quality/runtime steps. Handoff records validation V-056 and checked the review checklist. Turn to Claude for review."
+    },
+    {
+      "revision": 38,
+      "ts": "2026-10-03T20:10:00Z",
+      "agent": "claude",
+      "action": "review_t015_pass",
+      "task_ids": [
+        "T-015"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-015 (Full review, no changes): broker-first market status with schedule fallback, expected-silence handling, sanitised health. CI green. Turn to Codex."
     }
   ]
 }

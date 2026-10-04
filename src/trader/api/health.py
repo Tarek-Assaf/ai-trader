@@ -96,8 +96,13 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
     status = value.get("status")
     market_status = value.get("market_status")
     reconnect_count = value.get("reconnect_count")
+    expected_open = value.get("expected_open")
+    stale_epics = value.get("stale_epics")
     if not isinstance(reconnect_count, int) or reconnect_count < 0:
         reconnect_count = 0
+    if not isinstance(stale_epics, list):
+        stale_epics = []
+    stale_epics = [epic for epic in stale_epics[:10] if isinstance(epic, str) and len(epic) <= 32]
     return {
         "configured": value.get("configured") is True,
         "status": (
@@ -113,6 +118,14 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
             if isinstance(market_status, str) and len(market_status) <= 40
             else "unknown"
         ),
+        "market_status_source": (
+            value.get("market_status_source")
+            if isinstance(value.get("market_status_source"), str)
+            and len(value["market_status_source"]) <= 120
+            else "unknown"
+        ),
+        "expected_open": expected_open if isinstance(expected_open, bool) else None,
+        "stale_epics": stale_epics,
         "reconnect_count": reconnect_count,
         "last_reconnect_reason": (
             value.get("last_reconnect_reason")

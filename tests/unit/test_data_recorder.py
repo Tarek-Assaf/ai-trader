@@ -104,3 +104,57 @@ def test_startup_watermarks_and_liveness_use_ping_and_market_status(tmp_path: Pa
     assert value["market_status"] == "CLOSED"
     assert value["reconnect_count"] == 2
     assert value["last_reconnect_reason"] == "ConnectionClosed"
+
+
+def test_closed_market_suppresses_stale_tick_alarm(tmp_path: Path) -> None:
+    now = [datetime(2026, 10, 3, 12, 0, tzinfo=UTC)]
+    recorder = CapitalDataRecorder(
+        ParquetCandleStore(tmp_path / "lake"),
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+        clock=lambda: now[0],
+    )
+    now[0] += timedelta(minutes=10)
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="CLOSED",
+        expected_open_by_epic={"US100": False},
+        market_status_source="broker",
+        stale_after_seconds_by_epic={"US100": 180},
+    )
+
+    value = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert value["status"] == "healthy"
+    assert value["expected_open"] is False
+    assert value["stale_epics"] == []
+
+
+def test_tradeable_market_with_stale_ticks_degrades_recorder(tmp_path: Path) -> None:
+    now = [datetime(2026, 10, 3, 12, 0, tzinfo=UTC)]
+    recorder = CapitalDataRecorder(
+        ParquetCandleStore(tmp_path / "lake"),
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+        clock=lambda: now[0],
+    )
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="TRADEABLE",
+        expected_open_by_epic={"US100": True},
+        market_status_source="broker",
+        stale_after_seconds_by_epic={"US100": 180},
+    )
+    assert recorder.last_tick_at("US100") is None
+
+    now[0] += timedelta(seconds=181)
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="TRADEABLE",
+        expected_open_by_epic={"US100": True},
+        market_status_source="broker",
+        stale_after_seconds_by_epic={"US100": 180},
+    )
+
+    value = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert value["status"] == "degraded"
+    assert value["stale_epics"] == ["US100"]
