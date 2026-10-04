@@ -50,7 +50,6 @@ jobs:
       - name: Lint and format
         run: |
           set +e
-          uv run ruff check --diff scripts/demo_round_trip.py 2>&1 | tee /tmp/ruff-order.log || true
           make lint 2>&1 | tee /tmp/lint.log
           command_status=${PIPESTATUS[0]}
           if [ "$command_status" -ne 0 ]; then
