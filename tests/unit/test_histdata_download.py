@@ -11,8 +11,12 @@ from trader.data.importers import histdata_download as hd
 
 def _archive(symbol: str = "NSXUSD", period: str = "202608", timeframe: str = "M1") -> bytes:
     buffer = io.BytesIO()
+    date = f"{period[:6]}02" if len(period) == 6 else f"{period}0102"
     with zipfile.ZipFile(buffer, "w") as archive:
-        archive.writestr(f"DAT_ASCII_{symbol}_{timeframe}_{period}.csv", f"{period[:6]}02 180000;100;101;99;100;0\n")
+        archive.writestr(
+            f"DAT_ASCII_{symbol}_{timeframe}_{period}.csv",
+            f"{date} 180000;100;101;99;100;0\\n",
+        )
     return buffer.getvalue()
 
 
@@ -35,7 +39,9 @@ def test_download_is_verified_atomic_and_cached(
 ) -> None:
     calls: list[str] = []
 
-    def request(url: str, data: bytes | None = None, referer: str | None = None, **kwargs: object) -> bytes:
+    def request(
+        url: str, data: bytes | None = None, referer: str | None = None, **kwargs: object
+    ) -> bytes:
         calls.append(url)
         if data is None:
             return _form()
@@ -56,7 +62,9 @@ def test_invalid_download_never_commits(
     body: bytes, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        hd, "_request", lambda url, data=None, referer=None, **kwargs: _form() if data is None else body
+        hd,
+        "_request",
+        lambda url, data=None, referer=None, **kwargs: _form() if data is None else body,
     )
     with pytest.raises(ValueError):
         hd.download_histdata("NSXUSD", 2026, 8, tmp_path)
@@ -144,7 +152,9 @@ def test_range_download_pauses_between_form_and_archive_request(
     calls: list[str] = []
     pauses: list[float] = []
 
-    def request(url: str, data: bytes | None = None, referer: str | None = None, **kwargs: object) -> bytes:
+    def request(
+        url: str, data: bytes | None = None, referer: str | None = None, **kwargs: object
+    ) -> bytes:
         calls.append(url)
         return _form() if data is None else _archive()
 
@@ -170,21 +180,28 @@ def test_invalid_pause_is_rejected_before_network_request(
 
 def test_period_parser_reads_year_and_month_routes_and_prefers_months() -> None:
     parser = hd._PeriodParser("NSXUSD")
-    parser.feed(
-        '<a href="/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/nsxusd/2024">2024</a>'
-        '<a href="/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/nsxusd/2026/9">Sep</a>'
-        '<a href="/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/xauusd/2025">Other</a>'
-        '<a href="https://evil.example/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/nsxusd/2023">Bad host</a>'
-    )
+    route = "/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/"
+    links = [
+        f'<a href="{route}nsxusd/2024">2024</a>',
+        f'<a href="{route}nsxusd/2026/9">Sep</a>',
+        f'<a href="{route}xauusd/2025">Other</a>',
+        f'<a href="https://evil.example{route}nsxusd/2023">Bad host</a>',
+    ]
+    parser.feed("".join(links))
     assert parser.periods() == {2024: None, 2026: {9}}
-
 
 def test_yearly_download_uses_year_route_and_yearly_size_limit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     calls: list[tuple[str, bytes | None, int | None]] = []
 
-    def request(url: str, data: bytes | None = None, referer: str | None = None, *, max_bytes=hd.MAX_BYTES) -> bytes:
+    def request(
+        url: str,
+        data: bytes | None = None,
+        referer: str | None = None,
+        *,
+        max_bytes=hd.MAX_BYTES,
+    ) -> bytes:
         calls.append((url, data, max_bytes))
         return _form(year=2024, month=None) if data is None else _archive(period="2024")
 
