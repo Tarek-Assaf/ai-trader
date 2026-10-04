@@ -201,15 +201,9 @@ def adx(candles: Sequence[Candle], period: int = 14) -> tuple[float | None, ...]
         plus = 100.0 * smoothed_plus / smoothed_range
         minus = 100.0 * smoothed_minus / smoothed_range
         denominator = plus + minus
-        dx_values[index] = (
-            0.0 if denominator <= 0 else 100.0 * abs(plus - minus) / denominator
-        )
+        dx_values[index] = 0.0 if denominator <= 0 else 100.0 * abs(plus - minus) / denominator
 
-    initial = [
-        value
-        for value in dx_values[period - 1 : first_adx + 1]
-        if value is not None
-    ]
+    initial = [value for value in dx_values[period - 1 : first_adx + 1] if value is not None]
     if len(initial) != period:
         return tuple(output)
     current_adx = math.fsum(initial) / period
@@ -220,6 +214,7 @@ def adx(candles: Sequence[Candle], period: int = 14) -> tuple[float | None, ...]
             current_adx = (current_adx * (period - 1) + value) / period
             output[index] = current_adx
     return tuple(output)
+
 
 def session_vwap(candles: Sequence[Candle]) -> tuple[float | None, ...]:
     """UTC-calendar-day VWAP, reset at 00:00 UTC; zero volume stays unavailable."""
