@@ -210,6 +210,8 @@ def test_rss_rejects_doctype_and_normalizes_atom_links() -> None:
     )
     with pytest.raises(InvalidSourceResponse, match="forbidden"):
         source.parse_response(b"<!DOCTYPE rss [<!ENTITY x 'bad'>]><rss/>", source.endpoint)
+    with pytest.raises(InvalidSourceResponse, match="UTF-8"):
+        source.parse_response("<!DOCTYPE rss><rss/>".encode("utf-16"), source.endpoint)
     atom = (
         b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>Rates</title>'
         b'<summary>Review</summary><link href="https://news.example.test/rates"/></entry></feed>'
