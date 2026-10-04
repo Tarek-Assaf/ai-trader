@@ -17,7 +17,9 @@ from typing import Any
 from urllib.parse import urlsplit
 
 import httpx
-from sqlalchemy import Engine, insert
+from sqlalchemy import Engine
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from trader.core.db import metadata, tables
 from trader.research.cache import SQLiteResearchCache, encode_cache_value
@@ -66,15 +68,26 @@ class ResearchRepository:
             "content": item.content,
             "content_hash": item.content_hash,
         }
-        with self._engine.begin() as connection:
-            connection.execute(
-                insert(tables["research_items"]).values(
-                    id=item.id,
-                    created_at=item.fetched_at,
-                    cycle_id=None,
-                    payload=payload,
-                )
+        table = tables["research_items"]
+        values = {
+            "id": item.id,
+            "created_at": item.fetched_at,
+            "cycle_id": None,
+            "payload": payload,
+        }
+        dialect = self._engine.dialect.name
+        if dialect == "sqlite":
+            statement = sqlite_insert(table).values(**values).on_conflict_do_nothing(
+                index_elements=["id"]
             )
+        elif dialect == "postgresql":
+            statement = pg_insert(table).values(**values).on_conflict_do_nothing(
+                index_elements=["id"]
+            )
+        else:
+            raise ValueError("research provenance supports PostgreSQL or SQLite")
+        with self._engine.begin() as connection:
+            connection.execute(statement)
 
 
 class HttpResearchSource(ABC):
@@ -173,13 +186,18 @@ class HttpResearchSource(ABC):
                 raise InvalidSourceResponse("source returned no usable records")
             items = tuple(
                 sanitize_research(
-                    item_id=str(uuid.uuid4()),
+                    item_id=str(
+                        uuid.uuid5(
+                            uuid.NAMESPACE_URL,
+                            f"{cache_key}:{index}:{record_url}:{text}",
+                        )
+                    ),
                     source=self.name,
                     url=record_url,
                     fetched_at=fetched_at,
                     content=text,
                 )
-                for record_url, text in records
+                for index, (record_url, text) in enumerate(records)
             )
             for item in items:
                 self.repository.save(item)
