@@ -11,8 +11,13 @@ import pytest
 from sqlalchemy import create_engine
 
 from trader.agents.graph import (
-    AgentGraph, CycleBudget, CycleInput, ExecutionOutcome, GuardianDecision,
-    TradeIntent, EventDebouncer,
+    AgentGraph,
+    CycleBudget,
+    CycleInput,
+    EventDebouncer,
+    ExecutionOutcome,
+    GuardianDecision,
+    TradeIntent,
 )
 from trader.agents.llm.client import LLMClient
 from trader.agents.llm.ledger import SqlUsageLedger
@@ -33,7 +38,7 @@ class GuardianFake:
     def __init__(self, approved: bool = True) -> None:
         self.calls = 0
         self.approved = approved
-    async def evaluate(self, intent: TradeIntent, context: object, cycle_id: str) -> GuardianDecision:
+    async def evaluate(\n        self, intent: TradeIntent, context: object, cycle_id: str\n    ) -> GuardianDecision:
         self.calls += 1
         assert context == {"fixture": "opaque"}
         return GuardianDecision(approved=self.approved,
@@ -88,7 +93,7 @@ def values(action: str = "TRADE") -> list[ProviderReply]:
 
 
 def graph(responses: list[ProviderReply], *, approved: bool = True,
-          budget: CycleBudget = CycleBudget()) -> tuple[AgentGraph, Recorder, GuardianFake, ExecutorFake, MockLLM]:
+          budget: CycleBudget | None = None,\n) -> tuple[AgentGraph, Recorder, GuardianFake, ExecutorFake, MockLLM]:
     provider = MockLLM(responses)
     engine = create_engine("sqlite+pysqlite:///:memory:")
     ledger = SqlUsageLedger(engine, daily_cap_usd=Decimal("4"), monthly_cap_usd=Decimal("80"))
@@ -145,7 +150,7 @@ def test_critic_revision_limit_is_two_revisions() -> None:
     items = values()
     revised = {"verdict": "revise", "objections": ["tighten rationale"],
                "strongest_reason": "revise", "flags": []}
-    responses = items[:4] + [response(revised)] + items[3:4] + [response(revised)] + items[3:4] + [response(revised)]
+    responses = (\n        items[:4] + [response(revised)] + items[3:4] + [response(revised)]\n        + items[3:4] + [response(revised)]\n    )
     runner, _, guardian, executor, provider = graph(responses)
     result = asyncio.run(runner.run(cycle()))
     assert result.action == "NO_TRADE" and result.reason == "critique_revision_limit"

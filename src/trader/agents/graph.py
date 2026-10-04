@@ -16,7 +16,12 @@ from typing import Any, Literal, Protocol
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from trader.agents.llm.types import (
-    BudgetExceeded, InvalidModelOutput, LLMClient, LLMError, Message, ModelUnavailable
+    BudgetExceeded,
+    InvalidModelOutput,
+    LLMClient,
+    LLMError,
+    Message,
+    ModelUnavailable
 )
 from trader.core.audit import AuditEvent, AuditWriter
 from trader.research.sanitizer import ResearchItem
@@ -195,10 +200,10 @@ class AgentGraph:
     """Run one event cycle. LLM text is data; there is no model-facing tool dispatcher."""
     def __init__(
         self, *, llm: LLMClient, audit: AuditWriter, guardian: Guardian, executor: Executor,
-        budget: CycleBudget = CycleBudget(), prompts: PromptCatalog | None = None,
+        budget: CycleBudget | None = None, prompts: PromptCatalog | None = None,
     ) -> None:
         self.llm, self.audit, self.guardian, self.executor = llm, audit, guardian, executor
-        self.budget, self.prompts = budget, prompts or PromptCatalog()
+        self.budget, self.prompts = budget or CycleBudget(), prompts or PromptCatalog()
 
     async def run(self, cycle: CycleInput) -> CycleResult:
         started = time.monotonic()
@@ -213,7 +218,10 @@ class AgentGraph:
             digest = hashlib.sha256(json.dumps({
                 "event": cycle.event, "event_id": cycle.event_id, "instrument": cycle.instrument,
                 "snapshot": snapshot,
-                "research": [{"id": item.id, "sha256": item.content_hash} for item in cycle.research],
+                "research": [
+                    {"id": item.id, "sha256": item.content_hash}
+                    for item in cycle.research
+                ],
             }, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
             self._audit(cycle, "agent_cycle_started", {
                 "event": cycle.event, "instrument": cycle.instrument, "input_sha256": digest
@@ -240,7 +248,9 @@ class AgentGraph:
 
             macro, used = await self._ask(
                 cycle, started, "news_macro_analyst", MacroReport,
-                {"instrument": cycle.instrument, "research": [i.untrusted_block for i in cycle.research],
+                {
+                    "instrument": cycle.instrument,
+                    "research": [i.untrusted_block for i in cycle.research],
                  "summaries": summaries.model_dump(mode="json"), "provenance_ids": sorted(ids)}
             )
             calls, tokens, steps = calls + 1, tokens + used, steps + 1
@@ -259,7 +269,9 @@ class AgentGraph:
                     "research_summaries": summaries.model_dump(mode="json"),
                     "critic_feedback": critique.model_dump(mode="json") if critique else None,
                 }
-                proposal, used = await self._ask(cycle, started, "strategist", Proposal, strategy_input)
+                proposal, used = await self._ask(
+                    cycle, started, "strategist", Proposal, strategy_input
+                )
                 calls, tokens, steps = calls + 1, tokens + used, steps + 1
                 if self._exhausted(started, calls, tokens, steps):
                     return self._no_trade(cycle, "cycle_budget_exhausted", calls, tokens, proposal)
@@ -311,7 +323,7 @@ class AgentGraph:
             })
             return CycleResult(
                 "TRADE" if result.status == "submitted" else "NO_TRADE",
-                "execution_submitted" if result.status == "submitted" else "execution_not_submitted",
+                ("execution_submitted" if result.status == "submitted" else "execution_not_submitted"),
                 proposal, decision, result, calls, tokens,
             )
         except BudgetExceeded:
@@ -396,21 +408,3 @@ class EventDebouncer:
         self._last[key] = stamp
         return True
 
-class EventDebouncer:
-    """Reject duplicate event/instrument cycles inside a configurable UTC gap."""
-    def __init__(self, min_cycle_gap_seconds: float = 1.0) -> None:
-        if min_cycle_gap_seconds < 0:
-            raise ValueError("minimum cycle gap cannot be negative")
-        self.gap = min_cycle_gap_seconds
-        self._last: dict[tuple[str, str], datetime] = {}
-
-    def allow(self, instrument: str, event: str, at: datetime) -> bool:
-        if at.tzinfo is None or at.utcoffset() is None:
-            raise ValueError("event timestamp must be timezone-aware")
-        key = (instrument.strip().upper(), event)
-        stamp = at.astimezone(UTC)
-        previous = self._last.get(key)
-        if previous is not None and (stamp - previous).total_seconds() < self.gap:
-            return False
-        self._last[key] = stamp
-        return True
