@@ -264,4 +264,3 @@ def test_invalid_yearly_inputs_make_no_request(
         hd.download_histdata("NSXUSD", 2026, None, tmp_path)
     with pytest.raises(ValueError):
         hd.download_histdata("NSXUSD", 2024, None, tmp_path, timeframe="T")
-
