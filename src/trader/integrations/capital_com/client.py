@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import math
 import threading
 import time
 from collections.abc import Callable, Iterator, Mapping
@@ -268,13 +269,21 @@ class CapitalComClient:
             raise CapitalComError(200, "history/activity")
         return activities
 
+    @staticmethod
+    def _valid_stop_value(value: object) -> bool:
+        return (
+            not isinstance(value, bool)
+            and isinstance(value, int | float)
+            and math.isfinite(value)
+            and value > 0
+        )
+
     def open_position(self, payload: Mapping[str, object]) -> Mapping[str, Any]:
         """Open only with an explicit non-guaranteed server-side stop attached."""
         stop_level = payload.get("stopLevel")
         stop_distance = payload.get("stopDistance")
         if payload.get("guaranteedStop") is not False or not (
-            isinstance(stop_level, int | float) and stop_level > 0
-            or isinstance(stop_distance, int | float) and stop_distance > 0
+            self._valid_stop_value(stop_level) or self._valid_stop_value(stop_distance)
         ):
             raise ValueError("position requests require guaranteedStop=false and a positive stop")
         reply = self._request("POST", "positions", json=payload)
@@ -301,10 +310,7 @@ class CapitalComClient:
             raise ValueError("deal_id must not be empty")
         stop_level = payload.get("stopLevel")
         stop_distance = payload.get("stopDistance")
-        if not (
-            isinstance(stop_level, int | float) and stop_level > 0
-            or isinstance(stop_distance, int | float) and stop_distance > 0
-        ):
+        if not (self._valid_stop_value(stop_level) or self._valid_stop_value(stop_distance)):
             raise ValueError("position modification requires a positive stop")
         reply = self._request(
             "PUT", f"positions/{quote(deal_id, safe='')}", json=payload
