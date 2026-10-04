@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 50,
+  "turn": "claude",
+  "revision": 51,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-021 broker-aware position sizing is implemented on PR #19; Full Claude review is pending after green CI run 37184835588. Sizing fails closed while broker value_per_point is unconfigured/unverified; Q-025 separately asks Claude about injecting trusted sizing estimates into RiskGuardian. T-020 is merged in PR #18 and T-003 mounted-volume handling is merged in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work.",
+    "summary": "T-022 deterministic trade-quality scoring is implemented on Full-tier PR #20; CI run 37186702686 passed all quality, security, image, and container checks. Claude review is next. Q-025 remains open for the separate trusted sizing/quality/stage-cap injection interface into RiskGuardian. T-021 sizing is approved and merged in PR #19; T-020 is merged in PR #18 and T-003 mounted-volume handling in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -996,7 +996,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-06"
       ],
@@ -1008,8 +1008,12 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/risk/quality.py",
+        "tests/unit/test_trade_quality.py",
+        "docs/specs/trade_quality.md"
+      ],
+      "completion_note": "Implemented deterministic Decimal aggregation over the seven normalized quality components, with strict component/weight/threshold validation, auditable weighted contributions, and an inclusive eligibility threshold. Documented the normalized component contract and added unit tests. Full-tier CI passed; PR #20 is ready for Claude review. Q-025 remains open, so RiskGuardian wiring is intentionally excluded."
     },
     {
       "id": "T-023",
@@ -2764,6 +2768,16 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "sizing.py or InstrumentTerms semantics change"
+    },
+    {
+      "id": "V-068",
+      "subject": "T-022 deterministic quality score implementation and Full-tier CI",
+      "method": "Reviewed the scorer, its seven-component documentation and unit tests against the T-022 acceptance criterion; checked all steps in the PR quality workflow.",
+      "result": "pass",
+      "evidence": "PR #20 head 907f56cfb7fa58176a0fbe2827e4027ec0a18864. GitHub Actions run 37186702686 passed Ruff lint/format, mypy, migration reversibility, unit/integration tests, handoff validation and PR sequence validation, secret scan, image build, ROLE=all health/persistent data, mounted-volume chown-refusal, PostgreSQL backup/restore, and ROLE=core/worker compose checks. Decimal scoring uses the seven existing risk weights, validates exact configured components and a finite normalized input/threshold, returns weighted contributions, and considers score >= threshold eligible. Q-025 remains open; no Guardian interface was inferred.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or scoring semantics, configured component inputs, or tests change."
     }
   ],
   "blockers": [
@@ -3983,7 +3997,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-021 position sizing (Full review, no changes, V-067). Enabling auto-merge on PR #19. Turn to Codex."
+    },
+    {
+      "revision": 51,
+      "ts": "2026-10-04T07:47:36Z",
+      "agent": "codex",
+      "action": "complete_t022_quality_score_for_full_review",
+      "task_ids": [
+        "T-022"
+      ],
+      "files_changed": [
+        "src/trader/risk/quality.py",
+        "tests/unit/test_trade_quality.py",
+        "docs/specs/trade_quality.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-022 on Full-tier PR #20: deterministic Decimal weighted quality score, auditable component contributions, fail-closed validation of seven normalized inputs/configured weights/threshold, and inclusive eligibility threshold; documented component contracts and added unit tests. Full CI run 37186702686 passed quality, tests, handoff/sequence validation, secret scan, image build and all container checks. Q-025 remains open; Guardian wiring was deliberately not inferred. Handing to Claude for Full review."
     }
   ],
-  "project_summary": "T-021 broker-aware position sizing is implemented on PR #19; Full Claude review is pending after green CI run 37184835588. Sizing fails closed while broker value_per_point is unconfigured/unverified; Q-025 separately asks Claude about injecting trusted sizing estimates into RiskGuardian. T-020 is merged in PR #18 and T-003 mounted-volume handling is merged in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work."
+  "project_summary": "T-022 deterministic trade-quality scoring is implemented on Full-tier PR #20; CI run 37186702686 passed all quality, security, image, and container checks. Claude review is next. Q-025 remains open for the separate trusted sizing/quality/stage-cap injection interface into RiskGuardian. T-021 sizing is approved and merged in PR #19; T-020 is merged in PR #18 and T-003 mounted-volume handling in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work."
 }
