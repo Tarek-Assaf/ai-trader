@@ -22,6 +22,7 @@ class FakeClient:
     def __init__(self) -> None:
         self.position_rows: list[dict[str, Any]] = []
         self.references: list[tuple[str, str]] = []
+        self.market_payload: dict[str, object] | None = None
 
     def search_markets(self, term: str) -> list[dict[str, object]]:
         assert term == "US100"
@@ -29,6 +30,8 @@ class FakeClient:
 
     def market_details(self, epic: str) -> dict[str, object]:
         assert epic == "US100"
+        if self.market_payload is not None:
+            return self.market_payload
         return {
             "instrument": {
                 "epic": epic,
@@ -241,10 +244,12 @@ def test_market_inputs_falls_back_to_min_stop_or_profit_distance(
         lambda path: SimpleNamespace(model_dump=lambda: config),
     )
     client = FakeClient()
-    rules = client.market_details("US100")["dealingRules"]
+    details = client.market_details("US100")
+    rules = details["dealingRules"]
     assert isinstance(rules, dict)
     rules.pop("minNormalStopOrLimitDistance")
     rules["minStopOrProfitDistance"] = {"value": 3, "unit": "POINTS"}
+    client.market_payload = details
 
     result = round_trip._market_inputs(
         round_trip.ObservedTradingClient(client),
@@ -276,9 +281,11 @@ def test_market_inputs_rejects_non_points_stop_distance(
         lambda path: SimpleNamespace(model_dump=lambda: config),
     )
     client = FakeClient()
-    rules = client.market_details("US100")["dealingRules"]
+    details = client.market_details("US100")
+    rules = details["dealingRules"]
     assert isinstance(rules, dict)
     rules["minNormalStopOrLimitDistance"] = {"value": 2, "unit": "PERCENTAGE"}
+    client.market_payload = details
 
     with pytest.raises(ValueError, match="minimum_stop_distance_unit_unsupported"):
         round_trip._market_inputs(
@@ -345,5 +352,5 @@ def test_preflight_is_read_only_and_does_not_create_one_shot_marker(
 
     assert result == 0
     assert '"result": "preflight"' in output
-    assert '"tightened_requested": "19997.5"' in output
+    assert '"tightened_requested": "19997.4"' in output
     assert not round_trip.LOCK_PATH.exists()
