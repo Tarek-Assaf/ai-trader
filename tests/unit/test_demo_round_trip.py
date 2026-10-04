@@ -4,9 +4,8 @@ from decimal import Decimal
 from types import SimpleNamespace
 from typing import Any
 
-import pytest
-
 import scripts.demo_round_trip as round_trip
+import pytest
 
 
 class FakeClient:
