@@ -25,7 +25,12 @@ from trader.agents.graph import (
 from trader.agents.llm.client import LLMClient
 from trader.agents.llm.ledger import SqlUsageLedger
 from trader.agents.llm.providers import MockLLM
-from trader.agents.llm.types import BudgetExceeded, InvalidModelOutput, ModelUnavailable, ProviderReply
+from trader.agents.llm.types import (
+    BudgetExceeded,
+    InvalidModelOutput,
+    ModelUnavailable,
+    ProviderReply,
+)
 from trader.agents.tools.registry import ToolRegistry
 from trader.core.audit import AuditEvent
 from trader.research.sanitizer import sanitize_research
@@ -198,7 +203,6 @@ def test_budget_exceeded_fails_closed_without_guardian_or_execution() -> None:
 
 @pytest.mark.parametrize("error", ["unavailable", "invalid"])
 def test_model_failures_translate_to_no_trade(error: str) -> None:
-
     runner, _, guardian, executor, _ = graph([])
 
     class NoCalls:
@@ -256,7 +260,6 @@ def test_hostile_research_stays_untrusted_and_cannot_trigger_tools_or_state_chan
 
 
 def test_read_tool_registry_rejects_write_permission_and_unlisted_calls() -> None:
-
     config = yaml.safe_load(Path("config/tools.yaml").read_text())
     registry = ToolRegistry(config)
     registry.register("web_search", lambda **kw: kw)
