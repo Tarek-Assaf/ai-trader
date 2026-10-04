@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Protocol
@@ -44,16 +45,20 @@ class OrderRequest:
     profit_level: Decimal | None = None
 
     def __post_init__(self) -> None:
+        if not isinstance(self.direction, Direction):
+            raise ValueError("direction must be BUY or SELL")
         if not self.client_order_id.strip():
             raise ValueError("client_order_id must not be empty")
         if not self.epic.strip():
             raise ValueError("epic must not be empty")
         for name in ("size", "reference_price", "stop_level"):
             value = getattr(self, name)
-            if not value.is_finite() or value <= 0:
-                raise ValueError(f"{name} must be finite and greater than zero")
+            if not isinstance(value, Decimal) or not value.is_finite() or value <= 0:
+                raise ValueError(f"{name} must be a finite positive Decimal")
         if self.profit_level is not None and (
-            not self.profit_level.is_finite() or self.profit_level <= 0
+            not isinstance(self.profit_level, Decimal)
+            or not self.profit_level.is_finite()
+            or self.profit_level <= 0
         ):
             raise ValueError("profit_level must be finite and greater than zero")
         if self.direction is Direction.BUY:
@@ -90,11 +95,17 @@ class OrderReceipt:
 class BrokerAdapter(Protocol):
     """Deterministic execution boundary. Implementations must fail closed."""
 
+    def get_account(self) -> Mapping[str, object]: ...
+
     def get_positions(self) -> Sequence[Position]: ...
 
-    def get_working_orders(self) -> Sequence[Mapping[str, object]]: ...
+    def get_open_orders(self) -> Sequence[Mapping[str, object]]: ...
 
-    def get_activity(self, start: object, end: object) -> Sequence[Mapping[str, object]]: ...
+    def get_market_details(self, epic: str) -> Mapping[str, object]: ...
+
+    def get_activity(
+        self, start: datetime, end: datetime
+    ) -> Sequence[Mapping[str, object]]: ...
 
     def place_order(self, order: OrderRequest) -> OrderReceipt: ...
 
