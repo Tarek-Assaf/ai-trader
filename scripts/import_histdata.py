@@ -25,7 +25,9 @@ def main() -> int:
     parser.add_argument("--from-year", type=int, help="First year in an inclusive batch range")
     parser.add_argument("--through-year", type=int, help="Last year in an inclusive batch range")
     parser.add_argument("--pause-seconds", type=float, default=1.0)
-    parser.add_argument("--dry-run", action="store_true", help="list available archive periods without importing")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="list available archive periods without importing"
+    )
     parser.add_argument("--manifest", type=Path, help="SHA-256 manifest path for batch imports")
     parser.add_argument("--month", type=int)
     parser.add_argument("--raw", type=Path, default=Path("data/raw/histdata"))
