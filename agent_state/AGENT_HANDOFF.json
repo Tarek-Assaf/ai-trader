@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 74,
+  "turn": "claude",
+  "revision": 75,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "C-040 prompt and permission work is merged and verified (PR #32, CI 37224301070, V-090); T-051 StrategySpec is merged and Full-reviewed (PR #33, V-089). T-024 remains blocked on the owner-run Q-029 demo round trip after PR #31 merge/redeploy. The next workqueue item T-017 requires Pod recorder/basis data; T-060 also requires a fresh Pod restore. No Pod data or broker orders were changed.",
+    "summary": "T-043 bounded agent graph is implemented on PR #35 and passes full CI run 37229457914 (V-091), pending Claude Full review. The PR targets main and contains only T-043 code/tests plus its handoff. Next in the pod-free order: T-023 PaperBroker with default spread/slippage, then T-025 P&L, T-026 order manager, T-027 LLM-free kill switch, and T-060 backup-job code. T-060's fresh-Pod restore drill and T-017 recorder calibration remain Pod-dependent. Q-024 lake QA is complete (T-080 V-082); Q-029 demo round trip still awaits the owner-run Pod command. No Pod data or broker orders were changed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1338,7 +1338,7 @@
       "phase": 4,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-21",
         "R-25"
@@ -1358,8 +1358,13 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "config/tools.yaml",
+        "src/trader/agents/graph.py",
+        "src/trader/agents/tools/registry.py",
+        "tests/unit/test_agent_graph.py"
+      ],
+      "completion_note": "Implemented the bounded event-driven agent graph, typed stages, exact read-only tool registry, Guardian/execution injection, full cycle audit, two-revision critique, and fail-closed model/budget behavior. Added MockLLM end-to-end, failure, and hostile web/news/filing fixtures; Q-028 defers prompt caching and batch mode until accounting/lifecycle follow-up. PR #35 passes full CI run 37229457914 on head 6f667143b8b06ab9b3d05f3d2e8c267ed2019532. No Pod, hosted model, or broker was used. Pending Claude Full review."
     },
     {
       "id": "C-040",
@@ -3107,6 +3112,16 @@
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "A required prompt, instrument playbook, role mapping or tool permission changes."
+    },
+    {
+      "id": "V-091",
+      "subject": "T-043 event-driven agent graph and tool permissions",
+      "method": "Reviewed the implementation against docs/specs/phase4.md and T-043 acceptance criteria: typed bounded cycle, audit trail, read-only allow-list, no LLM-to-risk/broker imports, hostile research remains untrusted and malformed tool-call output fails closed, and unavailable/budget-exhausted model paths produce NO_TRADE.",
+      "result": "pass",
+      "evidence": "PR #35 head 6f667143b8b06ab9b3d05f3d2e8c267ed2019532; CI run 37229457914 passed lint/format, mypy, unit/integration tests, migration reversibility, handoff/PR-sequence validation, secret scan, image build, ROLE=all health/persistence, mounted-volume chown refusal, database backup/restore, and core/worker compose checks. Batch mode and prompt caching were explicitly deferred by Q-028. No hosted model, Pod, or broker was used.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or the event schema, graph, permission boundary, budget handling, or fail-closed behavior changes."
     }
   ],
   "blockers": [
@@ -4738,7 +4753,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted Codex's C-040 reviewer pass (V-090), handoff-only change. Next pod-free work for Codex, in order: T-043 agent graph on MockLLM (all dependencies are done; includes injection fixtures and NO_TRADE on BudgetExceeded/ModelUnavailable), T-023 PaperBroker using default spread/slippage (T-017 only calibrates later), T-025 P&L engine, then T-026 order manager and T-027 kill switch against the approved T-024 adapter interface (T-024 code is approved; only the owner-run demo round trip is pending, so do not wait for it), then T-060 backup job code. Pod-dependent items (T-017, T-060 restore drill, T-050) wait for the owner's Monday pod session. Turn to Codex."
+    },
+    {
+      "revision": 75,
+      "ts": "2026-10-04 19:48:17 UTC",
+      "agent": "codex",
+      "action": "complete_t043_agent_graph_for_full_review",
+      "task_ids": [
+        "T-043"
+      ],
+      "files_changed": [
+        "config/tools.yaml",
+        "src/trader/agents/graph.py",
+        "src/trader/agents/tools/registry.py",
+        "tests/unit/test_agent_graph.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-043 on PR #35 with a bounded typed event-driven graph, Guardian/executor injection, full audit, strict read-only tool registry, two-revision critique, and fail-closed LLM/budget errors. Added offline end-to-end, boundary, model failure, and hostile web/news/filing tests. Full CI run 37229457914 passed on head 6f667143b8b06ab9b3d05f3d2e8c267ed2019532. PR targets main. Prompt caching and batch mode are deferred per Q-028. No hosted model, Pod, or broker was used. Handing off for Claude Full review. Next ordered tasks after review: T-023, T-025, T-026, T-027, then T-060 backup-job code; restore drill remains Pod-dependent."
     }
   ],
-  "project_summary": "C-040 prompt and permission work is merged and verified (PR #32, CI 37224301070, V-090); T-051 StrategySpec is merged and Full-reviewed (PR #33, V-089). T-024 remains blocked on the owner-run Q-029 demo round trip after PR #31 merge/redeploy. The next workqueue item T-017 requires Pod recorder/basis data; T-060 also requires a fresh Pod restore. No Pod data or broker orders were changed."
+  "project_summary": "T-043 bounded agent graph is implemented on PR #35 and passes full CI run 37229457914 (V-091), pending Claude Full review. The PR targets main and contains only T-043 code/tests plus its handoff. Next in the pod-free order: T-023 PaperBroker with default spread/slippage, then T-025 P&L, T-026 order manager, T-027 LLM-free kill switch, and T-060 backup-job code. T-060's fresh-Pod restore drill and T-017 recorder calibration remain Pod-dependent. Q-024 lake QA is complete (T-080 V-082); Q-029 demo round trip still awaits the owner-run Pod command. No Pod data or broker orders were changed."
 }
