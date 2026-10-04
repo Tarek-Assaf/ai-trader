@@ -314,7 +314,11 @@ def _write_report(report: dict[str, object]) -> Path | None:
 
 def run_round_trip(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--preflight", action="store_true", help="read-only check; never reserves or submits an order")
+    parser.add_argument(
+        "--preflight",
+        action="store_true",
+        help="read-only check; never reserves or submits an order",
+    )
     args = parser.parse_args(argv)
     logging.disable(logging.CRITICAL)
     started = time.monotonic()
