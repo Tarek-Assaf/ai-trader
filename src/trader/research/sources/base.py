@@ -114,10 +114,18 @@ class HttpResearchSource(ABC):
         ),
         resolve_dns: Callable[[str], bool] | None = None,
     ) -> None:
-        if not name.strip() or ttl_seconds <= 0 or min_interval_seconds < 0:
-            raise ValueError("source name, positive TTL, and non-negative rate interval required")
-        if timeout_seconds <= 0 or max_response_bytes < 1 or attempts < 1 or backoff_seconds < 0:
-            raise ValueError("invalid HTTP source limits")
+        durations = (ttl_seconds, min_interval_seconds, timeout_seconds, backoff_seconds)
+        if (
+            not name.strip()
+            or any(not math.isfinite(value) for value in durations)
+            or ttl_seconds <= 0
+            or min_interval_seconds < 0
+            or timeout_seconds <= 0
+            or max_response_bytes < 1
+            or attempts < 1
+            or backoff_seconds < 0
+        ):
+            raise ValueError("invalid HTTP source configuration")
         self.name = name.strip()
         self._resolve_dns = resolve_dns or resolve_public_host
         self.endpoint = self._validate_url(endpoint, allowed_hosts, self._resolve_dns)
