@@ -10,7 +10,7 @@ import httpx
 import pytest
 
 from trader.core.settings import EnvironmentSettings
-from trader.integrations.capital_com import CapitalComClient
+from trader.integrations.capital_com.trading import CapitalComTradingClient
 from trader.integrations.capital_com.client import CapitalComError
 
 
@@ -24,7 +24,7 @@ class AllowAllLimiter:
 
 def make_client(
     handler: Any, limiter: AllowAllLimiter | None = None
-) -> tuple[CapitalComClient, httpx.Client]:
+) -> tuple[CapitalComTradingClient, httpx.Client]:
     settings = EnvironmentSettings(
         _env_file=None,
         broker_env="demo",
@@ -34,7 +34,7 @@ def make_client(
         redis_url="redis://localhost:6379/0",
     )
     http = httpx.Client(transport=httpx.MockTransport(handler))
-    return CapitalComClient(settings, limiter=limiter or AllowAllLimiter(), http_client=http), http
+    return CapitalComTradingClient(settings, limiter=limiter or AllowAllLimiter(), http_client=http), http
 
 
 def test_trading_reads_and_writes_use_authenticated_demo_routes() -> None:
