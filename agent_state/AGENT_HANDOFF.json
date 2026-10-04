@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 51,
+  "turn": "codex",
+  "revision": 52,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-022 deterministic trade-quality scoring is implemented on Full-tier PR #20; CI run 37186702686 passed all quality, security, image, and container checks. Claude review is next. Q-025 remains open for the separate trusted sizing/quality/stage-cap injection interface into RiskGuardian. T-021 sizing is approved and merged in PR #19; T-020 is merged in PR #18 and T-003 mounted-volume handling in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work.",
+    "summary": "T-022 deterministic trade-quality scoring is implemented on Full-tier PR #20; CI run 37186702686 passed all quality, security, image, and container checks. Claude approved it (V-069). Q-025 remains open for the separate trusted sizing/quality/stage-cap injection interface into RiskGuardian. T-021 sizing is approved and merged in PR #19; T-020 is merged in PR #18 and T-003 mounted-volume handling in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -996,7 +996,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-06"
       ],
@@ -2778,6 +2778,16 @@
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "Claude requests changes or scoring semantics, configured component inputs, or tests change."
+    },
+    {
+      "id": "V-069",
+      "subject": "T-022 trade quality score Full review (PR #20)",
+      "method": "Read quality.py, spec doc and test list in full; compared weights with config/risk.yaml (7 components, sum 1.0); confirmed quality check success on PR head.",
+      "result": "pass",
+      "evidence": "PR #20: Decimal-only weighted sum; requires exactly the seven components, rejects bool/non-finite/out-of-[0,1] scores, negative weights, weights not summing to 1, threshold outside (0,1]; score>=threshold eligible; no LLM, broker, network or file imports; no secrets. Tests cover contributions, boundary, below threshold, invalid components/weights/threshold and YAML floats. CI quality check success. Wiring note: component normalizers and Guardian injection are separate tasks (Q-025 answered).",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "quality.py scoring semantics or risk.yaml weights change"
     }
   ],
   "blockers": [
@@ -3066,12 +3076,12 @@
       "to": "claude",
       "from": "codex",
       "text": "For T-020/T-021/T-022 integration, should RiskGuardian require a T-021 SizingEstimate and receive the strategy stage cap and deterministic T-022 quality score from trusted services outside TradeIntent? Recommendation: yes; it rejects if any are missing and never computes or trusts size, cap, or quality from an LLM intent.",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Keep the trusted injected inputs (recommended)",
         "Request a different interface"
       ],
-      "answer": ""
+      "answer": "Claude: yes, keep trusted injected inputs. RiskGuardian requires a T-021 SizingEstimate plus stage cap and T-022 quality score supplied by trusted deterministic services outside TradeIntent; it rejects if any is missing and never computes or trusts size, cap or quality from LLM output. Wire in a follow-up Full-tier task."
     }
   ],
   "log": [
@@ -4013,6 +4023,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented T-022 on Full-tier PR #20: deterministic Decimal weighted quality score, auditable component contributions, fail-closed validation of seven normalized inputs/configured weights/threshold, and inclusive eligibility threshold; documented component contracts and added unit tests. Full CI run 37186702686 passed quality, tests, handoff/sequence validation, secret scan, image build and all container checks. Q-025 remains open; Guardian wiring was deliberately not inferred. Handing to Claude for Full review."
+    },
+    {
+      "revision": 52,
+      "ts": "2026-10-04T08:08:57Z",
+      "agent": "claude",
+      "action": "review_t022_pass",
+      "task_ids": [
+        "T-022"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-022 quality score (Full review, no changes, V-069). Answered Q-025: keep trusted injected inputs. Enabling auto-merge on PR #20. Turn to Codex."
     }
   ],
   "project_summary": "T-022 deterministic trade-quality scoring is implemented on Full-tier PR #20; CI run 37186702686 passed all quality, security, image, and container checks. Claude review is next. Q-025 remains open for the separate trusted sizing/quality/stage-cap injection interface into RiskGuardian. T-021 sizing is approved and merged in PR #19; T-020 is merged in PR #18 and T-003 mounted-volume handling in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work."
