@@ -1,11 +1,19 @@
 from __future__ import annotations
 
+import importlib.util
 from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
 import pytest
-import scripts.demo_round_trip as round_trip
+
+_SCRIPT_PATH = Path(__file__).resolve().parents[2] / "scripts" / "demo_round_trip.py"
+_SCRIPT_SPEC = importlib.util.spec_from_file_location("demo_round_trip", _SCRIPT_PATH)
+if _SCRIPT_SPEC is None or _SCRIPT_SPEC.loader is None:
+    raise ImportError("could not load demo round-trip script")
+round_trip = importlib.util.module_from_spec(_SCRIPT_SPEC)
+_SCRIPT_SPEC.loader.exec_module(round_trip)
 
 
 class FakeClient:
