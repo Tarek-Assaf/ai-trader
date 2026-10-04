@@ -7,8 +7,8 @@ import math
 import sqlite3
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 
 @dataclass(frozen=True, slots=True)
@@ -46,9 +46,7 @@ class SQLiteResearchCache:
                 return None
             value, expires_at = row
             if float(expires_at) <= now:
-                self._connection.execute(
-                    "DELETE FROM research_cache WHERE cache_key = ?", (key,)
-                )
+                self._connection.execute("DELETE FROM research_cache WHERE cache_key = ?", (key,))
                 return None
             return str(value)
 
@@ -70,7 +68,11 @@ class SQLiteResearchCache:
 
         Database errors deliberately propagate so callers fail closed without issuing a request.
         """
-        if not source.strip() or not math.isfinite(min_interval_seconds) or min_interval_seconds < 0:
+        if (
+            not source.strip()
+            or not math.isfinite(min_interval_seconds)
+            or min_interval_seconds < 0
+        ):
             raise ValueError("source and non-negative interval are required")
         now = self._clock()
         with self._lock, self._connection:
