@@ -55,4 +55,3 @@ def test_sql_audit_writer_appends_canonical_hash_chained_rows() -> None:
         "reasons": ["has_stop:stop_loss_required"],
     }
     assert verify_audit_chain(entries)
-
