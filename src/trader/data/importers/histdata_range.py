@@ -45,9 +45,7 @@ def _sha256(path: Path) -> str:
 def _atomic_json(path: Path, value: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".tmp")
-    temporary.write_text(
-        json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    temporary.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     temporary.replace(path)
 
 
@@ -56,9 +54,7 @@ def _load_manifest(path: Path) -> dict[str, Any]:
         try:
             manifest = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
-            raise ValueError(
-                "checksum manifest is unreadable; refusing to continue"
-            ) from exc
+            raise ValueError("checksum manifest is unreadable; refusing to continue") from exc
         if (
             not isinstance(manifest, dict)
             or manifest.get("schema_version") != 1
@@ -94,8 +90,7 @@ def _verify_or_pin(path: Path, manifest: dict[str, Any], manifest_path: Path) ->
         if (
             not isinstance(record, dict)
             or record.get("sha256") != actual
-            or record.get("verification")
-            not in {"trusted_report", "first_seen_cache_integrity"}
+            or record.get("verification") not in {"trusted_report", "first_seen_cache_integrity"}
         ):
             raise ValueError(f"archive checksum mismatch for {filename}")
         return str(record["verification"])
@@ -107,14 +102,10 @@ def _verify_or_pin(path: Path, manifest: dict[str, Any], manifest_path: Path) ->
     return "first_seen_cache_integrity"
 
 
-def _months(
-    start_year: int, through_year: int, as_of: datetime
-) -> list[tuple[int, int]]:
+def _months(start_year: int, through_year: int, as_of: datetime) -> list[tuple[int, int]]:
     if not 1900 <= start_year <= through_year <= 2100:
         raise ValueError("provide a valid inclusive year range from 1900 through 2100")
-    current = as_of.astimezone(UTC).replace(
-        day=1, hour=0, minute=0, second=0, microsecond=0
-    )
+    current = as_of.astimezone(UTC).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     last_year = min(through_year, current.year)
     result: list[tuple[int, int]] = []
     for year in range(start_year, last_year + 1):
@@ -127,9 +118,7 @@ def _months(
     return result
 
 
-def _archive_path(
-    raw_root: Path, symbol: str, year: int, month: int, timeframe: str
-) -> Path:
+def _archive_path(raw_root: Path, symbol: str, year: int, month: int, timeframe: str) -> Path:
     return raw_root / f"DAT_ASCII_{symbol}_{timeframe}_{year:04d}{month:02d}.zip"
 
 
@@ -153,9 +142,7 @@ def _check_cached_archives(
         if (
             completed is not None
             and "_T_" not in archive.name
-            and completed.get(
-                "m1_archive", _archive_path(raw_root, symbol, year, month, "M1").name
-            )
+            and completed.get("m1_archive", _archive_path(raw_root, symbol, year, month, "M1").name)
             != archive.name
         ):
             continue
@@ -185,18 +172,12 @@ def _summary_reports(reports: list[dict[str, object]]) -> dict[str, Any]:
         report_gaps = report.get("gaps", [])
         if isinstance(report_gaps, list):
             gaps.extend(
-                cast(dict[str, object], gap)
-                for gap in report_gaps
-                if isinstance(gap, dict)
+                cast(dict[str, object], gap) for gap in report_gaps if isinstance(gap, dict)
             )
     return {
         "rows_read": sum(_report_count(report, "rows_read") for report in reports),
-        "rows_written": sum(
-            _report_count(report, "rows_written") for report in reports
-        ),
-        "invalid_rows": sum(
-            _report_count(report, "invalid_rows") for report in reports
-        ),
+        "rows_written": sum(_report_count(report, "rows_written") for report in reports),
+        "invalid_rows": sum(_report_count(report, "invalid_rows") for report in reports),
         "conflicting_duplicates": sum(
             _report_count(report, "conflicting_duplicates") for report in reports
         ),
@@ -205,9 +186,7 @@ def _summary_reports(reports: list[dict[str, object]]) -> dict[str, Any]:
     }
 
 
-def _split_year_archive(
-    path: Path, symbol: str, year: int, scratch: Path
-) -> dict[int, Path]:
+def _split_year_archive(path: Path, symbol: str, year: int, scratch: Path) -> dict[int, Path]:
     """Split a validated yearly M1 member into source-calendar-month CSV files."""
     expected = f"DAT_ASCII_{symbol}_M1_{year:04d}.csv"
     writers: dict[int, tuple[TextIO, Any]] = {}
@@ -215,35 +194,25 @@ def _split_year_archive(
     try:
         with zipfile.ZipFile(path) as archive:
             with archive.open(expected) as member:
-                reader = csv.reader(
-                    io.TextIOWrapper(member, encoding="utf-8-sig"), delimiter=";"
-                )
+                reader = csv.reader(io.TextIOWrapper(member, encoding="utf-8-sig"), delimiter=";")
                 for row in reader:
                     if len(row) < 6:
                         raise ValueError("yearly M1 archive contains a malformed row")
                     match = re.match(r"^(\d{4})(\d{2})\d{2}(?:\s|$)", row[0])
                     if match is None or int(match.group(1)) != year:
-                        raise ValueError(
-                            "yearly M1 archive contains an unexpected date"
-                        )
+                        raise ValueError("yearly M1 archive contains an unexpected date")
                     month = int(match.group(2))
                     if not 1 <= month <= 12:
                         raise ValueError("yearly M1 archive contains an invalid month")
                     if month not in writers:
-                        output_path = (
-                            scratch / f"DAT_ASCII_{symbol}_M1_{year:04d}{month:02d}.csv"
-                        )
+                        output_path = scratch / f"DAT_ASCII_{symbol}_M1_{year:04d}{month:02d}.csv"
                         handle = output_path.open("w", encoding="utf-8", newline="")
-                        writer = csv.writer(
-                            handle, delimiter=";", lineterminator=chr(10)
-                        )
+                        writer = csv.writer(handle, delimiter=";", lineterminator=chr(10))
                         writers[month] = (handle, writer)
                         paths[month] = output_path
                     writers[month][1].writerow(row)
     except KeyError:
-        raise ValueError(
-            "yearly M1 archive is missing its expected CSV member"
-        ) from None
+        raise ValueError("yearly M1 archive is missing its expected CSV member") from None
     except csv.Error:
         raise ValueError("yearly M1 archive contains malformed CSV data") from None
     finally:
@@ -383,9 +352,7 @@ def import_histdata_range(
     raw = Path(raw_root)
     lake = Path(lake_root)
     lineage = Path(lineage_root)
-    manifest_file = (
-        Path(manifest_path) if manifest_path else raw / "sha256-manifest.json"
-    )
+    manifest_file = Path(manifest_path) if manifest_path else raw / "sha256-manifest.json"
     raw.mkdir(parents=True, exist_ok=True)
     manifest = _load_manifest(manifest_file)
     _atomic_json(manifest_file, manifest)
@@ -425,24 +392,16 @@ def import_histdata_range(
                         pending.append(month)
                 if not pending:
                     continue
-                if (
-                    not archive_path.exists()
-                    and last_download_at is not None
-                    and pause_seconds
-                ):
+                if not archive_path.exists() and last_download_at is not None and pause_seconds:
                     elapsed = time.monotonic() - last_download_at
                     if elapsed < pause_seconds:
                         time.sleep(pause_seconds - elapsed)
                 was_cached = archive_path.exists()
-                archive_path = download_histdata(
-                    symbol, year, None, raw, "M1", pause_seconds
-                )
+                archive_path = download_histdata(symbol, year, None, raw, "M1", pause_seconds)
                 if not was_cached:
                     last_download_at = time.monotonic()
                 verification = _verify_or_pin(archive_path, manifest, manifest_file)
-                with tempfile.TemporaryDirectory(
-                    prefix=f".histdata-{year}-", dir=raw
-                ) as temp:
+                with tempfile.TemporaryDirectory(prefix=f".histdata-{year}-", dir=raw) as temp:
                     split = _split_year_archive(archive_path, symbol, year, Path(temp))
                     present_months = sorted(split)
                     first_present, last_present = present_months[0], present_months[-1]
@@ -483,10 +442,7 @@ def import_histdata_range(
                 for month in selected:
                     key = f"{symbol}:{year:04d}-{month:02d}"
                     completed = manifest["completed_months"].get(key)
-                    if (
-                        not isinstance(completed, dict)
-                        or completed.get("status") != "ok"
-                    ):
+                    if not isinstance(completed, dict) or completed.get("status") != "ok":
                         result["rejected_months"].append(
                             {
                                 "month": f"{year:04d}{month:02d}",
@@ -507,18 +463,12 @@ def import_histdata_range(
                     result["skipped_months"].append(month_id)
                     continue
                 m1_path = _archive_path(raw, symbol, year, month, "M1")
-                if (
-                    not m1_path.exists()
-                    and last_download_at is not None
-                    and pause_seconds
-                ):
+                if not m1_path.exists() and last_download_at is not None and pause_seconds:
                     elapsed = time.monotonic() - last_download_at
                     if elapsed < pause_seconds:
                         time.sleep(pause_seconds - elapsed)
                 was_cached = m1_path.exists()
-                m1_path = download_histdata(
-                    symbol, year, month, raw, "M1", pause_seconds
-                )
+                m1_path = download_histdata(symbol, year, month, raw, "M1", pause_seconds)
                 if not was_cached:
                     last_download_at = time.monotonic()
                 verification = _verify_or_pin(m1_path, manifest, manifest_file)
@@ -540,9 +490,7 @@ def import_histdata_range(
                 add_report(report)
             except (OSError, ValueError, zipfile.BadZipFile, KeyError) as exc:
                 result["status"] = "partial"
-                result["rejected_months"].append(
-                    {"month": month_id, "reason": str(exc)[:240]}
-                )
+                result["rejected_months"].append({"month": month_id, "reason": str(exc)[:240]})
 
     result["gap_examples"] = result["gap_examples"][:20]
     if result["rejected_months"]:
