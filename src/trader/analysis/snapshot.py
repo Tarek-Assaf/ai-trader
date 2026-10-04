@@ -98,7 +98,8 @@ def _cluster_levels(
     if close is None:
         return ()
     points = sorted(
-        value for value in values
+        value
+        for value in values
         if value is not None and (value >= close if resistance else value <= close)
     )
     clusters: list[list[float]] = []
@@ -121,7 +122,8 @@ def _timeframe_snapshot(
     spread_by_time: Mapping[datetime, float],
 ) -> TimeframeSnapshot:
     visible = [
-        bar for bar in bars
+        bar
+        for bar in bars
         if bar.complete and bar.ts_utc + timedelta(minutes=timeframe) <= as_of
     ]
     closes = [bar.close for bar in visible]
@@ -189,12 +191,16 @@ def _timeframe_snapshot(
         pivot_support_1=last_pivot.support_1 if last_pivot else None,
         pivot_resistance_1=last_pivot.resistance_1 if last_pivot else None,
         support_levels=_cluster_levels(
-            swing_lows, close=last_bar.close if last_bar else None,
-            tolerance=level_tolerance, resistance=False,
+            swing_lows,
+            close=last_bar.close if last_bar else None,
+            tolerance=level_tolerance,
+            resistance=False,
         ),
         resistance_levels=_cluster_levels(
-            swing_highs, close=last_bar.close if last_bar else None,
-            tolerance=level_tolerance, resistance=True,
+            swing_highs,
+            close=last_bar.close if last_bar else None,
+            tolerance=level_tolerance,
+            resistance=True,
         ),
         candle_patterns=last_pattern,
         trend_regime=trend_regime,
@@ -246,8 +252,13 @@ def build_snapshot(
     validated = resample_ohlc(normalized, 1)
     normalized = [
         Candle(
-            ts_utc=bar.ts_utc, open=bar.open, high=bar.high, low=bar.low,
-            close=bar.close, volume=bar.volume, series_key=bar.series_key,
+            ts_utc=bar.ts_utc,
+            open=bar.open,
+            high=bar.high,
+            low=bar.low,
+            close=bar.close,
+            volume=bar.volume,
+            series_key=bar.series_key,
             complete=original_metadata[(bar.ts_utc, bar.series_key)][0],
             n_minutes=original_metadata[(bar.ts_utc, bar.series_key)][1],
         )
@@ -270,9 +281,7 @@ def build_snapshot(
     observed = views[0].timestamp
     freshness = (cutoff - observed).total_seconds() if observed else None
     directions = [
-        "up" if view.ema_9 > view.ema_21
-        else "down" if view.ema_9 < view.ema_21
-        else "flat"
+        "up" if view.ema_9 > view.ema_21 else "down" if view.ema_9 < view.ema_21 else "flat"
         for view in views
         if view.ema_9 is not None and view.ema_21 is not None
     ]
