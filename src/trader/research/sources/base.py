@@ -110,7 +110,15 @@ class HttpResearchSource(ABC):
         client: httpx.AsyncClient | None = None,
         backoff_seconds: float = 0.25,
         allowed_media_types: set[str] | frozenset[str] = frozenset(
-            {"application/json", "application/rss+xml", "application/atom+xml", "application/xml", "text/xml", "text/html", "text/plain"}
+            {
+                "application/json",
+                "application/rss+xml",
+                "application/atom+xml",
+                "application/xml",
+                "text/xml",
+                "text/html",
+                "text/plain",
+            }
         ),
         resolve_dns: Callable[[str], bool] | None = None,
     ) -> None:
@@ -121,7 +129,11 @@ class HttpResearchSource(ABC):
             or ttl_seconds <= 0
             or min_interval_seconds < 0
             or timeout_seconds <= 0
+            or isinstance(max_response_bytes, bool)
+            or not isinstance(max_response_bytes, int)
             or max_response_bytes < 1
+            or isinstance(attempts, bool)
+            or not isinstance(attempts, int)
             or attempts < 1
             or backoff_seconds < 0
         ):
@@ -141,6 +153,8 @@ class HttpResearchSource(ABC):
         self.client = client
         self.backoff_seconds = backoff_seconds
         self.allowed_media_types = frozenset(value.casefold() for value in allowed_media_types)
+        if not self.allowed_media_types:
+            raise ValueError("at least one response media type is required")
         self.reliability = Reliability()
 
     @staticmethod
