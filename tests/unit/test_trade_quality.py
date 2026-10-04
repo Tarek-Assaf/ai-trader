@@ -1,5 +1,6 @@
 import collections.abc
 import decimal
+
 import trader.risk.quality
 
 
@@ -98,7 +99,7 @@ def test_score_below_threshold_is_ineligible() -> None:
 def test_invalid_component_scores_fail_closed() -> None:
     for value in (decimal.Decimal("-0.01"), decimal.Decimal("1.01"), decimal.Decimal("NaN"), decimal.Decimal("Infinity")):
         _assert_value_error(
-            lambda: trader.risk.quality.score_trade_quality(
+            lambda value=value: trader.risk.quality.score_trade_quality(
                 _components(regime_fit=value),
                 WEIGHTS,
                 minimum_score=decimal.Decimal("0.50"),
@@ -116,7 +117,7 @@ def test_invalid_or_incomplete_weights_fail_closed() -> None:
     )
     for weights in invalid_weights:
         _assert_value_error(
-            lambda: trader.risk.quality.score_trade_quality(
+            lambda weights=weights: trader.risk.quality.score_trade_quality(
                 _components(),
                 weights,
                 minimum_score=decimal.Decimal("0.50"),
@@ -127,7 +128,7 @@ def test_invalid_or_incomplete_weights_fail_closed() -> None:
 def test_invalid_threshold_fails_closed() -> None:
     for threshold in (decimal.Decimal("0"), decimal.Decimal("-0.1"), decimal.Decimal("1.01")):
         _assert_value_error(
-            lambda: trader.risk.quality.score_trade_quality(
+            lambda threshold=threshold: trader.risk.quality.score_trade_quality(
                 _components(),
                 WEIGHTS,
                 minimum_score=threshold,
