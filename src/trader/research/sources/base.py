@@ -96,14 +96,14 @@ class HttpResearchSource(ABC):
         api_key: str | None = None,
         client: httpx.AsyncClient | None = None,
         backoff_seconds: float = 0.25,
-        resolve_dns: Callable[[str], bool] = lambda host: resolve_public_host(host),
+        resolve_dns: Callable[[str], bool] | None = None,
     ) -> None:
         if not name.strip() or ttl_seconds <= 0 or min_interval_seconds < 0:
             raise ValueError("source name, positive TTL, and non-negative rate interval required")
         if timeout_seconds <= 0 or max_response_bytes < 1 or attempts < 1 or backoff_seconds < 0:
             raise ValueError("invalid HTTP source limits")
         self.name = name.strip()
-        self._resolve_dns = resolve_dns
+        self._resolve_dns = resolve_dns or resolve_public_host
         self.endpoint = self._validate_url(endpoint, allowed_hosts, resolve_dns)
         self.allowed_hosts = {host.casefold() for host in allowed_hosts}
         self.cache = cache
