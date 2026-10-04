@@ -336,3 +336,46 @@ def test_source_url_requires_https_allowlist_and_public_dns() -> None:
         URLFetchSource._validate_url(
             "https://example.test", {"example.test"}, lambda host: False
         )
+
+
+def test_sqlite_cache_ttl_and_atomic_rate_reservations() -> None:
+    """Cached values expire and concurrent source calls reserve distinct request slots."""
+    now = [100.0]
+    cache = SQLiteResearchCache(":memory:", clock=lambda: now[0])
+    cache.set("query", "cached", 10)
+    assert cache.get("query") == "cached"
+    assert cache.reserve_request("search", 2) == 0
+    assert cache.reserve_request("search", 2) == 2
+    now[0] += 2
+    assert cache.reserve_request("search", 2) == 2
+    now[0] += 10
+    assert cache.get("query") is None
+    cache.close()
+
+
+@pytest.mark.asyncio
+async def test_closed_rate_cache_fails_before_network_request() -> None:
+    """Cache/rate state errors fail closed before an outbound research request."""
+    calls = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        return httpx.Response(200, text="content", headers={"content-type": "text/plain"})
+
+    cache = SQLiteResearchCache(":memory:")
+    engine = create_engine("sqlite:///:memory:")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        source = URLFetchSource(
+            allowed_hosts={"example.test"},
+            cache=cache,
+            repository=ResearchRepository(engine),
+            min_interval_seconds=0,
+            client=client,
+            resolve_dns=lambda host: True,
+        )
+        cache.close()
+        with pytest.raises(Exception):
+            await source.fetch({"url": "https://example.test/article"})
+    assert calls == 0
+    engine.dispose()
