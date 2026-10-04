@@ -148,9 +148,7 @@ def true_range(candles: Sequence[Candle]) -> tuple[float, ...]:
     for candle in candles:
         parts = [candle.high - candle.low]
         if previous_close is not None:
-            parts.extend(
-                (abs(candle.high - previous_close), abs(candle.low - previous_close))
-            )
+            parts.extend((abs(candle.high - previous_close), abs(candle.low - previous_close)))
         output.append(max(parts))
         previous_close = candle.close
     _finite(output)
@@ -197,9 +195,7 @@ def adx(candles: Sequence[Candle], period: int = 14) -> tuple[float | None, ...]
         plus = 100.0 * math.fsum(plus_dm[start : index + 1]) / tr
         minus = 100.0 * math.fsum(minus_dm[start : index + 1]) / tr
         denominator = plus + minus
-        dx_values[index] = (
-            0.0 if denominator <= 0 else 100.0 * abs(plus - minus) / denominator
-        )
+        dx_values[index] = 0.0 if denominator <= 0 else 100.0 * abs(plus - minus) / denominator
     first = period * 2 - 2
     for index in range(first, len(candles)):
         window = [value for value in dx_values[index - period + 1 : index + 1] if value is not None]
