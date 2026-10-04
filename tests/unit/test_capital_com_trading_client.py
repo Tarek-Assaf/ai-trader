@@ -56,7 +56,7 @@ def test_trading_reads_and_writes_use_authenticated_demo_routes() -> None:
             body = {"workingOrders": []}
         elif request.url.path.endswith("/history/activity"):
             body = {"activities": []}
-        elif request.url.path.endswith("/confirms/open%20ref"):
+        elif request.url.path.endswith("/confirms/open ref"):
             body = {"dealStatus": "ACCEPTED"}
         elif request.method in {"POST", "PUT", "DELETE"}:
             body = {"dealReference": "open ref"}
