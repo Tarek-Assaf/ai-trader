@@ -72,7 +72,9 @@ class FakeClient:
         return {"dealReference": "cancel-ref"}
 
 
-def test_environment_guard_requires_all_three_explicit_values(\n    monkeypatch: pytest.MonkeyPatch,\n) -> None:
+def test_environment_guard_requires_all_three_explicit_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     for name, value in (
         ("BROKER_ENV", "demo"),
         ("TRADING_MODE", "paper"),
