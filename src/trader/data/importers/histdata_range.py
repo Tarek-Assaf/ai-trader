@@ -496,4 +496,3 @@ def import_histdata_range(
     if result["rejected_months"]:
         result["status"] = "partial"
     return result
-
