@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictFloat, ValidationError, model_validator
 
@@ -86,7 +86,7 @@ class TrailingStopExit(StrictModel):
     distance: PositiveFiniteFloat
 
 
-ExitRule: TypeAlias = Annotated[
+type ExitRule = Annotated[
     StopExit | TargetExit | TimeStopExit | TrailingStopExit,
     Field(discriminator="kind"),
 ]
