@@ -67,7 +67,7 @@ def _request(
         with urllib.request.build_opener(_NoRedirect).open(request, timeout=60) as response:
             if response.status != 200:
                 raise ValueError("HistData returned an unsuccessful status")
-            content = bytes(response.read(MAX_BYTES + 1))
+            content = bytes(response.read(max_bytes + 1))
     except (urllib.error.URLError, OSError):
         raise ValueError("HistData download failed; retry later") from None
     if len(content) > MAX_BYTES:
