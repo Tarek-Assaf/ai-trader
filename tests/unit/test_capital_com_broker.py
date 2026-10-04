@@ -87,9 +87,7 @@ class FakeCapitalClient:
         self.calls.append(("confirm_deal", deal_reference))
         return self.confirm_reply
 
-    def modify_position(
-        self, deal_id: str, payload: Mapping[str, object]
-    ) -> Mapping[str, object]:
+    def modify_position(self, deal_id: str, payload: Mapping[str, object]) -> Mapping[str, object]:
         self.calls.append(("modify_position", (deal_id, payload)))
         row = position(stop_level=float(payload["stopLevel"]))
         self.position_rows = [row]
@@ -199,3 +197,4 @@ def test_modify_close_cancel_and_polling_use_confirmed_references() -> None:
     assert broker.get_positions()[0].deal_id == "deal-1"
     assert broker.get_open_orders()[0]["workingOrderData"]["dealId"] == "work-1"
     assert broker.get_activity(now, now + timedelta(hours=1))[0]["status"] == "ACCEPTED"
+
