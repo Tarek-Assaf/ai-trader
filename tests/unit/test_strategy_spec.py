@@ -183,7 +183,12 @@ def test_engine_has_no_network_file_or_broker_capabilities() -> None:
         elif isinstance(node, ast.ImportFrom) and node.module:
             imported.add(node.module)
         elif isinstance(node, ast.Call):
-            if isinstance(node.func, ast.Name) and node.func.id in {"open", "eval", "exec", "__import__"}:
+            if isinstance(node.func, ast.Name) and node.func.id in {
+                "open",
+                "eval",
+                "exec",
+                "__import__",
+            }:
                 dynamic_calls.add(node.func.id)
 
     assert not any(
