@@ -20,7 +20,10 @@ instruments:
     session:
       source: broker_status_then_rules
       timezone: America/New_York
-      notes: "VERIFY trading hours, daily break and holiday behavior of the CFD"
+      holiday_dates: []
+      early_closes: {}
+      stale_after_seconds: 180
+      notes: "Broker openingHours and snapshot.marketStatus are authoritative; add only owner-verified date overrides."
     typical_spread_points: null      # calibrated by T-017
     news_tags: [fomc, cpi, nfp, pmi, big_tech_earnings, rates]
 
@@ -39,6 +42,9 @@ instruments:
     session:
       source: broker_status_then_rules
       timezone: UTC
-      notes: "VERIFY trading hours, daily break and weekend behavior"
+      holiday_dates: []
+      early_closes: {}
+      stale_after_seconds: 180
+      notes: "Broker openingHours and snapshot.marketStatus are authoritative; add only owner-verified date overrides."
     typical_spread_points: null
     news_tags: [fomc, cpi, nfp, real_yields, usd, geopolitics]
