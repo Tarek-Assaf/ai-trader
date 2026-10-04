@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import re
 import tempfile
 import time
 import urllib.error
@@ -41,6 +42,79 @@ class _FormParser(HTMLParser):
     def handle_endtag(self, tag: str) -> None:
         if tag == "form":
             self.active = False
+
+
+class _PeriodParser(HTMLParser):
+    """Read HistData's visible year/month archive selector for one symbol."""
+
+    _ROUTE = re.compile(
+        r"^/ascii/1-minute-bar-quotes/(nsxusd|xauusd)/(\\d{4})(?:/(\\d{1,2}))?/?$"
+    )
+
+    def __init__(self, symbol: str) -> None:
+        super().__init__()
+        self.symbol = symbol.casefold()
+        self.years: set[int] = set()
+        self.months: dict[int, set[int]] = {}
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag.casefold() != "a":
+            return
+        href = dict(attrs).get("href")
+        if not href:
+            return
+        url = urllib.parse.urljoin(BASE + "/", href)
+        parts = urllib.parse.urlsplit(url)
+        if (
+            parts.scheme != "https"
+            or parts.hostname != "www.histdata.com"
+            or parts.path != "/download-free-forex-historical-data/"
+        ):
+            return
+        match = self._ROUTE.fullmatch(parts.query)
+        if match is None or match.group(1) != self.symbol:
+            return
+        year = int(match.group(2))
+        month = match.group(3)
+        if month is None:
+            self.years.add(year)
+        else:
+            value = int(month)
+            if not 1 <= value <= 12:
+                return
+            self.months.setdefault(year, set()).add(value)
+
+    def periods(self) -> dict[int, set[int] | None]:
+        """Prefer listed month archives; None identifies a year archive."""
+        result: dict[int, set[int] | None] = dict(self.months)
+        for year in self.years:
+            result.setdefault(year, None)
+        return result
+
+
+def list_histdata_periods(
+    symbol: str, pause_seconds: float = 0.0
+) -> dict[int, set[int] | None]:
+    """Read the provider's visible M1 selector to avoid requesting absent months."""
+    if symbol not in {"NSXUSD", "XAUUSD"}:
+        raise ValueError("unsupported HistData symbol")
+    if pause_seconds < 0 or pause_seconds > 3600:
+        raise ValueError("pause_seconds must be between 0 and 3600")
+    page = (
+        f"{BASE}/download-free-forex-historical-data/"
+        f"?/ascii/1-minute-bar-quotes/{symbol.lower()}"
+    )
+    parser = _PeriodParser(symbol)
+    try:
+        parser.feed(_request(page).decode("utf-8"))
+    except UnicodeDecodeError:
+        raise ValueError("HistData period selector is not UTF-8") from None
+    periods = parser.periods()
+    if not periods:
+        raise ValueError("HistData period selector has no matching archives")
+    if pause_seconds:
+        time.sleep(pause_seconds)
+    return periods
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
