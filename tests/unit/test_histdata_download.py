@@ -40,7 +40,10 @@ def test_download_is_verified_atomic_and_cached(
     calls: list[str] = []
 
     def request(
-        url: str, data: bytes | None = None, referer: str | None = None, **kwargs: object
+        url: str,
+        data: bytes | None = None,
+        referer: str | None = None,
+        **kwargs: object,
     ) -> bytes:
         calls.append(url)
         if data is None:
@@ -91,7 +94,11 @@ def test_invalid_month_or_symbol_makes_no_request(
         pytest.fail("invalid inputs must not send a request")
 
     monkeypatch.setattr(hd, "_request", unexpected)
-    for symbol, year, month in (("OTHER", 2026, 8), ("NSXUSD", 2099, 1), ("NSXUSD", 2026, 13)):
+    for symbol, year, month in (
+        ("OTHER", 2026, 8),
+        ("NSXUSD", 2099, 1),
+        ("NSXUSD", 2026, 13),
+    ):
         with pytest.raises(ValueError):
             hd.download_histdata(symbol, year, month, tmp_path)
 
@@ -143,7 +150,7 @@ def test_unexpected_http_status_and_oversized_response_are_rejected(
     monkeypatch.setattr(hd.urllib.request, "build_opener", lambda *args: Opener())
     monkeypatch.setattr(hd, "MAX_BYTES", 4)
     with pytest.raises(ValueError):
-        hd._request(hd.BASE + "/get.php")
+        hd._request(hd.BASE + "/get.php", max_bytes=4)
 
 
 def test_range_download_pauses_between_form_and_archive_request(
@@ -153,7 +160,10 @@ def test_range_download_pauses_between_form_and_archive_request(
     pauses: list[float] = []
 
     def request(
-        url: str, data: bytes | None = None, referer: str | None = None, **kwargs: object
+        url: str,
+        data: bytes | None = None,
+        referer: str | None = None,
+        **kwargs: object,
     ) -> bytes:
         calls.append(url)
         return _form() if data is None else _archive()
@@ -171,7 +181,9 @@ def test_invalid_pause_is_rejected_before_network_request(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        hd, "_request", lambda *args, **kwargs: pytest.fail("invalid pause must not request")
+        hd,
+        "_request",
+        lambda *args, **kwargs: pytest.fail("invalid pause must not request"),
     )
 
     with pytest.raises(ValueError, match="pause_seconds"):
@@ -189,6 +201,7 @@ def test_period_parser_reads_year_and_month_routes_and_prefers_months() -> None:
     ]
     parser.feed("".join(links))
     assert parser.periods() == {2024: None, 2026: {9}}
+
 
 def test_yearly_download_uses_year_route_and_yearly_size_limit(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -232,7 +245,9 @@ def test_yearly_form_rejects_unexpected_month_before_post(
     assert len(calls) == 1
 
 
-def test_yearly_archive_rejects_expansion_over_yearly_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_yearly_archive_rejects_expansion_over_yearly_cap(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(hd, "MAX_YEARLY_M1_EXPANDED_BYTES", 10)
     raw = io.BytesIO()
     with zipfile.ZipFile(raw, "w") as archive:
@@ -249,3 +264,4 @@ def test_invalid_yearly_inputs_make_no_request(
         hd.download_histdata("NSXUSD", 2026, None, tmp_path)
     with pytest.raises(ValueError):
         hd.download_histdata("NSXUSD", 2024, None, tmp_path, timeframe="T")
+
