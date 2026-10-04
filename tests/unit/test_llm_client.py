@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -40,7 +40,7 @@ def config() -> dict[str, Any]:
             "cheap": {
                 "provider": "cheap",
                 "model": "cheap-model",
-                "max_input_tokens": 10,
+                "max_input_tokens": 1000,
                 "max_output_tokens": 2,
                 "input_usd_per_million": 1.0,
                 "output_usd_per_million": 1.0,
@@ -174,8 +174,16 @@ def test_daily_cap_blocks_before_provider_call() -> None:
 
 def test_monthly_cap_is_checked_independently() -> None:
     engine = create_engine("sqlite+pysqlite:///:memory:")
-    usage = ledger(engine, daily="10", monthly="0.000012")
-    usage.reserve(role="prior", model="cheap-model", maximum_cost=Decimal("0.000012"))
+    now = [datetime(2026, 10, 4, 12, tzinfo=UTC)]
+    usage = SqlUsageLedger(
+        engine,
+        daily_cap_usd=Decimal("0.000010"),
+        monthly_cap_usd=Decimal("0.000012"),
+        clock=lambda: now[0],
+    )
+    usage.reserve(role="prior", model="cheap-model", maximum_cost=Decimal("0.000006"))
+    now[0] += timedelta(days=1)
+    usage.reserve(role="prior", model="cheap-model", maximum_cost=Decimal("0.000006"))
 
     with pytest.raises(BudgetExceeded):
         usage.reserve(role="planner", model="cheap-model", maximum_cost=Decimal("0.000001"))
