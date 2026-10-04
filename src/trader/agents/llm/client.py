@@ -78,8 +78,12 @@ class LLMClient:
         self._monotonic = monotonic
         self._lock = RLock()
         try:
-            self.roles = dict(config["roles"])
-            self.fallback = dict(config["fallback"])
+            self.roles: dict[str, str] = {
+                str(role): str(tier) for role, tier in config["roles"].items()
+            }
+            self.fallback: dict[str, str] = {
+                str(name): str(fallback) for name, fallback in config["fallback"].items()
+            }
             health = config["health_probe"]
             self.probe_interval = timedelta(minutes=int(health["interval_minutes"]))
             self.probe_timeout_seconds = float(health["timeout_seconds"])
