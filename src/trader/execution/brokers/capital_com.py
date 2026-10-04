@@ -7,7 +7,6 @@ from collections.abc import Mapping, Sequence
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Protocol
-from urllib.parse import quote
 
 from trader.execution.brokers.base import (
     BrokerError,
@@ -93,9 +92,7 @@ def _position(payload: Mapping[str, object]) -> Position:
         size=size,
         level=level,
         stop_level=_decimal(position.get("stopLevel"), "position.stopLevel", optional=True),
-        profit_level=_decimal(
-            position.get("profitLevel"), "position.profitLevel", optional=True
-        ),
+        profit_level=_decimal(position.get("profitLevel"), "position.profitLevel", optional=True),
     )
 
 
@@ -134,9 +131,7 @@ class CapitalComBroker:
             raise ValueError("epic must not be empty")
         return self._client.market_details(epic)
 
-    def get_activity(
-        self, start: datetime, end: datetime
-    ) -> Sequence[Mapping[str, object]]:
+    def get_activity(self, start: datetime, end: datetime) -> Sequence[Mapping[str, object]]:
         return tuple(self._client.get_activity(start, end))
 
     def place_order(self, order: OrderRequest) -> OrderReceipt:
@@ -267,5 +262,8 @@ class CapitalComBroker:
         with self._write_lock:
             reply = self._client.cancel_working_order(deal_id)
             reference = _required_text(reply.get("dealReference"), "dealReference")
-            self._require_accepted(self._client.confirm_deal(reference), "working-order cancellation")
+            self._require_accepted(
+                self._client.confirm_deal(reference), "working-order cancellation"
+            )
             return reference
+
