@@ -150,7 +150,7 @@ async def test_fred_key_is_redacted_from_provenance_and_response() -> None:
 
     assert parse_qs(urlsplit(seen_url).query)["api_key"] == ["private-fred-key"]
     assert "private-fred-key" not in item.url
-    assert "[REDACTED]" in item.url
+    assert "%5BREDACTED%5D" in item.url
     assert "4.2" in item.content
     engine.dispose()
     cache.close()
