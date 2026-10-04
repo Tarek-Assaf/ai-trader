@@ -159,4 +159,3 @@ def test_activity_range_must_be_utc_aware_and_at_most_one_day() -> None:
     finally:
         client.close()
         http.close()
-
