@@ -142,7 +142,9 @@ def test_invalid_output_routes_to_configured_fallback() -> None:
     assert outcomes == ["invalid_output", "success"]
 
 
-def test_transport_failure_falls_back_without_leaking_exception(caplog: pytest.LogCaptureFixture) -> None:
+def test_transport_failure_falls_back_without_leaking_exception(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     class FailingProvider:
         async def complete(self, **kwargs: Any) -> ProviderReply:
             del kwargs
@@ -214,7 +216,9 @@ def test_anthropic_provider_sends_key_only_in_header_and_maps_response() -> None
         async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as transport:
             provider = AnthropicProvider(api_key="sensitive", client=transport)
             return await provider.complete(
-                model="m", messages=(Message("user", "review"),), schema=Decision,
+                model="m",
+                messages=(Message("user", "review"),),
+                schema=Decision,
                 max_output_tokens=2,
             )
 
@@ -245,7 +249,9 @@ def test_openai_provider_maps_chat_completion_response() -> None:
                 base_url="https://api.example.test/v1", client=transport
             )
             return await provider.complete(
-                model="m", messages=(Message("user", "review"),), schema=Decision,
+                model="m",
+                messages=(Message("user", "review"),),
+                schema=Decision,
                 max_output_tokens=2,
             )
 
@@ -263,7 +269,9 @@ def test_openai_provider_rejects_redirect_and_endpoint_credentials() -> None:
                 base_url="https://api.example.test/v1", client=transport
             )
             await provider.complete(
-                model="m", messages=(Message("user", "review"),), schema=Decision,
+                model="m",
+                messages=(Message("user", "review"),),
+                schema=Decision,
                 max_output_tokens=2,
             )
 
@@ -273,7 +281,9 @@ def test_openai_provider_rejects_redirect_and_endpoint_credentials() -> None:
         OpenAICompatibleProvider(base_url="https://user:pass@example.test/v1")
 
 
-def test_remote_failure_does_not_include_response_body_or_key(caplog: pytest.LogCaptureFixture) -> None:
+def test_remote_failure_does_not_include_response_body_or_key(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     async def handler(request: httpx.Request) -> httpx.Response:
         del request
         return httpx.Response(500, text="secret payload")
@@ -284,7 +294,9 @@ def test_remote_failure_does_not_include_response_body_or_key(caplog: pytest.Log
                 base_url="https://api.example.test/v1", api_key="sensitive", client=transport
             )
             await provider.complete(
-                model="m", messages=(Message("user", "review"),), schema=Decision,
+                model="m",
+                messages=(Message("user", "review"),),
+                schema=Decision,
                 max_output_tokens=2,
             )
 
@@ -310,7 +322,9 @@ def test_oversized_remote_response_is_rejected_while_streaming() -> None:
                 base_url="https://api.example.test/v1", client=transport
             )
             await provider.complete(
-                model="m", messages=(Message("user", "review"),), schema=Decision,
+                model="m",
+                messages=(Message("user", "review"),),
+                schema=Decision,
                 max_output_tokens=2,
             )
 
@@ -326,4 +340,3 @@ def test_prompt_roles_must_be_supported_before_call() -> None:
     with pytest.raises(ValueError, match="known role"):
         asyncio.run(client.complete("planner", (Message("tool", "unsafe"),), Decision))
     assert provider.calls == 0
-

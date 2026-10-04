@@ -131,4 +131,3 @@ class SqlUsageLedger:
             )
             if result.rowcount != 1:
                 raise RuntimeError("LLM usage reservation was not found")
-

@@ -170,9 +170,7 @@ class LLMClient:
         for name, fallback in self.fallback.items():
             if name not in self.tiers or fallback not in self.tiers or name == fallback:
                 raise ValueError("fallbacks must reference a different configured tier")
-    def _select_tier(
-        self, requested: str, excluded: set[str] | None = None
-    ) -> tuple[Tier, bool]:
+    def _select_tier(self, requested: str, excluded: set[str] | None = None) -> tuple[Tier, bool]:
         now = self._clock()
         visited: set[str] = set()
         excluded = excluded or set()
@@ -231,9 +229,7 @@ class LLMClient:
             if len(encoded) > tier.max_input_tokens:
                 raise LLMError("request exceeds the configured input budget")
             reserve = tier.maximum_cost()
-            reservation_id = self.ledger.reserve(
-                role=role, model=tier.model, maximum_cost=reserve
-            )
+            reservation_id = self.ledger.reserve(role=role, model=tier.model, maximum_cost=reserve)
             started = self._monotonic()
             try:
                 reply = await provider.complete(
@@ -320,6 +316,7 @@ class LLMClient:
 
     async def run_health_probes(self) -> dict[str, bool]:
         """Probe each configured tier once; caller schedules this at the configured interval."""
+
         class Probe(BaseModel):
             ok: bool
 
@@ -381,8 +378,12 @@ class LLMClient:
             )
         except LLMError:
             self.ledger.settle(
-                reservation_id, input_tokens=0, output_tokens=0, cost_usd=Decimal(0),
-                latency_ms=max(0, int((self._monotonic() - started) * 1000)), outcome="error",
+                reservation_id,
+                input_tokens=0,
+                output_tokens=0,
+                cost_usd=Decimal(0),
+                latency_ms=max(0, int((self._monotonic() - started) * 1000)),
+                outcome="error",
             )
             raise ModelUnavailable("health probe failed safely") from None
         if (
@@ -396,8 +397,12 @@ class LLMClient:
             or reply.output_tokens > probe_output_limit
         ):
             self.ledger.settle(
-                reservation_id, input_tokens=0, output_tokens=0, cost_usd=Decimal(0),
-                latency_ms=max(0, int((self._monotonic() - started) * 1000)), outcome="error",
+                reservation_id,
+                input_tokens=0,
+                output_tokens=0,
+                cost_usd=Decimal(0),
+                latency_ms=max(0, int((self._monotonic() - started) * 1000)),
+                outcome="error",
             )
             raise LLMError("probe token use exceeds configured limits")
         cost = tier.actual_cost(reply.input_tokens, reply.output_tokens)
@@ -405,17 +410,29 @@ class LLMClient:
             value = schema.model_validate_json(reply.text)
         except ValidationError:
             self.ledger.settle(
-                reservation_id, input_tokens=reply.input_tokens, output_tokens=reply.output_tokens,
-                cost_usd=cost, latency_ms=max(0, int((self._monotonic() - started) * 1000)),
+                reservation_id,
+                input_tokens=reply.input_tokens,
+                output_tokens=reply.output_tokens,
+                cost_usd=cost,
+                latency_ms=max(0, int((self._monotonic() - started) * 1000)),
                 outcome="invalid_output",
             )
             raise InvalidModelOutput("health probe response was invalid") from None
         latency = max(0, int((self._monotonic() - started) * 1000))
         self.ledger.settle(
-            reservation_id, input_tokens=reply.input_tokens,
-            output_tokens=reply.output_tokens, cost_usd=cost, latency_ms=latency,
+            reservation_id,
+            input_tokens=reply.input_tokens,
+            output_tokens=reply.output_tokens,
+            cost_usd=cost,
+            latency_ms=latency,
             outcome="success",
         )
-        return TypedResult(value, "health_probe", tier.model, reply.input_tokens,
-                           reply.output_tokens, cost, latency)
-
+        return TypedResult(
+            value,
+            "health_probe",
+            tier.model,
+            reply.input_tokens,
+            reply.output_tokens,
+            cost,
+            latency,
+        )

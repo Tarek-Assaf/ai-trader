@@ -76,5 +76,3 @@ class UsageLedger(Protocol):
         latency_ms: int,
         outcome: str,
     ) -> None: ...
-
-

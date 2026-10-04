@@ -25,7 +25,11 @@ def test_usage_ledger_enforces_daily_and_monthly_caps() -> None:
 
     first = ledger.reserve(role="planner", model="m", maximum_cost=Decimal("2.5"))
     ledger.settle(
-        first, input_tokens=20, output_tokens=10, cost_usd=Decimal("1.25"), latency_ms=40,
+        first,
+        input_tokens=20,
+        output_tokens=10,
+        cost_usd=Decimal("1.25"),
+        latency_ms=40,
         outcome="success",
     )
     second = ledger.reserve(role="planner", model="m", maximum_cost=Decimal("2.75"))
@@ -54,7 +58,11 @@ def test_usage_ledger_preserves_full_reservation_after_uncertain_failure() -> No
     )
     reservation = ledger.reserve(role="planner", model="m", maximum_cost=Decimal("0.25"))
     ledger.settle(
-        reservation, input_tokens=0, output_tokens=0, cost_usd=Decimal(0), latency_ms=5,
+        reservation,
+        input_tokens=0,
+        output_tokens=0,
+        cost_usd=Decimal(0),
+        latency_ms=5,
         outcome="error",
     )
 
@@ -67,4 +75,3 @@ def test_usage_ledger_preserves_full_reservation_after_uncertain_failure() -> No
             )
         ).one()
     assert row == (Decimal("0.25000000"), Decimal("0.25000000"), "error")
-
