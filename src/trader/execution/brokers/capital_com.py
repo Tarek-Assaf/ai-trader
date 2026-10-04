@@ -24,6 +24,10 @@ class _CapitalComClient(Protocol):
     @property
     def environment(self) -> str: ...
 
+    def account_info(self) -> Mapping[str, object]: ...
+
+    def market_details(self, epic: str) -> Mapping[str, object]: ...
+
     def get_positions(self) -> list[Mapping[str, object]]: ...
 
     def get_working_orders(self) -> list[Mapping[str, object]]: ...
@@ -115,8 +119,20 @@ class CapitalComBroker:
     def get_positions(self) -> Sequence[Position]:
         return tuple(_position(item) for item in self._client.get_positions())
 
-    def get_working_orders(self) -> Sequence[Mapping[str, object]]:
+    def get_open_orders(self) -> Sequence[Mapping[str, object]]:
         return tuple(self._client.get_working_orders())
+
+    def get_working_orders(self) -> Sequence[Mapping[str, object]]:
+        """Compatibility name for the Capital.com working-orders endpoint."""
+        return self.get_open_orders()
+
+    def get_account(self) -> Mapping[str, object]:
+        return self._client.account_info()
+
+    def get_market_details(self, epic: str) -> Mapping[str, object]:
+        if not epic.strip():
+            raise ValueError("epic must not be empty")
+        return self._client.market_details(epic)
 
     def get_activity(
         self, start: datetime, end: datetime
@@ -198,8 +214,13 @@ class CapitalComBroker:
     def modify_position(
         self, deal_id: str, *, stop_level: Decimal, profit_level: Decimal | None = None
     ) -> str:
-        if not deal_id.strip() or not stop_level.is_finite() or stop_level <= 0:
-            raise ValueError("deal_id and a positive finite stop_level are required")
+        if (
+            not deal_id.strip()
+            or not isinstance(stop_level, Decimal)
+            or not stop_level.is_finite()
+            or stop_level <= 0
+        ):
+            raise ValueError("deal_id and a positive finite Decimal stop_level are required")
         with self._write_lock:
             existing = next((p for p in self.get_positions() if p.deal_id == deal_id), None)
             if existing is None or existing.stop_level is None:
@@ -217,7 +238,11 @@ class CapitalComBroker:
                 "stopLevel": float(stop_level),
             }
             if profit_level is not None:
-                if not profit_level.is_finite() or profit_level <= 0:
+                if (
+                    not isinstance(profit_level, Decimal)
+                    or not profit_level.is_finite()
+                    or profit_level <= 0
+                ):
                     raise ValueError("profit_level must be finite and positive")
                 payload["profitLevel"] = float(profit_level)
             reply = self._client.modify_position(deal_id, payload)
