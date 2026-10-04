@@ -104,7 +104,7 @@ class HttpResearchSource(ABC):
             raise ValueError("invalid HTTP source limits")
         self.name = name.strip()
         self._resolve_dns = resolve_dns or resolve_public_host
-        self.endpoint = self._validate_url(endpoint, allowed_hosts, resolve_dns)
+        self.endpoint = self._validate_url(endpoint, allowed_hosts, self._resolve_dns)
         self.allowed_hosts = {host.casefold() for host in allowed_hosts}
         self.cache = cache
         self.repository = repository
