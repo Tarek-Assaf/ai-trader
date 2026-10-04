@@ -76,9 +76,10 @@ def _request(
 
 
 def _validate_archive(
-    raw: bytes, symbol: str, year: int, month: int, timeframe: str = "M1"
+    raw: bytes, symbol: str, year: int, month: int | None, timeframe: str = "M1"
 ) -> None:
-    expected = f"DAT_ASCII_{symbol}_{timeframe}_{year:04d}{month:02d}.csv"
+    period = f"{year:04d}{month:02d}" if month is not None else f"{year:04d}"
+    expected = f"DAT_ASCII_{symbol}_{timeframe}_{period}.csv"
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as archive:
             expanded_limit = MAX_BYTES if timeframe == "M1" else 1024 * 1024 * 1024
