@@ -121,7 +121,12 @@ def test_sizing_supports_each_configured_instrument(
 ) -> None:
     decision = size_position(
         _intent(symbol=symbol),
-        _terms(symbol, value_per_point=value_per_point, contract_size=contract_size),
+        _terms(
+            symbol,
+            value_per_point=value_per_point,
+            contract_size=contract_size,
+            max_size=Decimal("0.1") if symbol == "XAUUSD" else Decimal("100"),
+        ),
         account_equity=Decimal("10000"),
         account_currency="USD",
         current_margin_used=Decimal("0"),
