@@ -40,4 +40,3 @@ def test_llm_trade_intent_cannot_supply_size_stage_cap_or_quality_score() -> Non
     fields = set(TradeIntent.__dataclass_fields__)
 
     assert fields.isdisjoint({"size", "stage_size_cap", "trade_quality_score"})
-
