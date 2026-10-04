@@ -44,8 +44,8 @@ def test_sanitizer_removes_active_markup_controls_and_closing_tag_injection() ->
 
     assert "steal" not in item.content
     assert "\u200b" not in item.content
-    assert "&lt;/untrusted_content&gt;" in item.untrusted_block
-    assert "&lt;tool&gt;" in item.untrusted_block
+    assert item.untrusted_block.count("</untrusted_content>") == 1
+    assert "<tool>" not in item.untrusted_block
     assert 'api_key=%5BREDACTED%5D' in item.url
     assert "do-not-store" not in item.url
     assert hashlib.sha256(item.content.encode()).hexdigest() == item.content_hash
