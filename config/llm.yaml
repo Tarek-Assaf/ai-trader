@@ -1,0 +1,64 @@
+version: 1
+
+# Prices are USD per million tokens. Recheck when changing model or provider.
+providers:
+  anthropic:
+    kind: anthropic
+    base_url: https://api.anthropic.com
+    api_key_env: ANTHROPIC_API_KEY
+  openai:
+    kind: openai_compatible
+    base_url: https://api.openai.com/v1
+    api_key_env: OPENAI_API_KEY
+  local:
+    kind: openai_compatible
+    base_url: http://127.0.0.1:11434/v1
+    api_key_env: ""
+
+tiers:
+  cheap:
+    provider: anthropic
+    model: claude-haiku-4-5-20251001
+    max_input_tokens: 16000
+    max_output_tokens: 500
+    input_usd_per_million: 1.0
+    output_usd_per_million: 5.0
+  mid:
+    provider: anthropic
+    model: claude-sonnet-5-5
+    max_input_tokens: 16000
+    max_output_tokens: 1200
+    input_usd_per_million: 2.0
+    output_usd_per_million: 10.0
+  strong:
+    provider: anthropic
+    model: claude-sonnet-5-5
+    max_input_tokens: 16000
+    max_output_tokens: 1800
+    input_usd_per_million: 2.0
+    output_usd_per_million: 10.0
+
+fallback:
+  cheap: mid
+  mid: cheap
+  strong: mid
+
+roles:
+  router_intent: cheap
+  data_summarizer: cheap
+  news_macro_analyst: mid
+  technical_analyst: mid
+  strategist: strong
+  critic: strong
+  performance_analyst: mid
+  reporter_commentary: cheap
+
+budget:
+  daily_usd_cap: 4.0
+  monthly_usd_cap: 80.0
+health_probe:
+  interval_minutes: 15
+  timeout_seconds: 20
+  failures_to_open: 3
+  cooldown_minutes: 10
+

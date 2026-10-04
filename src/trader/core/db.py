@@ -4,7 +4,20 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from sqlalchemy import JSON, BigInteger, Column, DateTime, Identity, MetaData, String, Table, func
+from sqlalchemy import (
+    JSON,
+    BigInteger,
+    Column,
+    DateTime,
+    Identity,
+    Index,
+    Integer,
+    MetaData,
+    Numeric,
+    String,
+    Table,
+    func,
+)
 from sqlalchemy.dialects.postgresql import JSONB
 
 metadata = MetaData()
@@ -53,3 +66,19 @@ def _record_table(name: str) -> Table:
 
 
 tables: dict[str, Table] = {name: _record_table(name) for name in TABLE_NAMES}
+
+tables["llm_usage"] = Table(
+    "llm_usage",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    Column("role", String(120), nullable=False),
+    Column("model", String(240), nullable=False),
+    Column("input_tokens", Integer, nullable=False, server_default="0"),
+    Column("output_tokens", Integer, nullable=False, server_default="0"),
+    Column("cost_usd", Numeric(18, 8), nullable=False, server_default="0"),
+    Column("reserved_cost_usd", Numeric(18, 8), nullable=False),
+    Column("latency_ms", Integer, nullable=False, server_default="0"),
+    Column("outcome", String(32), nullable=False),
+)
+Index("ix_llm_usage_created_at", tables["llm_usage"].c.created_at)
