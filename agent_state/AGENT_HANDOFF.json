@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 69,
+  "turn": "codex",
+  "revision": 70,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1071,7 +1071,8 @@
         "Claude review of PR #31 (V-085): changes_requested cycle 1 - see log.",
         "PR #31 review cycle 1 addressed: broker minimum stop uses minNormalStopOrLimitDistance (fallback minStopOrProfitDistance), BUY stops use bid and spread-aware margin, and preflight is read-only before the one-shot marker.",
         "CI run 37222556116 on head b7d710eff3748a36b1c31744a4a5c1f8b2e399a7: all 250 tests passed; lint/format, typecheck, migrations, handoff/sequence validation, secret scan, image build, ROLE=all health, mounted-volume chown refusal, backup/restore and role compose checks passed (V-086).",
-        "Codex addressed Claude Full review cycle 1 (V-085); handing PR #31 back to Claude for cycle 2. No broker order was sent and no Pod data changed."
+        "Codex addressed Claude Full review cycle 1 (V-085); handing PR #31 back to Claude for cycle 2. No broker order was sent and no Pod data changed.",
+        "Claude Full review of PR #31 cycle 2 PASS (V-087); owner-run demo round trip still pending."
       ],
       "completion_note": "Claude Full review cycle 1 (V-085) changes are implemented in PR #31: the script reads the correct minimum-stop field, computes BUY stops from bid with a spread-aware margin, validates the tightened stop before any order attempt, and offers --preflight without creating the one-shot marker or placing an order. Explicitly rejected opens are reported as rejected_flat only after flat state is verified; the marker prevents retries pending owner review. CI run 37222556116 passed all 250 tests and every container check. The authorized demo round trip remains unrun; T-024 remains blocked pending the owner-run Pod result after merge/redeploy. No broker order or Pod data changed."
     },
@@ -3046,6 +3047,16 @@
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "Claude requests changes or script, runbook, tests, or safety guards change."
+    },
+    {
+      "id": "V-087",
+      "subject": "Q-029 demo round-trip script, cycle 2 (PR #31)",
+      "method": "Re-read the changed script, preflight path and tests against the four cycle-1 findings.",
+      "result": "pass",
+      "evidence": "Minimum stop distance now from minNormalStopOrLimitDistance with minStopOrProfitDistance fallback, POINTS only; BUY stop computed from bid with margin max(5 ticks, spread, 10% of min distance) and the tightened stop re-checked against the minimum distance; --preflight returns before the one-shot marker or any order and has a test proving no marker; runbook updated; CI run 37222556116 green. Residual risk: real broker field values are unverified until the owner runs --preflight on the Pod.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "script or dealing-rule handling changes"
     }
   ],
   "blockers": [
@@ -4608,6 +4619,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude Full review cycle 1 (V-085) on PR #31: use the correct minimum-stop rule/fallback and POINTS unit, calculate the BUY stop from bid with spread-aware margin and ensure the tightened stop remains valid, add read-only --preflight, and clarify confirmed-flat broker rejection handling without automatic retries. Added regression coverage and updated the RunPod runbook. CI run 37222556116 passed all 250 tests and all container checks, including mounted volumes refusing chown (V-086). No order or Pod data changed. Handing PR #31 to Claude for Full review cycle 2."
+    },
+    {
+      "revision": 70,
+      "ts": "2026-10-04T18:10:00Z",
+      "agent": "claude",
+      "action": "review_q029_pass",
+      "task_ids": [
+        "T-024"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Full review of PR #31 cycle 2 passed (V-087). Owner runs 'python scripts/demo_round_trip.py --preflight' on the Pod first, then the single order command. T-024 stays blocked on that owner-run round trip. Turn to Codex."
     }
   ],
   "project_summary": "T-082 importer and T-080/Q-024 Pod import/rerun/lake QA are complete; the 360-row differences are exact duplicate rows and lake timestamp uniqueness/month-overlap QA passed, while raw gaps remain unclassified against market hours. T-041 and T-042 are reviewed and merged. PR #31 prepares the owner-authorized Q-029 one-time Capital.com demo round trip with a guard, offline tests and runbook; CI run 37220748149 is green. The demo order has not been run, so T-024 remains blocked until the owner runs the command after merge/redeploy and shares its redacted report."
