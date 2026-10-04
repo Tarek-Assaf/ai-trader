@@ -86,7 +86,9 @@ def test_yearly_import_resumes_without_reimporting_cached_months(
         imports.append(source.name)
         return _report()
 
-    monkeypatch.setattr(histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: None})
+    monkeypatch.setattr(
+        histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: None}
+    )
     monkeypatch.setattr(histdata_range, "download_histdata", fake_download)
     monkeypatch.setattr(histdata_range, "import_histdata", fake_import)
     args = ("NSXUSD", 2024, 2024, raw, tmp_path / "lake", tmp_path / "lineage")
@@ -104,7 +106,10 @@ def test_yearly_import_resumes_without_reimporting_cached_months(
     assert downloads == [(2024, None)]
     assert imports == [f"DAT_ASCII_NSXUSD_M1_2024{month:02d}.csv" for month in range(1, 13)]
     assert manifest["completed_months"]["NSXUSD:2024-01"]["m1_archive"] == archive.name
-    assert manifest["completed_months"]["NSXUSD:2024-02"]["m1_sha256"] == manifest["archives"][archive.name]["sha256"]
+    assert (
+        manifest["completed_months"]["NSXUSD:2024-02"]["m1_sha256"]
+        == manifest["archives"][archive.name]["sha256"]
+    )
 
 
 def test_yearly_conflict_uses_only_monthly_ticks_for_that_month(
@@ -131,7 +136,9 @@ def test_yearly_conflict_uses_only_monthly_ticks_for_that_month(
         rebuilt.append(source.name)
         return _report(rows=3)
 
-    monkeypatch.setattr(histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: None})
+    monkeypatch.setattr(
+        histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: None}
+    )
     monkeypatch.setattr(histdata_range, "download_histdata", fake_download)
     monkeypatch.setattr(histdata_range, "import_histdata", fake_import)
     monkeypatch.setattr(histdata_range, "rebuild_histdata_ticks", fake_rebuild)
@@ -164,7 +171,9 @@ def test_monthly_archives_are_used_when_listed_and_missing_months_are_not_reques
         path.write_bytes(path.name.encode())
         return path
 
-    monkeypatch.setattr(histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: {1}})
+    monkeypatch.setattr(
+        histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: {1}}
+    )
     monkeypatch.setattr(histdata_range, "download_histdata", fake_download)
     monkeypatch.setattr(histdata_range, "import_histdata", lambda *_args: _report())
 
@@ -180,13 +189,17 @@ def test_monthly_archives_are_used_when_listed_and_missing_months_are_not_reques
 def test_dry_run_returns_provider_plan_without_touching_disk(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    monkeypatch.setattr(histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: None})
+    monkeypatch.setattr(
+        histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: None}
+    )
     result = histdata_range.import_histdata_range(
         "NSXUSD", 2024, 2024, tmp_path / "raw", tmp_path / "lake", tmp_path / "lineage",
         pause_seconds=0, as_of=datetime(2025, 1, 1, tzinfo=UTC), dry_run=True,
     )
     assert result["status"] == "planned"
-    assert result["period_plan"] == [{"year": 2024, "mode": "yearly", "months": [f"2024{m:02d}" for m in range(1, 13)]}]
+    assert result["period_plan"] == [
+        {"year": 2024, "mode": "yearly", "months": [f"2024{m:02d}" for m in range(1, 13)]}
+    ]
     assert not (tmp_path / "raw").exists()
 
 
@@ -196,7 +209,9 @@ def test_failed_year_is_reported_for_every_unfinished_month(
     def fail_download(*_args, **_kwargs):
         raise ValueError("year archive unavailable")
 
-    monkeypatch.setattr(histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: None})
+    monkeypatch.setattr(
+        histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2024: None}
+    )
     monkeypatch.setattr(histdata_range, "download_histdata", fail_download)
     result = histdata_range.import_histdata_range(
         "NSXUSD", 2024, 2024, tmp_path / "raw", tmp_path / "lake", tmp_path / "lineage",
@@ -204,3 +219,39 @@ def test_failed_year_is_reported_for_every_unfinished_month(
     )
     assert result["status"] == "partial"
     assert [item["month"] for item in result["rejected_months"]] == ["202401", "202402"]
+
+
+def test_partial_first_year_marks_absent_edge_months_unavailable(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    raw = tmp_path / "raw"
+    archive_path = raw / "DAT_ASCII_NSXUSD_M1_2010.zip"
+    archive_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(archive_path, "w") as archive:
+        archive.writestr(
+            "DAT_ASCII_NSXUSD_M1_2010.csv",
+            "20101103 120000;100;101;99;100;0\n"
+            "20101203 120000;100;101;99;100;0\n",
+        )
+    monkeypatch.setattr(
+        histdata_range, "list_histdata_periods", lambda *_args, **_kwargs: {2010: None}
+    )
+    monkeypatch.setattr(
+        histdata_range, "download_histdata", lambda *_args, **_kwargs: archive_path
+    )
+    imported: list[str] = []
+
+    def fake_import(source: Path, symbol: str, lake: Path, lineage: Path):
+        imported.append(source.name)
+        return _report()
+
+    monkeypatch.setattr(histdata_range, "import_histdata", fake_import)
+    result = histdata_range.import_histdata_range(
+        "NSXUSD", 2010, 2010, raw, tmp_path / "lake", tmp_path / "lineage",
+        pause_seconds=0, as_of=datetime(2011, 1, 1, tzinfo=UTC),
+    )
+    assert result["status"] == "ok"
+    assert result["imported_months"] == ["201011", "201012"]
+    assert result["unavailable_months"] == [f"2010{month:02d}" for month in range(1, 11)]
+    assert result["rejected_months"] == []
+    assert imported == ["DAT_ASCII_NSXUSD_M1_201011.csv", "DAT_ASCII_NSXUSD_M1_201012.csv"]
