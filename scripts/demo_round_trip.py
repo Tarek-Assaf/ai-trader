@@ -149,7 +149,7 @@ def _check_environment() -> EnvironmentSettings:
 
 def _market_inputs(
     client: ObservedTradingClient, config_path: Path
-) -> tuple[Decimal, Decimal, Decimal, Decimal, str]:
+) -> tuple[Decimal, Decimal, Decimal, Decimal, str, Decimal]:
     raw_config = load_config_file(config_path).model_dump()
     mapper = InstrumentMapper(raw_config, client)
     terms = mapper.get("NAS100")
