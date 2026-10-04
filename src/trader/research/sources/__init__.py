@@ -11,8 +11,8 @@ from trader.research.sources.adapters import (
 from trader.research.sources.base import (
     HttpResearchSource,
     InvalidSourceResponse,
-    ResearchRepository,
     Reliability,
+    ResearchRepository,
     SourceError,
 )
 
