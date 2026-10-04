@@ -13,7 +13,7 @@ import sys
 import time
 import uuid
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import datetime, UTC
 from decimal import Decimal, ROUND_FLOOR
 from pathlib import Path
 from typing import Any
