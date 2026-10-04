@@ -98,3 +98,11 @@ Run again with `--symbol XAUUSD`. A `partial` status lists months that could not
 
 Sources: [HistData NSXUSD August archive](https://www.histdata.com/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/nsxusd/2026/8)
 and [HistData XAUUSD August archive](https://www.histdata.com/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/xauusd/2026/8).
+
+## T-082: yearly M1 archive selector verification
+
+Checked the live HistData ASCII selector in the rendered site on 2026-10-04. The NSXUSD M1 catalog displayed yearly links for 2010–2025 and monthly links for 2026. The visible final page for the 2024 year route (/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/nsxusd/2024) reported Year/Month 2024 and the filename HISTDATA_COM_ASCII_NSXUSD_M1_2024.zip. The September 2026 route reported Year/Month 202609 and HISTDATA_COM_ASCII_NSXUSD_M1_202609.zip. The selector showed NSXUSD beginning in November 2010 and XAUUSD beginning in March 2009.
+
+The older-year tick fallback was also checked in the rendered site: /download-free-forex-historical-data/?/ascii/tick-data-quotes/nsxusd/2024/1 displayed TimeFrame Tick Data, Year/Month 202401, and HISTDATA_COM_ASCII_NSXUSD_T_202401.zip. Each conflicted month can therefore request its own tick archive; if HistData does not offer a requested month, the importer rejects that month without writing M1 rows.
+
+The downloader uses the form endpoint /get.php with required fields fxpair, date, platform, timeframe, and the in-memory tk token. Monthly forms also require datemonth=YYYYMM; the yearly form accepts datemonth only when absent or empty. The token value is never written to this report, logs, or manifest. Year archives are bounded at 512 MiB compressed and 2 GiB expanded (annual M1 only); monthly M1 retains the 128 MiB archive / 128 MiB expanded caps. These bounds prevent unbounded response or ZIP expansion while allowing one annual M1 file.
