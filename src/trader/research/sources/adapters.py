@@ -69,12 +69,12 @@ class URLFetchSource(HttpResearchSource):
         url = query.get("url", "")
         return url, {}, {"Accept": "text/html, text/plain;q=0.9"}
 
-    def parse_response(self, body: bytes) -> list[tuple[str, str]]:
+    def parse_response(self, body: bytes, request_url: str) -> list[tuple[str, str]]:
         try:
             text = body.decode("utf-8")
         except UnicodeDecodeError:
             raise InvalidSourceResponse("URL response must be UTF-8 text") from None
-        return [(self.endpoint, text)]
+        return [(request_url, text)]
 
 
 class RSSSource(HttpResearchSource):
@@ -109,8 +109,9 @@ class RSSSource(HttpResearchSource):
         del query
         return self.endpoint, {}, {"Accept": "application/rss+xml, application/atom+xml, text/xml"}
 
-    def parse_response(self, body: bytes) -> list[tuple[str, str]]:
-        upper = body[:4096].upper()
+    def parse_response(self, body: bytes, request_url: str) -> list[tuple[str, str]]:
+        del request_url
+        upper = body.upper()
         if b"<!DOCTYPE" in upper or b"<!ENTITY" in upper:
             raise InvalidSourceResponse("RSS response contains a forbidden declaration")
         try:
@@ -178,12 +179,12 @@ class JsonRecordsSource(HttpResearchSource):
     ) -> tuple[str, Mapping[str, str], Mapping[str, str]]:
         return self.endpoint, query, _authorization(self.api_key)
 
-    def parse_response(self, body: bytes) -> list[tuple[str, str]]:
+    def parse_response(self, body: bytes, request_url: str) -> list[tuple[str, str]]:
         payload = require_json_object(body)
         rows = as_records(payload, self.records_key)
         results: list[tuple[str, str]] = []
         for row in rows[:100]:
-            url = _https_url(row.get("url", self.endpoint))
+            url = _https_url(row.get("url", request_url))
             selected = {
                 field: value
                 for field in self.fields
@@ -235,7 +236,8 @@ class WebSearchSource(HttpResearchSource):
             raise ValueError("web search query is required")
         return self.endpoint, {"q": term}, _authorization(self.api_key)
 
-    def parse_response(self, body: bytes) -> list[tuple[str, str]]:
+    def parse_response(self, body: bytes, request_url: str) -> list[tuple[str, str]]:
+        del request_url
         rows = as_records(require_json_object(body), "results")
         results = []
         for row in rows[:100]:
