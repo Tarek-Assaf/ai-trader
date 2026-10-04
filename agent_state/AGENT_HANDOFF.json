@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 55,
+  "turn": "codex",
+  "revision": 56,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1911,7 +1911,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-05"
       ],
@@ -1947,7 +1947,7 @@
         "Local focused importer tests: 26 passed; focused Ruff check/format and mypy on histdata_range.py passed.",
         "GitHub Actions CI run 37195053072 passed on code head 328f3dbc4dfceb9044cde2992abf6593b6526467: lint/format, mypy, migrations, tests, handoff validation and append-only sequence validation, secret scan, image build and all container checks."
       ],
-      "completion_note": "Implementation is ready for Claude's Light review. Year and current-month routes were confirmed from the visible HistData selector; code uses existing monthly archives whenever the provider lists months, and yearly archives otherwise. Annual M1 ZIP and expansion caps are 512 MiB and 2 GiB. The importer splits and resumes by month, records first-seen hashes as cache integrity only, and falls back to that month's ticks only for M1-conflict months. No new dependency was added and no pod data was touched. Remaining acceptance is the post-merge NSXUSD/XAUUSD pod import, zero-row rerun, and recorded row/gap/overlap QA through the existing open Q-024."
+      "completion_note": "Implementation is ready for Claude's Light review. Year and current-month routes were confirmed from the visible HistData selector; code uses existing monthly archives whenever the provider lists months, and yearly archives otherwise. Annual M1 ZIP and expansion caps are 512 MiB and 2 GiB. The importer splits and resumes by month, records first-seen hashes as cache integrity only, and falls back to that month's ticks only for M1-conflict months. No new dependency was added and no pod data was touched. Remaining acceptance is the post-merge NSXUSD/XAUUSD pod import, zero-row rerun, and recorded row/gap/overlap QA through the existing open Q-024. Claude Light review passed (V-073); post-merge pod import and zero-row rerun remain tracked in Q-024."
     }
   ],
   "decisions": [
@@ -2872,6 +2872,16 @@
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "Claude requests changes or archive selection, yearly splitting, manifest/resume, tick fallback, selector evidence, caps, or tests change."
+    },
+    {
+      "id": "V-073",
+      "subject": "T-082 Light-tier review of yearly HistData importer",
+      "method": "Reviewed diff of histdata_download.py, histdata_range.py, import_histdata.py, QA report and RunPod README against T-082 acceptance criteria and docs/process_fastlane.md Light tier; skimmed risky spots (network, writes, logging).",
+      "result": "pass",
+      "evidence": "Fixed host and no-redirect request path unchanged; yearly form rejects unexpected fields/month; yearly caps 512 MiB zip / 2 GiB expanded recorded in QA report; selector parser restricted to www.histdata.com NSXUSD/XAUUSD routes; monthly archives take precedence; per-month completion manifest with first-seen hashes labelled cache integrity only; conflict months use only that month's ticks or are rejected; dry-run plan added; no token value logged or stored; CI run 37195053072 green on code head 328f3db (head db6cc3f is handoff-only). Pod import acceptance remains in Q-024.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "archive selection, yearly splitting, manifest/resume, tick fallback, caps or downloader allow-list change."
     }
   ],
   "blockers": [
@@ -4171,7 +4181,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Completed T-082 implementation on Light-tier PR #24 (downloader allow-list unchanged). Verified visible HistData yearly M1, monthly M1 and older-year monthly tick selectors; implemented bounded yearly downloads, monthly-preferred selector planning, calendar-month split/import/resume, first-seen cache-integrity hashes, per-month conflict fallback to ticks, dry-run planning and updated one-command-per-symbol RunPod instructions. Local focused suite: 26 passed; focused Ruff and mypy passed. CI run 37195053072 passed all quality, type, test, handoff/sequence, secret scan, image and container checks on code head 328f3dbc4dfceb9044cde2992abf6593b6526467. Recorded V-072. No pod data touched; post-merge import, zero-row rerun and row/gap/overlap QA remain pending Q-024. Handing to Claude for Light review."
+    },
+    {
+      "revision": 56,
+      "ts": "2026-10-04T10:40:00Z",
+      "agent": "claude",
+      "action": "review_t082_pass",
+      "task_ids": [
+        "T-082"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-082 yearly HistData importer (Light review, no changes, V-073). Enabling auto-merge on PR #24. Turn to Codex; post-merge pod import stays under Q-024."
     }
   ],
-  "project_summary": "T-082 HistData yearly archive support is implemented on Light-tier PR #24 and code CI run 37195053072 passed; Claude review is next. The live selector evidence, bounded annual archive path, monthly fallback, per-month resume and conflict-to-ticks behavior are recorded in the PR. No pod import has been run. Q-024 and T-080 remain pending the owner/Claude-driven post-merge import and zero-row rerun. Next pod-free queue work after review is T-015, then T-016."
+  "project_summary": "T-082 HistData yearly archive support passed Claude Light review (V-073) and PR #24 is set to auto-merge. No pod import has been run; Q-024 and T-080 remain pending the post-merge import and zero-row rerun. Next pod-free queue work is T-015, then T-016."
 }
