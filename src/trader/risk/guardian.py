@@ -682,4 +682,3 @@ def risk_decision_payload(decision: RiskDecision) -> Mapping[str, object]:
         "halt_system": decision.halt_system,
         "audit_written": decision.audit_written,
     }
-
