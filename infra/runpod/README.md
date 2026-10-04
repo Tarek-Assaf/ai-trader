@@ -106,18 +106,24 @@ The script observes the demo stream for 90 seconds and prints one redacted JSON 
 
 ## 8. Import HistData history
 
-After the image containing `scripts/import_histdata.py` is deployed, run one symbol at a time in the pod terminal. Replace `2000` with the earliest year offered for that symbol by HistData. The importer ends at the last completed month even when the current year is selected:
+The importer reads HistData's live archive selector before downloading. It uses yearly M1 ZIPs where only yearly archives are listed and monthly ZIPs where months are listed. Use a dry run first to see the provider's current coverage; absent early months and years are not requested. The selector currently shows NSXUSD from 2010 (first available month November) and XAUUSD from 2009 (first available month March). Do not substitute a guessed start year.
 
 ```sh
 cd /app
-python scripts/import_histdata.py --symbol NSXUSD --from-year 2000 --through-year 2026 --pause-seconds 1 \
+python scripts/import_histdata.py --symbol NSXUSD --from-year 2010 --through-year 2026 --pause-seconds 1 --dry-run
+```
+
+Then run one symbol at a time. The importer ends at the last completed month, even when the current year is selected:
+
+```sh
+python scripts/import_histdata.py --symbol NSXUSD --from-year 2010 --through-year 2026 --pause-seconds 1 \
   --raw /workspace/data/raw/histdata --lake /workspace/data/lake \
   --lineage /workspace/data_lineage
 ```
 
-Run the same command again with `--symbol XAUUSD`. Do not run multiple import commands at the same time against the same volume. The process downloads one archive at a time, pauses between HTTP requests and uncached archives, reuses verified cached ZIPs, and saves its checksum and completed-month manifest under `/workspace/data/raw/histdata/sha256-manifest.json`. A rerun verifies cached ZIPs against the manifest, skips completed months, and leaves existing Parquet rows unchanged.
+For Gold, first inspect its available periods and then use the same command with `--symbol XAUUSD --from-year 2009`. Do not run multiple import commands at the same time against the same volume. A yearly archive is downloaded once, split into isolated month CSVs, and recorded as completed month-by-month; conflicted M1 months use their corresponding monthly tick archive or are rejected without writing M1 rows. Completed months are skipped on reruns, while the yearly ZIP is hash-checked from the mounted cache.
 
-The two August 2026 M1 checksums and two tick checksums in the manifest come from the reviewed HistData QA evidence. For other months, the importer pins the archive's SHA-256 when first downloaded and checks it on later runs. This catches cache corruption or replacement; it is not independent verification of HistData's source file. The summary reports imported and skipped months, rows read/written, invalid/conflicting rows, gaps, and rejected months. A partial result exits with status 1. Review rejected months and rerun after correcting the year range or a temporary download problem. Share the redacted JSON summary with the project owner; never share pod secrets.
+The two August 2026 M1 checksums and two tick checksums in the manifest come from the reviewed HistData QA evidence. For other months and yearly archives, the importer pins the archive's SHA-256 when first downloaded and checks it on later runs. Those first-seen hashes provide cache integrity only; they are not independent verification of HistData's source file. The summary reports the per-year archive plan, imported and skipped months, rows read/written, invalid/conflicting rows, gaps, and rejected months. A partial result exits with status 1. Review rejected months and rerun after correcting the year range or a temporary download problem. Share the redacted JSON summary with the project owner; never share pod secrets.
 
 ## 9. Stop and restart safely
 
