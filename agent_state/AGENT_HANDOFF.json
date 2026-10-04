@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 62,
+  "turn": "claude",
+  "revision": 63,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "PR #24 (T-082 importer) and PR #25 (yearly datemonth defect evidence) are merged. Follow-up code fix PR #27 accepts HistData's yearly datemonth='YYYY' field and passed full quality/container CI run 37207724960; passed Claude Light review (V-079) and is set to auto-merge. Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA; Codex has not changed Pod data. T-041 PR #22 is merged after Claude Full approval (V-075). T-042 PR #26 passed Claude Full review (V-077); prompt caching and batch mode are deferred, and T-043 owns graph-level NO_TRADE behavior for exhausted budgets.",
+    "summary": "T-080 Pod imports for NSXUSD and XAUUSD are complete and idempotent. Q-024 is answered; V-081 records the 360 exact duplicates per symbol, lake row counts, zero stored timestamp duplicates, zero adjacent partition overlaps, and raw unclassified gap totals. T-080 is ready for Claude Light review. PR #28 (T-024) has green CI and awaits Full review. T-082 importer work is complete; other roadmap tasks remain in the work queue.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1875,7 +1875,7 @@
       ],
       "id": "T-080",
       "title": "Pod-side historical import: batch range importer with sha256 manifest so the full NSXUSD and XAUUSD M1 history is rebuilt on the pod's /workspace volume",
-      "status": "blocked",
+      "status": "review",
       "acceptance_criteria": [
         "One command imports a symbol and year range, downloading politely (one request at a time, pauses between requests, cached archives reused); August 2026 archives are checked against the trusted hashes recorded in V-045 and the HistData QA report, while other archives are pinned on first download and checked on reuse as cache integrity only, not independent source verification.",
         "months with conflicting M1 minutes are rebuilt from ticks, other months use plain M1; run summary lists rows, rejected months and gaps",
@@ -1886,9 +1886,11 @@
       "evidence": [
         "PR #11, head 4fda5210b7fcdf18981d1e3753535d87233d5cc0, adds the resumable importer, CLI range options, checksum manifest, serial pauses, M1 conflict fallback to ticks, JSON summaries and RunPod instructions.",
         "Focused unit coverage added for resumable imports, hash pinning/mismatch detection, tick fallback and downloader pause behavior.",
-        "GitHub Actions run 37146599648 passed the full quality and ROLE runtime workflow, including lint/format, mypy, unit tests, handoff checks, secret scan, image build, health/persistence and backup/restore."
+        "GitHub Actions run 37146599648 passed the full quality and ROLE runtime workflow, including lint/format, mypy, unit tests, handoff checks, secret scan, image build, health/persistence and backup/restore.",
+        "docs/evidence/q024_histdata_pod_import.md",
+        "Whole-lake QA: NSXUSD 191 files/5,285,557 rows and XAUUSD 211 files/6,140,206 rows; zero duplicate timestamps and zero adjacent month-range overlaps; raw gap totals recorded in the Q-024 evidence report."
       ],
-      "completion_note": "Code approved by Claude (Light review, PR #11). Remaining: owner-run pod import for NSXUSD and XAUUSD with summaries and rerun idempotence (Q-024); mark done once recorded."
+      "completion_note": "Owner-run full-range imports and zero-row reruns are recorded in Q-024 evidence. QA found 360 exact duplicate rows per symbol in six October archives (60 each), with no invalid rows or conflicting prices. Whole-lake Parquet timestamp uniqueness and adjacent-month range checks passed; raw timestamp gaps are reported without market-calendar classification. Ready for Claude Light review."
     },
     {
       "id": "T-081",
@@ -2958,6 +2960,16 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "yearly/monthly datemonth validation or the downloader allow-list changes"
+    },
+    {
+      "id": "V-081",
+      "subject": "T-080/Q-024 pod import and whole-lake QA",
+      "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
+      "result": "pass",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives × 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
     }
   ],
   "blockers": [
@@ -3234,12 +3246,12 @@
       "to": "human",
       "from": "codex",
       "text": "After Claude reviews and you merge PR #11, redeploy the pod from the new image. Run the documented full-range importer for NSXUSD and XAUUSD on /workspace, then paste its redacted JSON summaries and the rerun summary so we can record pod-side completion and idempotence. Do not paste credentials.",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Run the full-range import after merge",
         "Need help with the command"
       ],
-      "answer": ""
+      "answer": "Completed on the owner-started Pod. Each symbol's 360-row read/write difference consists of 60 exact duplicate timestamp-and-OHLCV rows in each October archive from 2019 through 2024; importer lineage reports zero invalid rows and zero conflicting duplicates. Both reruns read and wrote zero rows. Lake QA found 5,285,557 NSXUSD rows across 191 monthly files and 6,140,206 XAUUSD rows across 211 files; duplicate timestamps and adjacent month-range overlaps were both zero. Raw >60-second gap intervals and absent-minute totals are documented, but not classified against trading sessions or holidays."
     },
     {
       "id": "Q-025",
@@ -4397,6 +4409,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Light review of PR #27 passed (V-079): minimal guard change plus regression test, no safety-relevant changes. T-082 set to done; Q-024 (owner-run Pod import, zero-row rerun, QA) remains open. Auto-merge enabled on PR #27. Turn to Codex."
+    },
+    {
+      "revision": 63,
+      "ts": "2026-10-04T15:54:46Z",
+      "agent": "codex",
+      "action": "complete_q024_t080_lake_qa",
+      "task_ids": [
+        "T-080"
+      ],
+      "files_changed": [
+        "docs/evidence/q024_histdata_pod_import.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     }
   ],
   "project_summary": "PR #24 (T-082 importer) and PR #25 (yearly datemonth defect evidence) are merged. Follow-up code fix PR #27 accepts HistData's yearly datemonth='YYYY' field and passed full quality/container CI run 37207724960; ready for Claude Light review. Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA; Codex has not changed Pod data. T-041 PR #22 is merged after Claude Full approval (V-075). T-042 PR #26 passed Claude Full review (V-077); prompt caching and batch mode are deferred, and T-043 owns graph-level NO_TRADE behavior for exhausted budgets."
