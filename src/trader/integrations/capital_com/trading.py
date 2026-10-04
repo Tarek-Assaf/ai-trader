@@ -150,4 +150,3 @@ class CapitalComTradingClient(CapitalComClient):
         if not reply["dealReference"].strip():
             raise CapitalComError(200, "workingorders")
         return reply
-
