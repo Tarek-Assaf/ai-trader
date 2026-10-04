@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from datetime import UTC, datetime
 from decimal import Decimal
-from collections.abc import Callable
 from uuid import uuid4
 
 from sqlalchemy import Engine, func, insert, select, update

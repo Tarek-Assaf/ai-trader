@@ -170,6 +170,7 @@ class LLMClient:
         for name, fallback in self.fallback.items():
             if name not in self.tiers or fallback not in self.tiers or name == fallback:
                 raise ValueError("fallbacks must reference a different configured tier")
+
     def _select_tier(self, requested: str, excluded: set[str] | None = None) -> tuple[Tier, bool]:
         now = self._clock()
         visited: set[str] = set()

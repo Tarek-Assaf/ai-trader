@@ -17,7 +17,6 @@ from sqlalchemy import create_engine, select
 from trader.agents.llm import (
     AnthropicProvider,
     BudgetExceeded,
-    InvalidModelOutput,
     LLMClient,
     LLMError,
     Message,
@@ -27,7 +26,7 @@ from trader.agents.llm import (
     ProviderReply,
     SqlUsageLedger,
 )
-from trader.core.db import metadata, tables
+from trader.core.db import tables
 
 
 class Decision(BaseModel):
