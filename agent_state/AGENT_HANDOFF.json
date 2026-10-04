@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 76,
+  "turn": "claude",
+  "revision": 77,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-043 bounded agent graph is implemented on PR #35 and passes full CI run 37229457914 (V-091), pending Claude Full review. The PR targets main and contains only T-043 code/tests plus its handoff. Next in the pod-free order: T-023 PaperBroker with default spread/slippage, then T-025 P&L, T-026 order manager, T-027 LLM-free kill switch, and T-060 backup-job code. T-060's fresh-Pod restore drill and T-017 recorder calibration remain Pod-dependent. Q-024 lake QA is complete (T-080 V-082); Q-029 demo round trip still awaits the owner-run Pod command. No Pod data or broker orders were changed.",
+    "summary": "T-043 cycle-1 review fixes are implemented on PR #35 and pass full CI run 37231051969 (V-093); Claude Full review cycle 2 is next. The PR targets main and contains only T-043 graph/tool/prompt/tests plus its handoff. Next pod-free work after approval: T-023 PaperBroker using default spread/slippage, then T-025 P&L, T-026 order manager and T-027 LLM-free kill switch, followed by T-060 backup-job code. T-060's fresh-Pod restore drill and T-017 recorder calibration remain Pod-dependent. Q-024 lake QA is complete (T-080 V-082); Q-029 demo round trip still awaits the owner-run Pod command. No Pod data or broker orders were changed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1363,9 +1363,10 @@
         "src/trader/agents/graph.py",
         "src/trader/agents/tools/registry.py",
         "tests/unit/test_agent_graph.py",
-        "Claude Full review of PR #35 (V-092): changes_requested cycle 1."
+        "Claude Full review of PR #35 (V-092): changes_requested cycle 1.",
+        "src/trader/agents/prompts/common_rules.md"
       ],
-      "completion_note": "Implemented the bounded event-driven agent graph, typed stages, exact read-only tool registry, Guardian/execution injection, full cycle audit, two-revision critique, and fail-closed model/budget behavior. Added MockLLM end-to-end, failure, and hostile web/news/filing fixtures; Q-028 defers prompt caching and batch mode until accounting/lifecycle follow-up. PR #35 passes full CI run 37229457914 on head 6f667143b8b06ab9b3d05f3d2e8c267ed2019532. No Pod, hosted model, or broker was used. Pending Claude Full review."
+      "completion_note": "Addressed Claude Full review cycle 1 (V-092): all model-derived free text passed to later roles is escaped and wrapped with provenance, common_rules is version 2, the full graph tests second-order hostile research through strategist/critic/Guardian while protected risk/gate/settings files remain byte-identical, and a submitted order remains TRADE with audit_write_failed surfaced if the post-execution audit append raises. Full CI run 37231051969 passed on code head 3d3e5c9e29c31a8c152c9233cf2e613947658dff. No hosted model, Pod, or broker was used. Awaiting Claude Full review cycle 2."
     },
     {
       "id": "C-040",
@@ -3133,6 +3134,16 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "graph, prompts, tool registry or untrusted-content handling change"
+    },
+    {
+      "id": "V-093",
+      "subject": "T-043 Full review cycle 1 corrections",
+      "method": "Rechecked all V-092 requested fixes against the updated graph, prompt and offline tests: summary, analyst, macro, strategist and critic text is wrapped as escaped untrusted derived content with provenance before downstream model input; common rules are versioned 2; the end-to-end MockLLM path carries hostile web/news/filing research through later roles and proves protected configuration files remain unchanged; post-submit audit append failure returns the submitted execution and an audit_write_failed flag.",
+      "result": "pass",
+      "evidence": "PR #35 code head 3d3e5c9e29c31a8c152c9233cf2e613947658dff; CI run 37231051969 passed Ruff lint/format, mypy, all tests, migration reversibility, handoff and sequence validation, secret scan, image build, ROLE=all health/persistence, mounted-volume chown refusal, database backup/restore, and ROLE=core/worker compose checks. No real LLM, Pod, broker or live order was used.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests additional changes or the graph's derived-text boundary, execution/audit handling, prompt rules, or injection tests change."
     }
   ],
   "blockers": [
@@ -4794,7 +4805,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Full review of PR #35: changes requested (cycle 1 of 2, V-092). Fix (1) wrap model-derived text from research in untrusted_content for later roles and bump common_rules to v2; (2) add the full-graph second-order injection test; (3) do not turn a submitted order into NO_TRADE when the post-execution audit write fails. Everything else passes. Turn to Codex."
+    },
+    {
+      "revision": 77,
+      "ts": "2026-10-04T20:15:00Z",
+      "agent": "codex",
+      "action": "address_t043_full_review_cycle_1",
+      "task_ids": [
+        "T-043"
+      ],
+      "files_changed": [
+        "src/trader/agents/graph.py",
+        "src/trader/agents/prompts/common_rules.md",
+        "tests/unit/test_agent_graph.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed all Claude Full review cycle-1 findings on PR #35: escaped/provenance-bearing wrappers now follow derived text through later model roles; common_rules is v2; added second-order hostile research coverage through strategist/critic/Guardian with protected config files unchanged; and post-submit audit write failures retain TRADE/submitted while setting audit_write_failed. Full CI run 37231051969 passed on code head 3d3e5c9e29c31a8c152c9233cf2e613947658dff. No hosted model, Pod, or broker was used. Handing to Claude for Full review cycle 2."
     }
   ],
-  "project_summary": "T-043 bounded agent graph is implemented on PR #35 and passes full CI run 37229457914 (V-091), pending Claude Full review. The PR targets main and contains only T-043 code/tests plus its handoff. Next in the pod-free order: T-023 PaperBroker with default spread/slippage, then T-025 P&L, T-026 order manager, T-027 LLM-free kill switch, and T-060 backup-job code. T-060's fresh-Pod restore drill and T-017 recorder calibration remain Pod-dependent. Q-024 lake QA is complete (T-080 V-082); Q-029 demo round trip still awaits the owner-run Pod command. No Pod data or broker orders were changed."
+  "project_summary": "T-043 cycle-1 review fixes are implemented on PR #35 and pass full CI run 37231051969 (V-093); Claude Full review cycle 2 is next. The PR targets main and contains only T-043 graph/tool/prompt/tests plus its handoff. Next pod-free work after approval: T-023 PaperBroker using default spread/slippage, then T-025 P&L, T-026 order manager and T-027 LLM-free kill switch, followed by T-060 backup-job code. T-060's fresh-Pod restore drill and T-017 recorder calibration remain Pod-dependent. Q-024 lake QA is complete (T-080 V-082); Q-029 demo round trip still awaits the owner-run Pod command. No Pod data or broker orders were changed."
 }
