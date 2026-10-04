@@ -60,6 +60,7 @@ class URLFetchSource(HttpResearchSource):
             repository=repository,
             ttl_seconds=ttl_seconds,
             min_interval_seconds=min_interval_seconds,
+            allowed_media_types={"text/html", "text/plain"},
             **kwargs,
         )
 
@@ -100,6 +101,7 @@ class RSSSource(HttpResearchSource):
             repository=repository,
             ttl_seconds=ttl_seconds,
             min_interval_seconds=min_interval_seconds,
+            allowed_media_types={"application/rss+xml", "application/atom+xml", "application/xml", "text/xml"},
             **kwargs,
         )
 
@@ -171,6 +173,7 @@ class JsonRecordsSource(HttpResearchSource):
             ttl_seconds=ttl_seconds,
             min_interval_seconds=min_interval_seconds,
             api_key=api_key,
+            allowed_media_types={"application/json"},
             **kwargs,
         )
 
@@ -225,6 +228,7 @@ class WebSearchSource(HttpResearchSource):
             ttl_seconds=ttl_seconds,
             min_interval_seconds=min_interval_seconds,
             api_key=api_key,
+            allowed_media_types={"application/json"},
             **kwargs,
         )
 
