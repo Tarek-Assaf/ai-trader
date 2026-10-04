@@ -47,9 +47,7 @@ class _FormParser(HTMLParser):
 class _PeriodParser(HTMLParser):
     """Read HistData's visible year/month archive selector for one symbol."""
 
-    _ROUTE = re.compile(
-        r"^/ascii/1-minute-bar-quotes/(nsxusd|xauusd)/(\d{4})(?:/(\d{1,2}))?/?$"
-    )
+    _ROUTE = re.compile(r"^/ascii/1-minute-bar-quotes/(nsxusd|xauusd)/(\d{4})(?:/(\d{1,2}))?/?$")
 
     def __init__(self, symbol: str) -> None:
         super().__init__()
@@ -92,17 +90,14 @@ class _PeriodParser(HTMLParser):
         return result
 
 
-def list_histdata_periods(
-    symbol: str, pause_seconds: float = 0.0
-) -> dict[int, set[int] | None]:
+def list_histdata_periods(symbol: str, pause_seconds: float = 0.0) -> dict[int, set[int] | None]:
     """Read the provider's visible M1 selector to avoid requesting absent months."""
     if symbol not in {"NSXUSD", "XAUUSD"}:
         raise ValueError("unsupported HistData symbol")
     if pause_seconds < 0 or pause_seconds > 3600:
         raise ValueError("pause_seconds must be between 0 and 3600")
     page = (
-        f"{BASE}/download-free-forex-historical-data/"
-        f"?/ascii/1-minute-bar-quotes/{symbol.lower()}"
+        f"{BASE}/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/{symbol.lower()}"
     )
     parser = _PeriodParser(symbol)
     try:
@@ -142,9 +137,7 @@ def _request(
         headers["Referer"] = referer
     request = urllib.request.Request(url, data=data, headers=headers)
     try:
-        with urllib.request.build_opener(_NoRedirect).open(
-            request, timeout=60
-        ) as response:
+        with urllib.request.build_opener(_NoRedirect).open(request, timeout=60) as response:
             if response.status != 200:
                 raise ValueError("HistData returned an unsuccessful status")
             content = bytes(response.read(max_bytes + 1))
@@ -172,13 +165,8 @@ def _validate_archive(
             if sum(member.file_size for member in archive.infolist()) > expanded_limit:
                 raise ValueError("HistData archive exceeds the expanded size limit")
             if expected not in archive.namelist():
-                raise ValueError(
-                    "HistData archive does not match the requested symbol/month"
-                )
-            if any(
-                name not in {expected, expected[:-4] + ".txt"}
-                for name in archive.namelist()
-            ):
+                raise ValueError("HistData archive does not match the requested symbol/month")
+            if any(name not in {expected, expected[:-4] + ".txt"} for name in archive.namelist()):
                 raise ValueError("HistData archive contains unexpected members")
             if archive.testzip() is not None:
                 raise ValueError("HistData archive checksum failed")
@@ -249,9 +237,7 @@ def download_histdata(
         or not fields.get("tk")
         or set(fields) - allowed_fields
     ):
-        raise ValueError(
-            "HistData download form is missing or does not match the request"
-        )
+        raise ValueError("HistData download form is missing or does not match the request")
     raw = _request(
         f"{BASE}/get.php",
         urllib.parse.urlencode(fields).encode(),
@@ -262,9 +248,7 @@ def download_histdata(
     root.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
     try:
-        with tempfile.NamedTemporaryFile(
-            dir=root, suffix=".tmp", delete=False
-        ) as output:
+        with tempfile.NamedTemporaryFile(dir=root, suffix=".tmp", delete=False) as output:
             temporary = Path(output.name)
             output.write(raw)
         temporary.replace(target)
