@@ -396,4 +396,3 @@ def test_short_direction_reward_risk_is_calculated_correctly() -> None:
         sizing=_sizing(),
     )
     assert decision.approved
-
