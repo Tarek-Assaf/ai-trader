@@ -371,7 +371,7 @@ class AgentGraph:
 
             technical_context = _technical_context(technical, ids)
             macro_context = _macro_context(macro, ids)
-            summary_context = _summary_context(summaries)
+            summary_context = _summary_context(summaries, ids)
             critique: Critique | None = None
             proposal: Proposal | None = None
             for revision in range(3):
