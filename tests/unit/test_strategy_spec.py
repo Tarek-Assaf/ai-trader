@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import random
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -159,3 +161,33 @@ def test_engine_resamples_only_complete_bars_and_rejects_mixed_series() -> None:
     ]
     with pytest.raises(ValueError, match="one candle series"):
         evaluate_entries(spec, mixed)
+
+
+def test_engine_has_no_network_file_or_broker_capabilities() -> None:
+    source = Path(__file__).parents[2] / "src" / "trader" / "lab" / "engine.py"
+    tree = ast.parse(source.read_text(encoding="utf-8"))
+    forbidden = {
+        "httpx",
+        "requests",
+        "socket",
+        "subprocess",
+        "pathlib",
+        "trader.execution",
+        "trader.integrations",
+    }
+    imported = set()
+    dynamic_calls = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported.add(node.module)
+        elif isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name) and node.func.id in {"open", "eval", "exec", "__import__"}:
+                dynamic_calls.add(node.func.id)
+
+    assert not any(
+        name in forbidden or any(name.startswith(f"{blocked}.") for blocked in forbidden)
+        for name in imported
+    )
+    assert not dynamic_calls
