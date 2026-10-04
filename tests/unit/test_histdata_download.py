@@ -9,22 +9,23 @@ import pytest
 from trader.data.importers import histdata_download as hd
 
 
-def _archive(symbol: str = "NSXUSD") -> bytes:
+def _archive(symbol: str = "NSXUSD", period: str = "202608", timeframe: str = "M1") -> bytes:
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as archive:
-        archive.writestr(f"DAT_ASCII_{symbol}_M1_202608.csv", "20260802 180000;100;101;99;100;0\n")
+        archive.writestr(f"DAT_ASCII_{symbol}_{timeframe}_{period}.csv", f"{period[:6]}02 180000;100;101;99;100;0\n")
     return buffer.getvalue()
 
 
-def _form(symbol: str = "NSXUSD") -> bytes:
+def _form(symbol: str = "NSXUSD", year: int = 2026, month: str | None = "202608") -> bytes:
     fields = {
         "tk": "test-form-token",
         "fxpair": symbol,
-        "date": "2026",
-        "datemonth": "202608",
+        "date": str(year),
         "platform": "ASCII",
         "timeframe": "M1",
     }
+    if month is not None:
+        fields["datemonth"] = month
     inputs = "".join(f'<input name="{name}" value="{value}" />' for name, value in fields.items())
     return f'<form id="file_down" action="/get.php">{inputs}</form>'.encode()
 
@@ -34,7 +35,7 @@ def test_download_is_verified_atomic_and_cached(
 ) -> None:
     calls: list[str] = []
 
-    def request(url: str, data: bytes | None = None, referer: str | None = None) -> bytes:
+    def request(url: str, data: bytes | None = None, referer: str | None = None, **kwargs: object) -> bytes:
         calls.append(url)
         if data is None:
             return _form()
@@ -55,7 +56,7 @@ def test_invalid_download_never_commits(
     body: bytes, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(
-        hd, "_request", lambda url, data=None, referer=None: _form() if data is None else body
+        hd, "_request", lambda url, data=None, referer=None, **kwargs: _form() if data is None else body
     )
     with pytest.raises(ValueError):
         hd.download_histdata("NSXUSD", 2026, 8, tmp_path)
@@ -65,7 +66,7 @@ def test_invalid_download_never_commits(
 def test_wrong_form_fails_before_post(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     calls = []
 
-    def request(url, data=None, referer=None):
+    def request(url, data=None, referer=None, **kwargs):
         calls.append(url)
         return _form("XAUUSD")
 
@@ -143,7 +144,7 @@ def test_range_download_pauses_between_form_and_archive_request(
     calls: list[str] = []
     pauses: list[float] = []
 
-    def request(url: str, data: bytes | None = None, referer: str | None = None) -> bytes:
+    def request(url: str, data: bytes | None = None, referer: str | None = None, **kwargs: object) -> bytes:
         calls.append(url)
         return _form() if data is None else _archive()
 
@@ -165,3 +166,69 @@ def test_invalid_pause_is_rejected_before_network_request(
 
     with pytest.raises(ValueError, match="pause_seconds"):
         hd.download_histdata("NSXUSD", 2026, 8, tmp_path, pause_seconds=-1)
+
+
+def test_period_parser_reads_year_and_month_routes_and_prefers_months() -> None:
+    parser = hd._PeriodParser("NSXUSD")
+    parser.feed(
+        '<a href="/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/nsxusd/2024">2024</a>'
+        '<a href="/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/nsxusd/2026/9">Sep</a>'
+        '<a href="/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/xauusd/2025">Other</a>'
+        '<a href="https://evil.example/download-free-forex-historical-data/?/ascii/1-minute-bar-quotes/nsxusd/2023">Bad host</a>'
+    )
+    assert parser.periods() == {2024: None, 2026: {9}}
+
+
+def test_yearly_download_uses_year_route_and_yearly_size_limit(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[tuple[str, bytes | None, int | None]] = []
+
+    def request(url: str, data: bytes | None = None, referer: str | None = None, *, max_bytes=hd.MAX_BYTES) -> bytes:
+        calls.append((url, data, max_bytes))
+        return _form(year=2024, month=None) if data is None else _archive(period="2024")
+
+    monkeypatch.setattr(hd, "_request", request)
+    target = hd.download_histdata("NSXUSD", 2024, None, tmp_path)
+
+    assert target.name == "DAT_ASCII_NSXUSD_M1_2024.zip"
+    assert "/nsxusd/2024" in calls[0][0]
+    assert "/nsxusd/2024/" not in calls[0][0]
+    assert calls[1][2] == hd.MAX_YEARLY_M1_BYTES
+    assert calls[1][1] is not None
+    assert b"date=2024" in calls[1][1]
+    assert b"datemonth" not in calls[1][1]
+
+
+def test_yearly_form_rejects_unexpected_month_before_post(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls = []
+
+    def request(url, data=None, referer=None, **kwargs):
+        calls.append(url)
+        return _form(year=2024, month="202401")
+
+    monkeypatch.setattr(hd, "_request", request)
+    with pytest.raises(ValueError, match="unexpected month"):
+        hd.download_histdata("NSXUSD", 2024, None, tmp_path)
+    assert len(calls) == 1
+
+
+def test_yearly_archive_rejects_expansion_over_yearly_cap(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(hd, "MAX_YEARLY_M1_EXPANDED_BYTES", 10)
+    raw = io.BytesIO()
+    with zipfile.ZipFile(raw, "w") as archive:
+        archive.writestr("DAT_ASCII_NSXUSD_M1_2024.csv", "x" * 11)
+    with pytest.raises(ValueError, match="expanded size"):
+        hd._validate_archive(raw.getvalue(), "NSXUSD", 2024, None)
+
+
+def test_invalid_yearly_inputs_make_no_request(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(hd, "_request", lambda *args, **kwargs: pytest.fail("must not request"))
+    with pytest.raises(ValueError):
+        hd.download_histdata("NSXUSD", 2026, None, tmp_path)
+    with pytest.raises(ValueError):
+        hd.download_histdata("NSXUSD", 2024, None, tmp_path, timeframe="T")
