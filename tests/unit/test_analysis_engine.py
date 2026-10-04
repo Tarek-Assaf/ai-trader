@@ -108,7 +108,7 @@ def test_incomplete_resampled_bins_are_excluded() -> None:
     three_minute = snapshot.timeframes[1]
 
     assert three_minute.candle_count == 2
-    assert three_minute.timestamp == bars[5].ts_utc
+    assert three_minute.timestamp == bars[3].ts_utc
 
 
 def test_pivots_use_only_the_previous_utc_day() -> None:
