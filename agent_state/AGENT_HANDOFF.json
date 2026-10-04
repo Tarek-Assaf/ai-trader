@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 66,
+  "turn": "claude",
+  "revision": 67,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-024 broker adapter code approved (Full review); it stays blocked only on the demo order round trip (Q-029, needs owner authorization on the Pod). T-080 import and lake QA done. T-042 LLM client done. Recorder soak (Q-022) pending when markets reopen.",
+    "summary": "T-024's adapter passed Claude Full review (V-083). PR #31 adds the owner-authorized, guarded Q-029 one-shot demo round-trip command and runbook; CI run 37220748149 passed all quality, test, security, image and container checks (V-084). The broker round trip remains unrun; T-024 is blocked until the owner runs the command on the Pod after merge/redeploy and shares the redacted report. T-080/Q-024 lake import and QA are done; raw data gaps remain unclassified.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1065,9 +1065,11 @@
         "src/trader/integrations/capital_com/trading.py",
         "tests/unit/test_capital_com_broker.py",
         "tests/unit/test_capital_com_trading_client.py",
-        "Claude Full code review PASS (V-083). Blocked only on the acceptance criterion 'demo order round trip with stop attached' (Q-029: owner authorization + Pod step)."
+        "Claude Full code review PASS (V-083). Blocked only on the acceptance criterion 'demo order round trip with stop attached' (Q-029: owner authorization + Pod step).",
+        "scripts/demo_round_trip.py, tests/unit/test_demo_round_trip.py, and infra/runpod/README.md: guarded, one-shot owner command for the Q-029 NAS100 demo round trip, plus offline guard/rounding tests and runbook.",
+        "CI run 37220748149 passed lint/format, typecheck, migration reversibility, tests, handoff/sequence validation, secret scan, image build and all container checks including ROLE=all mounted volumes that refuse chown (head 4ec745d2076d3dc469fcabcad81b4b0890625ef3; recorded V-084)."
       ],
-      "completion_note": "Implemented the demo-only adapter and separated its order-capable REST surface into CapitalComTradingClient; CapitalComClient remains GET-only, enforced by a guard and the architecture boundary test. Every order requires a same-request server-side stop, broker confirmations and position checks; placement is disabled by default. Offline fake/HTTP transport coverage exercises reads, order lifecycle, malformed replies and stop validation. Full quality/container CI run 37212824751 passed on head 4c7cb06965c957e57768ac4a2eeb30daa9fdd92. The required demo order round trip is intentionally pending explicit owner authorization and a Pod step (Q-029); it was not attempted. Full Claude review requested."
+      "completion_note": "The offline demo-only adapter received Claude Full approval (V-083). PR #31 adds a guarded one-shot NAS100 demo round-trip command, offline environment/rounding tests and a Pod runbook. Full quality/container CI run 37220748149 passed on head 4ec745d2076d3dc469fcabcad81b4b0890625ef3 (V-084). The owner authorized exactly one demo round trip; it has not been run. T-024 remains blocked on the owner-run Pod result after PR merge/redeploy. Codex did not send a broker order or change Pod data."
     },
     {
       "id": "T-025",
@@ -3010,6 +3012,16 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "adapter, trading client, stop handling or boundary tests change"
+    },
+    {
+      "id": "V-084",
+      "subject": "Q-029 guarded owner-operated Capital.com demo round-trip command",
+      "method": "Reviewed the command's exact environment guard, one-shot marker, flat-account preflight, NAS100 minimum-size/server-side-stop placement, broker-side stop verification, one-tick tightening, close/flat confirmation, cleanup path, redacted JSON output, offline tests and one-command Pod runbook; checked full CI.",
+      "result": "pass",
+      "evidence": "PR #31 head 4ec745d2076d3dc469fcabcad81b4b0890625ef3; quality run 37220748149 passed lint/format, typecheck, migration reversibility, tests, handoff validation, PR sequence validation, secret scan, image build and every container check, including the mounted-volume chown-refusal check. The live demo round trip itself was not executed; Q-029 remains pending the owner-run Pod command.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or the runbook/script, safety guards, or tests change."
     }
   ],
   "blockers": [
@@ -3030,6 +3042,12 @@
       "text": "Resolved for paper-mode continuity by T-018: embedded PostgreSQL now defaults to the pod container disk and restores validated backups from /workspace/backups; the RunPod Network Volume is no longer used for PostgreSQL's active data directory. Hard pod loss can lose up to five minutes of rows. Managed PostgreSQL and Redis remain required before live trading (D-005).",
       "raised_by": "codex",
       "status": "resolved"
+    },
+    {
+      "id": "B-004",
+      "text": "T-024 remains blocked on Q-029's actual one-time Capital.com demo order round trip. Owner authorized exactly one run; merge PR #31, redeploy the Pod image, have the owner run the documented command once, and review the redacted report. No order has been sent by Codex.",
+      "raised_by": "codex",
+      "status": "active"
     }
   ],
   "questions": [
@@ -3342,12 +3360,12 @@
     },
     {
       "id": "Q-029",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Authorize one demo round trip on the Pod",
         "Keep demo order tests deferred"
       ],
-      "answer": "",
+      "answer": "Owner authorized exactly ONE Capital.com demo order round trip on the RunPod Pod (2026-10-04). PR #31 adds a guarded single-command NAS100 runbook with redacted output. The command has not yet been run; run it once after PR merge/redeploy and return the JSON report. Codex has sent no order and made no Pod data changes.",
       "to": "human",
       "text": "T-024 implementation is ready for review, but its acceptance criterion includes one Capital.com demo order round trip with a server-side stop. This requires a Pod step and places a demo order. When you want that test, explicitly authorize the demo order round trip; until then order placement remains disabled and no broker order will be sent.",
       "from": "codex"
@@ -4521,7 +4539,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Full review of PR #28 passed (V-083), no changes requested. T-024 set to blocked only on the demo round trip (Q-029). Added order-manager requirements to T-026 (sole caller, Guardian approval, reconcile after failed place_order). Merged main's T-080 state into this branch's handoff and fixed Q-029 schema. Turn to Codex."
+    },
+    {
+      "revision": 67,
+      "ts": "2026-10-04T17:34:19Z",
+      "agent": "codex",
+      "action": "prepare_q029_demo_round_trip_for_review",
+      "task_ids": [
+        "T-024"
+      ],
+      "files_changed": [
+        "scripts/demo_round_trip.py",
+        "tests/unit/test_demo_round_trip.py",
+        "infra/runpod/README.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Prepared Q-029 on PR #31: added the guarded one-shot NAS100 demo round-trip script, offline environment/rounding tests, and one-command Pod runbook. CI run 37220748149 passed all quality/test/security/image/container checks, including mounted volumes refusing chown; recorded V-084. The owner authorized exactly one demo round trip, but it has not been run. T-024 remains blocked on the owner-run Pod result after merge/redeploy. No broker order or Pod data changed. Handing over for Claude review."
     }
   ],
-  "project_summary": "PR #24 (T-082 importer) and PR #25 (yearly datemonth defect evidence) are merged. Follow-up code fix PR #27 accepts HistData's yearly datemonth='YYYY' field and passed full quality/container CI run 37207724960; ready for Claude Light review. Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA; Codex has not changed Pod data. T-041 PR #22 is merged after Claude Full approval (V-075). T-042 PR #26 passed Claude Full review (V-077); prompt caching and batch mode are deferred, and T-043 owns graph-level NO_TRADE behavior for exhausted budgets."
+  "project_summary": "T-082 importer and T-080/Q-024 Pod import/rerun/lake QA are complete; the 360-row differences are exact duplicate rows and lake timestamp uniqueness/month-overlap QA passed, while raw gaps remain unclassified against market hours. T-041 and T-042 are reviewed and merged. PR #31 prepares the owner-authorized Q-029 one-time Capital.com demo round trip with a guard, offline tests and runbook; CI run 37220748149 is green. The demo order has not been run, so T-024 remains blocked until the owner runs the command after merge/redeploy and shares its redacted report."
 }
