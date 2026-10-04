@@ -206,7 +206,8 @@ class HttpResearchSource(ABC):
         self._validate_url(url, self.allowed_hosts, self._resolve_dns)
         try:
             body, fetched_at = await self._request(url, params, headers)
-            records = self.parse_response(body, url)
+            request_url = str(httpx.URL(url, params=params))
+            records = self.parse_response(body, request_url)
             if not records:
                 raise InvalidSourceResponse("source returned no usable records")
             items = tuple(
