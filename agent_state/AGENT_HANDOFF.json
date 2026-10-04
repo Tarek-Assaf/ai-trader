@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 48,
+  "turn": "claude",
+  "revision": 49,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-020 Risk Guardian cycle-1 canonical-symbol finding is fixed on a fresh branch from current main; full CI and Claude cycle-2 review are pending. The original PR #15 branch is stale/unmergeable, with its implementation and review history retained there and in the handoff until the replacement PR is ready. PR #17's mounted-volume fix is merged (V-064). RunPod-only T-017 measurement, Q-022 soak and Q-024 HistData import remain owner-pod work.",
+    "summary": "T-021 broker-aware position sizing is implemented on PR #19; Full Claude review is pending after green CI run 37184835588. Sizing fails closed while broker value_per_point is unconfigured/unverified; Q-025 separately asks Claude about injecting trusted sizing estimates into RiskGuardian. T-020 is merged in PR #18 and T-003 mounted-volume handling is merged in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -966,7 +966,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-08"
       ],
@@ -977,10 +977,18 @@
         "rounds down to size step",
         "rejects if min size exceeds risk budget"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/risk/sizing.py",
+        "tests/unit/test_position_sizing.py"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "PR #19 adds Decimal-based fail-closed position sizing: risk budget from account equity, broker value-per-point, stop distance, size-step flooring, max-size clamping, and min-size rejection.",
+        "Margin usage and projected effective leverage include current account usage; mismatched currencies require an explicit positive quote-to-account rate. No point value is inferred from lot size.",
+        "Tests cover both configured instruments, exact risk-budget rounding, explicit max-size clamp, min-size rejection, margin and leverage rejection, currency conversion, missing conversion, missing/wrong-side stops, and missing broker value_per_point.",
+        "GitHub Actions run 37184835588 on head e6d058c816ae66a410cf94dbee7d04028493c0d1 passed lint/format, mypy, migrations, tests, handoff validation, PR handoff sequence validation, secret scan, image build, and all ROLE=all/core/worker container checks."
+      ],
+      "completion_note": "Implemented the T-021 sizing function and focused tests on PR #19. It uses Decimal arithmetic, rounds down to the broker size step, clamps to the step-aligned maximum, rejects below-minimum sizes, checks margin and leverage including current account use, and requires explicit FX conversion when quote and account currencies differ. It fails closed while broker value_per_point is absent/unverified and never infers it from lot size. Final Full-tier CI passed (run 37184835588, head e6d058c816ae66a410cf94dbee7d04028493c0d1). Full Claude review is requested; Q-025 remains open for the separate Guardian sizing-estimate wiring decision."
     },
     {
       "id": "T-022",
@@ -2736,6 +2744,16 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "guardian.py rules or canonical symbol handling change"
+    },
+    {
+      "id": "V-066",
+      "subject": "T-021 broker-aware position sizing implementation and CI",
+      "method": "Reviewed the sizing module and tests against docs/specs/phase2.md T-021 and docs/review_checklist.md; checked the final GitHub Actions quality run.",
+      "result": "pass",
+      "evidence": "PR #19 head e6d058c816ae66a410cf94dbee7d04028493c0d1. CI run 37184835588 passed Ruff lint/format, mypy, migration reversibility, all unit/integration tests, handoff and PR sequence validation, secret scan, image build, ROLE=all health/persistent-data, mounted-volume chown-refusal, backup/restore, and ROLE=core/worker compose checks. Tests cover step flooring, maximum clamp, minimum rejection, both instruments, margin/leverage limits, FX conversion, and fail-closed missing stop/value-per-point/conversion inputs. No dependency added, network I/O or secrets.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or sizing inputs, arithmetic, limits, or tests change."
     }
   ],
   "blockers": [
@@ -3927,6 +3945,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-020 Risk Guardian (Full review, cycle 2, V-065); alias bypass closed. Enabling auto-merge on PR #18. Turn to Codex."
+    },
+    {
+      "revision": 49,
+      "ts": "2026-10-04T07:08:00Z",
+      "agent": "codex",
+      "action": "complete_t021_position_sizing_for_review",
+      "task_ids": [
+        "T-021"
+      ],
+      "files_changed": [
+        "src/trader/risk/sizing.py",
+        "tests/unit/test_position_sizing.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-021 in Full-tier PR #19. Added Decimal broker-aware sizing with fail-closed missing value_per_point/FX/stop handling, step flooring, maximum clamp, minimum rejection, and margin/leverage checks; tests cover both instruments, the safety rejections and FX conversion. CI run 37184835588 passed all quality, tests, handoff/sequence, security, image and container checks on head e6d058c816ae66a410cf94dbee7d04028493c0d1. The CI-detected XAUUSD fixture was constrained to the configured margin cap and now asserts the max-size clamp. Recorded V-066 and handed off for Full Claude review; Q-025 remains open for the separate Guardian wiring decision."
     }
-  ]
+  ],
+  "project_summary": "T-021 broker-aware position sizing is implemented on PR #19; Full Claude review is pending after green CI run 37184835588. Sizing fails closed while broker value_per_point is unconfigured/unverified; Q-025 separately asks Claude about injecting trusted sizing estimates into RiskGuardian. T-020 is merged in PR #18 and T-003 mounted-volume handling is merged in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work."
 }
