@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import html
 import json
 import re
 import time
@@ -175,6 +176,79 @@ class CycleResult:
     execution: ExecutionOutcome | None = None
     model_calls: int = 0
     tokens: int = 0
+    flags: tuple[str, ...] = ()
+
+
+def _untrusted_derived_text(value: str, provenance_ids: set[str]) -> str:
+    ids = html.escape(",".join(sorted(provenance_ids)), quote=True)
+    text = html.escape(value, quote=False)
+    return f'<untrusted_content source="derived" provenance_ids="{ids}">{text}</untrusted_content>'
+
+
+def _summary_context(report: SummaryBatch) -> dict[str, Any]:
+    payload = report.model_dump(mode="json")
+    for item in payload["items"]:
+        provenance = {item["provenance_id"]}
+        item["summary"] = _untrusted_derived_text(item["summary"], provenance)
+        item["flags"] = [_untrusted_derived_text(flag, provenance) for flag in item["flags"]]
+    payload["flags"] = [_untrusted_derived_text(flag, set()) for flag in payload["flags"]]
+    return payload
+
+
+def _technical_context(report: TechnicalReport, provenance_ids: set[str]) -> dict[str, Any]:
+    payload = report.model_dump(mode="json")
+    for field in ("regime", "timeframe_agreement"):
+        payload[field] = _untrusted_derived_text(payload[field], provenance_ids)
+    for field in ("key_levels", "risks", "flags"):
+        payload[field] = [
+            _untrusted_derived_text(value, provenance_ids) for value in payload[field]
+        ]
+    return payload
+
+
+def _macro_context(report: MacroReport, provenance_ids: set[str]) -> dict[str, Any]:
+    payload = report.model_dump(mode="json")
+    payload["backdrop"] = [
+        _untrusted_derived_text(value, provenance_ids) for value in payload["backdrop"]
+    ]
+    payload["flags"] = [
+        _untrusted_derived_text(value, provenance_ids) for value in payload["flags"]
+    ]
+    for event in payload["upcoming_events"]:
+        for field, value in event.items():
+            event[field] = _untrusted_derived_text(value, provenance_ids)
+    for claim in payload["claims"]:
+        claim["text"] = _untrusted_derived_text(
+            claim["text"], set(claim["provenance_ids"])
+        )
+    return payload
+
+
+def _proposal_context(proposal: Proposal, provenance_ids: set[str]) -> dict[str, Any]:
+    payload = proposal.model_dump(mode="json")
+    payload["thesis"] = _untrusted_derived_text(payload["thesis"], provenance_ids)
+    if payload["no_trade_reason"]:
+        payload["no_trade_reason"] = _untrusted_derived_text(
+            payload["no_trade_reason"], provenance_ids
+        )
+    if payload["intent"] is not None:
+        for field in ("thesis", "time_horizon"):
+            payload["intent"][field] = _untrusted_derived_text(
+                payload["intent"][field], provenance_ids
+            )
+    return payload
+
+
+def _critique_context(critique: Critique, provenance_ids: set[str]) -> dict[str, Any]:
+    payload = critique.model_dump(mode="json")
+    payload["strongest_reason"] = _untrusted_derived_text(
+        payload["strongest_reason"], provenance_ids
+    )
+    for field in ("objections", "flags"):
+        payload[field] = [
+            _untrusted_derived_text(value, provenance_ids) for value in payload[field]
+        ]
+    return payload
 
 
 class PromptCatalog:
@@ -287,7 +361,7 @@ class AgentGraph:
                 {
                     "instrument": cycle.instrument,
                     "research": [i.untrusted_block for i in cycle.research],
-                    "summaries": summaries.model_dump(mode="json"),
+                    "summaries": _summary_context(summaries),
                     "provenance_ids": sorted(ids),
                 },
             )
@@ -297,16 +371,19 @@ class AgentGraph:
             if any(not set(claim.provenance_ids).issubset(ids) for claim in macro.claims):
                 return self._no_trade(cycle, "unknown_provenance", calls, tokens)
 
+            technical_context = _technical_context(technical, ids)
+            macro_context = _macro_context(macro, ids)
+            summary_context = _summary_context(summaries)
             critique: Critique | None = None
             proposal: Proposal | None = None
             for revision in range(3):
                 strategy_input = {
                     "instrument": cycle.instrument,
                     "snapshot": snapshot,
-                    "technical_report": technical.model_dump(mode="json"),
-                    "macro_report": macro.model_dump(mode="json"),
-                    "research_summaries": summaries.model_dump(mode="json"),
-                    "critic_feedback": critique.model_dump(mode="json") if critique else None,
+                    "technical_report": technical_context,
+                    "macro_report": macro_context,
+                    "research_summaries": summary_context,
+                    "critic_feedback": _critique_context(critique, ids) if critique else None,
                 }
                 proposal, used = await self._ask(
                     cycle, started, "strategist", Proposal, strategy_input
@@ -329,9 +406,9 @@ class AgentGraph:
                     "critic",
                     Critique,
                     {
-                        "proposal": proposal.model_dump(mode="json"),
-                        "technical_report": technical.model_dump(mode="json"),
-                        "macro_report": macro.model_dump(mode="json"),
+                        "proposal": _proposal_context(proposal, ids),
+                        "technical_report": technical_context,
+                        "macro_report": macro_context,
                     },
                 )
                 calls, tokens, steps = calls + 1, tokens + used, steps + 1
@@ -376,11 +453,15 @@ class AgentGraph:
                 self.executor.execute(proposal.intent, decision, cycle.cycle_id),
                 timeout=self._remaining(started),
             )
-            self._audit(
-                cycle,
-                "agent_execution_result",
-                {"status": result.status, "reference": result.reference, "reason": result.reason},
-            )
+            audit_flags: tuple[str, ...] = ()
+            try:
+                self._audit(
+                    cycle,
+                    "agent_execution_result",
+                    {"status": result.status, "reference": result.reference, "reason": result.reason},
+                )
+            except Exception:
+                audit_flags = ("audit_write_failed",)
             return CycleResult(
                 "TRADE" if result.status == "submitted" else "NO_TRADE",
                 (
@@ -393,6 +474,7 @@ class AgentGraph:
                 result,
                 calls,
                 tokens,
+                audit_flags,
             )
         except BudgetExceeded:
             reason = "llm_budget_exceeded"
