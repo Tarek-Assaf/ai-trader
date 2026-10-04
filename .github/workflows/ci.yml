@@ -155,9 +155,9 @@ jobs:
           postgres="$root/postgres"
           bad_postgres="$root/postgres-unwritable"
           mkdir -p "$workspace/redisdata" "$workspace/logs" "$workspace/backups" "$postgres" "$bad_postgres"
-          sudo chown -R 10001:10001 "$workspace" "$postgres"
           chmod 0755 "$workspace" "$workspace/redisdata" "$workspace/logs" "$workspace/backups"
           chmod 0700 "$postgres" "$bad_postgres"
+          sudo chown -R 10001:10001 "$workspace" "$postgres"
           cleanup() {
             docker logs ai-trader-no-chown || true
             docker rm --force ai-trader-no-chown || true
