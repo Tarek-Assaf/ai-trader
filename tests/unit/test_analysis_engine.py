@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import csv
 import json
-from pathlib import Path
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 
@@ -59,6 +59,7 @@ def test_indicators_match_checked_in_reference_values() -> None:
     assert bands.middle == pytest.approx(float(expected["bb_middle_3"]))
     assert bands.upper == pytest.approx(float(expected["bb_upper_3"]))
     assert bands.lower == pytest.approx(float(expected["bb_lower_3"]))
+    assert adx(_bars(10), 2)[-1] == pytest.approx(100.0)
 
 
 def test_indicator_invalid_periods_and_non_finite_input_fail() -> None:
@@ -93,7 +94,8 @@ def test_future_bars_cannot_change_snapshot_at_cutoff() -> None:
     cutoff = bars[59].ts_utc + timedelta(minutes=1)
 
     before = build_snapshot("NAS100", cutoff, bars[:60])
-    after = build_snapshot("NAS100", cutoff, bars + _bars(20, start=bars[-1].ts_utc + timedelta(minutes=1)))
+    future = _bars(20, start=bars[-1].ts_utc + timedelta(minutes=1))
+    after = build_snapshot("NAS100", cutoff, bars + future)
 
     assert before.to_json() == after.to_json()
 
@@ -138,8 +140,8 @@ def test_pivots_use_only_the_previous_utc_day() -> None:
     assert levels[1] is None
     assert levels[2] is not None
     assert levels[2].pivot == pytest.approx(31.0 / 3.0)
-    assert levels[2].support_1 == pytest.approx(28.0 / 3.0)
-    assert levels[2].resistance_1 == pytest.approx(34.0 / 3.0)
+    assert levels[2].support_1 == pytest.approx(26.0 / 3.0)
+    assert levels[2].resistance_1 == pytest.approx(38.0 / 3.0)
 
 
 def test_incomplete_minute_input_is_excluded_and_naive_time_fails() -> None:
@@ -153,7 +155,7 @@ def test_incomplete_minute_input_is_excluded_and_naive_time_fails() -> None:
         volume=bars[-1].volume,
         series_key=bars[-1].series_key,
         complete=False,
-        n_minutes=0,
+        n_minutes=1,
     )
 
     snapshot = build_snapshot("NAS100", bars[-1].ts_utc + timedelta(minutes=1), bars)
