@@ -320,7 +320,6 @@ def run_round_trip(argv: list[str] | None = None) -> int:
         help="read-only check; never reserves or submits an order",
     )
     args = parser.parse_args(argv)
-    logging.disable(logging.CRITICAL)
     started = time.monotonic()
     report: dict[str, object] = {
         "schema_version": 1,
@@ -506,4 +505,5 @@ def run_round_trip(argv: list[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
+    logging.disable(logging.CRITICAL)
     sys.exit(run_round_trip())
