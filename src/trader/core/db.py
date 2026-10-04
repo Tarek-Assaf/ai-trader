@@ -5,18 +5,18 @@ from __future__ import annotations
 from typing import Any, cast
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Column,
     DateTime,
-    func,
     Identity,
     Index,
     Integer,
-    JSON,
     MetaData,
     Numeric,
     String,
     Table,
+    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
