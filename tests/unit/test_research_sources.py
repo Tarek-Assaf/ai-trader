@@ -46,7 +46,7 @@ def test_sanitizer_removes_active_markup_controls_and_closing_tag_injection() ->
     assert "\u200b" not in item.content
     assert item.untrusted_block.count("</untrusted_content>") == 1
     assert "<tool>" not in item.untrusted_block
-    assert 'api_key=%5BREDACTED%5D' in item.url
+    assert "api_key=%5BREDACTED%5D" in item.url
     assert "do-not-store" not in item.url
     assert hashlib.sha256(item.content.encode()).hexdigest() == item.content_hash
 
@@ -165,7 +165,11 @@ async def test_web_search_uses_bearer_header_and_validates_shape() -> None:
         seen_headers.update(dict(request.headers))
         return httpx.Response(
             200,
-            json={"results": [{"url": "https://news.example.test/a", "title": "Title", "snippet": "Text"}]},
+            json={
+                "results": [
+                    {"url": "https://news.example.test/a", "title": "Title", "snippet": "Text"}
+                ]
+            },
         )
 
     cache = SQLiteResearchCache(":memory:")
@@ -323,17 +327,13 @@ async def test_non_success_response_is_redacted_and_not_retried_for_4xx(caplog) 
 def test_source_url_requires_https_allowlist_and_public_dns() -> None:
     """Unconfigured hosts, private literals and unsafe schemes are rejected."""
     with pytest.raises(ValueError, match="HTTPS"):
-        URLFetchSource._validate_url(
-            "http://example.test", {"example.test"}, lambda host: True
-        )
+        URLFetchSource._validate_url("http://example.test", {"example.test"}, lambda host: True)
     with pytest.raises(ValueError, match="configured host"):
         URLFetchSource._validate_url(
             "https://other.example.test", {"example.test"}, lambda host: True
         )
     with pytest.raises(ValueError, match="private"):
-        URLFetchSource._validate_url(
-            "https://127.0.0.1", {"127.0.0.1"}, lambda host: True
-        )
+        URLFetchSource._validate_url("https://127.0.0.1", {"127.0.0.1"}, lambda host: True)
     with pytest.raises(ValueError, match="public addresses"):
         URLFetchSource._validate_url(
             "https://example.test", {"example.test"}, lambda host: False
