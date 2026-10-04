@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 40,
+  "turn": "claude",
+  "revision": 41,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-015 approved by Claude (Full review, PR #13). T-080 remains blocked only on the owner's full RunPod import summaries (Q-024); the T-014 soak (Q-022) is still owner-run. Codex may continue T-016 and T-017.",
+    "summary": "T-003 received an owner-requested entrypoint ownership follow-up on PR #17; Codex Full-tier review is recorded and merge waits for green CI. PR #15 still has the cycle-1 Risk Guardian canonical-symbol finding to address. RunPod-only T-017 measurement, Q-022 soak and Q-024 HistData import remain owner-pod work.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -518,9 +518,10 @@
         "scripts/start_redis.sh",
         "scripts/start_api.sh",
         "src/trader/api/health.py",
-        ".github/workflows/ci.yml"
+        ".github/workflows/ci.yml",
+        "PR #17 docker/entrypoint.sh mounted-volume chown fallback and CI ROLE=all test"
       ],
-      "completion_note": "Added single multi-stage image and role entrypoint; ROLE=all runs PostgreSQL, Redis, API, scheduler and supervisord as trader after minimal root-owned volume setup. Image and runtime check are pending CI. Docker runtime corrections applied: trader owns /var/run/postgresql; loopback PostgreSQL readiness uses the configured local host auth. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed. CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking."
+      "completion_note": "Added single multi-stage image and role entrypoint; ROLE=all runs PostgreSQL, Redis, API, scheduler and supervisord as trader after minimal root-owned volume setup. Image and runtime check are pending CI. Docker runtime corrections applied: trader owns /var/run/postgresql; loopback PostgreSQL readiness uses the configured local host auth. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed. CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking. T-003 follow-up (owner-directed Full-tier review): PR #17 makes chown best-effort only when the trader user can write, verifies the PostgreSQL data directory owner, and adds positive and negative container coverage with CHOWN capability dropped. Merge only after the PR quality check is green."
     },
     {
       "id": "T-004",
@@ -2630,6 +2631,16 @@
       "validated_by": "claude",
       "date": "2026-10-03",
       "reverify_if": "mapper, lifespan integration, instruments.yaml or tests change"
+    },
+    {
+      "id": "V-061",
+      "subject": "T-003 mounted-volume chown-tolerant entrypoint (Full-tier Codex review)",
+      "method": "Full-tier review of the entrypoint ownership fallback, trader writability checks, PostgreSQL owner guard, and CI container test using pre-owned and unwritable bind volumes with CHOWN capability dropped.",
+      "result": "pass",
+      "evidence": "PR #17 changes only docker/entrypoint.sh, .github/workflows/ci.yml and this handoff. The added CI step requires ROLE=all to reach healthy with chown denied for a trader-owned PostgreSQL volume and requires startup to fail fast for an unwritable PostgreSQL volume. Workflow YAML parsed locally; local Docker is unavailable, so the container test will run in GitHub Actions before merge.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "docker/entrypoint.sh ownership handling, container test, or mounted-volume ownership assumptions change."
     }
   ],
   "blockers": [
@@ -3695,6 +3706,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Full review of T-016 passed (V-058), no changes requested. Turn to Codex. (Claude resolved the handoff merge after T-015 landed; validation V-056 renumbered V-060 to avoid an ID clash.)"
+    },
+    {
+      "revision": 41,
+      "ts": "2026-10-04 05:00:54 UTC",
+      "agent": "codex",
+      "action": "review_and_fix_t003_chown_tolerant_entrypoint",
+      "task_ids": [
+        "T-003"
+      ],
+      "files_changed": [
+        "docker/entrypoint.sh",
+        ".github/workflows/ci.yml",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "The requested claude/entrypoint-chown-tolerant branch and PR were not present, so implemented the same change on a separate T-003 follow-up PR #17. Chown failures are tolerated only after the trader user passes a write check; PostgreSQL data ownership remains enforced. Added positive and negative ROLE=all container checks with CHOWN capability dropped. Full-tier review recorded as V-061. Merge after quality CI passes. Handing to Claude."
     }
   ]
 }

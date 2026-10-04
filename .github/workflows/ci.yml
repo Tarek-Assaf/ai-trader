@@ -148,6 +148,46 @@ jobs:
           grep --quiet '"status":"healthy"' /tmp/health.json
           docker exec ai-trader test -f /workspace/persistence-check
           docker exec ai-trader test -s /tmp/ai-trader-pgdata/PG_VERSION
+      - name: Verify ROLE=all tolerates mounted volumes that refuse chown
+        run: |
+          root="$RUNNER_TEMP/ai-trader-no-chown"
+          workspace="$root/workspace"
+          postgres="$root/postgres"
+          bad_postgres="$root/postgres-unwritable"
+          mkdir -p "$workspace/redisdata" "$workspace/logs" "$workspace/backups" "$postgres" "$bad_postgres"
+          sudo chown -R 10001:10001 "$workspace" "$postgres"
+          chmod 0755 "$workspace" "$workspace/redisdata" "$workspace/logs" "$workspace/backups"
+          chmod 0700 "$postgres" "$bad_postgres"
+          cleanup() {
+            docker logs ai-trader-no-chown || true
+            docker rm --force ai-trader-no-chown || true
+          }
+          trap cleanup EXIT
+          docker run --detach --name ai-trader-no-chown --publish 8001:8000 \
+            --cap-drop=CHOWN \
+            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \
+            --env LIVE_TRADING_ENABLED=false --env POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata \
+            --volume "$workspace:/workspace" \
+            --volume "$postgres:/tmp/ai-trader-pgdata" ai-trader:ci
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8001/health > /tmp/no-chown-health.json; then
+              grep --quiet '"status":"healthy"' /tmp/no-chown-health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/no-chown-health.json
+          grep --quiet 'chown failed for /tmp/ai-trader-pgdata; trader can write to it, continuing' < <(docker logs ai-trader-no-chown 2>&1)
+          docker exec --user 10001:10001 ai-trader-no-chown test -w /tmp/ai-trader-pgdata
+          test -s "$postgres/PG_VERSION"
+          docker rm --force ai-trader-no-chown
+          if docker run --rm --cap-drop=CHOWN \
+            --env ROLE=all --env POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata \
+            --volume "$workspace:/workspace" \
+            --volume "$bad_postgres:/tmp/ai-trader-pgdata" ai-trader:ci > /tmp/no-chown-unwritable.log 2>&1; then
+            echo "Container unexpectedly accepted a PostgreSQL volume the trader user cannot write" >&2
+            exit 1
+          fi
+          grep --quiet 'Cannot chown /tmp/ai-trader-pgdata and trader user cannot write to it' /tmp/no-chown-unwritable.log
       - name: Verify ROLE=all PostgreSQL backup and restore across container replacement
         run: bash scripts/test_postgres_backup_restore.sh
       - name: Verify ROLE=core and ROLE=worker compose services
