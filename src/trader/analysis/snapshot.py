@@ -14,8 +14,8 @@ from trader.analysis.indicators import (
     atr,
     bollinger,
     candle_patterns,
-    daily_pivots,
     confirmed_swings,
+    daily_pivots,
     ema,
     macd,
     rsi,
@@ -276,8 +276,16 @@ def build_snapshot(
         for view in views
         if view.ema_9 is not None and view.ema_21 is not None
     ]
-    dominant = max(("up", "down", "flat"), key=lambda item: (directions.count(item), item)) if directions else None
-    agreement = sum(direction == dominant for direction in directions) / len(directions) if directions else None
+    dominant = (
+        max(("up", "down", "flat"), key=lambda item: (directions.count(item), item))
+        if directions
+        else None
+    )
+    agreement = (
+        sum(direction == dominant for direction in directions) / len(directions)
+        if directions
+        else None
+    )
     return Snapshot(
         instrument=instrument.strip().upper(),
         as_of=cutoff,
