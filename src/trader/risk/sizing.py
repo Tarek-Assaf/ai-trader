@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from decimal import Decimal, ROUND_DOWN
+from decimal import ROUND_DOWN, Decimal
 
 from trader.data.instruments import InstrumentTerms
 from trader.risk.guardian import TradeIntent
@@ -71,10 +71,7 @@ def size_position(
         return _rejected("account equity must be positive")
     if not _positive(limits.risk_per_trade_pct) or limits.risk_per_trade_pct > 100:
         return _rejected("risk_per_trade_pct must be in (0, 100]")
-    if (
-        not _positive(limits.max_margin_usage_pct)
-        or limits.max_margin_usage_pct > 100
-    ):
+    if not _positive(limits.max_margin_usage_pct) or limits.max_margin_usage_pct > 100:
         return _rejected("max_margin_usage_pct must be in (0, 100]")
     if not _positive(limits.max_effective_leverage):
         return _rejected("max_effective_leverage must be positive")
@@ -131,9 +128,7 @@ def size_position(
     elif quote_to_account_rate is not None and _positive(quote_to_account_rate):
         conversion_rate = quote_to_account_rate
     else:
-        return _rejected(
-            "a positive quote-to-account conversion rate is required", risk_budget
-        )
+        return _rejected("a positive quote-to-account conversion rate is required", risk_budget)
 
     risk_per_size_unit = stop_distance * terms.value_per_point * conversion_rate
     if not _positive(risk_per_size_unit):
@@ -141,9 +136,9 @@ def size_position(
 
     raw_size = risk_budget / risk_per_size_unit
     size = (raw_size / terms.size_step).to_integral_value(rounding=ROUND_DOWN) * terms.size_step
-    max_step_aligned = (
-        terms.max_size / terms.size_step
-    ).to_integral_value(rounding=ROUND_DOWN) * terms.size_step
+    max_step_aligned = (terms.max_size / terms.size_step).to_integral_value(
+        rounding=ROUND_DOWN
+    ) * terms.size_step
     size = min(size, max_step_aligned)
     if size < terms.min_size:
         return _rejected("minimum broker size exceeds the risk budget", risk_budget)
