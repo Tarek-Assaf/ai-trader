@@ -82,7 +82,13 @@ def _validate_archive(
     expected = f"DAT_ASCII_{symbol}_{timeframe}_{period}.csv"
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as archive:
-            expanded_limit = MAX_BYTES if timeframe == "M1" else 1024 * 1024 * 1024
+            expanded_limit = (
+                MAX_YEARLY_M1_EXPANDED_BYTES
+                if month is None and timeframe == "M1"
+                else MAX_BYTES
+                if timeframe == "M1"
+                else 1024 * 1024 * 1024
+            )
             if sum(member.file_size for member in archive.infolist()) > expanded_limit:
                 raise ValueError("HistData archive exceeds the expanded size limit")
             if expected not in archive.namelist():
