@@ -160,9 +160,18 @@ def parse_strategy_spec(
         if len(spec.entry_conditions) > limits.max_conditions_per_strategy:
             raise StrategySpecError("too many entry conditions for configured Strategy Lab limits")
         if len(spec.tunable_parameters) > limits.max_tunable_parameters:
-            raise StrategySpecError("too many tunable parameters for configured Strategy Lab limits")
+            raise StrategySpecError(
+                "too many tunable parameters for configured Strategy Lab limits"
+            )
         return spec
     except StrategySpecError:
         raise
-    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError, TypeError, ValueError, ValidationError) as exc:
+    except (
+        UnicodeDecodeError,
+        json.JSONDecodeError,
+        RecursionError,
+        TypeError,
+        ValueError,
+        ValidationError,
+    ) as exc:
         raise StrategySpecError("invalid or unsafe strategy specification") from exc
