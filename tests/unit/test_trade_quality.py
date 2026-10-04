@@ -4,7 +4,7 @@ from decimal import Decimal
 
 import pytest
 
-import trader.risk.quality as quality
+from trader.risk import quality
 
 
 WEIGHTS: dict[str, Decimal | float] = {
