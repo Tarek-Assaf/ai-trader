@@ -1,5 +1,5 @@
 # Instruments. Adding a new one means adding a block here and nothing else.
-# Items marked VERIFY must be confirmed against the Capital.com demo API (tasks T-010, T-015, T-016).
+# Broker terms refresh at core startup and hourly (T-016). Values marked VERIFY need demo confirmation.
 
 version: 1
 
@@ -10,7 +10,7 @@ instruments:
     capital_epic: US100              # VERIFIED 2026-10-03 on demo: name "US Tech 100" (V-005)
     histdata_code: NSXUSD            # VERIFY coverage dates (V-004)
     asset_class: index
-    # Read from the broker at startup and cached; leave empty here:
+    # Broker search/details provide size and margin rules. No documented cash point-value field; verify before setting:
     tick_size: null
     value_per_point: null
     min_size: null

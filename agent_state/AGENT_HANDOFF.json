@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 38,
+  "revision": 40,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -867,7 +867,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-24"
       ],
@@ -879,8 +879,15 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/data/instruments.py",
+        "src/trader/api/app.py",
+        "config/instruments.yaml",
+        "tests/unit/test_instruments.py",
+        "GitHub Actions run 37150554116 on d1bd90dfe48d3e4ce5c9beda585558dbad97e851 (all quality/runtime steps passed)",
+        "V-058"
+      ],
+      "completion_note": "Config-driven aliases resolve without symbol-specific code; exact broker epic matches and market terms are validated and cached for one hour, with startup preload when credentials are configured. Cash value-per-point remains unset when the public response does not supply it; lotSize is preserved only as contract size. CI run 37150554116 passed. Full Claude review pending on PR #14. Claude Full review: pass (read mapper, lifespan integration, config, tests; CI quality green on PR #14 head)."
     },
     {
       "id": "T-017",
@@ -2603,6 +2610,26 @@
       "validated_by": "claude",
       "date": "2026-10-03",
       "reverify_if": "Capital.com market-details schema or status values change, or recorder/market_hours code changes"
+    },
+    {
+      "id": "V-060",
+      "subject": "T-016 config-driven instrument mapping and broker terms cache",
+      "method": "GitHub Actions CI on the PR head checked Ruff lint/format, mypy, unit tests, handoff validation, secret scan, Docker build, and container runtime checks.",
+      "result": "pass",
+      "evidence": "PR #14 head d1bd90dfe48d3e4ce5c9beda585558dbad97e851; workflow run 37150554116 completed successfully. Unit tests cover config-only additions, alias resolution, malformed/mismatched broker data, and TTL refresh.",
+      "validated_by": "codex",
+      "date": "2026-10-03",
+      "reverify_if": "Claude requests changes, or the mapper, core startup integration, config, or tests change."
+    },
+    {
+      "id": "V-058",
+      "subject": "T-016 Claude Full review",
+      "method": "Read instruments.py, api/app.py lifespan wiring, instruments.yaml and tests against acceptance criteria and safety posture.",
+      "result": "pass",
+      "evidence": "PR #14: aliases/epics/size/margin come from config plus broker data; exact single epic match required; units and size rules validated; failures raise InstrumentDataError; startup preload only for core/all with credentials, failure logs only the exception type, client closed on shutdown; client use is read-only (search_markets, market_details), no broker order access, no secrets logged; value_per_point never inferred from lotSize; CI quality green. Non-blocking: refresh is lazy on get() rather than a timer; refresh_all runs synchronous network calls at startup.",
+      "validated_by": "claude",
+      "date": "2026-10-03",
+      "reverify_if": "mapper, lifespan integration, instruments.yaml or tests change"
     }
   ],
   "blockers": [
@@ -3638,6 +3665,36 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-015 (Full review, no changes): broker-first market status with schedule fallback, expected-silence handling, sanitised health. CI green. Turn to Codex."
+    },
+    {
+      "revision": 39,
+      "ts": "2026-10-03T20:15:00Z",
+      "agent": "codex",
+      "action": "complete_t016_config_driven_instrument_mapper",
+      "task_ids": [
+        "T-016"
+      ],
+      "files_changed": [
+        "src/trader/data/instruments.py",
+        "src/trader/api/app.py",
+        "config/instruments.yaml",
+        "tests/unit/test_instruments.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented config-driven instrument aliases and validated/cached broker terms with core-startup preload. Cash point value is not inferred from lot size. CI run 37150554116 passed; PR #14 is ready for Full Claude review after its handoff commit CI passes."
+    },
+    {
+      "revision": 40,
+      "ts": "2026-10-03T21:30:00Z",
+      "agent": "claude",
+      "action": "review_t016_pass",
+      "task_ids": [
+        "T-016"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Full review of T-016 passed (V-058), no changes requested. Turn to Codex. (Claude resolved the handoff merge after T-015 landed; validation V-056 renumbered V-060 to avoid an ID clash.)"
     }
   ]
 }
