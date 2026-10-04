@@ -1,4 +1,5 @@
 """Bounded event-driven agent graph; trade proposals never size or execute themselves."""
+
 from __future__ import annotations
 
 import asyncio
@@ -21,7 +22,7 @@ from trader.agents.llm.types import (
     LLMClient,
     LLMError,
     Message,
-    ModelUnavailable
+    ModelUnavailable,
 )
 from trader.core.audit import AuditEvent, AuditWriter
 from trader.research.sanitizer import ResearchItem
@@ -174,11 +175,14 @@ class CycleResult:
 
 class PromptCatalog:
     """Only load checked-in prompts by a fixed role map."""
+
     def __init__(self) -> None:
         self.root = files("trader.agents.prompts")
         self.common = self.root.joinpath("common_rules.md").read_text(encoding="utf-8")
-        self.prompts = {role: self.root.joinpath(path).read_text(encoding="utf-8")
-                        for role, path in PROMPTS.items()}
+        self.prompts = {
+            role: self.root.joinpath(path).read_text(encoding="utf-8")
+            for role, path in PROMPTS.items()
+        }
 
     def get(self, role: str, instrument: str) -> tuple[str, str, int]:
         if role not in self.prompts:
@@ -198,9 +202,16 @@ class PromptCatalog:
 
 class AgentGraph:
     """Run one event cycle. LLM text is data; there is no model-facing tool dispatcher."""
+
     def __init__(
-        self, *, llm: LLMClient, audit: AuditWriter, guardian: Guardian, executor: Executor,
-        budget: CycleBudget | None = None, prompts: PromptCatalog | None = None,
+        self,
+        *,
+        llm: LLMClient,
+        audit: AuditWriter,
+        guardian: Guardian,
+        executor: Executor,
+        budget: CycleBudget | None = None,
+        prompts: PromptCatalog | None = None,
     ) -> None:
         self.llm, self.audit, self.guardian, self.executor = llm, audit, guardian, executor
         self.budget, self.prompts = budget or CycleBudget(), prompts or PromptCatalog()
@@ -215,22 +226,37 @@ class AgentGraph:
             ids = {item.id for item in cycle.research}
             if len(ids) != len(cycle.research):
                 return self._no_trade(cycle, "duplicate_provenance_id", calls, tokens)
-            digest = hashlib.sha256(json.dumps({
-                "event": cycle.event, "event_id": cycle.event_id, "instrument": cycle.instrument,
-                "snapshot": snapshot,
-                "research": [
-                    {"id": item.id, "sha256": item.content_hash}
-                    for item in cycle.research
-                ],
-            }, sort_keys=True, separators=(",", ":"), default=str).encode()).hexdigest()
-            self._audit(cycle, "agent_cycle_started", {
-                "event": cycle.event, "instrument": cycle.instrument, "input_sha256": digest
-            })
+            digest = hashlib.sha256(
+                json.dumps(
+                    {
+                        "event": cycle.event,
+                        "event_id": cycle.event_id,
+                        "instrument": cycle.instrument,
+                        "snapshot": snapshot,
+                        "research": [
+                            {"id": item.id, "sha256": item.content_hash} for item in cycle.research
+                        ],
+                    },
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    default=str,
+                ).encode()
+            ).hexdigest()
+            self._audit(
+                cycle,
+                "agent_cycle_started",
+                {"event": cycle.event, "instrument": cycle.instrument, "input_sha256": digest},
+            )
 
             summaries, used = await self._ask(
-                cycle, started, "data_summarizer", SummaryBatch,
-                {"items": [item.untrusted_block for item in cycle.research],
-                 "provenance_ids": sorted(ids)}
+                cycle,
+                started,
+                "data_summarizer",
+                SummaryBatch,
+                {
+                    "items": [item.untrusted_block for item in cycle.research],
+                    "provenance_ids": sorted(ids),
+                },
             )
             calls, tokens, steps = calls + 1, tokens + used, steps + 1
             if self._exhausted(started, calls, tokens, steps):
@@ -239,19 +265,27 @@ class AgentGraph:
                 return self._no_trade(cycle, "unknown_provenance", calls, tokens)
 
             technical, used = await self._ask(
-                cycle, started, "technical_analyst", TechnicalReport,
-                {"instrument": cycle.instrument, "snapshot": snapshot}
+                cycle,
+                started,
+                "technical_analyst",
+                TechnicalReport,
+                {"instrument": cycle.instrument, "snapshot": snapshot},
             )
             calls, tokens, steps = calls + 1, tokens + used, steps + 1
             if self._exhausted(started, calls, tokens, steps):
                 return self._no_trade(cycle, "cycle_budget_exhausted", calls, tokens)
 
             macro, used = await self._ask(
-                cycle, started, "news_macro_analyst", MacroReport,
+                cycle,
+                started,
+                "news_macro_analyst",
+                MacroReport,
                 {
                     "instrument": cycle.instrument,
                     "research": [i.untrusted_block for i in cycle.research],
-                 "summaries": summaries.model_dump(mode="json"), "provenance_ids": sorted(ids)}
+                    "summaries": summaries.model_dump(mode="json"),
+                    "provenance_ids": sorted(ids),
+                },
             )
             calls, tokens, steps = calls + 1, tokens + used, steps + 1
             if self._exhausted(started, calls, tokens, steps):
@@ -263,7 +297,8 @@ class AgentGraph:
             proposal: Proposal | None = None
             for revision in range(3):
                 strategy_input = {
-                    "instrument": cycle.instrument, "snapshot": snapshot,
+                    "instrument": cycle.instrument,
+                    "snapshot": snapshot,
                     "technical_report": technical.model_dump(mode="json"),
                     "macro_report": macro.model_dump(mode="json"),
                     "research_summaries": summaries.model_dump(mode="json"),
@@ -276,21 +311,32 @@ class AgentGraph:
                 if self._exhausted(started, calls, tokens, steps):
                     return self._no_trade(cycle, "cycle_budget_exhausted", calls, tokens, proposal)
                 if proposal.action == "NO_TRADE":
-                    return self._no_trade(cycle, proposal.no_trade_reason or "strategist_no_trade",
-                                          calls, tokens, proposal)
+                    return self._no_trade(
+                        cycle,
+                        proposal.no_trade_reason or "strategist_no_trade",
+                        calls,
+                        tokens,
+                        proposal,
+                    )
                 assert proposal.intent is not None
                 critique, used = await self._ask(
-                    cycle, started, "critic", Critique,
-                    {"proposal": proposal.model_dump(mode="json"),
-                     "technical_report": technical.model_dump(mode="json"),
-                     "macro_report": macro.model_dump(mode="json")}
+                    cycle,
+                    started,
+                    "critic",
+                    Critique,
+                    {
+                        "proposal": proposal.model_dump(mode="json"),
+                        "technical_report": technical.model_dump(mode="json"),
+                        "macro_report": macro.model_dump(mode="json"),
+                    },
                 )
                 calls, tokens, steps = calls + 1, tokens + used, steps + 1
                 if self._exhausted(started, calls, tokens, steps):
                     return self._no_trade(cycle, "cycle_budget_exhausted", calls, tokens, proposal)
                 if critique.verdict == "veto":
-                    return self._no_trade(cycle, critique.strongest_reason or "critic_veto",
-                                          calls, tokens, proposal)
+                    return self._no_trade(
+                        cycle, critique.strongest_reason or "critic_veto", calls, tokens, proposal
+                    )
                 if critique.verdict == "approve":
                     break
                 if revision == 2:
@@ -307,24 +353,42 @@ class AgentGraph:
                 self.guardian.evaluate(proposal.intent, cycle.guardian_context, cycle.cycle_id),
                 timeout=self._remaining(started),
             )
-            self._audit(cycle, "agent_guardian_decision", {
-                "proposal": proposal.model_dump(mode="json"), "approved": decision.approved,
-                "approved_size": str(decision.approved_size) if decision.approved_size else None,
-                "reasons": list(decision.reasons), "details": dict(decision.details),
-            })
+            self._audit(
+                cycle,
+                "agent_guardian_decision",
+                {
+                    "proposal": proposal.model_dump(mode="json"),
+                    "approved": decision.approved,
+                    "approved_size": str(decision.approved_size)
+                    if decision.approved_size
+                    else None,
+                    "reasons": list(decision.reasons),
+                    "details": dict(decision.details),
+                },
+            )
             if not decision.approved or decision.approved_size is None:
                 return self._no_trade(cycle, "guardian_rejected", calls, tokens, proposal, decision)
             result = await asyncio.wait_for(
                 self.executor.execute(proposal.intent, decision, cycle.cycle_id),
                 timeout=self._remaining(started),
             )
-            self._audit(cycle, "agent_execution_result", {
-                "status": result.status, "reference": result.reference, "reason": result.reason
-            })
+            self._audit(
+                cycle,
+                "agent_execution_result",
+                {"status": result.status, "reference": result.reference, "reason": result.reason},
+            )
             return CycleResult(
                 "TRADE" if result.status == "submitted" else "NO_TRADE",
-                ("execution_submitted" if result.status == "submitted" else "execution_not_submitted"),
-                proposal, decision, result, calls, tokens,
+                (
+                    "execution_submitted"
+                    if result.status == "submitted"
+                    else "execution_not_submitted"
+                ),
+                proposal,
+                decision,
+                result,
+                calls,
+                tokens,
             )
         except BudgetExceeded:
             reason = "llm_budget_exceeded"
@@ -341,27 +405,49 @@ class AgentGraph:
         return self._no_trade(cycle, reason, calls, tokens)
 
     async def _ask(
-        self, cycle: CycleInput, started: float, role: str, schema: type[BaseModel],
+        self,
+        cycle: CycleInput,
+        started: float,
+        role: str,
+        schema: type[BaseModel],
         payload: Mapping[str, Any],
     ) -> tuple[Any, int]:
         system, filename, version = self.prompts.get(role, cycle.instrument)
-        messages = (Message("system", system), Message(
-            "user", json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
-        ))
-        self._audit(cycle, "agent_model_input", {
-            "role": role, "prompt_file": filename, "prompt_version": version,
-            "messages": [{"role": item.role, "content": item.content} for item in messages],
-        })
+        messages = (
+            Message("system", system),
+            Message(
+                "user", json.dumps(payload, sort_keys=True, separators=(",", ":"), default=str)
+            ),
+        )
+        self._audit(
+            cycle,
+            "agent_model_input",
+            {
+                "role": role,
+                "prompt_file": filename,
+                "prompt_version": version,
+                "messages": [{"role": item.role, "content": item.content} for item in messages],
+            },
+        )
         result = await asyncio.wait_for(
             self.llm.complete(role, messages, schema), timeout=self._remaining(started)
         )
-        self._audit(cycle, "agent_model_output", {
-            "role": role, "prompt_file": filename, "prompt_version": version,
-            "model": result.model, "fallback_used": result.fallback_used,
-            "input_tokens": result.input_tokens, "output_tokens": result.output_tokens,
-            "cost_usd": str(result.cost_usd), "latency_ms": result.latency_ms,
-            "output": result.value.model_dump(mode="json"),
-        })
+        self._audit(
+            cycle,
+            "agent_model_output",
+            {
+                "role": role,
+                "prompt_file": filename,
+                "prompt_version": version,
+                "model": result.model,
+                "fallback_used": result.fallback_used,
+                "input_tokens": result.input_tokens,
+                "output_tokens": result.output_tokens,
+                "cost_usd": str(result.cost_usd),
+                "latency_ms": result.latency_ms,
+                "output": result.value.model_dump(mode="json"),
+            },
+        )
         return result.value, result.input_tokens + result.output_tokens
 
     def _audit(self, cycle: CycleInput, kind: str, payload: Mapping[str, Any]) -> None:
@@ -374,13 +460,21 @@ class AgentGraph:
         return remaining
 
     def _exhausted(self, started: float, calls: int, tokens: int, steps: int) -> bool:
-        return (calls >= self.budget.max_model_calls or tokens >= self.budget.max_tokens
-                or steps >= self.budget.max_steps
-                or time.monotonic() - started >= self.budget.wall_seconds)
+        return (
+            calls >= self.budget.max_model_calls
+            or tokens >= self.budget.max_tokens
+            or steps >= self.budget.max_steps
+            or time.monotonic() - started >= self.budget.wall_seconds
+        )
 
     def _no_trade(
-        self, cycle: CycleInput, reason: str, calls: int, tokens: int,
-        proposal: Proposal | None = None, guardian: GuardianDecision | None = None,
+        self,
+        cycle: CycleInput,
+        reason: str,
+        calls: int,
+        tokens: int,
+        proposal: Proposal | None = None,
+        guardian: GuardianDecision | None = None,
     ) -> CycleResult:
         try:
             self._audit(cycle, "agent_cycle_no_trade", {"reason": reason})
@@ -391,6 +485,7 @@ class AgentGraph:
 
 class EventDebouncer:
     """Reject duplicate event/instrument cycles inside the configured gap."""
+
     def __init__(self, min_cycle_gap_seconds: float = 1.0) -> None:
         if min_cycle_gap_seconds < 0:
             raise ValueError("minimum cycle gap cannot be negative")
@@ -407,4 +502,3 @@ class EventDebouncer:
             return False
         self._last[key] = stamp
         return True
-

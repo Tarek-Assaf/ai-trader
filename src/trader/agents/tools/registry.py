@@ -1,4 +1,5 @@
 """Read-only tool allow-list validation and dispatch."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -27,6 +28,7 @@ class Tool:
 
 class ToolRegistry:
     """LLM outputs are never interpreted as calls; trusted code may call read tools."""
+
     def __init__(self, config: Mapping[str, Any]) -> None:
         try:
             tools = {str(k): str(v["permission"]) for k, v in config["tools"].items()}
