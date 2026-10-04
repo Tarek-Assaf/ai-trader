@@ -119,7 +119,7 @@ def sanitize_research(
         or parts.username is not None
         or parts.password is not None
     ):
-        raise ValueError("provenance URL must be public HTTPS without embedded credentials")
+        raise ValueError("provenance URL must use HTTPS without embedded credentials")
     plain = strip_markup(content)[:max_chars]
     escaped = html.escape(plain, quote=False)
     digest = hashlib.sha256(escaped.encode("utf-8")).hexdigest()
