@@ -238,11 +238,44 @@ def _cleanup(broker: CapitalComBroker, client: ObservedTradingClient) -> dict[st
     }
 
 
+def _record_rounding(report: dict[str, object], client: ObservedTradingClient) -> None:
+    """Capture broker size/stop rounding even when strict adapter checks abort and close."""
+    epic = report.get("epic")
+    requested_size = report.get("requested_size")
+    stop_levels = report.get("stop_levels")
+    if not isinstance(stop_levels, dict):
+        return
+    observed = next(
+        (item for item in reversed(client.position_observations) if item.get("epic") == epic),
+        None,
+    )
+    if observed is None:
+        return
+    report["broker_observed_size"] = observed.get("size")
+    report["broker_observed_stop"] = observed.get("stop_level")
+    rounding = report.get("rounding")
+    if not isinstance(rounding, dict):
+        rounding = {}
+        report["rounding"] = rounding
+    try:
+        if requested_size is not None and observed.get("size") is not None:
+            rounding["size_delta"] = str(Decimal(str(observed["size"])) - Decimal(str(requested_size)))
+        open_stop = stop_levels.get("open_requested")
+        if open_stop is not None and observed.get("stop_level") is not None:
+            rounding["open_stop_delta"] = str(Decimal(str(observed["stop_level"])) - Decimal(str(open_stop)))
+        tight_stop = stop_levels.get("tightened_requested")
+        if tight_stop is not None and observed.get("stop_level") is not None:
+            rounding["tightened_stop_delta"] = str(Decimal(str(observed["stop_level"])) - Decimal(str(tight_stop)))
+    except Exception:
+        rounding["delta_calculation"] = "unavailable"
+
+
 def _write_report(report: dict[str, object]) -> Path | None:
     try:
         WORKSPACE.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-        path = WORKSPACE / f"demo_round_trip_{stamp}.json"
+        path = WORKSPACE / f"demo_round_trip_{stamp}_{uuid.uuid4().hex[:8]}.json"
+        report["report_path"] = str(path)
         path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(json.dumps(report, indent=2, sort_keys=True))
         return path
@@ -285,141 +318,153 @@ def run_round_trip() -> int:
         _write_report(report)
         return 2
     try:
-        # Exclusive creation prevents a second command from sending a second order.
-        fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
-        os.write(fd, b"Capital.com demo round trip attempted; do not remove to rerun.\n")
-        os.close(fd)
-    except FileExistsError:
-        report["error"] = "one_shot_already_used"
-        _write_report(report)
-        return 2
-    except OSError as exc:
-        report["error"] = type(exc).__name__
-        _write_report(report)
-        return 2
-
     observed: ObservedTradingClient | None = None
     broker: CapitalComBroker | None = None
+    trading_client: CapitalComTradingClient | None = None
     order_attempted = False
     phase_started = time.monotonic()
     try:
         config_path = Path(__file__).resolve().parents[1] / "config" / "instruments.yaml"
-        with CapitalComTradingClient(settings) as trading_client:
-            observed = ObservedTradingClient(trading_client)
-            broker = CapitalComBroker(observed, enable_demo_orders=True)
-            if not _flat(broker):
-                raise ValueError("account_must_have_no_open_positions_or_working_orders")
-            (
-                ask,
-                size,
-                size_step,
-                tick,
-                epic,
-                minimum_stop_distance,
-            ) = _market_inputs(observed, config_path)
-            stop = _floor_to_tick(ask - minimum_stop_distance - tick * 3, tick)
-            if stop <= 0 or ask - stop < minimum_stop_distance + tick * 2:
-                raise ValueError("safe_stop_cannot_be_placed")
-            report["epic"] = epic
-            report["requested_size"] = str(size)
-            report["requested_reference_price"] = str(ask)
-            report["minimum_size_step"] = str(size_step)
-            report["stop_levels"] = {
-                "open_requested": str(stop),
-                "tightened_requested": str(stop + tick),
-                "tick_size": str(tick),
-                "minimum_stop_distance": str(minimum_stop_distance),
-            }
-            report["timings_ms"]["preflight"] = round(
-                (time.monotonic() - phase_started) * 1000, 3
-            )
+        trading_client = CapitalComTradingClient(settings)
+        observed = ObservedTradingClient(trading_client)
+        broker = CapitalComBroker(observed, enable_demo_orders=True)
+        if not _flat(broker):
+            raise ValueError("account_must_have_no_open_positions_or_working_orders")
+        (
+            ask,
+            size,
+            size_step,
+            tick,
+            epic,
+            minimum_stop_distance,
+        ) = _market_inputs(observed, config_path)
+        stop = _floor_to_tick(ask - minimum_stop_distance - tick * 3, tick)
+        if stop <= 0 or ask - stop < minimum_stop_distance + tick * 2:
+            raise ValueError("safe_stop_cannot_be_placed")
+        report["epic"] = epic
+        report["requested_size"] = str(size)
+        report["requested_reference_price"] = str(ask)
+        report["minimum_size_step"] = str(size_step)
+        report["stop_levels"] = {
+            "open_requested": str(stop),
+            "tightened_requested": str(stop + tick),
+            "tick_size": str(tick),
+            "minimum_stop_distance": str(minimum_stop_distance),
+        }
+        report["timings_ms"]["preflight"] = round(
+            (time.monotonic() - phase_started) * 1000, 3
+        )
 
-            request = OrderRequest(
-                client_order_id=f"q029-{uuid.uuid4().hex}",
-                epic=epic,
-                direction=Direction.BUY,
-                size=size,
-                reference_price=ask,
-                stop_level=stop,
-            )
-            order_attempted = True
-            open_started = time.monotonic()
-            receipt = broker.place_order(request)
-            report["deal_references"]["open"] = receipt.deal_reference
-            report["opened_position"] = _safe_position(receipt.position)
-            report["broker_observations"] = list(observed.position_observations)
-            report["rounding"] = {
-                "size_delta": str(receipt.position.size - size),
-                "open_stop_delta": (
-                    str(receipt.position.stop_level - stop)
-                    if receipt.position.stop_level is not None
+        try:
+            fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+            try:
+                os.write(fd, b"Capital.com demo round trip attempted; do not remove to rerun.\\n")
+            finally:
+                os.close(fd)
+        except FileExistsError:
+            raise ValueError("one_shot_already_used") from None
+        except OSError as exc:
+            raise ValueError(type(exc).__name__) from None
+
+        request = OrderRequest(
+            client_order_id=f"q029-{uuid.uuid4().hex}",
+            epic=epic,
+            direction=Direction.BUY,
+            size=size,
+            reference_price=ask,
+            stop_level=stop,
+        )
+        order_attempted = True
+        open_started = time.monotonic()
+        receipt = broker.place_order(request)
+        report["deal_references"]["open"] = receipt.deal_reference
+        report["opened_position"] = _safe_position(receipt.position)
+        report["broker_observations"] = list(observed.position_observations)
+        report["rounding"] = {
+            "size_delta": str(receipt.position.size - size),
+            "open_stop_delta": (
+                str(receipt.position.stop_level - stop)
+                if receipt.position.stop_level is not None
+                else None
+            ),
+        }
+        report["stop_levels"]["open_observed"] = (
+            str(receipt.position.stop_level) if receipt.position.stop_level else None
+        )
+        if receipt.position.size != size or receipt.position.stop_level != stop:
+            raise ValueError("broker_open_rounding_mismatch")
+        report["timings_ms"]["open_and_stop_verify"] = round(
+            (time.monotonic() - open_started) * 1000, 3
+        )
+
+        tighten_started = time.monotonic()
+        tightened_stop = stop + tick
+        modify_reference = broker.modify_position(
+            receipt.deal_id, stop_level=tightened_stop
+        )
+        report["deal_references"]["modify"] = modify_reference
+        updated = next(
+            (item for item in broker.get_positions() if item.deal_id == receipt.deal_id),
+            None,
+        )
+        if (
+            updated is None
+            or updated.stop_level != tightened_stop
+            or updated.size != size
+        ):
+            if updated is not None:
+                report["rounding"]["size_delta_after_modify"] = str(updated.size - size)
+                report["rounding"]["tightened_stop_delta"] = (
+                    str(updated.stop_level - tightened_stop)
+                    if updated.stop_level is not None
                     else None
-                ),
-            }
-            report["stop_levels"]["open_observed"] = (
-                str(receipt.position.stop_level) if receipt.position.stop_level else None
-            )
-            if receipt.position.size != size or receipt.position.stop_level != stop:
-                raise ValueError("broker_open_rounding_mismatch")
-            report["timings_ms"]["open_and_stop_verify"] = round(
-                (time.monotonic() - open_started) * 1000, 3
-            )
+                )
+            raise ValueError("broker_tightened_stop_verification_failed")
+        report["stop_levels"]["tightened_observed"] = str(updated.stop_level)
+        report["rounding"]["size_delta_after_modify"] = str(updated.size - size)
+        report["rounding"]["tightened_stop_delta"] = str(updated.stop_level - tightened_stop)
+        report["timings_ms"]["tighten_and_verify"] = round(
+            (time.monotonic() - tighten_started) * 1000, 3
+        )
 
-            tighten_started = time.monotonic()
-            tightened_stop = stop + tick
-            modify_reference = broker.modify_position(
-                receipt.deal_id, stop_level=tightened_stop
-            )
-            report["deal_references"]["modify"] = modify_reference
-            updated = next(
-                (item for item in broker.get_positions() if item.deal_id == receipt.deal_id),
-                None,
-            )
-            if (
-                updated is None
-                or updated.stop_level != tightened_stop
-                or updated.size != size
-            ):
-                if updated is not None:
-                    report["rounding"]["size_delta_after_modify"] = str(updated.size - size)
-                    report["rounding"]["tightened_stop_delta"] = (
-                        str(updated.stop_level - tightened_stop)
-                        if updated.stop_level is not None
-                        else None
-                    )
-                raise ValueError("broker_tightened_stop_verification_failed")
-            report["stop_levels"]["tightened_observed"] = str(updated.stop_level)
-            report["rounding"]["size_delta_after_modify"] = str(updated.size - size)
-            report["rounding"]["tightened_stop_delta"] = str(updated.stop_level - tightened_stop)
-            report["timings_ms"]["tighten_and_verify"] = round(
-                (time.monotonic() - tighten_started) * 1000, 3
-            )
-
-            close_started = time.monotonic()
-            report["deal_references"]["close"] = broker.close_position(receipt.deal_id)
-            if not _wait_for_flat(broker):
-                raise ValueError("account_not_flat_after_close")
-            report["cleanup"] = {
-                "attempted": False,
-                "flat_confirmed": True,
-                "positions_remaining": 0,
-                "working_orders_remaining": 0,
-            }
-            report["timings_ms"]["close_and_flat_verify"] = round(
-                (time.monotonic() - close_started) * 1000, 3
-            )
-            report["result"] = "success"
+        close_started = time.monotonic()
+        report["deal_references"]["close"] = broker.close_position(receipt.deal_id)
+        if not _wait_for_flat(broker):
+            raise ValueError("account_not_flat_after_close")
+        report["cleanup"] = {
+            "attempted": False,
+            "flat_confirmed": True,
+            "positions_remaining": 0,
+            "working_orders_remaining": 0,
+        }
+        report["timings_ms"]["close_and_flat_verify"] = round(
+            (time.monotonic() - close_started) * 1000, 3
+        )
+        report["result"] = "success"
     except Exception as exc:
-        report["error"] = str(exc) if str(exc).startswith(("invalid_", "nas100_", "minimum_", "safe_", "account_", "broker_", "workspace_", "one_shot_")) else type(exc).__name__
+        message = str(exc)
+        report["error"] = (
+            message
+            if message.startswith((
+                "invalid_", "nas100_", "minimum_", "safe_", "account_", "broker_", "one_shot_"
+            ))
+            else type(exc).__name__
+        )
         if order_attempted and broker is not None and observed is not None:
             report["cleanup"] = {"attempted": True, **_cleanup(broker, observed)}
             report["broker_observations"] = list(observed.position_observations)
-            report["deal_references"] = {
-                **report["deal_references"],
-                **{f"{key}_observed": value for key, value in observed.references.items()},
-            }
+            references = report["deal_references"]
+            if isinstance(references, dict):
+                references.update(
+                    {f"{key}_observed": value for key, value in observed.references.items()}
+                )
+            _record_rounding(report, observed)
     finally:
-        report["timings_ms"]["total"] = round((time.monotonic() - started) * 1000, 3)
+        if trading_client is not None:
+            trading_client.close()
+        timings = report["timings_ms"]
+        if isinstance(timings, dict):
+            timings["total"] = round((time.monotonic() - started) * 1000, 3)
         _write_report(report)
 
     return 0 if report["result"] == "success" else 1
