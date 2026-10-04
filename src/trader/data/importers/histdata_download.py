@@ -1,4 +1,4 @@
-"""Download a monthly HistData ASCII M1 archive from its public download form."""
+"""Download a HistData monthly or yearly ASCII archive from its public form."""
 
 from __future__ import annotations
 
@@ -131,7 +131,11 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def _request(
-    url: str, data: bytes | None = None, referer: str | None = None, *, max_bytes: int = MAX_BYTES
+    url: str,
+    data: bytes | None = None,
+    referer: str | None = None,
+    *,
+    max_bytes: int = MAX_BYTES,
 ) -> bytes:
     headers = {"User-Agent": "ai-trader HistData importer"}
     if referer:
