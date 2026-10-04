@@ -121,6 +121,8 @@ def sanitize_research(
     ):
         raise ValueError("provenance URL must use HTTPS without embedded credentials")
     plain = strip_markup(content)[:max_chars]
+    if not plain:
+        raise ValueError("research source returned empty content")
     escaped = html.escape(plain, quote=False)
     digest = hashlib.sha256(escaped.encode("utf-8")).hexdigest()
     return ResearchItem(
