@@ -260,13 +260,19 @@ def _record_rounding(report: dict[str, object], client: ObservedTradingClient) -
         report["rounding"] = rounding
     try:
         if requested_size is not None and observed.get("size") is not None:
-            rounding["size_delta"] = str(\n                Decimal(str(observed["size"])) - Decimal(str(requested_size))\n            )
+            rounding["size_delta"] = str(
+                Decimal(str(observed["size"])) - Decimal(str(requested_size))
+            )
         open_stop = stop_levels.get("open_requested")
         if open_stop is not None and observed.get("stop_level") is not None:
-            rounding["open_stop_delta"] = str(\n                Decimal(str(observed["stop_level"])) - Decimal(str(open_stop))\n            )
+            rounding["open_stop_delta"] = str(
+                Decimal(str(observed["stop_level"])) - Decimal(str(open_stop))
+            )
         tight_stop = stop_levels.get("tightened_requested")
         if tight_stop is not None and observed.get("stop_level") is not None:
-            rounding["tightened_stop_delta"] = str(\n                Decimal(str(observed["stop_level"])) - Decimal(str(tight_stop))\n            )
+            rounding["tightened_stop_delta"] = str(
+                Decimal(str(observed["stop_level"])) - Decimal(str(tight_stop))
+            )
     except Exception:
         rounding["delta_calculation"] = "unavailable"
 
