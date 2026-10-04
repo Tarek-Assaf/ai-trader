@@ -171,12 +171,11 @@ class CapitalComBroker:
                 raise BrokerProtocolError("Capital.com did not confirm the position opened")
             deal_id = _required_text(affected.get("dealId"), "affectedDeals[0].dealId")
             positions = self._client.get_positions()
-            matches = [
-                _position(item)
-                for item in positions
-                if isinstance(item.get("position"), Mapping)
-                and item["position"].get("dealId") == deal_id
-            ]
+            matches: list[Position] = []
+            for item in positions:
+                position_data = item.get("position")
+                if isinstance(position_data, Mapping) and position_data.get("dealId") == deal_id:
+                    matches.append(_position(item))
             if len(matches) != 1:
                 raise BrokerProtocolError("Capital.com opened position was not uniquely confirmed")
             opened = matches[0]
