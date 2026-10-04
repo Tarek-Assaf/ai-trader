@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 70,
+  "turn": "claude",
+  "revision": 71,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "PR #31 addresses Claude's Q-029 cycle-1 review: it uses the broker minimum-stop rule and bid-based spread-aware stop, adds a no-order preflight, and reports confirmed-flat broker rejections for owner review. Full CI run 37222556116 passed all 250 tests, validation/security checks, image build, and container checks including mounted volumes refusing chown (V-086). Awaiting Claude Full review cycle 2. No demo order or Pod data was changed; T-024 remains blocked on the owner-run demo round trip after merge/redeploy.",
+    "summary": "PR #33 implements T-051's strict declarative StrategySpec and deterministic offline candle evaluator; CI run 37225189441 passed all 264 tests and all quality/container checks (V-088). T-051 is ready for Claude Full review. No Pod data or broker orders were touched. T-024 remains blocked on the owner-run demo round trip after PR #31 merge/redeploy.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1422,7 +1422,7 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -1430,12 +1430,24 @@
         "T-040"
       ],
       "acceptance_criteria": [
-        "invalid or unsafe spec rejected"
+        "Strict StrategySpec supports instrument, 1m/3m/5m timeframe, bounded entry conditions and tunables, typed stop/target/time/trailing exits, and regime/session filters.",
+        "Only the allow-listed T-040 indicators and declared parameters are accepted; code, imports, attribute access, unknown fields, and oversized JSON are rejected.",
+        "Complexity caps come from config/strategy_lab.yaml; parameter references and bounds are validated; every strategy requires a stop exit.",
+        "Valid specs round-trip through JSON; invalid/malicious corpus and deterministic random-JSON fuzzing raise only StrategySpecError.",
+        "Pure engine evaluates complete UTC 1m/3m/5m candle bars deterministically and has no file, network, or broker capabilities."
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/lab/spec.py",
+        "src/trader/lab/engine.py"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/lab/spec.py: strict Pydantic schema and bounded JSON parser reading complexity limits from the read-only Strategy Lab config.",
+        "src/trader/lab/engine.py: deterministic offline evaluator using the approved T-040 indicators and shared candle resampler.",
+        "tests/unit/test_strategy_spec.py: JSON round-trip, unsafe corpus, configured limits, parameter references, random JSON fuzzing, deterministic evaluation, complete-bar resampling, mixed-series rejection, and AST capability boundary.",
+        "GitHub Actions CI run 37225189441 passed on code head ba45a1d0e3f2a74fcd0c9bf5f9600a481103c2b4: 264 tests, lint/format, typecheck, migration checks, handoff and sequence validators, secret scan, Docker build, ROLE=all health/persistence, chown-refusing volume, backup/restore, and core/worker compose checks."
+      ],
+      "completion_note": "Implemented T-051 as an offline declarative strategy boundary. Parsing rejects executable or unknown input, reads complexity caps from the read-only config, validates bounded parameters and requires a stop rule. The engine evaluates only completed candles and has no broker, filesystem, or network capabilities. CI run 37225189441 passed all 264 tests and all quality/container checks. Ready for Claude Full review; no Pod data or broker orders were used."
     },
     {
       "id": "T-052",
@@ -3057,6 +3069,16 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "script or dealing-rule handling changes"
+    },
+    {
+      "id": "V-088",
+      "subject": "T-051 declarative strategy schema and sandbox engine",
+      "method": "Reviewed spec and evaluator against docs/specs/phase5.md; GitHub Actions ran the complete quality and container suite, including explicit AST checks that the evaluator has no file/network/broker capabilities.",
+      "result": "pass",
+      "evidence": "PR #33 code head ba45a1d0e3f2a74fcd0c9bf5f9600a481103c2b4; CI run 37225189441 passed 264 tests, lint/format, typecheck, migration reversibility, handoff/sequence validation, secret scan, image build, ROLE=all health/persistence, mounted volumes refusing chown, backup/restore, and core/worker compose checks. T-051 remains in review pending Claude Full review.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or the StrategySpec schema, engine, tests, or safety boundary changes."
     }
   ],
   "blockers": [
@@ -4632,7 +4654,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Full review of PR #31 cycle 2 passed (V-087). Owner runs 'python scripts/demo_round_trip.py --preflight' on the Pod first, then the single order command. T-024 stays blocked on that owner-run round trip. Turn to Codex."
+    },
+    {
+      "revision": 71,
+      "ts": "2026-10-04T18:41:44Z",
+      "agent": "codex",
+      "action": "implement_t051_strategy_spec_sandbox",
+      "task_ids": [
+        "T-051"
+      ],
+      "files_changed": [
+        "src/trader/lab/spec.py",
+        "src/trader/lab/engine.py",
+        "tests/unit/test_strategy_spec.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-051 on PR #33: strict declarative Pydantic spec, JSON parser with configured complexity bounds and an allow-listed T-040 indicator surface, typed exit rules with mandatory stop, and a deterministic offline evaluator over complete 1M/3M/5M bars. Added malicious-input, round-trip, bounds, random-JSON fuzz, resampling, and static capability-boundary tests. Full CI run 37225189441 passed 264 tests and all quality/container checks (V-088). No Pod data or broker orders used. Handing over for Claude Full review."
     }
   ],
-  "project_summary": "T-082 importer and T-080/Q-024 Pod import/rerun/lake QA are complete; the 360-row differences are exact duplicate rows and lake timestamp uniqueness/month-overlap QA passed, while raw gaps remain unclassified against market hours. T-041 and T-042 are reviewed and merged. PR #31 prepares the owner-authorized Q-029 one-time Capital.com demo round trip with a guard, offline tests and runbook; CI run 37220748149 is green. The demo order has not been run, so T-024 remains blocked until the owner runs the command after merge/redeploy and shares its redacted report."
+  "project_summary": "T-082 importer and T-080/Q-024 Pod import/rerun/lake QA are complete; the 360-row differences are exact duplicates and lake timestamp uniqueness/month-overlap QA passed, while raw gaps remain unclassified against market hours. T-041 and T-042 are reviewed and merged. PR #31 prepares the owner-authorized Q-029 one-time Capital.com demo round trip with a guard, offline tests and runbook; the owner-run order remains pending. PR #33 implements T-051 StrategySpec schema and sandbox engine; full CI passed and Claude Full review is next."
 }
