@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 54,
+  "revision": 56,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-040 deterministic analysis engine is implemented on Light-tier PR #21; CI run 37189661831 passed all quality, test, handoff/sequence, security, image, and container checks on head 71d4e1ee1e4ef80fe597f9f4fa9d70edfdf332e9. Awaiting Claude review. T-022 is approved and merged in PR #20; Q-025 remains open for follow-up Guardian wiring. T-021 sizing is merged in PR #19; T-020 and T-003 mounted-volume handling are merged in PRs #18 and #17. Next pod-free queue work after review: T-041. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work.",
+    "summary": "T-082 HistData yearly range importer is implemented on Light-tier PR #24; code CI run 37195053072 passed all quality, test, handoff, security, image and container checks. Claude Light review is next. Post-merge NSXUSD/XAUUSD import, zero-row rerun and row/gap/overlap QA remain pending Q-024 on the existing pod; T-080 remains blocked until that acceptance is recorded. Next pod-free queue items after review: T-015 and T-016.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -91,14 +91,15 @@
       "id": "R-05",
       "text": "Use HistData historical data to validate strategies",
       "notes": "HistData is M1, bid-only, EST without DST",
-      "status": "not_started",
+      "status": "in_progress",
       "covered_by": [
         "C-003",
         "T-012",
         "T-014",
         "T-017",
         "T-050",
-        "T-080"
+        "T-080",
+        "T-082"
       ]
     },
     {
@@ -1905,6 +1906,48 @@
         "V-064; CI run 37181720263 quality success on head 2411ec4"
       ],
       "completion_note": "Claude Full final review passed (V-064): quality green on head 2411ec4 including both chown-refusal container cases."
+    },
+    {
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-05"
+      ],
+      "depends_on": [
+        "T-012"
+      ],
+      "deliverables": [
+        "src/trader/data/importers/histdata_download.py",
+        "src/trader/data/importers/histdata_range.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_download.py",
+        "tests/unit/test_histdata_range.py",
+        "docs/reports/histdata_qa.md",
+        "infra/runpod/README.md"
+      ],
+      "id": "T-082",
+      "title": "HistData yearly archives for the range importer",
+      "acceptance_criteria": [
+        "Verify HistData's visible yearly M1 and current-year monthly selectors and record the non-secret form field names and archive URLs in the QA report.",
+        "For each year, use a yearly M1 archive only when the selector has no monthly archives for that year; preserve monthly downloads where listed, the fixed host, no redirects, member validation, atomic caching and serial requests with pauses.",
+        "Apply bounded compressed and expanded size caps to yearly M1 archives and record the caps in the QA report.",
+        "Pin first-seen archive SHA-256 values as cache integrity only; record completion per month so yearly import reruns skip completed months and write zero duplicate rows.",
+        "Split yearly data by source-calendar month; for a conflicting month use only that month's tick archive and record both hashes and the method, or reject that month if ticks are unavailable.",
+        "Use exactly one method per month and preserve resume behavior without mixing M1 and tick partitions.",
+        "Provide a dry-run archive plan and tests for yearly import, resume/idempotence, conflict-to-ticks fallback, download failure, partial first year, and monthly archive precedence.",
+        "Update RunPod section 8 with verified earliest NSXUSD and XAUUSD periods and one command per symbol.",
+        "After merge, import NSXUSD and XAUUSD from their earliest periods through the last completed month on the existing pod volume, then rerun and record summaries and gap QA; preserve already completed months."
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "PR #24 (Light tier; downloader allow-list unchanged): https://github.com/Tarek-Assaf/ai-trader/pull/24.",
+        "Official HistData visible selector evidence in docs/reports/histdata_qa.md: NSXUSD M1 year archive 2024 and monthly archive 2026/09; older-year monthly tick archive route verified. The UI establishes filenames and period options; no token value was recorded.",
+        "Local focused importer tests: 26 passed; focused Ruff check/format and mypy on histdata_range.py passed.",
+        "GitHub Actions CI run 37195053072 passed on code head 328f3dbc4dfceb9044cde2992abf6593b6526467: lint/format, mypy, migrations, tests, handoff validation and append-only sequence validation, secret scan, image build and all container checks."
+      ],
+      "completion_note": "Implementation is ready for Claude's Light review. Year and current-month routes were confirmed from the visible HistData selector; code uses existing monthly archives whenever the provider lists months, and yearly archives otherwise. Annual M1 ZIP and expansion caps are 512 MiB and 2 GiB. The importer splits and resumes by month, records first-seen hashes as cache integrity only, and falls back to that month's ticks only for M1-conflict months. No new dependency was added and no pod data was touched. Remaining acceptance is the post-merge NSXUSD/XAUUSD pod import, zero-row rerun, and recorded row/gap/overlap QA through the existing open Q-024. Claude Light review passed (V-073); post-merge pod import and zero-row rerun remain tracked in Q-024."
     }
   ],
   "decisions": [
@@ -2819,6 +2862,26 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "indicator definitions or snapshot windowing change"
+    },
+    {
+      "id": "V-072",
+      "subject": "T-082 yearly HistData range importer implementation and CI",
+      "method": "Checked T-082 against docs/specs/t082_histdata_yearly.md and docs/review_checklist.md; reviewed live visible HistData selector evidence and verified the final implementation quality workflow.",
+      "result": "pass",
+      "evidence": "PR #24 code head 328f3dbc4dfceb9044cde2992abf6593b6526467. GitHub Actions run 37195053072 passed all quality steps: Ruff lint/format, mypy, migration reversibility, unit/integration tests, handoff validation and append-only PR sequence validation, secret scan, Docker image build, ROLE=all health/persistence, mounted-volume chown refusal, PostgreSQL backup/restore and ROLE=core/worker compose. The focused importer suite passed 26 tests locally. The live visible selector evidence and size caps are recorded in docs/reports/histdata_qa.md. Pod import/rerun acceptance remains pending Q-024.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or archive selection, yearly splitting, manifest/resume, tick fallback, selector evidence, caps, or tests change."
+    },
+    {
+      "id": "V-073",
+      "subject": "T-082 Light-tier review of yearly HistData importer",
+      "method": "Reviewed diff of histdata_download.py, histdata_range.py, import_histdata.py, QA report and RunPod README against T-082 acceptance criteria and docs/process_fastlane.md Light tier; skimmed risky spots (network, writes, logging).",
+      "result": "pass",
+      "evidence": "Fixed host and no-redirect request path unchanged; yearly form rejects unexpected fields/month; yearly caps 512 MiB zip / 2 GiB expanded recorded in QA report; selector parser restricted to www.histdata.com NSXUSD/XAUUSD routes; monthly archives take precedence; per-month completion manifest with first-seen hashes labelled cache integrity only; conflict months use only that month's ticks or are rejected; dry-run plan added; no token value logged or stored; CI run 37195053072 green on code head 328f3db (head db6cc3f is handoff-only). Pod import acceptance remains in Q-024.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "archive selection, yearly splitting, manifest/resume, tick fallback, caps or downloader allow-list change."
     }
   ],
   "blockers": [
@@ -4098,7 +4161,40 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-040 analysis engine (Light review, no changes, V-071). Enabling auto-merge on PR #21. Turn to Codex."
+    },
+    {
+      "revision": 55,
+      "ts": "2026-10-04 10:24:54 UTC",
+      "agent": "codex",
+      "action": "complete_t082_histdata_yearly_for_review",
+      "task_ids": [
+        "T-082"
+      ],
+      "files_changed": [
+        "src/trader/data/importers/histdata_download.py",
+        "src/trader/data/importers/histdata_range.py",
+        "scripts/import_histdata.py",
+        "tests/unit/test_histdata_download.py",
+        "tests/unit/test_histdata_range.py",
+        "docs/reports/histdata_qa.md",
+        "infra/runpod/README.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-082 implementation on Light-tier PR #24 (downloader allow-list unchanged). Verified visible HistData yearly M1, monthly M1 and older-year monthly tick selectors; implemented bounded yearly downloads, monthly-preferred selector planning, calendar-month split/import/resume, first-seen cache-integrity hashes, per-month conflict fallback to ticks, dry-run planning and updated one-command-per-symbol RunPod instructions. Local focused suite: 26 passed; focused Ruff and mypy passed. CI run 37195053072 passed all quality, type, test, handoff/sequence, secret scan, image and container checks on code head 328f3dbc4dfceb9044cde2992abf6593b6526467. Recorded V-072. No pod data touched; post-merge import, zero-row rerun and row/gap/overlap QA remain pending Q-024. Handing to Claude for Light review."
+    },
+    {
+      "revision": 56,
+      "ts": "2026-10-04T10:40:00Z",
+      "agent": "claude",
+      "action": "review_t082_pass",
+      "task_ids": [
+        "T-082"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-082 yearly HistData importer (Light review, no changes, V-073). Enabling auto-merge on PR #24. Turn to Codex; post-merge pod import stays under Q-024."
     }
   ],
-  "project_summary": "T-022 deterministic trade-quality scoring is implemented on Full-tier PR #20; CI run 37186702686 passed all quality, security, image, and container checks. Claude review is next. Q-025 remains open for the separate trusted sizing/quality/stage-cap injection interface into RiskGuardian. T-021 sizing is approved and merged in PR #19; T-020 is merged in PR #18 and T-003 mounted-volume handling in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work."
+  "project_summary": "T-082 HistData yearly archive support passed Claude Light review (V-073) and PR #24 is set to auto-merge. No pod import has been run; Q-024 and T-080 remain pending the post-merge import and zero-row rerun. Next pod-free queue work is T-015, then T-016."
 }
