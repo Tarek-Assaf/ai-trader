@@ -1,7 +1,8 @@
 import collections.abc
 import decimal
+import importlib
 
-import trader.risk.quality
+quality = importlib.import_module("trader.risk.quality")
 
 
 WEIGHTS: dict[str, decimal.Decimal | float] = {
@@ -24,8 +25,8 @@ def _components(
     event_proximity: decimal.Decimal = decimal.Decimal("1"),
     liquidity_session: decimal.Decimal = decimal.Decimal("0.75"),
     strategy_reliability: decimal.Decimal = decimal.Decimal("0.6"),
-) -> trader.risk.quality.TradeQualityComponents:
-    return trader.risk.quality.TradeQualityComponents(
+) -> quality.TradeQualityComponents:
+    return quality.TradeQualityComponents(
         stop_distance_atr=stop_distance_atr,
         spread_to_atr=spread_to_atr,
         regime_fit=regime_fit,
@@ -45,7 +46,7 @@ def _assert_value_error(operation: collections.abc.Callable[[], object]) -> None
 
 
 def test_weighted_score_and_component_contributions_are_deterministic() -> None:
-    result = trader.risk.quality.score_trade_quality(
+    result = quality.score_trade_quality(
         _components(),
         WEIGHTS,
         minimum_score=decimal.Decimal("0.70"),
@@ -75,7 +76,7 @@ def test_score_equal_to_threshold_is_eligible() -> None:
         strategy_reliability=decimal.Decimal("1"),
     )
 
-    result = trader.risk.quality.score_trade_quality(
+    result = quality.score_trade_quality(
         features,
         WEIGHTS,
         minimum_score=decimal.Decimal("1"),
@@ -86,7 +87,7 @@ def test_score_equal_to_threshold_is_eligible() -> None:
 
 
 def test_score_below_threshold_is_ineligible() -> None:
-    result = trader.risk.quality.score_trade_quality(
+    result = quality.score_trade_quality(
         _components(regime_fit=decimal.Decimal("0")),
         WEIGHTS,
         minimum_score=decimal.Decimal("0.70"),
@@ -97,9 +98,14 @@ def test_score_below_threshold_is_ineligible() -> None:
 
 
 def test_invalid_component_scores_fail_closed() -> None:
-    for value in (decimal.Decimal("-0.01"), decimal.Decimal("1.01"), decimal.Decimal("NaN"), decimal.Decimal("Infinity")):
+    for value in (
+        decimal.Decimal("-0.01"),
+        decimal.Decimal("1.01"),
+        decimal.Decimal("NaN"),
+        decimal.Decimal("Infinity"),
+    ):
         _assert_value_error(
-            lambda value=value: trader.risk.quality.score_trade_quality(
+            lambda value=value: quality.score_trade_quality(
                 _components(regime_fit=value),
                 WEIGHTS,
                 minimum_score=decimal.Decimal("0.50"),
@@ -117,7 +123,7 @@ def test_invalid_or_incomplete_weights_fail_closed() -> None:
     )
     for weights in invalid_weights:
         _assert_value_error(
-            lambda weights=weights: trader.risk.quality.score_trade_quality(
+            lambda weights=weights: quality.score_trade_quality(
                 _components(),
                 weights,
                 minimum_score=decimal.Decimal("0.50"),
@@ -128,7 +134,7 @@ def test_invalid_or_incomplete_weights_fail_closed() -> None:
 def test_invalid_threshold_fails_closed() -> None:
     for threshold in (decimal.Decimal("0"), decimal.Decimal("-0.1"), decimal.Decimal("1.01")):
         _assert_value_error(
-            lambda threshold=threshold: trader.risk.quality.score_trade_quality(
+            lambda threshold=threshold: quality.score_trade_quality(
                 _components(),
                 WEIGHTS,
                 minimum_score=threshold,
@@ -137,7 +143,7 @@ def test_invalid_threshold_fails_closed() -> None:
 
 
 def test_yaml_float_weights_are_converted_deterministically() -> None:
-    result = trader.risk.quality.score_trade_quality(
+    result = quality.score_trade_quality(
         _components(),
         WEIGHTS,
         minimum_score=decimal.Decimal("0.705"),
