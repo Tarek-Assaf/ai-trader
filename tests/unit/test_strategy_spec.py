@@ -119,10 +119,7 @@ def test_random_json_never_leaks_non_validation_exceptions() -> None:
             return rng.choice(scalars)
         if rng.random() < 0.5:
             return [value(depth + 1) for _ in range(rng.randrange(5))]
-        return {
-            f"key_{rng.randrange(10)}": value(depth + 1)
-            for _ in range(rng.randrange(5))
-        }
+        return {f"key_{rng.randrange(10)}": value(depth + 1) for _ in range(rng.randrange(5))}
 
     for _ in range(250):
         encoded = json.dumps(value(), allow_nan=False)
