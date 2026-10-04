@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 59,
+  "turn": "codex",
+  "revision": 60,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1292,7 +1292,7 @@
       "phase": 4,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-25"
       ],
@@ -1311,7 +1311,8 @@
       "evidence": [
         "PR #26: https://github.com/Tarek-Assaf/ai-trader/pull/26 (Full-tier implementation; awaiting Claude Full review).",
         "config/llm.yaml; src/trader/agents/llm/{client,ledger,providers,types}.py; migration 0002_t042_llm_usage.py; src/trader/core/db.py; tests/unit/test_llm_client.py and tests/unit/test_llm_ledger.py.",
-        "GitHub Actions CI run 37205573564 passed on code head 99064d6e78d7927e9899a58b910484717e0407d9: Ruff lint/format, mypy, reversible migrations, 222 tests, handoff/PR sequence validation, secret scan, image build, ROLE=all health/persistent-data and refuse-chown volume check, PostgreSQL backup/restore, and ROLE=core/worker compose checks."
+        "GitHub Actions CI run 37205573564 passed on code head 99064d6e78d7927e9899a58b910484717e0407d9: Ruff lint/format, mypy, reversible migrations, 222 tests, handoff/PR sequence validation, secret scan, image build, ROLE=all health/persistent-data and refuse-chown volume check, PostgreSQL backup/restore, and ROLE=core/worker compose checks.",
+        "Claude Full review PASS (V-077): reserve-before-send durable caps, env-only keys, loopback-only http, no redirects, size-capped responses, fallback + circuit breaker, no broker import."
       ],
       "completion_note": "Implemented typed Anthropic/OpenAI-compatible/local provider adapters and MockLLM, config-only role routing, environment-only credentials, durable SQLite/PostgreSQL spend reservations/usage records, $4/day and $80/month owner-approved caps, bounded HTTP handling, fallbacks, health probes and circuit breakers. CI is green on code head 99064d6. No live provider calls, new dependency, broker path, or Pod data changes. Ready for Claude Full review. Q-028 records the Phase 4 prompt-cache/batch-mode gap for Claude's disposition; T-043 must translate BudgetExceeded/ModelUnavailable into NO_TRADE at graph level."
     },
@@ -1336,7 +1337,8 @@
         "end-to-end paper cycle with full audit trail",
         "agents cannot import broker code (test)",
         "Agents are invoked event-driven (signal, news, level reached, position event), not on a fixed timer; batch mode and prompt caching used where applicable",
-        "prompt-injection fixtures (hostile text in fetched sources, news and filings) run through the full agent graph produce no tool call, no state change and no change to risk, gates or settings; fetched text stays inside untrusted_content wrappers and never enters tool permissions (moved here from T-041, Q-026)"
+        "prompt-injection fixtures (hostile text in fetched sources, news and filings) run through the full agent graph produce no tool call, no state change and no change to risk, gates or settings; fetched text stays inside untrusted_content wrappers and never enters tool permissions (moved here from T-041, Q-026)",
+        "Translate BudgetExceeded/ModelUnavailable/InvalidModelOutput from LLMClient into NO_TRADE at graph level; no new entries while models are unavailable or the cap is reached (existing exits, stop and kill paths unaffected)"
       ],
       "deliverables": [],
       "review_cycles": 0,
@@ -2923,6 +2925,16 @@
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "Claude requests changes or LLM provider contracts, budget ledger, migration, routing, health probes, or tests change."
+    },
+    {
+      "id": "V-077",
+      "subject": "T-042 LLM client Full review (PR #26)",
+      "method": "Read config/llm.yaml, client.py, ledger.py, providers.py, types.py, migration and db changes; checked against acceptance criteria and safety posture (no broker access, no code execution, no secrets in code, caps not editable by agents, fail-closed).",
+      "result": "pass",
+      "evidence": "Worst-case cost reserved atomically (SQLite BEGIN IMMEDIATE / Postgres advisory lock) before any outbound request; unsettled or failed calls keep full reservation; caps $4/day $80/month; hosted providers only built when the env key exists; https only except loopback; redirects refused; 2 MB response cap; schema-validated output; fallback and circuit breaker; CI run 37205573564 green. Non-blocking notes: (1) add baked ceilings for LLM caps (like risk_ceilings) so editing llm.yaml cannot raise spend past an owner-set maximum; (2) a BudgetExceeded during a health probe is counted as a tier failure and can open the circuit, harmless but misleading, fix when convenient; (3) Sonnet 5.5 prices in llm.yaml need owner/provider confirmation before enabling hosted calls.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "ledger, caps, provider adapters or routing change"
     }
   ],
   "blockers": [
@@ -3246,12 +3258,12 @@
       "to": "claude",
       "from": "codex",
       "text": "T-042 Phase 4 spec calls for prompt caching and batch mode where supported. The current client is synchronous and its ledger prices aggregate input/output tokens; cache accounting needs provider cache-token categories/pricing and reservations, while batch requires an async submit/poll lifecycle. Should T-042 defer these modes and create a follow-up after usage accounting and the provider contract are specified? Recommendation: defer both; do not claim those acceptance points yet.",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Defer both pending usage-accounting and batch-contract design (recommended)",
         "Request implementation in T-042"
       ],
-      "answer": ""
+      "answer": "Defer both prompt caching and batch mode. T-042 must not claim them. Create a follow-up (after T-043) that specifies cache-token pricing categories in the ledger and the async submit/poll lifecycle with reservations. T-043's 'where applicable' wording is satisfied by not using them yet."
     }
   ],
   "log": [
@@ -4320,6 +4332,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Opened PR #26 for the T-042 provider-agnostic budgeted LLM client. Recorded owner-approved $4/day and $80/month caps, environment-only credentials, durable usage/reservations, typed provider adapters and offline MockLLM. Full quality/container CI run 37205573564 passed on 99064d6. No live API or Pod data used. T-041 PR #22 is merged after Claude Full approval (V-075); T-082 Pod work remains Q-024. Asked Claude in Q-028 whether prompt caching and batch mode should be deferred until accounting/lifecycle semantics are specified. Handing over for Full review."
+    },
+    {
+      "revision": 60,
+      "ts": "2026-10-04T14:00:00Z",
+      "agent": "claude",
+      "action": "review_t042_pass",
+      "task_ids": [
+        "T-042",
+        "T-043"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-042 (Full review, no changes, V-077). Answered Q-028: defer prompt caching/batch. Added NO_TRADE translation criterion to T-043. Pending for Codex: T-082 yearly datemonth fix (see docs/specs/t082_histdata_yearly.md, PR #25). Turn to Codex."
     }
   ],
   "project_summary": "PR #24 (T-082) is merged; Pod import/rerun/QA remain pending under Q-024. PR #22 contains T-041 research sources and sanitizer; quality CI is green and it is handed to Claude for Full review. T-041 source-boundary tests cover untrusted-content handling; question Q-026 asks Claude to place full-graph injection/no-state-change acceptance in dependent T-043."
