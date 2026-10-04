@@ -17,7 +17,10 @@ def upgrade() -> None:
             "llm_usage",
             sa.Column("id", sa.String(length=36), nullable=False),
             sa.Column(
-                "created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False
+                "created_at",
+                sa.DateTime(timezone=True),
+                server_default=sa.func.now(),
+                nullable=False,
             ),
             sa.Column("role", sa.String(length=120), nullable=False),
             sa.Column("model", sa.String(length=240), nullable=False),
