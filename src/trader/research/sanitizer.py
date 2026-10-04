@@ -111,13 +111,22 @@ def sanitize_research(
         raise ValueError("fetched_at must be timezone-aware")
     if max_chars < 1:
         raise ValueError("max_chars must be positive")
+    redacted_url = redact_url(url)
+    parts = urlsplit(redacted_url)
+    if (
+        parts.scheme.casefold() != "https"
+        or not parts.hostname
+        or parts.username is not None
+        or parts.password is not None
+    ):
+        raise ValueError("provenance URL must be public HTTPS without embedded credentials")
     plain = strip_markup(content)[:max_chars]
     escaped = html.escape(plain, quote=False)
     digest = hashlib.sha256(escaped.encode("utf-8")).hexdigest()
     return ResearchItem(
         id=item_id,
         source=source.strip(),
-        url=redact_url(url),
+        url=redacted_url,
         fetched_at=fetched_at.astimezone(UTC),
         content=escaped,
         content_hash=digest,
