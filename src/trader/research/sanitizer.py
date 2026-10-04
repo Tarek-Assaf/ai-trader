@@ -18,7 +18,12 @@ def redact_url(url: str) -> str:
     """Remove credential-like query values before a URL is persisted as provenance."""
     parts = urlsplit(url)
     query = [
-        (key, "[REDACTED]" if any(term in key.casefold() for term in _SENSITIVE_QUERY_KEYS) else value)
+        (
+            key,
+            "[REDACTED]"
+            if any(term in key.casefold() for term in _SENSITIVE_QUERY_KEYS)
+            else value,
+        )
         for key, value in parse_qsl(parts.query, keep_blank_values=True)
     ]
     return urlunsplit((parts.scheme, parts.netloc, parts.path, urlencode(query), ""))
