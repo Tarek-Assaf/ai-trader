@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import sqlite3
 import threading
 import time
@@ -53,7 +54,7 @@ class SQLiteResearchCache:
 
     def set(self, key: str, value: str, ttl_seconds: float) -> None:
         """Store a value until its positive TTL expires."""
-        if ttl_seconds <= 0:
+        if not math.isfinite(ttl_seconds) or ttl_seconds <= 0:
             raise ValueError("cache TTL must be positive")
         expires_at = self._clock() + ttl_seconds
         with self._lock, self._connection:
@@ -69,7 +70,7 @@ class SQLiteResearchCache:
 
         Database errors deliberately propagate so callers fail closed without issuing a request.
         """
-        if not source.strip() or min_interval_seconds < 0:
+        if not source.strip() or not math.isfinite(min_interval_seconds) or min_interval_seconds < 0:
             raise ValueError("source and non-negative interval are required")
         now = self._clock()
         with self._lock, self._connection:
