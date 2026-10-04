@@ -237,7 +237,9 @@ class CapitalComClient:
         """Return validated open-position records."""
         payload = self._request("GET", "positions")
         positions = payload.get("positions") if isinstance(payload, Mapping) else None
-        if not isinstance(positions, list) or any(not isinstance(item, Mapping) for item in positions):
+        if not isinstance(positions, list) or any(
+            not isinstance(item, Mapping) for item in positions
+        ):
             raise CapitalComError(200, "positions")
         return positions
 
@@ -302,9 +304,7 @@ class CapitalComClient:
             raise CapitalComError(200, "confirms")
         return payload
 
-    def modify_position(
-        self, deal_id: str, payload: Mapping[str, object]
-    ) -> Mapping[str, Any]:
+    def modify_position(self, deal_id: str, payload: Mapping[str, object]) -> Mapping[str, Any]:
         """Modify stop/limit levels; a protective stop is mandatory."""
         if not deal_id.strip():
             raise ValueError("deal_id must not be empty")
@@ -312,9 +312,7 @@ class CapitalComClient:
         stop_distance = payload.get("stopDistance")
         if not (self._valid_stop_value(stop_level) or self._valid_stop_value(stop_distance)):
             raise ValueError("position modification requires a positive stop")
-        reply = self._request(
-            "PUT", f"positions/{quote(deal_id, safe='')}", json=payload
-        )
+        reply = self._request("PUT", f"positions/{quote(deal_id, safe='')}", json=payload)
         if not isinstance(reply, Mapping) or not isinstance(reply.get("dealReference"), str):
             raise CapitalComError(200, "positions")
         if not reply["dealReference"].strip():
@@ -422,3 +420,4 @@ class CapitalComClient:
             if cursor > end_utc:
                 return
         raise CapitalComError(200, path)
+
