@@ -113,7 +113,7 @@ async def test_url_fetch_sanitizes_persists_and_reuses_cache() -> None:
     assert "private" not in first[0].url
     with engine.connect() as connection:
         row = connection.exec_driver_sql("SELECT payload FROM research_items").one()
-    payload = row[0]
+    payload = json.loads(row[0])
     assert payload["url"] == first[0].url
     assert "private" not in json.dumps(payload)
     engine.dispose()
