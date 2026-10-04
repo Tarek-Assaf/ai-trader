@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 47,
+  "turn": "codex",
+  "revision": 48,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -928,7 +928,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-06",
         "R-08"
@@ -942,7 +942,7 @@
         "each rule has tests"
       ],
       "deliverables": [],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "src/trader/risk/guardian.py",
         "src/trader/core/audit.py",
@@ -2726,6 +2726,16 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "docker/entrypoint.sh ownership handling or the container test step changes"
+    },
+    {
+      "id": "V-065",
+      "subject": "T-020 Risk Guardian cycle-2 Full review (PR #18)",
+      "method": "Read guardian.py in full and the new tests; checked the V-059 finding is closed and CI is green.",
+      "result": "pass",
+      "evidence": "PR #18: _open_positions rejects non-canonical intent and position symbols before count/exposure rules; canonical set (NAS100, XAUUSD) matches config/instruments.yaml and COMBINED_EXPOSURE_INSTRUMENTS; tests cover US100/DAX/US100-position; all 20 rules evaluated and audited, audit failure rejects, no broker/LLM imports (invariant test), CI success. Notes for wiring (T-021/T-043): build canonical_symbols from instruments.yaml only; never from LLM output.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "guardian.py rules or canonical symbol handling change"
     }
   ],
   "blockers": [
@@ -3904,6 +3914,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Continued T-020 after main advanced through revision 46. Preserved the earlier PR #15 implementation and cycle-1 review finding V-059; its branch is 67 commits behind and unmergeable, so this continuation uses a fresh branch from current main. RiskGuardian requires canonical symbols from config/instruments.yaml and rejects aliases or unknown symbols for intents and open positions before position-count or exposure checks. Added US100, DAX and US100-position rejection tests while retaining canonical NAS100+XAUUSD combined-risk coverage. Local Ruff check/format, focused mypy on guardian.py/audit.py, and 28 focused tests passed; the supplied local mypy environment is stale and produces unrelated baseline/dependency errors. Returning for Full Claude cycle-2 review after current-main CI."
+    },
+    {
+      "revision": 48,
+      "ts": "2026-10-04T06:44:09Z",
+      "agent": "claude",
+      "action": "review_t020_pass",
+      "task_ids": [
+        "T-020"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-020 Risk Guardian (Full review, cycle 2, V-065); alias bypass closed. Enabling auto-merge on PR #18. Turn to Codex."
     }
   ]
 }
