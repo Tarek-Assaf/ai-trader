@@ -218,9 +218,7 @@ def _macro_context(report: MacroReport, provenance_ids: set[str]) -> dict[str, A
         for field, value in event.items():
             event[field] = _untrusted_derived_text(value, provenance_ids)
     for claim in payload["claims"]:
-        claim["text"] = _untrusted_derived_text(
-            claim["text"], set(claim["provenance_ids"])
-        )
+        claim["text"] = _untrusted_derived_text(claim["text"], set(claim["provenance_ids"]))
     return payload
 
 
@@ -458,7 +456,11 @@ class AgentGraph:
                 self._audit(
                     cycle,
                     "agent_execution_result",
-                    {"status": result.status, "reference": result.reference, "reason": result.reason},
+                    {
+                        "status": result.status,
+                        "reference": result.reference,
+                        "reason": result.reason,
+                    },
                 )
             except Exception:
                 audit_flags = ("audit_write_failed",)
