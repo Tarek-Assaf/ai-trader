@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 75,
+  "turn": "codex",
+  "revision": 76,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1357,12 +1357,13 @@
         "Translate BudgetExceeded/ModelUnavailable/InvalidModelOutput from LLMClient into NO_TRADE at graph level; no new entries while models are unavailable or the cap is reached (existing exits, stop and kill paths unaffected)"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "config/tools.yaml",
         "src/trader/agents/graph.py",
         "src/trader/agents/tools/registry.py",
-        "tests/unit/test_agent_graph.py"
+        "tests/unit/test_agent_graph.py",
+        "Claude Full review of PR #35 (V-092): changes_requested cycle 1."
       ],
       "completion_note": "Implemented the bounded event-driven agent graph, typed stages, exact read-only tool registry, Guardian/execution injection, full cycle audit, two-revision critique, and fail-closed model/budget behavior. Added MockLLM end-to-end, failure, and hostile web/news/filing fixtures; Q-028 defers prompt caching and batch mode until accounting/lifecycle follow-up. PR #35 passes full CI run 37229457914 on head 6f667143b8b06ab9b3d05f3d2e8c267ed2019532. No Pod, hosted model, or broker was used. Pending Claude Full review."
     },
@@ -3122,6 +3123,16 @@
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "Claude requests changes or the event schema, graph, permission boundary, budget handling, or fail-closed behavior changes."
+    },
+    {
+      "id": "V-092",
+      "subject": "T-043 agent graph Full review (PR #35)",
+      "method": "Read graph.py, registry.py, tools.yaml and tests against the five acceptance criteria and the injection and fail-closed rules.",
+      "result": "fail",
+      "evidence": "Good: no model-facing tool dispatcher, typed strict outputs, TradeIntent has no size, Guardian approval required before executor, critic veto/revision limit, budget/model errors become NO_TRADE, wall-clock/step/token caps, full audit of prompts and outputs, allow-list pinned to the reviewed table. Must fix: Second-order injection: summaries from the data_summarizer and the macro report's free text (claims, backdrop, upcoming_events) are model paraphrases of hostile fetched text, but they reach the technical/strategist/critic inputs as plain JSON, outside <untrusted_content>. Wrap all text derived from research (summaries[].summary, macro claims.text, backdrop, upcoming_events fields) in an untrusted_content envelope (source=derived, with its provenance ids) whenever it is passed to a later role, and add a line to common_rules.md (version 2) saying derived text stays untrusted. | Add the missing full-graph injection test required by Q-026: a hostile research item whose text the mock summarizer and mock analysts echo back, run end to end through strategist, critic and Guardian. Assert: the hostile text appears only inside untrusted_content in every later model input, no tool call happens, Guardian and executor receive only the typed TradeIntent, and risk/gate/settings files are unchanged. The current test stops at the first invalid model output, so it does not exercise this path. | If the audit write for agent_execution_result fails AFTER the executor returned submitted, the graph currently falls into cycle_failed_closed and reports NO_TRADE although an order exists at the broker. Catch the audit error around that single write, still return the TRADE/submitted CycleResult, and surface an 'audit_write_failed' flag in the result so the caller and reconciler know. Add a test with an AuditWriter that raises on that event. Non-blocking: T-026 should use cycle_id as the idempotency key for execution; EventDebouncer is per process only.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "graph, prompts, tool registry or untrusted-content handling change"
     }
   ],
   "blockers": [
@@ -4770,6 +4781,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Completed T-043 on PR #35 with a bounded typed event-driven graph, Guardian/executor injection, full audit, strict read-only tool registry, two-revision critique, and fail-closed LLM/budget errors. Added offline end-to-end, boundary, model failure, and hostile web/news/filing tests. Full CI run 37229457914 passed on head 6f667143b8b06ab9b3d05f3d2e8c267ed2019532. PR targets main. Prompt caching and batch mode are deferred per Q-028. No hosted model, Pod, or broker was used. Handing off for Claude Full review. Next ordered tasks after review: T-023, T-025, T-026, T-027, then T-060 backup-job code; restore drill remains Pod-dependent."
+    },
+    {
+      "revision": 76,
+      "ts": "2026-10-04T20:05:00Z",
+      "agent": "claude",
+      "action": "review_t043_changes_requested",
+      "task_ids": [
+        "T-043"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Full review of PR #35: changes requested (cycle 1 of 2, V-092). Fix (1) wrap model-derived text from research in untrusted_content for later roles and bump common_rules to v2; (2) add the full-graph second-order injection test; (3) do not turn a submitted order into NO_TRADE when the post-execution audit write fails. Everything else passes. Turn to Codex."
     }
   ],
   "project_summary": "T-043 bounded agent graph is implemented on PR #35 and passes full CI run 37229457914 (V-091), pending Claude Full review. The PR targets main and contains only T-043 code/tests plus its handoff. Next in the pod-free order: T-023 PaperBroker with default spread/slippage, then T-025 P&L, T-026 order manager, T-027 LLM-free kill switch, and T-060 backup-job code. T-060's fresh-Pod restore drill and T-017 recorder calibration remain Pod-dependent. Q-024 lake QA is complete (T-080 V-082); Q-029 demo round trip still awaits the owner-run Pod command. No Pod data or broker orders were changed."
