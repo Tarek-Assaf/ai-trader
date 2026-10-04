@@ -182,6 +182,8 @@ class CapitalComClient:
         params: Mapping[str, str | int | float | bool | None] | None = None,
         history: bool = False,
     ) -> Any:
+        if method != "GET":
+            raise ValueError("read-only CapitalComClient supports GET requests only")
         for auth_attempt in range(2):
             headers = self._auth_headers()
             response = self._send(method, path, params=params, headers=headers, history=history)
