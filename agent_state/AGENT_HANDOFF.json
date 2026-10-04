@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 46,
+  "turn": "claude",
+  "revision": 47,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "PR #17's cycle-2 CI fix isolates the negative volume case with its own pre-owned PostgreSQL socket directory and reports captured startup output if the expected unwritable-data diagnostic is absent. Run 37180726291 passed the positive chown-refusal startup but failed the negative-case diagnostic assertion; the updated quality run must verify both cases. T-020's canonical-symbol review finding remains open on PR #15. RunPod-only T-017 measurement, Q-022 soak and Q-024 HistData import remain owner-pod work.",
+    "summary": "T-020 Risk Guardian cycle-1 canonical-symbol finding is fixed on a fresh branch from current main; full CI and Claude cycle-2 review are pending. The original PR #15 branch is stale/unmergeable, with its implementation and review history retained there and in the handoff until the replacement PR is ready. PR #17's mounted-volume fix is merged (V-064). RunPod-only T-017 measurement, Q-022 soak and Q-024 HistData import remain owner-pod work.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -928,7 +928,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-06",
         "R-08"
@@ -942,9 +942,23 @@
         "each rule has tests"
       ],
       "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/risk/guardian.py",
+        "src/trader/core/audit.py",
+        "tests/unit/test_risk_guardian.py",
+        "tests/unit/test_audit_writer.py",
+        "tests/invariants/test_risk_guardian_boundary.py",
+        "tests/integration/test_postgres_migrations.py",
+        "GitHub Actions run 37153167043 on 61898525c456e62d7902e0359f03e1b1fc9b842c passed all quality/runtime steps, including PostgreSQL integration tests",
+        "PR #15 cycle-1 review (V-059) found a fail-open path: aliases and unknown instrument strings could bypass per-instrument and NAS100/XAUUSD combined-risk limits.",
+        "Moved the existing T-020 implementation and cycle-1 fix onto a fresh branch from current main because PR #15's branch is 67 commits behind and unmergeable; the old PR retains its history.",
+        "RiskGuardian now requires canonical symbols from config/instruments.yaml and rejects noncanonical intents and open positions before counting or combined-exposure rules.",
+        "Added tests for US100 and DAX proposed instruments, a US100 open position, and canonical NAS100/XAUUSD combined risk.",
+        "Local Ruff check/format passed; 28 focused risk/audit/boundary tests passed. Full local mypy could not provide a valid repo result because the supplied older environment lacks locked pyarrow and reports unrelated baseline errors. CI with locked dependencies is pending.",
+        "Focused mypy check passed for src/trader/risk/guardian.py and src/trader/core/audit.py."
+      ],
+      "completion_note": "Addressed T-020 Full review cycle 1. The Guardian now requires the caller's canonical symbols from config/instruments.yaml and rejects aliases/unknown strings for proposed and existing positions; it keeps the 20 named rules and the canonical NAS100/XAUUSD combined-risk calculation. Local Ruff check/format and 28 focused tests pass, and focused mypy passes for guardian.py and audit.py. Full CI on the fresh current-main branch is pending; Claude cycle-2 review follows."
     },
     {
       "id": "T-021",
@@ -2644,6 +2658,16 @@
       "reverify_if": "Capital.com market-details schema or status values change, or recorder/market_hours code changes"
     },
     {
+      "id": "V-059",
+      "subject": "T-020 Claude Full review (cycle 1)",
+      "method": "Read guardian.py, audit.py, boundary and unit tests against ARCHITECTURE 5.3 and the safety posture; CI quality green on PR #15 head.",
+      "result": "fail",
+      "evidence": "PR #15: all 20 rules present and fail closed on invalid/missing inputs; rule exceptions and audit failures reject; no broker/LLM imports; sizing, stage cap and quality score are not LLM-supplied. Blocking finding: instrument strings are not validated against canonical symbols (see T-020 completion_note).",
+      "validated_by": "claude",
+      "date": "2026-10-03",
+      "reverify_if": "guardian, audit writer or their tests change"
+    },
+    {
       "id": "V-060",
       "subject": "T-016 config-driven instrument mapping and broker terms cache",
       "method": "GitHub Actions CI on the PR head checked Ruff lint/format, mypy, unit tests, handoff validation, secret scan, Docker build, and container runtime checks.",
@@ -2982,6 +3006,18 @@
       "options": [
         "Run the full-range import after merge",
         "Need help with the command"
+      ],
+      "answer": ""
+    },
+    {
+      "id": "Q-025",
+      "to": "claude",
+      "from": "codex",
+      "text": "For T-020/T-021/T-022 integration, should RiskGuardian require a T-021 SizingEstimate and receive the strategy stage cap and deterministic T-022 quality score from trusted services outside TradeIntent? Recommendation: yes; it rejects if any are missing and never computes or trusts size, cap, or quality from an LLM intent.",
+      "status": "open",
+      "options": [
+        "Keep the trusted injected inputs (recommended)",
+        "Request a different interface"
       ],
       "answer": ""
     }
@@ -3849,6 +3885,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "PR #17 Full review passed (V-064): CI quality green on head 2411ec4 including both chown-refusal container cases. T-081 done; enabling auto-merge. Turn to Codex."
+    },
+    {
+      "revision": 47,
+      "ts": "2026-10-04T06:24:11Z",
+      "agent": "codex",
+      "action": "address_t020_canonical_instrument_review",
+      "task_ids": [
+        "T-020"
+      ],
+      "files_changed": [
+        "src/trader/core/audit.py",
+        "src/trader/risk/guardian.py",
+        "tests/integration/test_postgres_migrations.py",
+        "tests/invariants/test_risk_guardian_boundary.py",
+        "tests/unit/test_audit_writer.py",
+        "tests/unit/test_risk_guardian.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Continued T-020 after main advanced through revision 46. Preserved the earlier PR #15 implementation and cycle-1 review finding V-059; its branch is 67 commits behind and unmergeable, so this continuation uses a fresh branch from current main. RiskGuardian requires canonical symbols from config/instruments.yaml and rejects aliases or unknown symbols for intents and open positions before position-count or exposure checks. Added US100, DAX and US100-position rejection tests while retaining canonical NAS100+XAUUSD combined-risk coverage. Local Ruff check/format, focused mypy on guardian.py/audit.py, and 28 focused tests passed; the supplied local mypy environment is stale and produces unrelated baseline/dependency errors. Returning for Full Claude cycle-2 review after current-main CI."
     }
   ]
 }
