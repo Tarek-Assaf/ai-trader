@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 52,
+  "revision": 54,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-022 deterministic trade-quality scoring is implemented on Full-tier PR #20; CI run 37186702686 passed all quality, security, image, and container checks. Claude approved it (V-069). Q-025 remains open for the separate trusted sizing/quality/stage-cap injection interface into RiskGuardian. T-021 sizing is approved and merged in PR #19; T-020 is merged in PR #18 and T-003 mounted-volume handling in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work.",
+    "summary": "T-040 deterministic analysis engine is implemented on Light-tier PR #21; CI run 37189661831 passed all quality, test, handoff/sequence, security, image, and container checks on head 71d4e1ee1e4ef80fe597f9f4fa9d70edfdf332e9. Awaiting Claude review. T-022 is approved and merged in PR #20; Q-025 remains open for follow-up Guardian wiring. T-021 sizing is merged in PR #19; T-020 and T-003 mounted-volume handling are merged in PRs #18 and #17. Next pod-free queue work after review: T-041. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1221,7 +1221,7 @@
       "phase": 4,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-02"
       ],
@@ -1232,10 +1232,21 @@
         "snapshot for 1M/3M/5M builds from recorded data",
         "indicator tests against reference values"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/analysis/indicators.py",
+        "src/trader/analysis/snapshot.py",
+        "tests/unit/test_analysis_engine.py",
+        "tests/fixtures/analysis_reference.csv",
+        "docs/specs/analysis_engine.md"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "PR #21 (codex/T-040-analysis-engine) implements deterministic indicators and immutable 1M/3M/5M snapshots from validated one-minute candles. Future, incomplete, and unconfirmed data is excluded; freshness is measured from the close of the latest completed one-minute bar.",
+        "The implementation covers SMA/EMA, Wilder RSI/MACD/ATR/Bollinger/ADX, UTC-day VWAP and pivots, confirmed swing levels, deterministic candle patterns, broad UTC session tags, regime labels, spread/ATR matching, support/resistance clusters, descriptive timeframe agreement, and stable JSON serialization.",
+        "Reference fixture and unit tests cover indicator values, UTC pivots, incomplete inputs, aligned aggregation, and no-lookahead behavior. No dependencies, live API calls, broker logic, or secrets were added.",
+        "GitHub Actions CI run 37189661831 passed on head 71d4e1ee1e4ef80fe597f9f4fa9d70edfdf332e9: Ruff, mypy, migrations, unit/integration tests, handoff and PR sequence validation, secret scan, image build, and all ROLE=all/core/worker container checks."
+      ],
+      "completion_note": "Completed T-040 on PR #21 as a pure, deterministic analysis layer with reference fixtures and no-lookahead tests. Final CI run 37189661831 passed on head 71d4e1ee1e4ef80fe597f9f4fa9d70edfdf332e9, including all container checks. Ready for Claude review; no pod work or live data was used.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -2788,6 +2799,26 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "quality.py scoring semantics or risk.yaml weights change"
+    },
+    {
+      "id": "V-070",
+      "subject": "T-040 analysis engine implementation and CI",
+      "method": "Compared the indicators, snapshot builder, fixture and tests with the T-040 acceptance criteria and docs/review_checklist.md; checked all steps of the final PR quality workflow.",
+      "result": "pass",
+      "evidence": "PR #21 head 71d4e1ee1e4ef80fe597f9f4fa9d70edfdf332e9. GitHub Actions run 37189661831 passed Ruff lint/format, mypy, migration reversibility, unit/integration tests, handoff and PR sequence validation, secret scan, image build, ROLE=all health/persistent data, mounted-volume chown-refusal, PostgreSQL backup/restore, and ROLE=core/worker compose checks. This is implementation evidence pending the independent Claude Light review.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or analysis semantics, no-lookahead behavior, fixture values, or tests change."
+    },
+    {
+      "id": "V-071",
+      "subject": "T-040 analysis engine Light review (PR #21)",
+      "method": "Read snapshot.py, the spec, swing and pivot code, the reference fixture and the test list; CI green on head.",
+      "result": "pass",
+      "evidence": "Snapshots filter to complete bars whose close is at or before as_of (no look-ahead); swings emitted only with right-hand confirmation inside the visible window; pivots use only the previous observed UTC day; VWAP resets at 00:00 UTC; warm-up returns None; JSON is stable with allow_nan=False; spread/ATR only when spread timestamp matches the latest 1M bar. Tests: reference values, invalid periods and non-finite input, UTC-aligned 1M/3M/5M, future bars cannot change a cutoff snapshot, incomplete resampled bins excluded, previous-day pivots, naive time fails. Note: the score is descriptive, not a trade-quality score (as the spec says); T-043 must not treat it as eligibility.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "indicator definitions or snapshot windowing change"
     }
   ],
   "blockers": [
@@ -4036,6 +4067,37 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-022 quality score (Full review, no changes, V-069). Answered Q-025: keep trusted injected inputs. Enabling auto-merge on PR #20. Turn to Codex."
+    },
+    {
+      "revision": 53,
+      "ts": "2026-10-04T08:42:54Z",
+      "agent": "codex",
+      "action": "complete_t040_analysis_engine_for_review",
+      "task_ids": [
+        "T-040"
+      ],
+      "files_changed": [
+        "src/trader/analysis/indicators.py",
+        "src/trader/analysis/snapshot.py",
+        "tests/unit/test_analysis_engine.py",
+        "tests/fixtures/analysis_reference.csv",
+        "docs/specs/analysis_engine.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-040 on Light-tier PR #21: deterministic indicators and no-lookahead 1M/3M/5M snapshots from validated minute candles, with reference fixtures and unit tests; no dependency, broker logic, live call, or pod usage. Final CI run 37189661831 passed all quality, tests, handoff/sequence, security, image, and container checks on head 71d4e1ee1e4ef80fe597f9f4fa9d70edfdf332e9. Recorded V-070 and requested Claude review."
+    },
+    {
+      "revision": 54,
+      "ts": "2026-10-04T08:50:15Z",
+      "agent": "claude",
+      "action": "review_t040_pass",
+      "task_ids": [
+        "T-040"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-040 analysis engine (Light review, no changes, V-071). Enabling auto-merge on PR #21. Turn to Codex."
     }
   ],
   "project_summary": "T-022 deterministic trade-quality scoring is implemented on Full-tier PR #20; CI run 37186702686 passed all quality, security, image, and container checks. Claude review is next. Q-025 remains open for the separate trusted sizing/quality/stage-cap injection interface into RiskGuardian. T-021 sizing is approved and merged in PR #19; T-020 is merged in PR #18 and T-003 mounted-volume handling in PR #17. RunPod-only T-017 measurement, Q-022 recorder soak, and Q-024 HistData import remain owner-pod work."
