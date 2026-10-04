@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 63,
+  "turn": "codex",
+  "revision": 66,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-024 CapitalComBroker adapter is implemented on PR #28 and Full CI run 37212824751 passed. Claude Full review is now due. Offline contract tests cover order reads/lifecycle and protective-stop validation; order placement is disabled by default. The required demo order round trip is pending explicit owner authorization and a Pod step (Q-029); no broker orders or Pod data changes were made. T-082's Pod import/rerun/QA remains Q-024, and T-014 recorder soak remains Q-022.",
+    "summary": "T-024 broker adapter code approved (Full review); it stays blocked only on the demo order round trip (Q-029, needs owner authorization on the Pod). T-080 import and lake QA done. T-042 LLM client done. Recorder soak (Q-022) pending when markets reopen.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1043,7 +1043,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "blocked",
       "requirements": [
         "R-10",
         "R-11"
@@ -1064,7 +1064,8 @@
         "src/trader/integrations/capital_com/client.py",
         "src/trader/integrations/capital_com/trading.py",
         "tests/unit/test_capital_com_broker.py",
-        "tests/unit/test_capital_com_trading_client.py"
+        "tests/unit/test_capital_com_trading_client.py",
+        "Claude Full code review PASS (V-083). Blocked only on the acceptance criterion 'demo order round trip with stop attached' (Q-029: owner authorization + Pod step)."
       ],
       "completion_note": "Implemented the demo-only adapter and separated its order-capable REST surface into CapitalComTradingClient; CapitalComClient remains GET-only, enforced by a guard and the architecture boundary test. Every order requires a same-request server-side stop, broker confirmations and position checks; placement is disabled by default. Offline fake/HTTP transport coverage exercises reads, order lifecycle, malformed replies and stop validation. Full quality/container CI run 37212824751 passed on head 4c7cb06965c957e57768ac4a2eeb30daa9fdd92. The required demo order round trip is intentionally pending explicit owner authorization and a Pod step (Q-029); it was not attempted. Full Claude review requested."
     },
@@ -1104,7 +1105,8 @@
       ],
       "acceptance_criteria": [
         "duplicate order impossible in chaos test",
-        "mismatch pauses entries and alerts"
+        "mismatch pauses entries and alerts",
+        "Order manager is the only caller of BrokerAdapter.place_order, requires a Risk Guardian approval for the exact OrderRequest, persists client_order_id/intent before the call, and reconciles broker positions after any ambiguous or failed place_order (a position may be open even if the call raised); test that the LLM-side modules cannot reach it"
       ],
       "deliverables": [],
       "review_cycles": 0,
@@ -1882,7 +1884,7 @@
       ],
       "id": "T-080",
       "title": "Pod-side historical import: batch range importer with sha256 manifest so the full NSXUSD and XAUUSD M1 history is rebuilt on the pod's /workspace volume",
-      "status": "blocked",
+      "status": "done",
       "acceptance_criteria": [
         "One command imports a symbol and year range, downloading politely (one request at a time, pauses between requests, cached archives reused); August 2026 archives are checked against the trusted hashes recorded in V-045 and the HistData QA report, while other archives are pinned on first download and checked on reuse as cache integrity only, not independent source verification.",
         "months with conflicting M1 minutes are rebuilt from ticks, other months use plain M1; run summary lists rows, rejected months and gaps",
@@ -1893,9 +1895,12 @@
       "evidence": [
         "PR #11, head 4fda5210b7fcdf18981d1e3753535d87233d5cc0, adds the resumable importer, CLI range options, checksum manifest, serial pauses, M1 conflict fallback to ticks, JSON summaries and RunPod instructions.",
         "Focused unit coverage added for resumable imports, hash pinning/mismatch detection, tick fallback and downloader pause behavior.",
-        "GitHub Actions run 37146599648 passed the full quality and ROLE runtime workflow, including lint/format, mypy, unit tests, handoff checks, secret scan, image build, health/persistence and backup/restore."
+        "GitHub Actions run 37146599648 passed the full quality and ROLE runtime workflow, including lint/format, mypy, unit tests, handoff checks, secret scan, image build, health/persistence and backup/restore.",
+        "docs/evidence/q024_histdata_pod_import.md",
+        "Whole-lake QA: NSXUSD 191 files/5,285,557 rows and XAUUSD 211 files/6,140,206 rows; zero duplicate timestamps and zero adjacent month-range overlaps; raw gap totals recorded in the Q-024 evidence report.",
+        "Claude Light review PASS (V-082)"
       ],
-      "completion_note": "Code approved by Claude (Light review, PR #11). Remaining: owner-run pod import for NSXUSD and XAUUSD with summaries and rerun idempotence (Q-024); mark done once recorded."
+      "completion_note": "Owner-run full-range imports and zero-row reruns are recorded in Q-024 evidence. QA found 360 exact duplicate rows per symbol in six October archives (60 each), with no invalid rows or conflicting prices. Whole-lake Parquet timestamp uniqueness and adjacent-month range checks passed; raw timestamp gaps are reported without market-calendar classification. Ready for Claude Light review."
     },
     {
       "id": "T-081",
@@ -2967,6 +2972,26 @@
       "reverify_if": "yearly/monthly datemonth validation or the downloader allow-list changes"
     },
     {
+      "id": "V-081",
+      "subject": "T-080/Q-024 pod import and whole-lake QA",
+      "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
+      "result": "pass",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives × 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
+    },
+    {
+      "id": "V-082",
+      "subject": "T-080/Q-024 pod import and lake QA (Light review)",
+      "method": "Read docs/evidence/q024_histdata_pod_import.md and Codex's handoff; compared with my own pod observations (first run rows_read/written, zero-row reruns, rejected_months empty).",
+      "result": "pass",
+      "evidence": "360-row difference explained as exact duplicates (60 per October archive 2019-2024 per symbol), zero invalid/conflicting rows; reruns read/wrote 0; lake QA zero duplicate timestamps and zero month overlaps; gaps recorded raw, not calendar-classified. Follow-up for Phase 1/3: classify gaps against market hours before backtests (T-017/T-030 consumers).",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "importer or lake layout changes"
+    },
+    {
       "id": "V-080",
       "subject": "T-024 demo broker adapter implementation and CI",
       "method": "Reviewed the adapter, trading/read-only REST boundary, offline broker and HTTP transport tests, and the complete CI run.",
@@ -2975,6 +3000,16 @@
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "Claude requests changes or the adapter, order-stop handling, auth surface, or tests change."
+    },
+    {
+      "id": "V-083",
+      "subject": "T-024 Capital.com broker adapter Full review (PR #28)",
+      "method": "Read base.py, capital_com.py, trading.py and tests; checked demo-only enforcement, disabled-by-default orders, stop-in-same-request, confirmation/position verification, loosen-stop prevention, retry behaviour of the HTTP layer (429 only, no transport retries), module-boundary invariant coverage, and that CapitalComClient stays GET-only.",
+      "result": "pass",
+      "evidence": "CapitalComBroker requires client.environment == 'demo' and enable_demo_orders=True to place orders; every open request carries guaranteedStop=false and a server-side stop; broker confirmation and position state are verified and a mismatch triggers a protective close; modify can only tighten; close and cancel are not gated so exits always work; module-boundary tests forbid LLM-side imports of trader.execution.brokers and trader.integrations.capital_com; CI run 37212824751 green. Notes (non-blocking): (1) if confirmation or position lookup fails after the broker accepted the order, the adapter raises without closing; T-026 must reconcile positions after any failed place_order (added to T-026 criteria); (2) strict equality on the confirmed stop level may close a valid trade if the broker rounds the stop, check during the demo round trip; (3) size and levels are sent as floats, verify the demo accepts the decimal precision used; (4) approval by the Risk Guardian is not enforced inside the adapter, so T-026 must make the order manager the only caller. Not verified: the real demo round trip (Q-029).",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "adapter, trading client, stop handling or boundary tests change"
     }
   ],
   "blockers": [
@@ -3251,12 +3286,12 @@
       "to": "human",
       "from": "codex",
       "text": "After Claude reviews and you merge PR #11, redeploy the pod from the new image. Run the documented full-range importer for NSXUSD and XAUUSD on /workspace, then paste its redacted JSON summaries and the rerun summary so we can record pod-side completion and idempotence. Do not paste credentials.",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Run the full-range import after merge",
         "Need help with the command"
       ],
-      "answer": ""
+      "answer": "Completed on the owner-started Pod. Each symbol's 360-row read/write difference consists of 60 exact duplicate timestamp-and-OHLCV rows in each October archive from 2019 through 2024; importer lineage reports zero invalid rows and zero conflicting duplicates. Both reruns read and wrote zero rows. Lake QA found 5,285,557 NSXUSD rows across 191 monthly files and 6,140,206 XAUUSD rows across 211 files; duplicate timestamps and adjacent month-range overlaps were both zero. Raw >60-second gap intervals and absent-minute totals are documented, but not classified against trading sessions or holidays."
     },
     {
       "id": "Q-025",
@@ -3307,14 +3342,15 @@
     },
     {
       "id": "Q-029",
-      "question": "T-024 implementation is ready for review, but its acceptance criterion includes one Capital.com demo order round trip with a server-side stop. This requires a Pod step and places a demo order. When you want that test, explicitly authorize the demo order round trip; until then order placement remains disabled and no broker order will be sent.",
       "status": "open",
       "options": [
         "Authorize one demo round trip on the Pod",
         "Keep demo order tests deferred"
       ],
       "answer": "",
-      "to": "human"
+      "to": "human",
+      "text": "T-024 implementation is ready for review, but its acceptance criterion includes one Capital.com demo order round trip with a server-side stop. This requires a Pod step and places a demo order. When you want that test, explicitly authorize the demo order round trip; until then order placement remains disabled and no broker order will be sent.",
+      "from": "codex"
     }
   ],
   "log": [
@@ -4428,6 +4464,33 @@
     },
     {
       "revision": 63,
+      "ts": "2026-10-04T15:54:46Z",
+      "agent": "codex",
+      "action": "complete_q024_t080_lake_qa",
+      "task_ids": [
+        "T-080"
+      ],
+      "files_changed": [
+        "docs/evidence/q024_histdata_pod_import.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+    },
+    {
+      "revision": 64,
+      "ts": "2026-10-04T16:35:00Z",
+      "agent": "claude",
+      "action": "review_t080_pass",
+      "task_ids": [
+        "T-080"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Light review of PR #30 passed (V-082); T-080 done. Evidence matches my pod observations. Gap classification against market hours is a follow-up for backtest consumers. T-024 (PR #28) Full review is next. Turn to Codex."
+    },
+    {
+      "revision": 65,
       "ts": "2026-10-04T15:26:44Z",
       "agent": "codex",
       "action": "complete_t024_offline_adapter_for_full_review",
@@ -4444,7 +4507,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Completed T-024 implementation on Full-tier PR #28. Added typed BrokerAdapter contracts and a demo-only CapitalComBroker with order placement disabled by default, mandatory same-request server-side stop, confirmation and position-state validation, stop-tightening-only modifications, and offline fake/HTTP transport tests. Kept CapitalComClient GET-only by moving all position/order endpoints into CapitalComTradingClient; CI run 37212824751 passed on head 4c7cb06965c957e57768ac4a2eeb30daa9fdd92, including the module-boundary invariant, all tests and ROLE=all container checks. Recorded V-080. Q-029 tracks the required demo order round trip, which needs explicit owner authorization and a Pod step; no orders or Pod data were touched. Handing off for Full Claude review."
+    },
+    {
+      "revision": 66,
+      "ts": "2026-10-04T16:50:00Z",
+      "agent": "claude",
+      "action": "review_t024_pass",
+      "task_ids": [
+        "T-024",
+        "T-026"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Full review of PR #28 passed (V-083), no changes requested. T-024 set to blocked only on the demo round trip (Q-029). Added order-manager requirements to T-026 (sole caller, Guardian approval, reconcile after failed place_order). Merged main's T-080 state into this branch's handoff and fixed Q-029 schema. Turn to Codex."
     }
   ],
-  "project_summary": "T-024 CapitalComBroker adapter is implemented on PR #28 and Full CI run 37212824751 passed. Claude Full review is now due. Offline contract tests cover order reads/lifecycle and protective-stop validation; order placement is disabled by default. The required demo order round trip is pending explicit owner authorization and a Pod step (Q-029); no broker orders or Pod data changes were made. T-082's Pod import/rerun/QA remains Q-024, and T-014 recorder soak remains Q-022."
+  "project_summary": "PR #24 (T-082 importer) and PR #25 (yearly datemonth defect evidence) are merged. Follow-up code fix PR #27 accepts HistData's yearly datemonth='YYYY' field and passed full quality/container CI run 37207724960; ready for Claude Light review. Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA; Codex has not changed Pod data. T-041 PR #22 is merged after Claude Full approval (V-075). T-042 PR #26 passed Claude Full review (V-077); prompt caching and batch mode are deferred, and T-043 owns graph-level NO_TRADE behavior for exhausted budgets."
 }
