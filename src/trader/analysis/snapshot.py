@@ -277,7 +277,11 @@ def build_snapshot(
         _timeframe_snapshot(resample_ohlc(normalized, 5), 5, cutoff, spread_map),
     )
     observed = views[0].timestamp
-    freshness = max(0.0, (cutoff - (observed + timedelta(minutes=1))).total_seconds()) if observed else None
+    freshness = (
+        max(0.0, (cutoff - (observed + timedelta(minutes=1))).total_seconds())
+        if observed
+        else None
+    )
     directions = [
         "up" if view.ema_9 > view.ema_21 else "down" if view.ema_9 < view.ema_21 else "flat"
         for view in views
