@@ -77,12 +77,12 @@ class ResearchRepository:
         }
         dialect = self._engine.dialect.name
         if dialect == "sqlite":
-            statement = sqlite_insert(table).values(**values).on_conflict_do_nothing(
-                index_elements=["id"]
+            statement = (
+                sqlite_insert(table).values(**values).on_conflict_do_nothing(index_elements=["id"])
             )
         elif dialect == "postgresql":
-            statement = pg_insert(table).values(**values).on_conflict_do_nothing(
-                index_elements=["id"]
+            statement = (
+                pg_insert(table).values(**values).on_conflict_do_nothing(index_elements=["id"])
             )
         else:
             raise ValueError("research provenance supports PostgreSQL or SQLite")
@@ -158,9 +158,7 @@ class HttpResearchSource(ABC):
         self.reliability = Reliability()
 
     @staticmethod
-    def _validate_url(
-        url: str, allowed_hosts: set[str], resolve_dns: Callable[[str], bool]
-    ) -> str:
+    def _validate_url(url: str, allowed_hosts: set[str], resolve_dns: Callable[[str], bool]) -> str:
         parts = urlsplit(url)
         host = (parts.hostname or "").casefold()
         if (
@@ -307,7 +305,12 @@ class HttpResearchSource(ABC):
             if 300 <= response.status_code < 400:
                 raise InvalidSourceResponse("source redirects are not followed")
             response.raise_for_status()
-            media_type = response.headers.get("content-type", "").split(";", maxsplit=1)[0].strip().casefold()
+            media_type = (
+                response.headers.get("content-type", "")
+                .split(";", maxsplit=1)[0]
+                .strip()
+                .casefold()
+            )
             if media_type not in self.allowed_media_types:
                 raise InvalidSourceResponse("source returned an unsupported content type")
             declared = response.headers.get("content-length")
