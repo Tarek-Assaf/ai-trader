@@ -181,7 +181,7 @@ jobs:
           grep --quiet '"status":"healthy"' /tmp/no-chown-health.json
           grep --quiet 'chown failed for /tmp/ai-trader-pgdata; trader can write to it, continuing' < <(docker logs ai-trader-no-chown 2>&1)
           docker exec --user 10001:10001 ai-trader-no-chown test -w /tmp/ai-trader-pgdata
-          test -s "$postgres/PG_VERSION"
+          docker exec --user 10001:10001 ai-trader-no-chown test -s /tmp/ai-trader-pgdata/PG_VERSION
           docker stop --time 15 ai-trader-no-chown >/dev/null
           docker rm ai-trader-no-chown >/dev/null
           if docker run --rm --cap-drop=CHOWN \
