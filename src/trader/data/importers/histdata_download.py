@@ -70,7 +70,7 @@ def _request(
             content = bytes(response.read(max_bytes + 1))
     except (urllib.error.URLError, OSError):
         raise ValueError("HistData download failed; retry later") from None
-    if len(content) > MAX_BYTES:
+    if len(content) > max_bytes:
         raise ValueError("HistData response exceeds the archive size limit")
     return content
 
