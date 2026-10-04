@@ -17,6 +17,8 @@ from typing import IO
 
 BASE = "https://www.histdata.com"
 MAX_BYTES = 128 * 1024 * 1024
+MAX_YEARLY_M1_BYTES = 512 * 1024 * 1024
+MAX_YEARLY_M1_EXPANDED_BYTES = 2 * 1024 * 1024 * 1024
 
 
 class _FormParser(HTMLParser):
