@@ -42,9 +42,10 @@ class FakeClient:
                 "minDealSize": {"value": 0.1, "unit": "POINTS"},
                 "maxDealSize": {"value": 100, "unit": "POINTS"},
                 "minSizeIncrement": {"value": 0.1, "unit": "POINTS"},
-                "minStepDistance": {"value": 2, "unit": "POINTS"},
+                "minStepDistance": {"value": 999, "unit": "POINTS"},
+                "minNormalStopOrLimitDistance": {"value": 2, "unit": "POINTS"},
             },
-            "snapshot": {"marketStatus": "TRADEABLE", "offer": 20000.0},
+            "snapshot": {"marketStatus": "TRADEABLE", "bid": 19999.8, "offer": 20000.0},
         }
 
     def get_positions(self) -> list[dict[str, Any]]:
@@ -150,11 +151,12 @@ def test_market_preflight_uses_broker_minimum_size_stop_distance_and_quote(
         lambda path: SimpleNamespace(model_dump=lambda: config),
     )
 
-    ask, size, step, tick, epic, minimum_distance = round_trip._market_inputs(
+    bid, ask, size, step, tick, epic, minimum_distance = round_trip._market_inputs(
         round_trip.ObservedTradingClient(FakeClient()), round_trip.Path("config/instruments.yaml")
     )
 
-    assert (ask, size, step, tick, epic, minimum_distance) == (
+    assert (bid, ask, size, step, tick, epic, minimum_distance) == (
+        Decimal("19999.8"),
         Decimal("20000.0"),
         Decimal("0.1"),
         Decimal("0.1"),
@@ -198,3 +200,52 @@ def test_observer_records_safe_position_values_and_rounding_without_credentials(
     }
     assert "client" not in report
     assert "password" not in str(report).lower()
+
+
+def test_stop_plan_uses_bid_and_spread_margin_and_preserves_minimum_after_tighten() -> None:
+    spread, margin, stop, tightened = round_trip._stop_plan(Decimal("100.0"), Decimal("100.4"), Decimal("0.1"), Decimal("2"))
+    assert (spread, margin, stop, tightened) == (Decimal("0.4"), Decimal("0.5"), Decimal("97.5"), Decimal("97.6"))
+    assert Decimal("100.0") - tightened >= Decimal("2")
+
+
+def test_market_inputs_falls_back_to_min_stop_or_profit_distance(monkeypatch: pytest.MonkeyPatch) -> None:
+    config = {"version": 1, "instruments": {"NAS100": {"display_name": "Nasdaq-100", "aliases": ["NAS100"], "capital_epic": "US100", "histdata_code": "NSXUSD", "asset_class": "index", "value_per_point": None}}}
+    monkeypatch.setattr(round_trip, "load_config_file", lambda path: SimpleNamespace(model_dump=lambda: config))
+    client = FakeClient()
+    rules = client.market_details("US100")["dealingRules"]
+    assert isinstance(rules, dict)
+    rules.pop("minNormalStopOrLimitDistance")
+    rules["minStopOrProfitDistance"] = {"value": 3, "unit": "POINTS"}
+    result = round_trip._market_inputs(round_trip.ObservedTradingClient(client), round_trip.Path("config/instruments.yaml"))
+    assert result[-1] == Decimal("3")
+
+
+def test_market_inputs_rejects_non_points_stop_distance(monkeypatch: pytest.MonkeyPatch) -> None:
+    config = {"version": 1, "instruments": {"NAS100": {"display_name": "Nasdaq-100", "aliases": ["NAS100"], "capital_epic": "US100", "histdata_code": "NSXUSD", "asset_class": "index", "value_per_point": None}}}
+    monkeypatch.setattr(round_trip, "load_config_file", lambda path: SimpleNamespace(model_dump=lambda: config))
+    client = FakeClient()
+    rules = client.market_details("US100")["dealingRules"]
+    assert isinstance(rules, dict)
+    rules["minNormalStopOrLimitDistance"] = {"value": 2, "unit": "PERCENTAGE"}
+    with pytest.raises(ValueError, match="minimum_stop_distance_unit_unsupported"):
+        round_trip._market_inputs(round_trip.ObservedTradingClient(client), round_trip.Path("config/instruments.yaml"))
+
+
+def test_preflight_is_read_only_and_does_not_create_one_shot_marker(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    class ReadOnlyClient:
+        environment = "demo"
+        def get_positions(self) -> list[dict[str, Any]]: return []
+        def get_working_orders(self) -> list[dict[str, Any]]: return []
+        def close(self) -> None: return None
+    for name, value in (("BROKER_ENV", "demo"), ("TRADING_MODE", "paper"), ("LIVE_TRADING_ENABLED", "false")):
+        monkeypatch.setenv(name, value)
+    monkeypatch.setattr(round_trip, "EnvironmentSettings", lambda: SimpleNamespace(broker_env="demo", trading_mode="paper", live_trading_enabled=False))
+    monkeypatch.setattr(round_trip, "WORKSPACE", tmp_path)
+    monkeypatch.setattr(round_trip, "CapitalComTradingClient", lambda settings: ReadOnlyClient())
+    monkeypatch.setattr(round_trip, "_market_inputs", lambda client, path: (Decimal("19999.8"), Decimal("20000.0"), Decimal("0.1"), Decimal("0.1"), Decimal("0.1"), "US100", Decimal("2")))
+    result = round_trip.run_round_trip(["--preflight"])
+    output = capsys.readouterr().out
+    assert result == 0
+    assert '"result": "preflight"' in output
+    assert '"tightened_requested": "19997.5"' in output
+    assert not round_trip.LOCK_PATH.exists()
