@@ -122,9 +122,7 @@ def _timeframe_snapshot(
     spread_by_time: Mapping[datetime, float],
 ) -> TimeframeSnapshot:
     visible = [
-        bar
-        for bar in bars
-        if bar.complete and bar.ts_utc + timedelta(minutes=timeframe) <= as_of
+        bar for bar in bars if bar.complete and bar.ts_utc + timedelta(minutes=timeframe) <= as_of
     ]
     closes = [bar.close for bar in visible]
     fast, slow = ema(closes, 9), ema(closes, 21)
