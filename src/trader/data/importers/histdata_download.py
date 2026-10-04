@@ -56,7 +56,9 @@ class _NoRedirect(urllib.request.HTTPRedirectHandler):
         raise ValueError("unexpected HistData redirect")
 
 
-def _request(url: str, data: bytes | None = None, referer: str | None = None) -> bytes:
+def _request(
+    url: str, data: bytes | None = None, referer: str | None = None, *, max_bytes: int = MAX_BYTES
+) -> bytes:
     headers = {"User-Agent": "ai-trader HistData importer"}
     if referer:
         headers["Referer"] = referer
