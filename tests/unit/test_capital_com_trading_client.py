@@ -34,9 +34,7 @@ def make_client(
         redis_url="redis://localhost:6379/0",
     )
     http = httpx.Client(transport=httpx.MockTransport(handler))
-    return CapitalComClient(
-        settings, limiter=limiter or AllowAllLimiter(), http_client=http
-    ), http
+    return CapitalComClient(settings, limiter=limiter or AllowAllLimiter(), http_client=http), http
 
 
 def test_trading_reads_and_writes_use_authenticated_demo_routes() -> None:
@@ -81,9 +79,12 @@ def test_trading_reads_and_writes_use_authenticated_demo_routes() -> None:
             }
         )
         assert client.confirm_deal(created["dealReference"])["dealStatus"] == "ACCEPTED"
-        assert client.modify_position("deal-1", {"guaranteedStop": False, "stopLevel": 100})[
-            "dealReference"
-        ] == "open ref"
+        assert (
+            client.modify_position("deal-1", {"guaranteedStop": False, "stopLevel": 100})[
+                "dealReference"
+            ]
+            == "open ref"
+        )
         assert client.close_position("deal-1")["dealReference"] == "open ref"
         assert client.cancel_working_order("work-1")["dealReference"] == "open ref"
     finally:
@@ -105,7 +106,9 @@ def test_trading_reads_and_writes_use_authenticated_demo_routes() -> None:
         {"guaranteedStop": False, "stopDistance": 0},
     ],
 )
-def test_open_position_requires_explicit_non_guaranteed_finite_stop(payload: Mapping[str, object]) -> None:
+def test_open_position_requires_explicit_non_guaranteed_finite_stop(
+    payload: Mapping[str, object],
+) -> None:
     requests: list[httpx.Request] = []
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -156,3 +159,4 @@ def test_activity_range_must_be_utc_aware_and_at_most_one_day() -> None:
     finally:
         client.close()
         http.close()
+
