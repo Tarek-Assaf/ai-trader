@@ -132,6 +132,15 @@ def _configured_limits() -> ComplexityLimits:
         raise StrategySpecError("could not load Strategy Lab complexity limits") from exc
 
 
+def _freeze_json_arrays(value: object) -> object:
+    """Convert decoded JSON arrays to tuples so strict models remain immutable."""
+    if isinstance(value, list):
+        return tuple(_freeze_json_arrays(item) for item in value)
+    if isinstance(value, dict):
+        return {key: _freeze_json_arrays(item) for key, item in value.items()}
+    return value
+
+
 def parse_strategy_spec(
     raw: str | bytes | Mapping[str, object],
     *,
@@ -155,7 +164,7 @@ def parse_strategy_spec(
         )
         if not isinstance(payload, dict):
             raise StrategySpecError("strategy JSON must be an object")
-        spec = StrategySpec.model_validate(payload)
+        spec = StrategySpec.model_validate(_freeze_json_arrays(payload))
         limits = complexity_limits or _configured_limits()
         if len(spec.entry_conditions) > limits.max_conditions_per_strategy:
             raise StrategySpecError("too many entry conditions for configured Strategy Lab limits")
