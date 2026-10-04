@@ -231,7 +231,7 @@ class CapitalComClient:
             raise CapitalComError(200, "accounts")
         return payload
 
-ethod
+    @staticmethod
     def _timestamp(value: datetime) -> str:
         if value.tzinfo is None:
             raise ValueError("price history timestamps must be timezone-aware")
