@@ -102,4 +102,3 @@ def test_sql_audit_writer_serializes_and_chains_risk_decisions() -> None:
         assert len(stored[0]["hash"]) == 64
         assert stored[1]["prev_hash"] == stored[0]["hash"]
     engine.dispose()
-
