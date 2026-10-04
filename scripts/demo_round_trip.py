@@ -6,6 +6,7 @@ settings and leaves a durable one-shot marker on /workspace before submission.
 
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import os
@@ -39,6 +40,7 @@ class ObservedTradingClient:
         self.environment = client.environment
         self.position_observations: list[dict[str, object]] = []
         self.references: dict[str, str] = {}
+        self.deal_statuses: list[str] = []
 
     def search_markets(self, search_term: str) -> list[Mapping[str, Any]]:
         return self.client.search_markets(search_term)
@@ -80,7 +82,11 @@ class ObservedTradingClient:
         return reply
 
     def confirm_deal(self, deal_reference: str) -> Mapping[str, Any]:
-        return self.client.confirm_deal(deal_reference)
+        reply = self.client.confirm_deal(deal_reference)
+        status = reply.get("dealStatus")
+        if isinstance(status, str):
+            self.deal_statuses.append(status.upper())
+        return reply
 
     def modify_position(self, deal_id: str, payload: Mapping[str, object]) -> Mapping[str, Any]:
         reply = self.client.modify_position(deal_id, payload)
@@ -147,7 +153,7 @@ def _check_environment() -> EnvironmentSettings:
 
 def _market_inputs(
     client: ObservedTradingClient, config_path: Path
-) -> tuple[Decimal, Decimal, Decimal, Decimal, str, Decimal]:
+) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal, str, Decimal]:
     raw_config = load_config_file(config_path).model_dump()
     mapper = InstrumentMapper(raw_config, client)
     terms = mapper.get("NAS100")
@@ -156,25 +162,41 @@ def _market_inputs(
     snapshot = details.get("snapshot")
     if not isinstance(rules, Mapping) or not isinstance(snapshot, Mapping):
         raise ValueError("market_rules_or_snapshot_missing")
-    status = snapshot.get("marketStatus")
-    if status != "TRADEABLE":
+    if snapshot.get("marketStatus") != "TRADEABLE":
         raise ValueError("nas100_market_not_tradeable")
+    bid = _decimal(snapshot.get("bid"), "bid")
     ask = _decimal(snapshot.get("offer"), "ask")
-    min_distance_rule = rules.get("minStepDistance")
+    if ask < bid:
+        raise ValueError("invalid_quote")
+    min_distance_rule = rules.get("minNormalStopOrLimitDistance")
+    if not isinstance(min_distance_rule, Mapping):
+        min_distance_rule = rules.get("minStopOrProfitDistance")
     if not isinstance(min_distance_rule, Mapping):
         raise ValueError("minimum_stop_distance_missing")
-    if str(min_distance_rule.get("unit", "")).upper() not in {"POINTS", "POINT"}:
+    if str(min_distance_rule.get("unit", "")).upper() != "POINTS":
         raise ValueError("minimum_stop_distance_unit_unsupported")
     min_stop_distance = _decimal(min_distance_rule.get("value"), "minimum_stop_distance")
     minimum_size = terms.min_size
     step = terms.size_step
     if minimum_size > terms.max_size or (minimum_size - terms.min_size) % step != 0:
         raise ValueError("minimum_size_not_valid_for_broker_increment")
-    return ask, minimum_size, step, terms.tick_size, terms.capital_epic, min_stop_distance
+    return bid, ask, minimum_size, step, terms.tick_size, terms.capital_epic, min_stop_distance
 
 
 def _floor_to_tick(value: Decimal, tick: Decimal) -> Decimal:
     return (value / tick).to_integral_value(rounding=ROUND_FLOOR) * tick
+
+
+def _stop_plan(
+    bid: Decimal, ask: Decimal, tick: Decimal, minimum_distance: Decimal
+) -> tuple[Decimal, Decimal, Decimal, Decimal]:
+    spread = ask - bid
+    margin = max(tick * 5, spread, minimum_distance * Decimal("0.10"))
+    stop = _floor_to_tick(bid - minimum_distance - margin, tick)
+    tightened_stop = stop + tick
+    if stop <= 0 or bid - tightened_stop < minimum_distance:
+        raise ValueError("safe_stop_cannot_be_placed")
+    return spread, margin, stop, tightened_stop
 
 
 def _flat(broker: CapitalComBroker) -> bool:
@@ -290,7 +312,10 @@ def _write_report(report: dict[str, object]) -> Path | None:
         return None
 
 
-def run_round_trip() -> int:
+def run_round_trip(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--preflight", action="store_true", help="read-only check; never reserves or submits an order")
+    args = parser.parse_args(argv)
     logging.disable(logging.CRITICAL)
     started = time.monotonic()
     report: dict[str, object] = {
@@ -336,27 +361,26 @@ def run_round_trip() -> int:
         if not _flat(broker):
             raise ValueError("account_must_have_no_open_positions_or_working_orders")
         (
-            ask,
-            size,
-            size_step,
-            tick,
-            epic,
-            minimum_stop_distance,
+            bid, ask, size, size_step, tick, epic, minimum_stop_distance
         ) = _market_inputs(observed, config_path)
-        stop = _floor_to_tick(ask - minimum_stop_distance - tick * 3, tick)
-        if stop <= 0 or ask - stop < minimum_stop_distance + tick * 2:
-            raise ValueError("safe_stop_cannot_be_placed")
+        spread, margin, stop, tightened_stop = _stop_plan(bid, ask, tick, minimum_stop_distance)
         report["epic"] = epic
         report["requested_size"] = str(size)
         report["requested_reference_price"] = str(ask)
+        report["quote"] = {"bid": str(bid), "ask": str(ask), "spread": str(spread)}
         report["minimum_size_step"] = str(size_step)
         report["stop_levels"] = {
             "open_requested": str(stop),
-            "tightened_requested": str(stop + tick),
+            "tightened_requested": str(tightened_stop),
             "tick_size": str(tick),
             "minimum_stop_distance": str(minimum_stop_distance),
+            "safety_margin": str(margin),
+            "tightened_distance_from_bid": str(bid - tightened_stop),
         }
         report["timings_ms"]["preflight"] = round((time.monotonic() - phase_started) * 1000, 3)
+        if args.preflight:
+            report["result"] = "preflight"
+            return 0
 
         try:
             fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
@@ -401,7 +425,6 @@ def run_round_trip() -> int:
         )
 
         tighten_started = time.monotonic()
-        tightened_stop = stop + tick
         modify_reference = broker.modify_position(receipt.deal_id, stop_level=tightened_stop)
         report["deal_references"]["modify"] = modify_reference
         updated = next(
@@ -450,6 +473,17 @@ def run_round_trip() -> int:
         if order_attempted and broker is not None and observed is not None:
             report["cleanup"] = {"attempted": True, **_cleanup(broker)}
             report["broker_observations"] = list(observed.position_observations)
+            cleanup = report["cleanup"]
+            if (
+                observed.deal_statuses
+                and observed.deal_statuses[0] == "REJECTED"
+                and isinstance(cleanup, dict)
+                and cleanup.get("flat_confirmed") is True
+                and cleanup.get("positions_remaining") == 0
+                and cleanup.get("working_orders_remaining") == 0
+            ):
+                report["result"] = "rejected_flat"
+                report["error"] = "open_order_rejected_flat_confirmed_owner_decides_retry"
             references = report["deal_references"]
             if isinstance(references, dict):
                 references.update(
@@ -464,7 +498,7 @@ def run_round_trip() -> int:
             timings["total"] = round((time.monotonic() - started) * 1000, 3)
         _write_report(report)
 
-    return 0 if report["result"] == "success" else 1
+    return 0 if report["result"] in {"success", "preflight"} else 1
 
 
 if __name__ == "__main__":
