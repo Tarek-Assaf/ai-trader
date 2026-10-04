@@ -123,10 +123,10 @@ def _configured_limits() -> ComplexityLimits:
     path = Path(__file__).resolve().parents[3] / "config" / "strategy_lab.yaml"
     try:
         config = load_config_file(path)
-        limits = config.complexity_limits
+        limits = config.model_dump()["complexity_limits"]
         return ComplexityLimits(
-            max_conditions_per_strategy=limits.max_conditions_per_strategy,
-            max_tunable_parameters=limits.max_tunable_parameters,
+            max_conditions_per_strategy=limits["max_conditions_per_strategy"],
+            max_tunable_parameters=limits["max_tunable_parameters"],
         )
     except (AttributeError, TypeError, ValueError) as exc:
         raise StrategySpecError("could not load Strategy Lab complexity limits") from exc
