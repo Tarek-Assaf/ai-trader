@@ -136,6 +136,8 @@ def test_sizing_supports_each_configured_instrument(
 
     assert decision.approved
     assert decision.size is not None
+    if symbol == "XAUUSD":
+        assert decision.size == Decimal("0.1")
     assert decision.estimated_risk is not None
     assert decision.estimated_risk <= decision.risk_budget
 
@@ -242,13 +244,14 @@ def test_missing_broker_value_per_point_fails_closed() -> None:
 @pytest.mark.parametrize(
     ("direction", "entry", "stop"),
     [
+        ("buy", Decimal("100"), None),
         ("buy", Decimal("100"), Decimal("100")),
         ("buy", Decimal("100"), Decimal("101")),
         ("sell", Decimal("100"), Decimal("99")),
     ],
 )
 def test_rejects_missing_or_wrong_side_stop(
-    direction: Literal["buy", "sell"], entry: Decimal, stop: Decimal
+    direction: Literal["buy", "sell"], entry: Decimal, stop: Decimal | None
 ) -> None:
     decision = size_position(
         _intent(direction=direction, entry=entry, stop=stop),
