@@ -168,11 +168,11 @@ class LLMClient:
                 or tier.output_usd_per_million <= 0
             ):
                 raise ValueError(f"invalid model tier: {name}")
-        for role, tier in self.roles.items():
-            if not role or tier not in self.tiers:
+        for role, tier_name in self.roles.items():
+            if not role or tier_name not in self.tiers:
                 raise ValueError("each role must reference a configured tier")
-        for name, fallback in self.fallback.items():
-            if name not in self.tiers or fallback not in self.tiers or name == fallback:
+        for name, fallback_tier in self.fallback.items():
+            if name not in self.tiers or fallback_tier not in self.tiers or name == fallback_tier:
                 raise ValueError("fallbacks must reference a different configured tier")
 
     def _select_tier(self, requested: str, excluded: set[str] | None = None) -> tuple[Tier, bool]:
