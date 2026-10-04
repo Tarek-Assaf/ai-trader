@@ -48,7 +48,7 @@ class _PeriodParser(HTMLParser):
     """Read HistData's visible year/month archive selector for one symbol."""
 
     _ROUTE = re.compile(
-        r"^/ascii/1-minute-bar-quotes/(nsxusd|xauusd)/(\\d{4})(?:/(\\d{1,2}))?/?$"
+        r"^/ascii/1-minute-bar-quotes/(nsxusd|xauusd)/(\d{4})(?:/(\d{1,2}))?/?$"
     )
 
     def __init__(self, symbol: str) -> None:
@@ -178,34 +178,45 @@ def _validate_archive(
 def download_histdata(
     symbol: str,
     year: int,
-    month: int,
+    month: int | None,
     raw_root: str | Path,
     timeframe: str = "M1",
     pause_seconds: float = 0.0,
 ) -> Path:
-    """Cache a verified archive atomically; valid cached files need no new request."""
+    """Cache a verified monthly or yearly archive atomically."""
     if pause_seconds < 0 or pause_seconds > 3600:
         raise ValueError("pause_seconds must be between 0 and 3600")
     if symbol not in {"NSXUSD", "XAUUSD"}:
         raise ValueError("unsupported HistData symbol")
     if timeframe not in {"M1", "T"}:
         raise ValueError("unsupported HistData timeframe")
-    requested = datetime(year, month, 1, tzinfo=UTC)
+    if not 1900 <= year <= 2100:
+        raise ValueError("HistData year must be between 1900 and 2100")
     now = datetime.now(UTC)
-    if requested >= now.replace(day=1, hour=0, minute=0, second=0, microsecond=0):
-        raise ValueError("select a completed historical month")
+    if month is None:
+        if timeframe != "M1" or year >= now.year:
+            raise ValueError("select a completed yearly M1 archive")
+        period = f"{year:04d}"
+        max_bytes = MAX_YEARLY_M1_BYTES
+    else:
+        try:
+            requested = datetime(year, month, 1, tzinfo=UTC)
+        except ValueError:
+            raise ValueError("select a valid historical month") from None
+        if requested >= now.replace(day=1, hour=0, minute=0, second=0, microsecond=0):
+            raise ValueError("select a completed historical month")
+        period = f"{year:04d}{month:02d}"
+        max_bytes = MAX_BYTES
     root = Path(raw_root)
-    target = root / f"DAT_ASCII_{symbol}_{timeframe}_{year:04d}{month:02d}.zip"
+    target = root / f"DAT_ASCII_{symbol}_{timeframe}_{period}.zip"
     if target.exists():
-        if target.stat().st_size > MAX_BYTES:
+        if target.stat().st_size > max_bytes:
             raise ValueError("cached HistData archive exceeds the size limit")
         _validate_archive(target.read_bytes(), symbol, year, month, timeframe)
         return target
     layout = "1-minute-bar-quotes" if timeframe == "M1" else "tick-data-quotes"
-    page = (
-        f"{BASE}/download-free-forex-historical-data/"
-        f"?/ascii/{layout}/{symbol.lower()}/{year}/{month}"
-    )
+    suffix = f"/{year}" if month is None else f"/{year}/{month}"
+    page = f"{BASE}/download-free-forex-historical-data/?/ascii/{layout}/{symbol.lower()}{suffix}"
     parser = _FormParser()
     parser.feed(_request(page).decode("utf-8"))
     if pause_seconds:
@@ -214,13 +225,26 @@ def download_histdata(
     required = {
         "fxpair": symbol,
         "date": str(year),
-        "datemonth": f"{year:04d}{month:02d}",
         "platform": "ASCII",
         "timeframe": timeframe,
     }
-    if any(fields.get(key) != value for key, value in required.items()) or not fields.get("tk"):
+    allowed_fields = set(required) | {"tk", "datemonth"}
+    if month is not None:
+        required["datemonth"] = f"{year:04d}{month:02d}"
+    elif fields.get("datemonth") not in {None, ""}:
+        raise ValueError("HistData yearly form contains an unexpected month")
+    if (
+        any(fields.get(key) != value for key, value in required.items())
+        or not fields.get("tk")
+        or set(fields) - allowed_fields
+    ):
         raise ValueError("HistData download form is missing or does not match the request")
-    raw = _request(f"{BASE}/get.php", urllib.parse.urlencode(fields).encode(), page)
+    raw = _request(
+        f"{BASE}/get.php",
+        urllib.parse.urlencode(fields).encode(),
+        page,
+        max_bytes=max_bytes,
+    )
     _validate_archive(raw, symbol, year, month, timeframe)
     root.mkdir(parents=True, exist_ok=True)
     temporary: Path | None = None
