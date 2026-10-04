@@ -266,4 +266,3 @@ class CapitalComBroker:
                 self._client.confirm_deal(reference), "working-order cancellation"
             )
             return reference
-
