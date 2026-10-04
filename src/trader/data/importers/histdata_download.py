@@ -230,7 +230,7 @@ def download_histdata(
     allowed_fields = set(required) | {"tk", "datemonth"}
     if month is not None:
         required["datemonth"] = f"{year:04d}{month:02d}"
-    elif fields.get("datemonth") not in {None, ""}:
+    elif fields.get("datemonth") not in {None, "", str(year)}:
         raise ValueError("HistData yearly form contains an unexpected month")
     if (
         any(fields.get(key) != value for key, value in required.items())

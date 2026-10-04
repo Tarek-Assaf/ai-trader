@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 60,
+  "revision": 62,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "PR #24 is merged after T-082 passed Claude Light review; Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA, with no Pod data changed by Codex. T-041 PR #22 is merged after Claude Full approval (V-075). T-042 PR #26 has green full CI and is ready for Claude Full review; $4/day and $80/month caps are owner-approved. Q-028 asks whether prompt caching and batch mode should be deferred until usage accounting and async batch semantics are specified. T-043 owns graph-level NO_TRADE behavior for exhausted budgets.",
+    "summary": "PR #24 (T-082 importer) and PR #25 (yearly datemonth defect evidence) are merged. Follow-up code fix PR #27 accepts HistData's yearly datemonth='YYYY' field and passed full quality/container CI run 37207724960; passed Claude Light review (V-079) and is set to auto-merge. Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA; Codex has not changed Pod data. T-041 PR #22 is merged after Claude Full approval (V-075). T-042 PR #26 passed Claude Full review (V-077); prompt caching and batch mode are deferred, and T-043 owns graph-level NO_TRADE behavior for exhausted budgets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1953,14 +1953,17 @@
         "Update RunPod section 8 with verified earliest NSXUSD and XAUUSD periods and one command per symbol.",
         "After merge, import NSXUSD and XAUUSD from their earliest periods through the last completed month on the existing pod volume, then rerun and record summaries and gap QA; preserve already completed months."
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "PR #24 (Light tier; downloader allow-list unchanged): https://github.com/Tarek-Assaf/ai-trader/pull/24.",
         "Official HistData visible selector evidence in docs/reports/histdata_qa.md: NSXUSD M1 year archive 2024 and monthly archive 2026/09; older-year monthly tick archive route verified. The UI establishes filenames and period options; no token value was recorded.",
         "Local focused importer tests: 26 passed; focused Ruff check/format and mypy on histdata_range.py passed.",
-        "GitHub Actions CI run 37195053072 passed on code head 328f3dbc4dfceb9044cde2992abf6593b6526467: lint/format, mypy, migrations, tests, handoff validation and append-only sequence validation, secret scan, image build and all container checks."
+        "GitHub Actions CI run 37195053072 passed on code head 328f3dbc4dfceb9044cde2992abf6593b6526467: lint/format, mypy, migrations, tests, handoff validation and append-only sequence validation, secret scan, image build and all container checks.",
+        "PR #27 Light-tier follow-up: https://github.com/Tarek-Assaf/ai-trader/pull/27; code head cb5a5b8ec2a7b48b2f5a4ff85698855b70bddddf accepts the provider's yearly datemonth='YYYY' field, with a regression test asserting the complete observed form payload.",
+        "GitHub Actions run 37207724960 passed on PR #27 code head cb5a5b8ec2a7b48b2f5a4ff85698855b70bddddf: lint/format, mypy, migrations, tests, handoff and PR-sequence validation, secret scan, image build, ROLE=all runtime, chown-refusing mounted volume, PostgreSQL backup/restore, and core/worker Compose checks.",
+        "Claude Light review of PR #27 (V-079): diff limited to one guard condition plus a regression test; CI green on code head cb5a5b8."
       ],
-      "completion_note": "Implementation is ready for Claude's Light review. Year and current-month routes were confirmed from the visible HistData selector; code uses existing monthly archives whenever the provider lists months, and yearly archives otherwise. Annual M1 ZIP and expansion caps are 512 MiB and 2 GiB. The importer splits and resumes by month, records first-seen hashes as cache integrity only, and falls back to that month's ticks only for M1-conflict months. No new dependency was added and no pod data was touched. Remaining acceptance is the post-merge NSXUSD/XAUUSD pod import, zero-row rerun, and recorded row/gap/overlap QA through the existing open Q-024. Claude Light review passed (V-073); post-merge pod import and zero-row rerun remain tracked in Q-024."
+      "completion_note": "Implementation is ready for Claude's Light review. Year and current-month routes were confirmed from the visible HistData selector; code uses existing monthly archives whenever the provider lists months, and yearly archives otherwise. Annual M1 ZIP and expansion caps are 512 MiB and 2 GiB. The importer splits and resumes by month, records first-seen hashes as cache integrity only, and falls back to that month's ticks only for M1-conflict months. No new dependency was added and no pod data was touched. Remaining acceptance is the post-merge NSXUSD/XAUUSD pod import, zero-row rerun, and recorded row/gap/overlap QA through the existing open Q-024. Claude Light review passed (V-073); post-merge pod import and zero-row rerun remain tracked in Q-024. Follow-up defect from PR #25 is fixed in PR #27: yearly M1 accepts datemonth when absent, empty, or equal to the requested year; other values remain rejected, and monthly YYYYMM validation is unchanged. The real observed yearly field set has a regression test; CI run 37207724960 passed all quality and container checks. Ready for Claude Light review. Pod import/rerun and row/gap/overlap QA remain pending under Q-024; no Pod data changed."
     }
   ],
   "decisions": [
@@ -2935,6 +2938,26 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "ledger, caps, provider adapters or routing change"
+    },
+    {
+      "id": "V-078",
+      "subject": "T-082 yearly datemonth follow-up implementation and CI (PR #27)",
+      "method": "Compared the yearly form guard and regression test with the pod-observed form fields and docs/specs/t082_histdata_yearly.md, then checked the full quality/container workflow and docs/review_checklist.md.",
+      "result": "pass",
+      "evidence": "PR #27 code head cb5a5b8ec2a7b48b2f5a4ff85698855b70bddddf; GitHub Actions run 37207724960 passed lint/format, mypy, migrations, tests, handoff and append-only PR sequence validation, secret scan, Docker build, ROLE=all health/persistence, mounted-volume chown refusal, PostgreSQL backup/restore, and ROLE=core/worker Compose. Regression test posts the real yearly fields including datemonth=2024. Pod import acceptance remains pending under Q-024.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or yearly/monthly datemonth validation or tests change."
+    },
+    {
+      "id": "V-079",
+      "subject": "T-082 yearly datemonth follow-up, Claude Light review (PR #27)",
+      "method": "Read the full diff (one-line guard change in histdata_download.py, one new test), checked it against docs/specs/t082_histdata_yearly.md and the Light-tier rules in docs/process_fastlane.md; skimmed for logging, writes and network changes.",
+      "result": "pass",
+      "evidence": "Guard now accepts datemonth absent, empty or str(year) for yearly requests only; any other value still raises before POST; monthly YYYYMM validation untouched. Allow-list, fixed host, redirects, size caps unchanged; no new logging, writes or network paths, no secrets (test token is a dummy). New test asserts the full observed form payload. Code head cb5a5b8 passed CI run 37207724960; later commits are handoff-only. Pod import acceptance remains open under Q-024.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "yearly/monthly datemonth validation or the downloader allow-list changes"
     }
   ],
   "blockers": [
@@ -4346,7 +4369,35 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-042 (Full review, no changes, V-077). Answered Q-028: defer prompt caching/batch. Added NO_TRADE translation criterion to T-043. Pending for Codex: T-082 yearly datemonth fix (see docs/specs/t082_histdata_yearly.md, PR #25). Turn to Codex."
+    },
+    {
+      "revision": 61,
+      "ts": "2026-10-04T14:07:00Z",
+      "agent": "codex",
+      "action": "fix_t082_yearly_datemonth_form",
+      "task_ids": [
+        "T-082"
+      ],
+      "files_changed": [
+        "src/trader/data/importers/histdata_download.py",
+        "tests/unit/test_histdata_download.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "PR #25 confirmed the pod-observed yearly form defect but contained documentation only. Opened PR #27 with a narrow importer fix: for yearly M1, accept datemonth absent, empty, or equal to the requested year; continue rejecting any other value and preserve monthly YYYYMM validation. Added a regression test posting the recorded full yearly form fields. CI run 37207724960 passed all quality and container checks on code head cb5a5b8ec2a7b48b2f5a4ff85698855b70bddddf. No Pod data changed; Q-024 import/rerun/QA remains pending. Handing to Claude for Light review."
+    },
+    {
+      "revision": 62,
+      "ts": "2026-10-04T14:20:00Z",
+      "agent": "claude",
+      "action": "review_t082_datemonth_pass",
+      "task_ids": [
+        "T-082"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Light review of PR #27 passed (V-079): minimal guard change plus regression test, no safety-relevant changes. T-082 set to done; Q-024 (owner-run Pod import, zero-row rerun, QA) remains open. Auto-merge enabled on PR #27. Turn to Codex."
     }
   ],
-  "project_summary": "PR #24 (T-082) is merged; Pod import/rerun/QA remain pending under Q-024. PR #22 contains T-041 research sources and sanitizer; quality CI is green and it is handed to Claude for Full review. T-041 source-boundary tests cover untrusted-content handling; question Q-026 asks Claude to place full-graph injection/no-state-change acceptance in dependent T-043."
+  "project_summary": "PR #24 (T-082 importer) and PR #25 (yearly datemonth defect evidence) are merged. Follow-up code fix PR #27 accepts HistData's yearly datemonth='YYYY' field and passed full quality/container CI run 37207724960; ready for Claude Light review. Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA; Codex has not changed Pod data. T-041 PR #22 is merged after Claude Full approval (V-075). T-042 PR #26 passed Claude Full review (V-077); prompt caching and batch mode are deferred, and T-043 owns graph-level NO_TRADE behavior for exhausted budgets."
 }
