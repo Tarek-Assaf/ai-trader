@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlsplit
 
@@ -286,8 +287,8 @@ async def test_http_retry_does_not_retry_successful_but_invalid_json() -> None:
 
 
 @pytest.mark.asyncio
-async def test_non_success_response_is_redacted_and_not_retried_for_4xx() -> None:
-    """Provider error bodies and credential headers never escape source errors."""
+async def test_non_success_response_is_redacted_and_not_retried_for_4xx(caplog) -> None:
+    """Provider error bodies and credential headers never escape errors or logs."""
     calls = 0
 
     async def handler(request: httpx.Request) -> httpx.Response:
@@ -314,6 +315,7 @@ async def test_non_success_response_is_redacted_and_not_retried_for_4xx() -> Non
             await source.fetch({"query": "test"})
     assert calls == 1
     assert "secret-value" not in str(error.value)
+    assert "token=secret-value" not in caplog.text
     engine.dispose()
     cache.close()
 
@@ -375,7 +377,46 @@ async def test_closed_rate_cache_fails_before_network_request() -> None:
             resolve_dns=lambda host: True,
         )
         cache.close()
-        with pytest.raises(Exception):
+        with pytest.raises(sqlite3.ProgrammingError):
             await source.fetch({"url": "https://example.test/article"})
     assert calls == 0
     engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_provenance_insert_is_idempotent_after_cache_expiry() -> None:
+    """A repeated unchanged source response does not duplicate research_items rows."""
+    now = [100.0]
+    requests = 0
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal requests
+        requests += 1
+        return httpx.Response(
+            200,
+            text="<p>same source text</p>",
+            headers={"content-type": "text/html"},
+        )
+
+    cache = SQLiteResearchCache(":memory:", clock=lambda: now[0])
+    engine = create_engine("sqlite:///:memory:")
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+        source = URLFetchSource(
+            allowed_hosts={"example.test"},
+            cache=cache,
+            repository=ResearchRepository(engine),
+            ttl_seconds=1,
+            min_interval_seconds=0,
+            client=client,
+            resolve_dns=lambda host: True,
+        )
+        first = await source.fetch({"url": "https://example.test/article"})
+        now[0] += 2
+        second = await source.fetch({"url": "https://example.test/article"})
+    assert requests == 2
+    assert first[0].id == second[0].id
+    with engine.connect() as connection:
+        count = connection.exec_driver_sql("SELECT COUNT(*) FROM research_items").scalar_one()
+    assert count == 1
+    engine.dispose()
+    cache.close()
