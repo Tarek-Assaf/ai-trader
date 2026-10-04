@@ -253,6 +253,7 @@ def _record_rounding(report: dict[str, object], client: ObservedTradingClient) -
         return
     report["broker_observed_size"] = observed.get("size")
     report["broker_observed_stop"] = observed.get("stop_level")
+    stop_levels["open_observed"] = observed.get("stop_level")
     rounding = report.get("rounding")
     if not isinstance(rounding, dict):
         rounding = {}
@@ -291,6 +292,7 @@ def run_round_trip() -> int:
     report: dict[str, object] = {
         "schema_version": 1,
         "result": "aborted",
+        "created_at": datetime.now(UTC).isoformat(),
         "environment": "demo",
         "mode": "paper",
         "live_trading_enabled": False,
@@ -317,7 +319,6 @@ def run_round_trip() -> int:
         report["error"] = "workspace_not_mounted"
         _write_report(report)
         return 2
-    try:
     observed: ObservedTradingClient | None = None
     broker: CapitalComBroker | None = None
     trading_client: CapitalComTradingClient | None = None
