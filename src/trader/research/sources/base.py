@@ -76,6 +76,7 @@ class ResearchRepository:
             "payload": payload,
         }
         dialect = self._engine.dialect.name
+        statement: Any
         if dialect == "sqlite":
             statement = (
                 sqlite_insert(table).values(**values).on_conflict_do_nothing(index_elements=["id"])
