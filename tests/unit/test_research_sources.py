@@ -335,9 +335,7 @@ def test_source_url_requires_https_allowlist_and_public_dns() -> None:
     with pytest.raises(ValueError, match="private"):
         URLFetchSource._validate_url("https://127.0.0.1", {"127.0.0.1"}, lambda host: True)
     with pytest.raises(ValueError, match="public addresses"):
-        URLFetchSource._validate_url(
-            "https://example.test", {"example.test"}, lambda host: False
-        )
+        URLFetchSource._validate_url("https://example.test", {"example.test"}, lambda host: False)
 
 
 def test_sqlite_cache_ttl_and_atomic_rate_reservations() -> None:
