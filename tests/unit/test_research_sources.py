@@ -9,7 +9,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine
 
 from trader.research.cache import SQLiteResearchCache
 from trader.research.sanitizer import ResearchItem, sanitize_research, supported_claims
@@ -25,7 +25,6 @@ from trader.research.sources.base import (
     InvalidSourceResponse,
     ResearchRepository,
     SourceError,
-    resolve_public_host,
 )
 
 NOW = datetime(2026, 10, 4, 8, 0, tzinfo=UTC)
@@ -112,13 +111,10 @@ async def test_url_fetch_sanitizes_persists_and_reuses_cache() -> None:
     assert "&lt;" not in first[0].content
     assert "private" not in first[0].url
     with engine.connect() as connection:
-        stored = connection.execute(select(repository._engine.dialect.name)).fetchall() if False else None
-        del stored
         row = connection.exec_driver_sql("SELECT payload FROM research_items").one()
     payload = row[0]
     assert payload["url"] == first[0].url
     assert "private" not in json.dumps(payload)
-    await client.aclose() if False else None
     engine.dispose()
     cache.close()
 
@@ -324,24 +320,19 @@ async def test_non_success_response_is_redacted_and_not_retried_for_4xx() -> Non
 
 def test_source_url_requires_https_allowlist_and_public_dns() -> None:
     """Unconfigured hosts, private literals and unsafe schemes are rejected."""
-    assert resolve_public_host("invalid.invalid") is False
-    cache = SQLiteResearchCache(":memory:")
-    engine = create_engine("sqlite:///:memory:")
     with pytest.raises(ValueError, match="HTTPS"):
-        URLFetchSource(
-            allowed_hosts={"example.test"},
-            cache=cache,
-            repository=ResearchRepository(engine),
-            min_interval_seconds=0,
-            resolve_dns=lambda host: True,
-        ).fetch({"url": "http://example.test"})
-    with pytest.raises(ValueError, match="private"):
-        URLFetchSource(
-            allowed_hosts={"127.0.0.1"},
-            cache=cache,
-            repository=ResearchRepository(engine),
-            min_interval_seconds=0,
-            resolve_dns=lambda host: True,
+        URLFetchSource._validate_url(
+            "http://example.test", {"example.test"}, lambda host: True
         )
-    engine.dispose()
-    cache.close()
+    with pytest.raises(ValueError, match="configured host"):
+        URLFetchSource._validate_url(
+            "https://other.example.test", {"example.test"}, lambda host: True
+        )
+    with pytest.raises(ValueError, match="private"):
+        URLFetchSource._validate_url(
+            "https://127.0.0.1", {"127.0.0.1"}, lambda host: True
+        )
+    with pytest.raises(ValueError, match="public addresses"):
+        URLFetchSource._validate_url(
+            "https://example.test", {"example.test"}, lambda host: False
+        )
