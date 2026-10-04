@@ -48,7 +48,7 @@ def config() -> dict[str, Any]:
             "mid": {
                 "provider": "mid",
                 "model": "mid-model",
-                "max_input_tokens": 10,
+                "max_input_tokens": 1000,
                 "max_output_tokens": 2,
                 "input_usd_per_million": 1.0,
                 "output_usd_per_million": 1.0,
