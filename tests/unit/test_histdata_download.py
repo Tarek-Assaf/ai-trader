@@ -230,6 +230,30 @@ def test_yearly_download_uses_year_route_and_yearly_size_limit(
     assert b"datemonth" not in calls[1][1]
 
 
+def test_yearly_form_accepts_year_in_datemonth_field(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    calls: list[tuple[str, bytes | None]] = []
+
+    def request(url: str, data: bytes | None = None, referer: str | None = None, **kwargs) -> bytes:
+        calls.append((url, data))
+        if data is None:
+            return _form(year=2024, month="2024")
+        return _archive(period="2024")
+
+    monkeypatch.setattr(hd, "_request", request)
+    hd.download_histdata("NSXUSD", 2024, None, tmp_path)
+
+    assert len(calls) == 2
+    assert calls[1][1] is not None
+    assert b"tk=test-form-token" in calls[1][1]
+    assert b"date=2024" in calls[1][1]
+    assert b"datemonth=2024" in calls[1][1]
+    assert b"platform=ASCII" in calls[1][1]
+    assert b"timeframe=M1" in calls[1][1]
+    assert b"fxpair=NSXUSD" in calls[1][1]
+
+
 def test_yearly_form_rejects_unexpected_month_before_post(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
