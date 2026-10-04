@@ -297,4 +297,3 @@ def test_partial_first_year_marks_absent_edge_months_unavailable(
         "DAT_ASCII_NSXUSD_M1_201011.csv",
         "DAT_ASCII_NSXUSD_M1_201012.csv",
     ]
-
