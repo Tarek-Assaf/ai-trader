@@ -420,4 +420,3 @@ class CapitalComClient:
             if cursor > end_utc:
                 return
         raise CapitalComError(200, path)
-
