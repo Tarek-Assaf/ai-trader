@@ -9,7 +9,7 @@ import math
 import socket
 import uuid
 from abc import ABC, abstractmethod
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from ipaddress import ip_address
@@ -96,13 +96,15 @@ class HttpResearchSource(ABC):
         api_key: str | None = None,
         client: httpx.AsyncClient | None = None,
         backoff_seconds: float = 0.25,
+        resolve_dns: Callable[[str], bool] = lambda host: resolve_public_host(host),
     ) -> None:
         if not name.strip() or ttl_seconds <= 0 or min_interval_seconds < 0:
             raise ValueError("source name, positive TTL, and non-negative rate interval required")
         if timeout_seconds <= 0 or max_response_bytes < 1 or attempts < 1 or backoff_seconds < 0:
             raise ValueError("invalid HTTP source limits")
         self.name = name.strip()
-        self.endpoint = self._validate_url(endpoint, allowed_hosts)
+        self._resolve_dns = resolve_dns
+        self.endpoint = self._validate_url(endpoint, allowed_hosts, resolve_dns)
         self.allowed_hosts = {host.casefold() for host in allowed_hosts}
         self.cache = cache
         self.repository = repository
@@ -117,7 +119,9 @@ class HttpResearchSource(ABC):
         self.reliability = Reliability()
 
     @staticmethod
-    def _validate_url(url: str, allowed_hosts: set[str]) -> str:
+    def _validate_url(
+        url: str, allowed_hosts: set[str], resolve_dns: Callable[[str], bool]
+    ) -> str:
         parts = urlsplit(url)
         host = (parts.hostname or "").casefold()
         if (
@@ -126,6 +130,7 @@ class HttpResearchSource(ABC):
             or parts.username is not None
             or parts.password is not None
             or host not in {entry.casefold() for entry in allowed_hosts}
+            or parts.port not in {None, 443}
         ):
             raise ValueError("source URL must use HTTPS and a configured host")
         try:
@@ -134,6 +139,8 @@ class HttpResearchSource(ABC):
             address = None
         if address is not None and not address.is_global:
             raise ValueError("source URL cannot target a private or special-use address")
+        if address is None and not resolve_dns(host):
+            raise ValueError("source host does not resolve exclusively to public addresses")
         return url
 
     @abstractmethod
@@ -143,7 +150,7 @@ class HttpResearchSource(ABC):
         """Return URL, query parameters, and headers for a normalized query."""
 
     @abstractmethod
-    def parse_response(self, body: bytes) -> list[tuple[str, str]]:
+    def parse_response(self, body: bytes, request_url: str) -> list[tuple[str, str]]:
         """Validate a response and return provenance URL/content pairs."""
 
     async def fetch(self, query: Mapping[str, str]) -> tuple[ResearchItem, ...]:
@@ -158,10 +165,10 @@ class HttpResearchSource(ABC):
             return self._decode_items(cached)
 
         url, params, headers = self.request_spec(normalized)
-        self._validate_url(url, self.allowed_hosts)
+        self._validate_url(url, self.allowed_hosts, self._resolve_dns)
         try:
             body, fetched_at = await self._request(url, params, headers)
-            records = self.parse_response(body)
+            records = self.parse_response(body, url)
             if not records:
                 raise InvalidSourceResponse("source returned no usable records")
             items = tuple(
@@ -246,7 +253,12 @@ class HttpResearchSource(ABC):
         headers: Mapping[str, str],
     ) -> bytes:
         async with client.stream(
-            "GET", url, params=params, headers=headers, timeout=self.timeout_seconds
+            "GET",
+            url,
+            params=params,
+            headers=headers,
+            timeout=self.timeout_seconds,
+            follow_redirects=False,
         ) as response:
             if 300 <= response.status_code < 400:
                 raise InvalidSourceResponse("source redirects are not followed")
