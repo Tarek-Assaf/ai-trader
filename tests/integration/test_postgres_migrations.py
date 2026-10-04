@@ -58,6 +58,7 @@ def test_migrations_create_tables_and_audit_log_is_append_only() -> None:
             connection.execute(text("TRUNCATE audit_log"))
     engine.dispose()
 
+
 def test_sql_audit_writer_serializes_and_chains_risk_decisions() -> None:
     """The production writer uses the DB lock and trigger for a valid chain."""
     engine = create_engine(DATABASE_URL or "")
