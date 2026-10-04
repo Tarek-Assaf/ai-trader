@@ -104,6 +104,20 @@ The script observes the demo stream for 90 seconds and prints one redacted JSON 
 
 
 
+### One Capital.com demo NAS100 round trip (owner authorized)
+
+This is the only command in this runbook that sends a broker order. The owner explicitly authorized one demo round trip for Q-029. Run it only on the intended Pod, while the account has no open positions or working orders. It submits one BUY at Capital.com's current minimum deal size, with a server-side stop, verifies the broker-side stop, tightens that stop once, closes the position, and checks that the account is flat. It refuses unless the process environment explicitly has `BROKER_ENV=demo`, `TRADING_MODE=paper`, and `LIVE_TRADING_ENABLED=false`. The market must be tradeable and publish valid size, tick, quote, and minimum-stop rules.
+
+In **Connect → Start Terminal**, run this command once:
+
+```sh
+cd /app && python scripts/demo_round_trip.py
+```
+
+The script uses the Capital.com secrets already configured on the Pod and prints no credential values. It saves the same redacted JSON summary under `/workspace/demo_round_trip_*.json`, including order/modify/close deal references, requested and broker-observed size/stop levels, rounding deltas, timings, cleanup attempts and final result. The exclusive `/workspace/.capital_demo_round_trip.once` marker prevents a second order, including after an interrupted or failed run. Do not delete the marker or rerun the command; send the printed JSON summary to the project owner. On any error after submission, the script attempts to close observed positions and cancel working orders, then verifies that none remain. If cleanup cannot confirm a flat account, stop and contact the owner; do not retry.
+
+The adapter currently requires exact equality for broker-confirmed size and stop values. If Capital.com rounds either value, the adapter treats that as a mismatch and requests a close. The report retains the last broker-observed size and stop plus their deltas so the rounding can be reviewed; a failed round trip does not imply a successful validation.
+
 ## 8. Import HistData history
 
 The importer reads HistData's live archive selector before downloading. It uses yearly M1 ZIPs where only yearly archives are listed and monthly ZIPs where months are listed. Use a dry run first to see the provider's current coverage; absent early months and years are not requested. The selector currently shows NSXUSD from 2010 (first available month November) and XAUUSD from 2009 (first available month March). Do not substitute a guessed start year.
