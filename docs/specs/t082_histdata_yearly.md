@@ -20,3 +20,14 @@
 
 ## Pod state to reuse
 The pod volume already holds 2025-01 to 2026-09 for NSXUSD (and XAUUSD 2025 onward is importing). Do not re-import those months.
+
+## Defect found on the pod (2026-10-04) — must fix before T-082 is accepted
+
+Observed on the pod running image aaa80e0d: every yearly request (NSXUSD 2010–2024) was rejected with
+"HistData yearly form contains an unexpected month". The real yearly form (fetched on the pod for
+nsxusd/2015) returns fields: `tk`, `date='2015'`, `datemonth='2015'`, `platform='ASCII'`,
+`timeframe='M1'`, `fxpair='NSXUSD'`. So for yearly archives `datemonth` equals the year string.
+
+Required fix (`histdata_download.py`): for `month is None`, require `datemonth` to be absent, empty, or exactly
+`str(year)`; reject anything else. Keep the monthly rule (`YYYYMM`). Add a test using the real field set above.
+Acceptance: pod rerun of NSXUSD from 2010 imports yearly archives with 0 rejected months for 2010–2024.
