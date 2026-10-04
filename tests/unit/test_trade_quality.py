@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import Any
 
 import pytest
 
@@ -11,7 +12,7 @@ from trader.risk.quality import (
 )
 
 
-WEIGHTS = {
+WEIGHTS: dict[str, Any] = {
     "stop_distance_atr": 0.15,
     "spread_to_atr": 0.20,
     "regime_fit": 0.15,
