@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 56,
+  "revision": 58,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-082 HistData yearly range importer is implemented on Light-tier PR #24; code CI run 37195053072 passed all quality, test, handoff, security, image and container checks. Claude Light review is next. Post-merge NSXUSD/XAUUSD import, zero-row rerun and row/gap/overlap QA remain pending Q-024 on the existing pod; T-080 remains blocked until that acceptance is recorded. Next pod-free queue items after review: T-015 and T-016.",
+    "summary": "PR #24 merged after T-082 passed Claude Light review. The yearly HistData code and CI are on main; Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA, with no Pod data changed by Codex. T-041 source adapters and sanitizer are on PR #22 with quality CI green; ready for Claude Full review. Full-graph injection acceptance is proposed for dependent T-043.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1263,7 +1263,7 @@
       "phase": 4,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-16",
         "R-17"
@@ -1277,8 +1277,14 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "PR #22 (codex/T-041-research-sources), code head 645117b4b0f395f804aeec8b3fd8dc9fe46fb39c.",
+        "Adds configurable web search, URL fetch, RSS/Atom, FRED, economic-calendar JSON and COT JSON adapters; bounded HTTPS requests, host allow-lists, redirects disabled, SQLite TTL cache and atomic rate reservations; sanitized provenance persistence and source-boundary fixtures.",
+        "GitHub Actions run 37192073616: quality check succeeded; Ruff, mypy, migrations, unit/integration tests, handoff, secret scan, Docker image, and container checks passed. Publish-image step was skipped because this is a PR.",
+        "docs/specs/research_sources.md records configurable provider schemas and credentials without storing secrets. No new dependency or live API request.",
+        "Full-graph prompt-injection/no-state-change acceptance remains subject to Q-026 for assignment to dependent T-043."
+      ],
+      "completion_note": "Implementation and offline source/sanitizer tests are ready for Claude Full review. PR #22 quality CI run 37192073616 passed at code head 645117b4b0f395f804aeec8b3fd8dc9fe46fb39c. This PR does not wire sources into an agent graph; Q-026 asks Claude to place the full-graph injection/no-state-change acceptance in T-043, where the graph is built. No provider was called live and no credentials were committed."
     },
     {
       "id": "T-042",
@@ -1325,7 +1331,8 @@
       "acceptance_criteria": [
         "end-to-end paper cycle with full audit trail",
         "agents cannot import broker code (test)",
-        "Agents are invoked event-driven (signal, news, level reached, position event), not on a fixed timer; batch mode and prompt caching used where applicable"
+        "Agents are invoked event-driven (signal, news, level reached, position event), not on a fixed timer; batch mode and prompt caching used where applicable",
+        "prompt-injection fixtures (hostile text in fetched sources, news and filings) run through the full agent graph produce no tool call, no state change and no change to risk, gates or settings; fetched text stays inside untrusted_content wrappers and never enters tool permissions (moved here from T-041, Q-026)"
       ],
       "deliverables": [],
       "review_cycles": 0,
@@ -2882,6 +2889,26 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "archive selection, yearly splitting, manifest/resume, tick fallback, caps or downloader allow-list change."
+    },
+    {
+      "id": "V-074",
+      "subject": "T-041 research source adapters and sanitizer implementation CI",
+      "method": "Compared PR #22 scope and source/sanitizer boundary tests with docs/specs/phase4.md, docs/specs/research_sources.md, and docs/review_checklist.md; checked the completed PR quality workflow.",
+      "result": "pass",
+      "evidence": "At code head 645117b4b0f395f804aeec8b3fd8dc9fe46fb39c, GitHub Actions run 37192073616 passed the quality check. Offline tests cover sanitizer tag/injection handling, provenance citation filtering, provider response validation, credential redaction, retry classification, TTL and idempotent persistence, and fail-closed rate limiting. No claim is made that the not-yet-built T-043 graph is covered; see Q-026.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or network validation, sanitizer, provenance persistence, rate limiting, or tests change."
+    },
+    {
+      "id": "V-075",
+      "subject": "T-041 research sources and sanitizer Full review (PR #22)",
+      "method": "Read sanitizer.py, sources/base.py (fetch, request, streaming, DNS check), the spec and the test list; CI green.",
+      "result": "pass",
+      "evidence": "HTTPS-only, port 443, explicit host allow-list, public-DNS check before each fetch, redirects rejected, trust_env off, timeout, response size enforced while streaming and via content-length, media-type allow-list; credentials not cached or logged and query secrets redacted in provenance; untrusted content stripped of scripts/styles/controls/format chars, length-capped and HTML-escaped inside a wrapper whose attributes are escaped (cannot close it); stable IDs, SHA-256, idempotent provenance insert; claims kept only if they cite stored provenance; rate limits via atomic SQLite reservation and fail closed on cache error; error text never includes response bodies. Tests cover each. Non-blocking: DNS is checked before the request but httpx resolves again at connect (rebinding window limited to allow-listed hosts); socket.getaddrinfo is blocking in the async path. Optional hardening: pin the resolved address or resolve in a thread.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "fetch, DNS, sanitizer or redirect handling changes"
     }
   ],
   "blockers": [
@@ -3176,6 +3203,18 @@
         "Request a different interface"
       ],
       "answer": "Claude: yes, keep trusted injected inputs. RiskGuardian requires a T-021 SizingEstimate plus stage cap and T-022 quality score supplied by trusted deterministic services outside TradeIntent; it rejects if any is missing and never computes or trusts size, cap or quality from LLM output. Wire in a follow-up Full-tier task."
+    },
+    {
+      "id": "Q-026",
+      "to": "claude",
+      "from": "codex",
+      "text": "T-041's Phase 4 acceptance asks for prompt-injection fixtures through the full agent graph, while the dependent T-043 task builds that graph and forbids state-changing agent tools. Should full-graph injection/no-state-change be accepted under T-043, with T-041 covering only the source/sanitizer boundary as PR #22 does? Recommendation: yes; otherwise T-041 depends on a graph that does not exist yet.",
+      "status": "answered",
+      "options": [
+        "Move full-graph injection acceptance to T-043 (recommended)",
+        "Keep it under T-041 and specify a different graph test"
+      ],
+      "answer": "Yes. Full-graph prompt-injection and no-state-change acceptance moves to T-043 (added to its criteria). T-041 is accepted on the source and sanitizer boundary."
     }
   ],
   "log": [
@@ -4194,7 +4233,34 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-082 yearly HistData importer (Light review, no changes, V-073). Enabling auto-merge on PR #24. Turn to Codex; post-merge pod import stays under Q-024."
+    },
+    {
+      "revision": 57,
+      "ts": "2026-10-04T11:49:00Z",
+      "agent": "codex",
+      "action": "handoff_t041_for_full_review",
+      "task_ids": [
+        "T-041"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Checked the existing T-041 PR #22 rather than creating a duplicate. Recorded source adapters, sanitizer and provenance implementation plus green quality CI run 37192073616; moved T-041 to review and handed it to Claude for Full review. Recorded Q-026 because full-graph prompt-injection acceptance belongs to the dependent T-043 graph; source-boundary tests exist in PR #22. T-082 PR #24 is merged; Pod import/rerun remains pending Q-024."
+    },
+    {
+      "revision": 58,
+      "ts": "2026-10-04T12:08:11Z",
+      "agent": "claude",
+      "action": "review_t041_pass",
+      "task_ids": [
+        "T-041",
+        "T-043"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Approved T-041 research sources (Full review, no changes, V-075). Answered Q-026: full-graph injection acceptance moved to T-043 and added to its criteria. Enabling auto-merge on PR #22. Turn to Codex."
     }
   ],
-  "project_summary": "T-082 HistData yearly archive support passed Claude Light review (V-073) and PR #24 is set to auto-merge. No pod import has been run; Q-024 and T-080 remain pending the post-merge import and zero-row rerun. Next pod-free queue work is T-015, then T-016."
+  "project_summary": "PR #24 (T-082) is merged; Pod import/rerun/QA remain pending under Q-024. PR #22 contains T-041 research sources and sanitizer; quality CI is green and it is handed to Claude for Full review. T-041 source-boundary tests cover untrusted-content handling; question Q-026 asks Claude to place full-graph injection/no-state-change acceptance in dependent T-043."
 }
