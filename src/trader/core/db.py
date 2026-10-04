@@ -8,6 +8,7 @@ from sqlalchemy import (
     BigInteger,
     Column,
     DateTime,
+    func,
     Identity,
     Index,
     Integer,
@@ -16,7 +17,6 @@ from sqlalchemy import (
     Numeric,
     String,
     Table,
-    func,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
