@@ -7,14 +7,13 @@ import math
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import TypeAlias
 
 from trader.analysis import indicators
 from trader.analysis.indicators import session_tags
 from trader.data.resample import Candle, resample_ohlc
 from trader.lab.spec import IndicatorCondition, ParameterReference, StrategySpec
 
-IndicatorSeries: TypeAlias = tuple[float | None, ...]
+type IndicatorSeries = tuple[float | None, ...]
 
 
 @dataclass(frozen=True, slots=True)
