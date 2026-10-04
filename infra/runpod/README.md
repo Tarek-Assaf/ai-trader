@@ -113,6 +113,12 @@ cd /app
 python scripts/import_histdata.py --symbol NSXUSD --from-year 2010 --through-year 2026 --pause-seconds 1 --dry-run
 ```
 
+Check Gold separately:
+
+```sh
+python scripts/import_histdata.py --symbol XAUUSD --from-year 2009 --through-year 2026 --pause-seconds 1 --dry-run
+```
+
 Then run one symbol at a time. The importer ends at the last completed month, even when the current year is selected:
 
 ```sh
@@ -121,7 +127,15 @@ python scripts/import_histdata.py --symbol NSXUSD --from-year 2010 --through-yea
   --lineage /workspace/data_lineage
 ```
 
-For Gold, first inspect its available periods and then use the same command with `--symbol XAUUSD --from-year 2009`. Do not run multiple import commands at the same time against the same volume. A yearly archive is downloaded once, split into isolated month CSVs, and recorded as completed month-by-month; conflicted M1 months use their corresponding monthly tick archive or are rejected without writing M1 rows. Completed months are skipped on reruns, while the yearly ZIP is hash-checked from the mounted cache.
+After reviewing that summary, run the Gold import separately:
+
+```sh
+python scripts/import_histdata.py --symbol XAUUSD --from-year 2009 --through-year 2026 --pause-seconds 1 \
+  --raw /workspace/data/raw/histdata --lake /workspace/data/lake \
+  --lineage /workspace/data_lineage
+```
+
+Do not run multiple import commands at the same time against the same volume. A yearly archive is downloaded once, split into isolated month CSVs, and recorded as completed month-by-month; conflicted M1 months use their corresponding monthly tick archive or are rejected without writing M1 rows. Completed months are skipped on reruns, while the yearly ZIP is hash-checked from the mounted cache.
 
 The two August 2026 M1 checksums and two tick checksums in the manifest come from the reviewed HistData QA evidence. For other months and yearly archives, the importer pins the archive's SHA-256 when first downloaded and checks it on later runs. Those first-seen hashes provide cache integrity only; they are not independent verification of HistData's source file. The summary reports the per-year archive plan, imported and skipped months, rows read/written, invalid/conflicting rows, gaps, and rejected months. A partial result exits with status 1. Review rejected months and rerun after correcting the year range or a temporary download problem. Share the redacted JSON summary with the project owner; never share pod secrets.
 
