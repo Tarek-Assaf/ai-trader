@@ -256,4 +256,3 @@ def download_histdata(
         if temporary is not None:
             temporary.unlink(missing_ok=True)
     return target
-
