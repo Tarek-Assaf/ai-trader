@@ -3,6 +3,7 @@
 This command can place one real demo-account order. It refuses unsafe environment
 settings and leaves a durable one-shot marker on /workspace before submission.
 """
+
 from __future__ import annotations
 
 import json
@@ -82,9 +83,7 @@ class ObservedTradingClient:
     def confirm_deal(self, deal_reference: str) -> Mapping[str, Any]:
         return self.client.confirm_deal(deal_reference)
 
-    def modify_position(
-        self, deal_id: str, payload: Mapping[str, object]
-    ) -> Mapping[str, Any]:
+    def modify_position(self, deal_id: str, payload: Mapping[str, object]) -> Mapping[str, Any]:
         reply = self.client.modify_position(deal_id, payload)
         self._reference("modify", reply)
         return reply
@@ -316,7 +315,7 @@ def run_round_trip() -> int:
     }
     try:
         settings = _check_environment()
-    except Exception as exc:
+    except Exception:
         report["error"] = "demo_paper_environment_required"
         _write_report(report)
         return 2
@@ -358,9 +357,7 @@ def run_round_trip() -> int:
             "tick_size": str(tick),
             "minimum_stop_distance": str(minimum_stop_distance),
         }
-        report["timings_ms"]["preflight"] = round(
-            (time.monotonic() - phase_started) * 1000, 3
-        )
+        report["timings_ms"]["preflight"] = round((time.monotonic() - phase_started) * 1000, 3)
 
         try:
             fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
@@ -406,19 +403,13 @@ def run_round_trip() -> int:
 
         tighten_started = time.monotonic()
         tightened_stop = stop + tick
-        modify_reference = broker.modify_position(
-            receipt.deal_id, stop_level=tightened_stop
-        )
+        modify_reference = broker.modify_position(receipt.deal_id, stop_level=tightened_stop)
         report["deal_references"]["modify"] = modify_reference
         updated = next(
             (item for item in broker.get_positions() if item.deal_id == receipt.deal_id),
             None,
         )
-        if (
-            updated is None
-            or updated.stop_level != tightened_stop
-            or updated.size != size
-        ):
+        if updated is None or updated.stop_level != tightened_stop or updated.size != size:
             if updated is not None:
                 report["rounding"]["size_delta_after_modify"] = str(updated.size - size)
                 report["rounding"]["tightened_stop_delta"] = (
@@ -452,9 +443,9 @@ def run_round_trip() -> int:
         message = str(exc)
         report["error"] = (
             message
-            if message.startswith((
-                "invalid_", "nas100_", "minimum_", "safe_", "account_", "broker_", "one_shot_"
-            ))
+            if message.startswith(
+                ("invalid_", "nas100_", "minimum_", "safe_", "account_", "broker_", "one_shot_")
+            )
             else type(exc).__name__
         )
         if order_attempted and broker is not None and observed is not None:
