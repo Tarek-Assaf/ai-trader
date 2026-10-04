@@ -197,4 +197,3 @@ def test_modify_close_cancel_and_polling_use_confirmed_references() -> None:
     assert broker.get_positions()[0].deal_id == "deal-1"
     assert broker.get_open_orders()[0]["workingOrderData"]["dealId"] == "work-1"
     assert broker.get_activity(now, now + timedelta(hours=1))[0]["status"] == "ACCEPTED"
-
