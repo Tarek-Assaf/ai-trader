@@ -185,13 +185,13 @@ def _untrusted_derived_text(value: str, provenance_ids: set[str]) -> str:
     return f'<untrusted_content source="derived" provenance_ids="{ids}">{text}</untrusted_content>'
 
 
-def _summary_context(report: SummaryBatch) -> dict[str, Any]:
+def _summary_context(report: SummaryBatch, provenance_ids: set[str]) -> dict[str, Any]:
     payload = report.model_dump(mode="json")
     for item in payload["items"]:
         provenance = {item["provenance_id"]}
         item["summary"] = _untrusted_derived_text(item["summary"], provenance)
         item["flags"] = [_untrusted_derived_text(flag, provenance) for flag in item["flags"]]
-    payload["flags"] = [_untrusted_derived_text(flag, set()) for flag in payload["flags"]]
+    payload["flags"] = [_untrusted_derived_text(flag, provenance_ids) for flag in payload["flags"]]
     return payload
 
 
@@ -359,7 +359,7 @@ class AgentGraph:
                 {
                     "instrument": cycle.instrument,
                     "research": [i.untrusted_block for i in cycle.research],
-                    "summaries": _summary_context(summaries),
+                    "summaries": _summary_context(summaries, ids),
                     "provenance_ids": sorted(ids),
                 },
             )
