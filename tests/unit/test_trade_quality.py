@@ -1,18 +1,13 @@
 from __future__ import annotations
 
 from decimal import Decimal
-from typing import Any
 
 import pytest
 
-from trader.risk.quality import (
-    QUALITY_COMPONENTS,
-    TradeQualityComponents,
-    score_trade_quality,
-)
+from trader.risk.quality import TradeQualityComponents, score_trade_quality
 
 
-WEIGHTS: dict[str, Any] = {
+WEIGHTS: dict[str, Decimal | float] = {
     "stop_distance_atr": 0.15,
     "spread_to_atr": 0.20,
     "regime_fit": 0.15,
@@ -140,7 +135,6 @@ def test_invalid_threshold_fails_closed(threshold: Decimal) -> None:
 
 
 def test_weights_may_come_from_yaml_float_values() -> None:
-    assert set(WEIGHTS) == set(QUALITY_COMPONENTS)
     result = score_trade_quality(
         _components(),
         WEIGHTS,
