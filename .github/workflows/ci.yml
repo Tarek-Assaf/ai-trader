@@ -155,10 +155,11 @@ jobs:
           postgres="$root/postgres"
           bad_postgres="$root/postgres-unwritable"
           postgres_socket="$root/postgres-socket"
-          mkdir -p "$workspace/redisdata" "$workspace/logs" "$workspace/backups" "$postgres" "$bad_postgres" "$postgres_socket"
+          bad_postgres_socket="$root/postgres-socket-unwritable"
+          mkdir -p "$workspace/redisdata" "$workspace/logs" "$workspace/backups" "$postgres" "$bad_postgres" "$postgres_socket" "$bad_postgres_socket"
           chmod 0755 "$workspace" "$workspace/redisdata" "$workspace/logs" "$workspace/backups"
-          chmod 0700 "$postgres" "$bad_postgres" "$postgres_socket"
-          sudo chown -R 10001:10001 "$workspace" "$postgres" "$postgres_socket"
+          chmod 0700 "$postgres" "$bad_postgres" "$postgres_socket" "$bad_postgres_socket"
+          sudo chown -R 10001:10001 "$workspace" "$postgres" "$postgres_socket" "$bad_postgres_socket"
           cleanup() {
             docker logs ai-trader-no-chown || true
             docker rm --force ai-trader-no-chown || true
@@ -181,16 +182,21 @@ jobs:
           grep --quiet 'chown failed for /tmp/ai-trader-pgdata; trader can write to it, continuing' < <(docker logs ai-trader-no-chown 2>&1)
           docker exec --user 10001:10001 ai-trader-no-chown test -w /tmp/ai-trader-pgdata
           test -s "$postgres/PG_VERSION"
-          docker rm --force ai-trader-no-chown
+          docker stop --time 15 ai-trader-no-chown >/dev/null
+          docker rm ai-trader-no-chown >/dev/null
           if docker run --rm --cap-drop=CHOWN \
             --env ROLE=all --env POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata \
             --volume "$workspace:/workspace" \
             --volume "$bad_postgres:/tmp/ai-trader-pgdata" \
-            --volume "$postgres_socket:/var/run/postgresql" ai-trader:ci > /tmp/no-chown-unwritable.log 2>&1; then
+            --volume "$bad_postgres_socket:/var/run/postgresql" ai-trader:ci > /tmp/no-chown-unwritable.log 2>&1; then
             echo "Container unexpectedly accepted a PostgreSQL volume the trader user cannot write" >&2
             exit 1
           fi
-          grep --quiet 'Cannot chown /tmp/ai-trader-pgdata and trader user cannot write to it' /tmp/no-chown-unwritable.log
+          if ! grep --fixed-strings --quiet 'Cannot chown /tmp/ai-trader-pgdata and trader user cannot write to it' /tmp/no-chown-unwritable.log; then
+            cat /tmp/no-chown-unwritable.log >&2
+            echo "Container failed without the expected unwritable PostgreSQL volume diagnostic" >&2
+            exit 1
+          fi
       - name: Verify ROLE=all PostgreSQL backup and restore across container replacement
         run: bash scripts/test_postgres_backup_restore.sh
       - name: Verify ROLE=core and ROLE=worker compose services
