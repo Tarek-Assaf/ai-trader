@@ -59,6 +59,14 @@ class FakeCapitalClient:
             "affectedDeals": [{"dealId": "deal-1", "status": "OPENED"}],
         }
 
+    def account_info(self) -> Mapping[str, object]:
+        self.calls.append(("account_info", None))
+        return {"accounts": []}
+
+    def market_details(self, epic: str) -> Mapping[str, object]:
+        self.calls.append(("market_details", epic))
+        return {"market": {"epic": epic}}
+
     def get_positions(self) -> list[Mapping[str, object]]:
         self.calls.append(("get_positions", None))
         return self.position_rows
@@ -186,6 +194,8 @@ def test_modify_close_cancel_and_polling_use_confirmed_references() -> None:
     assert broker.modify_position("deal-1", stop_level=Decimal("100")) == "modify-ref"
     assert broker.close_position("deal-1") == "close-ref"
     assert broker.cancel_working_order("work-1") == "cancel-ref"
+    assert broker.get_account()["accounts"] == []
+    assert broker.get_market_details("US100")["market"]["epic"] == "US100"
     assert broker.get_positions()[0].deal_id == "deal-1"
-    assert broker.get_working_orders()[0]["workingOrderData"]["dealId"] == "work-1"
+    assert broker.get_open_orders()[0]["workingOrderData"]["dealId"] == "work-1"
     assert broker.get_activity(now, now + timedelta(hours=1))[0]["status"] == "ACCEPTED"
