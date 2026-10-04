@@ -180,7 +180,7 @@ def test_monthly_cap_is_checked_independently() -> None:
         usage.reserve(role="planner", model="cheap-model", maximum_cost=Decimal("0.000001"))
 
 
-def test_probe_timeout_opens_circuit_without_calling_stop_or_broker() -> None:
+def test_probe_timeout_marks_models_unhealthy_and_blocks_unavailable_role() -> None:
     class HangingProvider:
         async def complete(self, **kwargs: Any) -> ProviderReply:
             del kwargs

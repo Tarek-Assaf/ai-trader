@@ -205,7 +205,7 @@ class LLMClient:
     async def complete(
         self, role: str, messages: tuple[Message, ...], schema: type[T]
     ) -> TypedResult[T]:
-        """Complete a role-configured call; invalid typed output gets one retry."""
+        """Complete a role-configured call and route provider failures to its fallback."""
         if (
             role not in self.roles
             or not messages
@@ -248,7 +248,7 @@ class LLMClient:
                     reservation_id,
                     input_tokens=0,
                     output_tokens=0,
-                    cost_usd=0,
+                    cost_usd=Decimal(0),
                     latency_ms=elapsed,
                     outcome="error",
                 )
@@ -270,7 +270,7 @@ class LLMClient:
                     reservation_id,
                     input_tokens=0,
                     output_tokens=0,
-                    cost_usd=0,
+                    cost_usd=Decimal(0),
                     latency_ms=max(0, int((self._monotonic() - started) * 1000)),
                     outcome="error",
                 )
@@ -381,7 +381,7 @@ class LLMClient:
             )
         except LLMError:
             self.ledger.settle(
-                reservation_id, input_tokens=0, output_tokens=0, cost_usd=0,
+                reservation_id, input_tokens=0, output_tokens=0, cost_usd=Decimal(0),
                 latency_ms=max(0, int((self._monotonic() - started) * 1000)), outcome="error",
             )
             raise ModelUnavailable("health probe failed safely") from None
@@ -396,7 +396,7 @@ class LLMClient:
             or reply.output_tokens > probe_output_limit
         ):
             self.ledger.settle(
-                reservation_id, input_tokens=0, output_tokens=0, cost_usd=0,
+                reservation_id, input_tokens=0, output_tokens=0, cost_usd=Decimal(0),
                 latency_ms=max(0, int((self._monotonic() - started) * 1000)), outcome="error",
             )
             raise LLMError("probe token use exceeds configured limits")
