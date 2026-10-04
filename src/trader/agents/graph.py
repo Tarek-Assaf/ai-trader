@@ -12,20 +12,22 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
 from importlib.resources import files
-from typing import Any, Literal, Protocol
+from typing import Any, Literal, Protocol, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from trader.agents.llm.client import LLMClient
 from trader.agents.llm.types import (
     BudgetExceeded,
     InvalidModelOutput,
-    LLMClient,
     LLMError,
     Message,
     ModelUnavailable,
 )
 from trader.core.audit import AuditEvent, AuditWriter
 from trader.research.sanitizer import ResearchItem
+
+TModel = TypeVar("TModel", bound=BaseModel)
 
 Event = Literal["bar_close", "news_event", "level_reached", "position_event", "session_open"]
 PROMPTS = {
@@ -409,9 +411,9 @@ class AgentGraph:
         cycle: CycleInput,
         started: float,
         role: str,
-        schema: type[BaseModel],
+        schema: type[TModel],
         payload: Mapping[str, Any],
-    ) -> tuple[Any, int]:
+    ) -> tuple[TModel, int]:
         system, filename, version = self.prompts.get(role, cycle.instrument)
         messages = (
             Message("system", system),
