@@ -101,7 +101,12 @@ class RSSSource(HttpResearchSource):
             repository=repository,
             ttl_seconds=ttl_seconds,
             min_interval_seconds=min_interval_seconds,
-            allowed_media_types={"application/rss+xml", "application/atom+xml", "application/xml", "text/xml"},
+            allowed_media_types={
+                "application/rss+xml",
+                "application/atom+xml",
+                "application/xml",
+                "text/xml",
+            },
             **kwargs,
         )
 
@@ -135,7 +140,9 @@ class RSSSource(HttpResearchSource):
             if not link:
                 continue
             title = fields.get("title", "")
-            description = fields.get("description", fields.get("summary", fields.get("content", "")))
+            description = fields.get(
+                "description", fields.get("summary", fields.get("content", ""))
+            )
             text = "\n".join(value for value in (title, description) if value)
             if text:
                 records.append((_https_url(link), text))
@@ -192,7 +199,7 @@ class JsonRecordsSource(HttpResearchSource):
                 field: value
                 for field in self.fields
                 if (value := row.get(field)) is not None
-                and isinstance(value, (str, int, float, bool))
+                and isinstance(value, str | int | float | bool)
             }
             if not selected:
                 raise InvalidSourceResponse("source record has no configured scalar fields")
@@ -313,7 +320,17 @@ class EconomicCalendarSource(JsonRecordsSource):
             endpoint=endpoint,
             allowed_hosts=allowed_hosts,
             records_key="events",
-            fields=("date", "time", "currency", "country", "title", "impact", "actual", "forecast", "previous"),
+            fields=(
+                "date",
+                "time",
+                "currency",
+                "country",
+                "title",
+                "impact",
+                "actual",
+                "forecast",
+                "previous",
+            ),
             cache=cache,
             repository=repository,
             ttl_seconds=ttl_seconds,
