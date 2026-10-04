@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from decimal import Decimal
-
-import pytest
 
 from trader.risk import quality
 
@@ -27,7 +26,7 @@ def _components(
     event_proximity: Decimal = Decimal("1"),
     liquidity_session: Decimal = Decimal("0.75"),
     strategy_reliability: Decimal = Decimal("0.6"),
-) -> TradeQualityComponents:
+) -> quality.TradeQualityComponents:
     return quality.TradeQualityComponents(
         stop_distance_atr=stop_distance_atr,
         spread_to_atr=spread_to_atr,
@@ -37,6 +36,14 @@ def _components(
         liquidity_session=liquidity_session,
         strategy_reliability=strategy_reliability,
     )
+
+
+def _assert_value_error(operation: Callable[[], object]) -> None:
+    try:
+        operation()
+    except ValueError:
+        return
+    raise AssertionError("expected ValueError")
 
 
 def test_weighted_score_and_component_contributions_are_deterministic() -> None:
@@ -91,50 +98,47 @@ def test_score_below_threshold_is_ineligible() -> None:
     assert not result.eligible
 
 
-@pytest.mark.parametrize(
-    "value",
-    [
-        Decimal("-0.01"),
-        Decimal("1.01"),
-        Decimal("NaN"),
-        Decimal("Infinity"),
-    ],
-)
-def test_invalid_component_scores_fail_closed(value: Decimal) -> None:
-    with pytest.raises(ValueError):
-        quality.score_trade_quality(
-            _components(regime_fit=value),
-            WEIGHTS,
-            minimum_score=Decimal("0.50"),
+def test_invalid_component_scores_fail_closed() -> None:
+    for value in (Decimal("-0.01"), Decimal("1.01"), Decimal("NaN"), Decimal("Infinity")):
+        _assert_value_error(
+            lambda: quality.score_trade_quality(
+                _components(regime_fit=value),
+                WEIGHTS,
+                minimum_score=Decimal("0.50"),
+            )
         )
 
 
-@pytest.mark.parametrize(
-    "weights",
-    [
+def test_invalid_or_incomplete_weights_fail_closed() -> None:
+    invalid_weights = (
         {key: value for key, value in WEIGHTS.items() if key != "regime_fit"},
         {**WEIGHTS, "unconfigured": 0.0},
         {**WEIGHTS, "regime_fit": -0.1},
         {**WEIGHTS, "regime_fit": float("nan")},
         {**WEIGHTS, "regime_fit": 0.1},
-    ],
-)
-def test_invalid_or_incomplete_weights_fail_closed(weights: dict[str, object]) -> None:
-    with pytest.raises(ValueError):
-        quality.score_trade_quality(
-            _components(),
-            weights,
-            minimum_score=Decimal("0.50"),
+    )
+    for weights in invalid_weights:
+        _assert_value_error(
+            lambda: quality.score_trade_quality(
+                _components(),
+                weights,
+                minimum_score=Decimal("0.50"),
+            )
         )
 
 
-@pytest.mark.parametrize("threshold", [Decimal("0"), Decimal("-0.1"), Decimal("1.01")])
-def test_invalid_threshold_fails_closed(threshold: Decimal) -> None:
-    with pytest.raises(ValueError, match="minimum_score"):
-        quality.score_trade_quality(_components(), WEIGHTS, minimum_score=threshold)
+def test_invalid_threshold_fails_closed() -> None:
+    for threshold in (Decimal("0"), Decimal("-0.1"), Decimal("1.01")):
+        _assert_value_error(
+            lambda: quality.score_trade_quality(
+                _components(),
+                WEIGHTS,
+                minimum_score=threshold,
+            )
+        )
 
 
-def test_weights_may_come_from_yaml_float_values() -> None:
+def test_yaml_float_weights_are_converted_deterministically() -> None:
     result = quality.score_trade_quality(
         _components(),
         WEIGHTS,
