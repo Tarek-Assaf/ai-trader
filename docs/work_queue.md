@@ -2,6 +2,9 @@
 
 Owner instruction (2026-10-03): everything runs without the owner except steps that need the RunPod pod. Codex keeps taking the next unblocked task from this list without waiting to be told, one Codex session per task. Claude reviews each PR (tiers in `docs/process_fastlane.md`) and enables auto-merge; Codex starts the next task as soon as its PR is open if the next task does not build on unreviewed Full-tier code.
 
+## Priority (owner decision 2026-10-04)
+0. T-082 HistData yearly archives: the first pod import found HistData has monthly archives only for 2025 to 2026, so 2010 to 2024 is missing. Spec: `docs/specs/t082_histdata_yearly.md`. Add T-082 to the handoff (owner codex, reviewer claude, Light tier unless the downloader allow-list changes) and do it before other queue items.
+
 ## Order (all runnable without the pod)
 1. T-015 market hours service (Light, batch with T-016)
 2. T-016 instruments.yaml and mapper (Light)
