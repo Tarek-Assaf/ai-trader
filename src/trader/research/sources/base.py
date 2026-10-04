@@ -109,6 +109,9 @@ class HttpResearchSource(ABC):
         api_key: str | None = None,
         client: httpx.AsyncClient | None = None,
         backoff_seconds: float = 0.25,
+        allowed_media_types: set[str] | frozenset[str] = frozenset(
+            {"application/json", "application/rss+xml", "application/atom+xml", "application/xml", "text/xml", "text/html", "text/plain"}
+        ),
         resolve_dns: Callable[[str], bool] | None = None,
     ) -> None:
         if not name.strip() or ttl_seconds <= 0 or min_interval_seconds < 0:
@@ -129,6 +132,7 @@ class HttpResearchSource(ABC):
         self.api_key = api_key
         self.client = client
         self.backoff_seconds = backoff_seconds
+        self.allowed_media_types = frozenset(value.casefold() for value in allowed_media_types)
         self.reliability = Reliability()
 
     @staticmethod
@@ -281,6 +285,9 @@ class HttpResearchSource(ABC):
             if 300 <= response.status_code < 400:
                 raise InvalidSourceResponse("source redirects are not followed")
             response.raise_for_status()
+            media_type = response.headers.get("content-type", "").split(";", maxsplit=1)[0].strip().casefold()
+            if media_type not in self.allowed_media_types:
+                raise InvalidSourceResponse("source returned an unsupported content type")
             declared = response.headers.get("content-length")
             if declared is not None and int(declared) > self.max_response_bytes:
                 raise InvalidSourceResponse("source response exceeds size limit")
