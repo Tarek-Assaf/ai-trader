@@ -110,6 +110,7 @@ def test_incomplete_resampled_bins_are_excluded() -> None:
     assert three_minute.candle_count == 2
     assert three_minute.timestamp == bars[5].ts_utc
 
+
 def test_pivots_use_only_the_previous_utc_day() -> None:
     day_one = [
         Candle(
