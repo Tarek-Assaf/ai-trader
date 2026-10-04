@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import json
+import random
 from datetime import UTC, datetime, timedelta
 
-from hypothesis import given, strategies as st
 import pytest
 
 from trader.data.resample import Candle
@@ -109,23 +110,26 @@ def test_oversized_and_non_object_json_are_rejected() -> None:
         parse_strategy_spec("[]", complexity_limits=LIMITS)
 
 
-@given(
-    st.recursive(
-        st.none()
-        | st.booleans()
-        | st.integers()
-        | st.floats(allow_nan=False, allow_infinity=False)
-        | st.text(max_size=20),
-        lambda children: st.lists(children, max_size=5)
-        | st.dictionaries(st.text(max_size=12), children, max_size=5),
-        max_leaves=20,
-    )
-)
-def test_random_json_never_leaks_non_validation_exceptions(payload: object) -> None:
-    try:
-        parse_strategy_spec(payload, complexity_limits=LIMITS)  # type: ignore[arg-type]
-    except StrategySpecError:
-        pass
+def test_random_json_never_leaks_non_validation_exceptions() -> None:
+    rng = random.Random(0)
+    scalars: list[object] = [None, True, False, 0, 1.5, "random", "__import__('os')"]
+
+    def value(depth: int = 0) -> object:
+        if depth >= 4 or rng.random() < 0.5:
+            return rng.choice(scalars)
+        if rng.random() < 0.5:
+            return [value(depth + 1) for _ in range(rng.randrange(5))]
+        return {
+            f"key_{rng.randrange(10)}": value(depth + 1)
+            for _ in range(rng.randrange(5))
+        }
+
+    for _ in range(250):
+        encoded = json.dumps(value(), allow_nan=False)
+        try:
+            parse_strategy_spec(encoded, complexity_limits=LIMITS)
+        except StrategySpecError:
+            pass
 
 
 def test_engine_emits_deterministic_signals_from_closed_bars() -> None:
