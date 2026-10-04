@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
-import pytest
 from hypothesis import given, strategies as st
+import pytest
 
 from trader.data.resample import Candle
 from trader.lab.engine import evaluate_entries
@@ -32,10 +32,7 @@ def _spec(**overrides: object) -> dict[str, object]:
 
 def _bars(count: int = 40) -> list[Candle]:
     start = datetime(2026, 1, 5, 12, 0, tzinfo=UTC)
-    values = [
-        100.0 + (index % 5) if index % 2 else 100.0 - (index % 7)
-        for index in range(count)
-    ]
+    values = [100.0 + (index % 5) if index % 2 else 100.0 - (index % 7) for index in range(count)]
     return [
         Candle(
             ts_utc=start + timedelta(minutes=index),
@@ -60,9 +57,7 @@ def test_valid_spec_round_trips_to_json() -> None:
     [
         _spec(entry_conditions=[{"indicator": "unknown", "operator": "gt", "threshold": 1.0}]),
         _spec(
-            entry_conditions=[
-                {"indicator": "close.__class__", "operator": "gt", "threshold": 1.0}
-            ]
+            entry_conditions=[{"indicator": "close.__class__", "operator": "gt", "threshold": 1.0}]
         ),
         _spec(
             entry_conditions=[
@@ -71,7 +66,9 @@ def test_valid_spec_round_trips_to_json() -> None:
         ),
         _spec(expression="__import__('os').system('id')"),
         _spec(exit_rules=[{"kind": "target", "distance": 2.0}]),
-        _spec(tunable_parameters=[{"name": "floor", "value": 10.0, "minimum": 0.0, "maximum": 5.0}]),
+        _spec(
+            tunable_parameters=[{"name": "floor", "value": 10.0, "minimum": 0.0, "maximum": 5.0}]
+        ),
     ],
 )
 def test_invalid_or_executable_specs_are_rejected(payload: dict[str, object]) -> None:
@@ -84,8 +81,7 @@ def test_condition_and_parameter_counts_follow_configured_limits() -> None:
     with pytest.raises(StrategySpecError, match="too many entry conditions"):
         parse_strategy_spec(_spec(entry_conditions=[condition] * 6), complexity_limits=LIMITS)
     params = [
-        {"name": f"p{index}", "value": 1.0, "minimum": 0.0, "maximum": 2.0}
-        for index in range(5)
+        {"name": f"p{index}", "value": 1.0, "minimum": 0.0, "maximum": 2.0} for index in range(5)
     ]
     with pytest.raises(StrategySpecError, match="too many tunable parameters"):
         parse_strategy_spec(_spec(tunable_parameters=params), complexity_limits=LIMITS)
@@ -96,9 +92,7 @@ def test_parameter_references_are_resolved_only_by_declared_names() -> None:
         entry_conditions=[
             {"indicator": "close", "operator": "gt", "threshold": {"parameter": "floor"}}
         ],
-        tunable_parameters=[
-            {"name": "floor", "value": 50.0, "minimum": 40.0, "maximum": 60.0}
-        ],
+        tunable_parameters=[{"name": "floor", "value": 50.0, "minimum": 40.0, "maximum": 60.0}],
     )
     assert len(parse_strategy_spec(payload, complexity_limits=LIMITS).tunable_parameters) == 1
     payload["entry_conditions"] = [
