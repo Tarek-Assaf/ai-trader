@@ -291,9 +291,7 @@ def test_second_order_research_injection_stays_wrapped_through_full_graph() -> N
     }
     macro = {
         "event_risk": "none",
-        "upcoming_events": [
-            {"time": hostile, "impact": hostile, "instrument_relevance": hostile}
-        ],
+        "upcoming_events": [{"time": hostile, "impact": hostile, "instrument_relevance": hostile}],
         "backdrop": [hostile],
         "claims": [{"text": hostile, "provenance_ids": ["news-1"], "verified": True}],
         "flags": [hostile],
