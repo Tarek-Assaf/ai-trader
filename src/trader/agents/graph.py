@@ -29,7 +29,9 @@ from trader.research.sanitizer import ResearchItem
 
 TModel = TypeVar("TModel", bound=BaseModel)
 
-Event = Literal["signal", "bar_close", "news_event", "level_reached", "position_event", "session_open"]
+Event = Literal[
+    "signal", "bar_close", "news_event", "level_reached", "position_event", "session_open"
+]
 PROMPTS = {
     "data_summarizer": "data_summarizer.md",
     "technical_analyst": "technical_analyst.md",
