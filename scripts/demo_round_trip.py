@@ -25,7 +25,6 @@ from trader.execution.brokers.base import Direction, OrderRequest, Position
 from trader.execution.brokers.capital_com import CapitalComBroker
 from trader.integrations.capital_com.trading import CapitalComTradingClient
 
-
 WORKSPACE = Path("/workspace")
 LOCK_PATH = WORKSPACE / ".capital_demo_round_trip.once"
 POLL_SECONDS = 0.5
