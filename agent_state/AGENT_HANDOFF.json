@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 41,
+  "turn": "codex",
+  "revision": 42,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -295,7 +295,8 @@
         "T-008",
         "T-009",
         "T-018",
-        "T-019"
+        "T-019",
+        "T-081"
       ]
     },
     {
@@ -521,7 +522,7 @@
         ".github/workflows/ci.yml",
         "PR #17 docker/entrypoint.sh mounted-volume chown fallback and CI ROLE=all test"
       ],
-      "completion_note": "Added single multi-stage image and role entrypoint; ROLE=all runs PostgreSQL, Redis, API, scheduler and supervisord as trader after minimal root-owned volume setup. Image and runtime check are pending CI. Docker runtime corrections applied: trader owns /var/run/postgresql; loopback PostgreSQL readiness uses the configured local host auth. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed. CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking. T-003 follow-up (owner-directed Full-tier review): PR #17 makes chown best-effort only when the trader user can write, verifies the PostgreSQL data directory owner, and adds positive and negative container coverage with CHOWN capability dropped. Merge only after the PR quality check is green."
+      "completion_note": "Added single multi-stage image and role entrypoint; ROLE=all runs PostgreSQL, Redis, API, scheduler and supervisord as trader after minimal root-owned volume setup. Image and runtime check are pending CI. Docker runtime corrections applied: trader owns /var/run/postgresql; loopback PostgreSQL readiness uses the configured local host auth. GitHub Actions run 37044750525 on f8c884bf3390b31a91d353d83868dad637f66bb3: lint/format, mypy, migrations, tests, handoff validation, secret scan, Docker build, and ROLE=all /health all passed. CLAUDE APPROVED (C-100): CI run 37045114037 green on every step incl. migrations, tests, secret scan, Docker build and ROLE=all health. Follow-ups T-007/T-008 are non-blocking. T-003 follow-up (owner-directed Full-tier review): PR #17 makes chown best-effort only when the trader user can write, verifies the PostgreSQL data directory owner, and adds positive and negative container coverage with CHOWN capability dropped. Merge only after the PR quality check is green. PR #17 follow-up is tracked as T-081 (changes requested)."
     },
     {
       "id": "T-004",
@@ -1837,6 +1838,30 @@
         "GitHub Actions run 37146599648 passed the full quality and ROLE runtime workflow, including lint/format, mypy, unit tests, handoff checks, secret scan, image build, health/persistence and backup/restore."
       ],
       "completion_note": "Code approved by Claude (Light review, PR #11). Remaining: owner-run pod import for NSXUSD and XAUUSD with summaries and rerun idempotence (Q-024); mark done once recorded."
+    },
+    {
+      "id": "T-081",
+      "title": "PR #17 chown-tolerant entrypoint: fix failing CI test step",
+      "phase": 0,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "changes_requested",
+      "requirements": [
+        "R-23"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "PR #17 quality check green on the head commit",
+        "new CI step proves ROLE=all reaches healthy with CHOWN dropped on a trader-owned PG volume and fails fast on an unwritable one"
+      ],
+      "deliverables": [
+        ".github/workflows/ci.yml"
+      ],
+      "review_cycles": 1,
+      "evidence": [
+        "quality run 37178878924"
+      ],
+      "completion_note": "Claude Full review cycle 1: entrypoint.sh accepted. CI step 'Verify ROLE=all tolerates mounted volumes that refuse chown' fails because chmod runs after sudo chown to 10001 (Operation not permitted). Fix: chmod before chown, or use sudo chmod. No other change. Re-run CI, then set status review."
     }
   ],
   "decisions": [
@@ -2641,6 +2666,16 @@
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "docker/entrypoint.sh ownership handling, container test, or mounted-volume ownership assumptions change."
+    },
+    {
+      "id": "V-062",
+      "subject": "T-003 mounted-volume chown-tolerant entrypoint (Claude Full review)",
+      "method": "Read docker/entrypoint.sh and the new CI step line by line; fetched failed quality job log for PR #17.",
+      "result": "fail",
+      "evidence": "Entrypoint logic sound: chown failure tolerated only when gosu trader can write, PG dir uid verified, fails fast otherwise; no secrets, no LLM or broker paths. CI quality failed (run 37178878924) in the new test step: chmod on $workspace dirs after sudo chown 10001 -> Operation not permitted, so the container tests never ran. Test-harness bug, not entrypoint. Note V-061 was Codex self-review and does not replace this.",
+      "validated_by": "claude",
+      "date": "2026-10-04",
+      "reverify_if": "CI step or entrypoint changes"
     }
   ],
   "blockers": [
@@ -3721,6 +3756,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "The requested claude/entrypoint-chown-tolerant branch and PR were not present, so implemented the same change on a separate T-003 follow-up PR #17. Chown failures are tolerated only after the trader user passes a write check; PostgreSQL data ownership remains enforced. Added positive and negative ROLE=all container checks with CHOWN capability dropped. Full-tier review recorded as V-061. Merge after quality CI passes. Handing to Claude."
+    },
+    {
+      "revision": 42,
+      "ts": "2026-10-04T06:00:00Z",
+      "agent": "claude",
+      "action": "review_t003_changes_requested",
+      "task_ids": [
+        "T-003"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Full review of PR #17: entrypoint accepted, but new CI step fails on chmod after chown (V-062). Changes requested, cycle 1. Turn to Codex. Not approved; auto-merge not enabled."
     }
   ]
 }
