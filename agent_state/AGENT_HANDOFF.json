@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 72,
+  "revision": 74,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "PR #33 implements T-051's strict declarative StrategySpec and deterministic offline candle evaluator; CI run 37225189441 passed all 264 tests and all quality/container checks (V-088). T-051 is ready for Claude Full review. No Pod data or broker orders were touched. T-024 remains blocked on the owner-run demo round trip after PR #31 merge/redeploy.",
+    "summary": "C-040 prompt and permission work is merged and verified (PR #32, CI 37224301070, V-090); T-051 StrategySpec is merged and Full-reviewed (PR #33, V-089). T-024 remains blocked on the owner-run Q-029 demo round trip after PR #31 merge/redeploy. The next workqueue item T-017 requires Pod recorder/basis data; T-060 also requires a fresh Pod restore. No Pod data or broker orders were changed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1367,7 +1367,7 @@
       "phase": 4,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-21",
         "R-25"
@@ -1381,8 +1381,14 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "PR #32 merged as 6bdcceb5d9367cbe1f73a446338a7ef3d3307d42; CI run 37224301070 completed successfully.",
+        "src/trader/agents/prompts/README.md maps all configured LLM roles to versioned prompts and describes instrument playbook loading.",
+        "Versioned prompts exist for technical_analyst, news_macro_analyst, critic, and performance_analyst.",
+        "Versioned playbooks exist for NAS100 and Gold.",
+        "PR #32 adds the router_intent, data_summarizer, and reporter_commentary prompts; the existing TOOL_PERMISSIONS.md restricts every agent to read-only allow-listed tools."
+      ],
+      "completion_note": "Codex reviewer pass: verified the merged PR #32 against C-040 acceptance. Required role prompts and NAS100/Gold playbooks exist and are versioned, the README maps the configured roles and playbooks, and the tool permission table is present. PR #32 CI run 37224301070 succeeded. No prompt/tool permission changes were needed."
     },
     {
       "id": "T-050",
@@ -3091,6 +3097,16 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "allowed indicators, exit kinds or the engine's inputs change"
+    },
+    {
+      "id": "V-090",
+      "subject": "C-040 agent prompts and permission table reviewer pass (PR #32)",
+      "method": "Checked merged prompt directory, role mapping, instrument playbooks and tool permission table against C-040 acceptance; read PR #32 changes and confirmed its CI run.",
+      "result": "pass",
+      "evidence": "PR #32 merged as 6bdcceb5d9367cbe1f73a446338a7ef3d3307d42. CI run 37224301070 succeeded. Versioned technical_analyst, news_macro_analyst, critic and performance_analyst prompts and NAS100/Gold playbooks exist; PR #32 adds router_intent, data_summarizer and reporter_commentary and maps all configured roles in README. TOOL_PERMISSIONS.md has an explicit read-only allow-list.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "A required prompt, instrument playbook, role mapping or tool permission changes."
     }
   ],
   "blockers": [
@@ -4696,7 +4712,33 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Full review of PR #33 passed (V-089), no changes requested; T-051 done. Added direction and schema_version to T-050 criteria. Also: C-040 prompts merged (PR #32), C-040 can be marked done by Codex's reviewer pass or by me next turn. Turn to Codex."
+    },
+    {
+      "revision": 73,
+      "ts": "2026-10-04T18:56:18Z",
+      "agent": "codex",
+      "action": "review_c040_pass",
+      "task_ids": [
+        "C-040"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed the delegated Codex reviewer pass for C-040 after PR #32 merged. Verified required versioned role prompts and NAS100/Gold playbooks, full role mapping and read-only tool permissions; PR #32 CI run 37224301070 passed. Recorded V-090 and marked C-040 done. The next ordered work that needs recorder/basis data (T-017) remains Pod-dependent; T-060 also requires a fresh Pod restore drill. Turn to Claude."
+    },
+    {
+      "revision": 74,
+      "ts": "2026-10-04T19:20:00Z",
+      "agent": "claude",
+      "action": "ack_c040_and_direct_next_work",
+      "task_ids": [
+        "C-040"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted Codex's C-040 reviewer pass (V-090), handoff-only change. Next pod-free work for Codex, in order: T-043 agent graph on MockLLM (all dependencies are done; includes injection fixtures and NO_TRADE on BudgetExceeded/ModelUnavailable), T-023 PaperBroker using default spread/slippage (T-017 only calibrates later), T-025 P&L engine, then T-026 order manager and T-027 kill switch against the approved T-024 adapter interface (T-024 code is approved; only the owner-run demo round trip is pending, so do not wait for it), then T-060 backup job code. Pod-dependent items (T-017, T-060 restore drill, T-050) wait for the owner's Monday pod session. Turn to Codex."
     }
   ],
-  "project_summary": "T-082 importer and T-080/Q-024 Pod import/rerun/lake QA are complete; the 360-row differences are exact duplicates and lake timestamp uniqueness/month-overlap QA passed, while raw gaps remain unclassified against market hours. T-041 and T-042 are reviewed and merged. PR #31 prepares the owner-authorized Q-029 one-time Capital.com demo round trip with a guard, offline tests and runbook; the owner-run order remains pending. PR #33 implements T-051 StrategySpec schema and sandbox engine; full CI passed and Claude Full review is next."
+  "project_summary": "C-040 prompt and permission work is merged and verified (PR #32, CI 37224301070, V-090); T-051 StrategySpec is merged and Full-reviewed (PR #33, V-089). T-024 remains blocked on the owner-run Q-029 demo round trip after PR #31 merge/redeploy. The next workqueue item T-017 requires Pod recorder/basis data; T-060 also requires a fresh Pod restore. No Pod data or broker orders were changed."
 }
