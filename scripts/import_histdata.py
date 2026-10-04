@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Import a HistData monthly ZIP or text file into the local data lake."""
+"""Import HistData M1 archives or text files into the local data lake."""
 
 from __future__ import annotations
 
@@ -25,6 +25,7 @@ def main() -> int:
     parser.add_argument("--from-year", type=int, help="First year in an inclusive batch range")
     parser.add_argument("--through-year", type=int, help="Last year in an inclusive batch range")
     parser.add_argument("--pause-seconds", type=float, default=1.0)
+    parser.add_argument("--dry-run", action="store_true", help="list available archive periods without importing")
     parser.add_argument("--manifest", type=Path, help="SHA-256 manifest path for batch imports")
     parser.add_argument("--month", type=int)
     parser.add_argument("--raw", type=Path, default=Path("data/raw/histdata"))
@@ -58,12 +59,16 @@ def main() -> int:
                 args.lineage,
                 args.manifest,
                 args.pause_seconds,
+                dry_run=args.dry_run,
             )
         except (ValueError, OSError):
             print(json.dumps({"status": "error", "reason": "HistData range import failed"}))
             return 1
         print(json.dumps(summary, indent=2, default=str))
-        return 0 if summary["status"] == "ok" else 1
+        return 0 if summary["status"] in {"ok", "planned"} else 1
+
+    if args.dry_run:
+        parser.error("--dry-run is available only with --from-year and --through-year")
 
     if args.download:
         if args.source or args.year is None or args.month is None:
