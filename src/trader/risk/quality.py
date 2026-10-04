@@ -57,10 +57,7 @@ def _decimal(value: object, field: str) -> Decimal:
 
 
 def _component_scores(components: TradeQualityComponents) -> dict[str, Decimal]:
-    scores = {
-        name: _decimal(getattr(components, name), name)
-        for name in QUALITY_COMPONENTS
-    }
+    scores = {name: _decimal(getattr(components, name), name) for name in QUALITY_COMPONENTS}
     if any(score < 0 or score > 1 for score in scores.values()):
         raise ValueError("trade-quality component scores must be in [0, 1]")
     return scores
