@@ -12,7 +12,7 @@ import time
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, TextIO, cast
+from typing import Any, TextIO, TypedDict, cast
 
 from trader.data.importers.histdata import import_histdata
 from trader.data.importers.histdata_download import (
@@ -32,6 +32,12 @@ _TRUSTED_SEEDS = {
     "DAT_ASCII_XAUUSD_T_202608.zip": _XAUUSD_TICK_SHA256,
 }
 _ALLOWED_SYMBOLS = {"NSXUSD", "XAUUSD"}
+
+
+class _PeriodEntry(TypedDict):
+    year: int
+    mode: str
+    months: list[str]
 
 
 def _sha256(path: Path) -> str:
@@ -206,7 +212,7 @@ def _split_year_archive(path: Path, symbol: str, year: int, scratch: Path) -> di
                         raise ValueError("yearly M1 archive contains an invalid month")
                     if month not in writers:
                         output_path = scratch / f"DAT_ASCII_{symbol}_M1_{year:04d}{month:02d}.csv"
-                        handle = output_path.open("w", encoding="utf-8", newline="")
+                        handle: TextIO = output_path.open("w", encoding="utf-8", newline="")
                         writer = csv.writer(handle, delimiter=";", lineterminator=chr(10))
                         writers[month] = (handle, writer)
                         paths[month] = output_path
@@ -225,11 +231,11 @@ def _split_year_archive(path: Path, symbol: str, year: int, scratch: Path) -> di
 
 def _period_plan(
     requested: list[tuple[int, int]], available: dict[int, set[int] | None]
-) -> list[dict[str, object]]:
+) -> list[_PeriodEntry]:
     requested_by_year: dict[int, set[int]] = {}
     for year, month in requested:
         requested_by_year.setdefault(year, set()).add(month)
-    plan: list[dict[str, object]] = []
+    plan: list[_PeriodEntry] = []
     for year, months in sorted(requested_by_year.items()):
         provider_months = available.get(year, set())
         if provider_months is None and year in available:
