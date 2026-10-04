@@ -171,10 +171,11 @@ def atr(candles: Sequence[Candle], period: int = 14) -> tuple[float | None, ...]
 
 
 def adx(candles: Sequence[Candle], period: int = 14) -> tuple[float | None, ...]:
-    """ADX from rolling directional-movement and true-range means."""
+    """Wilder ADX with Wilder-smoothed true range and directional movement."""
     _period(period)
     output: list[float | None] = [None] * len(candles)
-    if len(candles) < period * 2:
+    first_adx = 2 * period - 2
+    if len(candles) <= first_adx:
         return tuple(output)
     ranges = true_range(candles)
     plus_dm = [0.0]
@@ -185,24 +186,40 @@ def adx(candles: Sequence[Candle], period: int = 14) -> tuple[float | None, ...]
         plus_dm.append(up if up > down and up > 0 else 0.0)
         minus_dm.append(down if down > up and down > 0 else 0.0)
 
+    smoothed_range = math.fsum(ranges[:period])
+    smoothed_plus = math.fsum(plus_dm[:period])
+    smoothed_minus = math.fsum(minus_dm[:period])
     dx_values: list[float | None] = [None] * len(candles)
     for index in range(period - 1, len(candles)):
-        start = index - period + 1
-        tr = math.fsum(ranges[start : index + 1])
-        if tr <= 0:
+        if index >= period:
+            smoothed_range += ranges[index] - smoothed_range / period
+            smoothed_plus += plus_dm[index] - smoothed_plus / period
+            smoothed_minus += minus_dm[index] - smoothed_minus / period
+        if smoothed_range <= 0:
             dx_values[index] = 0.0
             continue
-        plus = 100.0 * math.fsum(plus_dm[start : index + 1]) / tr
-        minus = 100.0 * math.fsum(minus_dm[start : index + 1]) / tr
+        plus = 100.0 * smoothed_plus / smoothed_range
+        minus = 100.0 * smoothed_minus / smoothed_range
         denominator = plus + minus
-        dx_values[index] = 0.0 if denominator <= 0 else 100.0 * abs(plus - minus) / denominator
-    first = period * 2 - 2
-    for index in range(first, len(candles)):
-        window = [value for value in dx_values[index - period + 1 : index + 1] if value is not None]
-        if len(window) == period:
-            output[index] = math.fsum(window) / period
-    return tuple(output)
+        dx_values[index] = (
+            0.0 if denominator <= 0 else 100.0 * abs(plus - minus) / denominator
+        )
 
+    initial = [
+        value
+        for value in dx_values[period - 1 : first_adx + 1]
+        if value is not None
+    ]
+    if len(initial) != period:
+        return tuple(output)
+    current_adx = math.fsum(initial) / period
+    output[first_adx] = current_adx
+    for index in range(first_adx + 1, len(candles)):
+        value = dx_values[index]
+        if value is not None:
+            current_adx = (current_adx * (period - 1) + value) / period
+            output[index] = current_adx
+    return tuple(output)
 
 def session_vwap(candles: Sequence[Candle]) -> tuple[float | None, ...]:
     """UTC-calendar-day VWAP, reset at 00:00 UTC; zero volume stays unavailable."""
