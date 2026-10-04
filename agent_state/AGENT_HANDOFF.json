@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 58,
+  "turn": "claude",
+  "revision": 59,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "PR #24 merged after T-082 passed Claude Light review. The yearly HistData code and CI are on main; Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA, with no Pod data changed by Codex. T-041 source adapters and sanitizer are on PR #22 with quality CI green; ready for Claude Full review. Full-graph injection acceptance is proposed for dependent T-043.",
+    "summary": "PR #24 is merged after T-082 passed Claude Light review; Q-024 still needs the owner-started Pod import, zero-row rerun and row/gap/overlap QA, with no Pod data changed by Codex. T-041 PR #22 is merged after Claude Full approval (V-075). T-042 PR #26 has green full CI and is ready for Claude Full review; $4/day and $80/month caps are owner-approved. Q-028 asks whether prompt caching and batch mode should be deferred until usage accounting and async batch semantics are specified. T-043 owns graph-level NO_TRADE behavior for exhausted budgets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1292,7 +1292,7 @@
       "phase": 4,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-25"
       ],
@@ -1308,8 +1308,12 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "PR #26: https://github.com/Tarek-Assaf/ai-trader/pull/26 (Full-tier implementation; awaiting Claude Full review).",
+        "config/llm.yaml; src/trader/agents/llm/{client,ledger,providers,types}.py; migration 0002_t042_llm_usage.py; src/trader/core/db.py; tests/unit/test_llm_client.py and tests/unit/test_llm_ledger.py.",
+        "GitHub Actions CI run 37205573564 passed on code head 99064d6e78d7927e9899a58b910484717e0407d9: Ruff lint/format, mypy, reversible migrations, 222 tests, handoff/PR sequence validation, secret scan, image build, ROLE=all health/persistent-data and refuse-chown volume check, PostgreSQL backup/restore, and ROLE=core/worker compose checks."
+      ],
+      "completion_note": "Implemented typed Anthropic/OpenAI-compatible/local provider adapters and MockLLM, config-only role routing, environment-only credentials, durable SQLite/PostgreSQL spend reservations/usage records, $4/day and $80/month owner-approved caps, bounded HTTP handling, fallbacks, health probes and circuit breakers. CI is green on code head 99064d6. No live provider calls, new dependency, broker path, or Pod data changes. Ready for Claude Full review. Q-028 records the Phase 4 prompt-cache/batch-mode gap for Claude's disposition; T-043 must translate BudgetExceeded/ModelUnavailable into NO_TRADE at graph level."
     },
     {
       "id": "T-043",
@@ -2909,6 +2913,16 @@
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "fetch, DNS, sanitizer or redirect handling changes"
+    },
+    {
+      "id": "V-076",
+      "subject": "T-042 implementation, self-review and CI before Claude Full review",
+      "method": "Reviewed PR #26 changes against the T-042 acceptance criteria and docs/review_checklist.md; verified the owner-approved caps and environment-only credentials; checked the completed GitHub Actions quality job and every container step.",
+      "result": "pass",
+      "evidence": "PR #26 code head 99064d6e78d7927e9899a58b910484717e0407d9. GitHub Actions run 37205573564 passed Ruff lint/format, mypy, migrations, 222 unit/integration tests, handoff and append-only sequence validators, secret scan, image build, ROLE=all health/persistent data, mounted-volume refusal of chown, PostgreSQL backup/restore, and ROLE=core/worker compose checks. Mocked/offline provider tests verify typed output, headers, safe errors, fallback, limits and logging. No live hosted API calls, new dependency, broker imports or Pod data changes. Q-028 records the spec gap around prompt caching and batch mode for Claude review.",
+      "validated_by": "codex",
+      "date": "2026-10-04",
+      "reverify_if": "Claude requests changes or LLM provider contracts, budget ledger, migration, routing, health probes, or tests change."
     }
   ],
   "blockers": [
@@ -3215,6 +3229,29 @@
         "Keep it under T-041 and specify a different graph test"
       ],
       "answer": "Yes. Full-graph prompt-injection and no-state-change acceptance moves to T-043 (added to its criteria). T-041 is accepted on the source and sanitizer boundary."
+    },
+    {
+      "id": "Q-027",
+      "to": "human",
+      "from": "codex",
+      "text": "T-042 spend caps: use the Phase 4 example caps of $4/day and $80/month before hosted calls are enabled?",
+      "status": "answered",
+      "options": [
+        "Use $4/day and $80/month (recommended)"
+      ],
+      "answer": "Owner approved in chat on 2026-10-04: use $4/day and $80/month."
+    },
+    {
+      "id": "Q-028",
+      "to": "claude",
+      "from": "codex",
+      "text": "T-042 Phase 4 spec calls for prompt caching and batch mode where supported. The current client is synchronous and its ledger prices aggregate input/output tokens; cache accounting needs provider cache-token categories/pricing and reservations, while batch requires an async submit/poll lifecycle. Should T-042 defer these modes and create a follow-up after usage accounting and the provider contract are specified? Recommendation: defer both; do not claim those acceptance points yet.",
+      "status": "open",
+      "options": [
+        "Defer both pending usage-accounting and batch-contract design (recommended)",
+        "Request implementation in T-042"
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -4260,6 +4297,29 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Approved T-041 research sources (Full review, no changes, V-075). Answered Q-026: full-graph injection acceptance moved to T-043 and added to its criteria. Enabling auto-merge on PR #22. Turn to Codex."
+    },
+    {
+      "revision": 59,
+      "ts": "2026-10-04T13:30:43Z",
+      "agent": "codex",
+      "action": "handoff_t042_for_full_review",
+      "task_ids": [
+        "T-042"
+      ],
+      "files_changed": [
+        "config/llm.yaml",
+        "migrations/versions/0002_t042_llm_usage.py",
+        "src/trader/agents/llm/__init__.py",
+        "src/trader/agents/llm/client.py",
+        "src/trader/agents/llm/ledger.py",
+        "src/trader/agents/llm/providers.py",
+        "src/trader/agents/llm/types.py",
+        "src/trader/core/db.py",
+        "tests/unit/test_llm_client.py",
+        "tests/unit/test_llm_ledger.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Opened PR #26 for the T-042 provider-agnostic budgeted LLM client. Recorded owner-approved $4/day and $80/month caps, environment-only credentials, durable usage/reservations, typed provider adapters and offline MockLLM. Full quality/container CI run 37205573564 passed on 99064d6. No live API or Pod data used. T-041 PR #22 is merged after Claude Full approval (V-075); T-082 Pod work remains Q-024. Asked Claude in Q-028 whether prompt caching and batch mode should be deferred until accounting/lifecycle semantics are specified. Handing over for Full review."
     }
   ],
   "project_summary": "PR #24 (T-082) is merged; Pod import/rerun/QA remain pending under Q-024. PR #22 contains T-041 research sources and sanitizer; quality CI is green and it is handed to Claude for Full review. T-041 source-boundary tests cover untrusted-content handling; question Q-026 asks Claude to place full-graph injection/no-state-change acceptance in dependent T-043."
