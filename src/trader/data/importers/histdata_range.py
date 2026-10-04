@@ -206,7 +206,8 @@ def _split_year_archive(path: Path, symbol: str, year: int, scratch: Path) -> di
                     if month not in writers:
                         output_path = scratch / f"DAT_ASCII_{symbol}_M1_{year:04d}{month:02d}.csv"
                         handle = output_path.open("w", encoding="utf-8", newline="")
-                        writers[month] = (handle, csv.writer(handle, delimiter=";", lineterminator="\n"))
+                        writer = csv.writer(handle, delimiter=";", lineterminator=chr(10))
+                        writers[month] = (handle, writer)
                         paths[month] = output_path
                     writers[month][1].writerow(row)
     except KeyError:
@@ -239,7 +240,9 @@ def _period_plan(
         else:
             mode = "unavailable"
             selected = []
-        plan.append({"year": year, "mode": mode, "months": [f"{year:04d}{m:02d}" for m in selected]})
+        plan.append(
+            {"year": year, "mode": mode, "months": [f"{year:04d}{m:02d}" for m in selected]}
+        )
     return plan
 
 
@@ -376,7 +379,9 @@ def import_histdata_range(
                     key = f"{symbol}:{year:04d}-{month:02d}"
                     completed = manifest["completed_months"].get(key)
                     if isinstance(completed, dict) and completed.get("status") == "ok":
-                        _check_cached_archives(raw, symbol, year, month, manifest, manifest_file, completed)
+                        _check_cached_archives(
+                            raw, symbol, year, month, manifest, manifest_file, completed
+                        )
                         result["skipped_months"].append(f"{year:04d}{month:02d}")
                     else:
                         pending.append(month)
@@ -403,14 +408,18 @@ def import_histdata_range(
                                 result["unavailable_months"].append(month_id)
                             else:
                                 result["rejected_months"].append(
-                                    {"month": month_id, "reason": "yearly archive is missing a month inside its coverage"}
+                                    {
+                                        "month": month_id,
+                                        "reason": "yearly archive has an internal month gap",
+                                    }
                                 )
                                 result["status"] = "partial"
                             continue
                         report, last_download_at = _complete_month(
                             symbol=symbol, year=year, month=month, m1_path=month_path,
                             m1_archive=archive_path.name, m1_verification=verification,
-                            archive_sha256=_sha256(archive_path), raw=raw, lake=lake, lineage=lineage, manifest=manifest,
+                            archive_sha256=_sha256(archive_path),
+                            raw=raw, lake=lake, lineage=lineage, manifest=manifest,
                             manifest_file=manifest_file, last_download_at=last_download_at,
                             pause_seconds=pause_seconds,
                         )
