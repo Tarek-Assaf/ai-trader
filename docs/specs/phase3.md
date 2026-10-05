@@ -40,5 +40,16 @@ Additional notes from this phase:
 - Telegram confirm button and TOTP prompts are the only owner-facing UI; the service itself is UI-agnostic.
 - Acceptance as listed in the task: agents cannot import it (static import test, same pattern as the broker import test), nothing can exceed `risk_ceilings.yaml`, loosening during a loss halt is rejected, every change is in `audit_log` and notifies Telegram.
 
+## Addendum A: Control path rules for T-030 / T-031 (Claude, 2026-10-05)
+Ties Telegram and the router to the T-027 control module (`src/trader/execution/control.py`: `ControlMode`, `ControlWriter`, `build_control_sources`).
+
+1. **Single writer.** `/pause`, `/resume`, `/stop`, `/kill` and their fast-path phrases call only `ControlWriter` (and the flatten function for stop/kill). No other module in `channels/` imports the control sources for writing. Add an import-boundary test.
+2. **Safe direction is immediate.** `/pause`, `/stop`, `/kill` and their phrases take effect on the first message with no confirm step and no TOTP, because they can only reduce risk. Reply states the resulting mode and the time.
+3. **Unsafe direction is gated.** `/resume` (and any settings change) needs all of: owner chat id, a Confirm button press carrying a server-side nonce (single use, 60 s expiry), and the control module's existing resume authorization (TOTP/replay protection as built in T-027). A resume after `/kill` additionally requires the manual reset the architecture defines; Telegram alone cannot clear a kill.
+4. **No LLM or agent path to control.** The T-031 `Intent` schema has no pause/resume/stop/kill variant. If the LLM path classifies text as one of these, the router must not act on it; it replies "use /pause, /resume, /stop or /kill". No agent tool, prompt or MCP surface may expose `ControlWriter`.
+5. **Fail closed.** If the control store (flag file or Redis) cannot be read, the system behaves as paused; `/status` says so. If Telegram is down, control still works through the owner HTTP endpoints.
+6. **Audit.** Every control command writes an audit event: source (`telegram`/`api`), chat id hash, previous and new mode, nonce id for gated actions. Rejected attempts (non-owner, bad nonce, expired nonce, replay) are logged without echoing content.
+7. **Acceptance additions.** Tests: LLM mock never called for control phrases; Intent schema cannot represent control actions; resume without Confirm is refused; replayed and expired nonces are refused; unreadable control store yields paused; `/kill` cannot be undone from Telegram; import-boundary test for rule 1.
+
 ## Phase 3 exit checklist
 All five tasks pass review; `scripts/` smoke test sends a status message to the owner on the pod (owner-run, demo only); stop phrase from Telegram flattens the demo account within 5 seconds in the demo test.
