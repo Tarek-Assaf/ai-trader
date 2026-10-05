@@ -19,7 +19,16 @@
   },
   "result": "partial_round_trip_with_api_error",
   "error": "CapitalComError",
+  "capital_com_error": {
+    "call": "GET /accounts",
+    "http_status": null,
+    "error_code": null,
+    "step": "during_open_account_capture",
+    "diagnostics_available": false,
+    "diagnostics_note": "The original redacted report recorded only the sanitized exception class; its HTTP status and broker errorCode were not persisted. The capture fix now preserves these non-secret diagnostics for future failures."
+  },
   "account_snapshot_during_open": "not_captured",
   "account_snapshot_after_close": "read_only_session_available",
+  "tightened_stop_delta_explanation": "The tightened stop was observed 0.1 below the requested level, a one-tick broker adjustment; the initial stop delta was 0.0.",
   "notes": "No retry was attempted. Full field-map verification still requires an account response while a position is open."
 }

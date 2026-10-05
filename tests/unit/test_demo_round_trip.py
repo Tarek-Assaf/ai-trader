@@ -106,6 +106,87 @@ def test_environment_guard_requires_all_three_explicit_values(
     assert round_trip._check_environment().broker_env == "demo"
 
 
+def test_account_info_retries_only_reads_with_bounded_backoff() -> None:
+    class FlakyClient(FakeClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls = 0
+
+        def account_info(self) -> dict[str, object]:
+            self.calls += 1
+            if self.calls < 3:
+                raise round_trip.CapitalComError(500, "accounts")
+            return {"accounts": [{"currency": "USD", "balance": {"balance": "100"}}]}
+
+    sleeps: list[float] = []
+    client = FlakyClient()
+    observed = round_trip.ObservedTradingClient(
+        client, sleep=sleeps.append  # type: ignore[arg-type]
+    )
+
+    assert observed.account_info()["accounts"]
+    assert client.calls == 3
+    assert sleeps == [1.0, 2.0]
+
+
+def test_account_info_stops_after_three_read_failures() -> None:
+    class FailingClient(FakeClient):
+        def __init__(self) -> None:
+            super().__init__()
+            self.calls = 0
+
+        def account_info(self) -> dict[str, object]:
+            self.calls += 1
+            raise round_trip.CapitalComError(503, "accounts")
+
+    sleeps: list[float] = []
+    client = FailingClient()
+    observed = round_trip.ObservedTradingClient(
+        client, sleep=sleeps.append  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(round_trip.CapitalComError, match="accounts"):
+        observed.account_info()
+    assert client.calls == 3
+    assert sleeps == [1.0, 2.0]
+
+
+def test_account_response_redaction_keeps_balance_fields_without_identifiers() -> None:
+    redacted = round_trip._redact_account_response(
+        {
+            "accounts": [
+                {
+                    "accountId": "secret-account-id",
+                    "currency": "USD",
+                    "balance": {
+                        "balance": "1000.00",
+                        "profitLoss": "-0.10",
+                        "deposit": "100.00",
+                        "available": "899.90",
+                    },
+                }
+            ]
+        }
+    )
+
+    assert redacted == {
+        "account_count": 1,
+        "accounts": [
+            {
+                "currency": "USD",
+                "fields_present": ["available", "balance", "deposit", "profitLoss"],
+                "observed_values": {
+                    "balance": "1000.00",
+                    "profitLoss": "-0.10",
+                    "deposit": "100.00",
+                    "available": "899.90",
+                },
+            }
+        ],
+    }
+    assert "secret-account-id" not in str(redacted)
+
+
 @pytest.mark.parametrize(
     ("name", "bad_value"),
     [
