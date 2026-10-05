@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import hmac
 import os
+import time
 from collections.abc import Sequence
 from enum import StrEnum
 from pathlib import Path
 from typing import Protocol
+
+from trader.control.totp import matching_totp_step
 
 
 class ControlMode(StrEnum):
@@ -54,6 +58,48 @@ class RedisControlSource:
         self._client = client
         self._key = key
 
+    def _auth_key(self, suffix: str) -> str:
+        return f"{self._key}:auth:{suffix}"
+
+    def authorize(
+        self,
+        expected_token: str,
+        provided_token: str,
+        totp_secret: str,
+        code: str,
+        *,
+        now: float | None = None,
+    ) -> bool:
+        """Authenticate an owner action with shared replay and lockout state."""
+        current = time.time() if now is None else now
+        try:
+            lockout_until = float(self._client.get(self._auth_key("lockout")) or 0)
+            if lockout_until > current:
+                return False
+            if lockout_until:
+                self._client.delete(self._auth_key("lockout"))
+                self._client.delete(self._auth_key("failures"))
+            token_ok = hmac.compare_digest(expected_token, provided_token)
+            matched_step = matching_totp_step(totp_secret, code, now=current)
+            last_step_raw = self._client.get(self._auth_key("last_step"))
+            last_step = int(last_step_raw) if last_step_raw is not None else None
+            valid = token_ok and matched_step is not None and (
+                last_step is None or matched_step > last_step
+            )
+            if valid:
+                self._client.set(self._auth_key("last_step"), str(matched_step))
+                self._client.delete(self._auth_key("failures"))
+                return True
+            failures = int(self._client.get(self._auth_key("failures")) or 0) + 1
+            if failures >= 5:
+                self._client.set(self._auth_key("lockout"), str(current + 900))
+                self._client.delete(self._auth_key("failures"))
+            else:
+                self._client.set(self._auth_key("failures"), str(failures))
+            return False
+        except Exception:
+            raise ControlUnavailable("control authentication state is unavailable") from None
+
     def read(self) -> ControlMode:
         try:
             value = self._client.get(self._key)  # type: ignore[attr-defined]
@@ -73,6 +119,8 @@ class RedisControlSource:
 
     def set(self, mode: ControlMode) -> None:
         try:
+            if mode is ControlMode.PAUSE and self.read() is ControlMode.KILL:
+                return
             if mode is ControlMode.RUN:
                 self._client.delete(self._key)  # type: ignore[attr-defined]
             else:
