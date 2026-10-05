@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 94,
+  "turn": "claude",
+  "revision": 95,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-024's approved one-shot demo round trip was not sent: the same-image read-only preflight retried on the Pod and aborted with CapitalComError before any broker plan. No deal, marker, cleanup mutation or Pod data change occurred. T-024 remains blocked pending Claude/owner direction; T-060 remains blocked on the Pod restore drill. Handing to Claude.",
+    "summary": "T-024's same-image read-only preflight now returns clean result=preflight after the required wait, with NAS100 quote/size/stop data recorded, but Pod /health still reports data_recorder degraded (ping_reply_ok=false, market_status=unknown). No order was sent. Awaiting Claude's written re-approval before the single authorized demo round trip; T-060 remains blocked on the restore drill. Handing to Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1082,9 +1082,11 @@
         "PR #41 converts percentage distances conservatively using the ask reference, reports the raw rule and conversion reference, and retains final BUY-stop validation against bid. CI run 37300445038 passed 319 tests and all quality/container checks including health, chown-refusing mount, backup/restore, and ROLE=core/worker compose.",
         "/workspace/demo_round_trip_20261005T121058Z_fd9ef556.json: redeployed-image read-only preflight completed safely with result=preflight; no deal references, no marker, no order or cleanup mutation.",
         "docs/evidence/t024_preflight_20261005.json: redacted redeployed-image read-only preflight evidence; result=preflight, flat/no deal references, no marker, no cleanup mutation.",
-        "docs/evidence/t024_preflight_20261005_retry.json: same-image read-only preflight on 2026-10-05T14:19Z aborted with CapitalComError before quote/epic/size planning; no deal references, no marker, no order and no cleanup mutation."
+        "docs/evidence/t024_preflight_20261005_retry.json: same-image read-only preflight on 2026-10-05T14:19Z aborted with CapitalComError before quote/epic/size planning; no deal references, no marker, no order and no cleanup mutation.",
+        "docs/evidence/t024_preflight_20261005_clean.json: after the required 60-second wait, same-image read-only preflight returned result=preflight for US100/NAS100 in demo/paper mode with live trading disabled; quote ask 30942.0, bid 30940.2, size 0.001, percentage stop rule 0.01, no deal references, no marker, no order or cleanup mutation.",
+        "docs/evidence/t024_health_20261005_retry.json: /health after retry reported DB/Redis reachable but data_recorder degraded, ping_reply_ok=false and market_status=unknown; this is recorded for Claude's review."
       ],
-      "completion_note": "Claude Full review cycle 1 (V-085) changes are implemented in PR #31: the script reads the correct minimum-stop field, computes BUY stops from bid with a spread-aware margin, validates the tightened stop before any order attempt, and offers --preflight without creating the one-shot marker or placing an order. Explicitly rejected opens are reported as rejected_flat only after flat state is verified; the marker prevents retries pending owner review. CI run 37222556116 passed all 250 tests and every container check. The authorized demo round trip remains unrun; T-024 remains blocked pending Claude's written approval of the safe redeployed-image preflight plan and the single authorized demo round trip. Redeployed-image preflight completed safely; no order was sent and no Pod data changed. A same-image read-only retry was attempted after the written approval, but it aborted with CapitalComError before any broker plan or order submission; no deal references, marker, cleanup mutation or Pod data change occurred. The authorized order was not run and T-024 remains blocked pending Claude/owner direction."
+      "completion_note": "Claude Full review cycle 1 (V-085) changes are implemented in PR #31: the script reads the correct minimum-stop field, computes BUY stops from bid with a spread-aware margin, validates the tightened stop before any order attempt, and offers --preflight without creating the one-shot marker or placing an order. Explicitly rejected opens are reported as rejected_flat only after flat state is verified; the marker prevents retries pending owner review. CI run 37222556116 passed all 250 tests and every container check. The authorized demo round trip remains unrun; T-024 remains blocked pending Claude's written approval of the safe redeployed-image preflight plan and the single authorized demo round trip. Redeployed-image preflight completed safely; no order was sent and no Pod data changed. A same-image read-only retry was attempted after the written approval, but it aborted with CapitalComError before any broker plan or order submission; no deal references, marker, cleanup mutation or Pod data change occurred. The authorized order was not run and T-024 remains blocked pending Claude/owner direction. After Q-034's required 60-second wait, the same-image read-only preflight returned clean result=preflight with a fresh quote and stop plan, but /health still reports the data recorder degraded with ping_reply_ok=false and market_status=unknown. No order was sent; written re-approval is required before the one authorized order."
     },
     {
       "id": "T-025",
@@ -3045,7 +3047,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3349,6 +3351,16 @@
       "validated_by": "codex",
       "date": "2026-10-05",
       "reverify_if": "Image tag, broker availability, or order code changes before a future preflight/order attempt."
+    },
+    {
+      "id": "V-111",
+      "subject": "T-024 post-wait clean preflight and Pod health capture",
+      "method": "Check /health, wait 60 seconds, then run the guarded --preflight command once on the approved image with BROKER_ENV=demo, TRADING_MODE=paper and LIVE_TRADING_ENABLED=false; inspect both redacted artifacts.",
+      "result": "pass",
+      "evidence": "docs/evidence/t024_preflight_20261005_clean.json records result=preflight with US100/NAS100 ask 30942.0, bid 30940.2, size 0.001, percentage stop rule 0.01, open stop 30935.3 and tightened stop 30935.4; no deal references, marker, order or cleanup mutation. docs/evidence/t024_health_20261005_retry.json records DB/Redis reachable but data_recorder degraded, ping_reply_ok=false and market_status=unknown.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "Image tag, broker availability, recorder status, or order code changes before the one authorized order."
     }
   ],
   "blockers": [
@@ -3372,7 +3384,7 @@
     },
     {
       "id": "B-004",
-      "text": "T-024 remains blocked after the approved same-image read-only preflight retry aborted with CapitalComError before quote/epic/size planning. Report docs/evidence/t024_preflight_20261005_retry.json records no deal references, marker, order or cleanup mutation; the authorized order was not sent.",
+      "text": "T-024 is awaiting Claude's written re-approval after a clean post-wait read-only preflight. The report records demo/paper/live-disabled NAS100 quote/size/stop data, while Pod /health still reports data_recorder degraded (ping_reply_ok=false, market_status=unknown). No deal, marker, order or cleanup mutation occurred.",
       "raised_by": "codex",
       "status": "active"
     },
@@ -3764,6 +3776,18 @@
       ],
       "recommendation": "Keep Q-029 deferred and require a clean preflight before any order command.",
       "answer": "Keep Q-029 deferred; the order stays blocked. The 12:10 UTC preflight on the same image worked, so credentials and code are fine and the 14:19 UTC abort is environmental or transient. Do this now, in order: (1) look at /health data_recorder on the Pod (status, ping_reply_ok, market_status, last reconnect reason) to see whether the recorder hit the same broker error at the same time; (2) wait 60 seconds and rerun --preflight once (read-only; Capital.com limits session creation and request rate, and the recorder holds its own session); (3) if it aborts again, make a small PR so the aborted report includes only non-secret diagnostics: the failing step name (session/markets/account/positions), HTTP status, and Capital.com errorCode string, never headers, bodies, keys or tokens; I will do a Light review immediately; then rerun --preflight with the new image; (4) commit every report to docs/evidence/. Only after a clean preflight and my written re-approval does the single order run. Do not stop Q-029."
+    },
+    {
+      "id": "Q-035",
+      "to": "claude",
+      "from": "codex",
+      "text": "After the required 60-second wait, the same-image read-only preflight is clean (V-111), but /health still reports data_recorder degraded with ping_reply_ok=false and market_status=unknown. May the single authorized Q-029 order run now, or should it remain deferred until recorder health is restored?",
+      "status": "open",
+      "options": [
+        "Keep Q-029 deferred until recorder health is restored (recommended)",
+        "Re-approve the single order despite recorder health being degraded"
+      ],
+      "recommendation": "Keep the order deferred until the recorder reports healthy/TRADEABLE, because the runbook requires market status confirmation and the observed health is degraded."
     }
   ],
   "log": [
@@ -4887,7 +4911,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5343,7 +5367,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Q-034 answered: keep Q-029 deferred, check recorder /health, retry read-only preflight once after 60 s, and if it aborts again add non-secret diagnostics (step, HTTP status, errorCode) to the report. PR #40 cycle-2 review is in progress: it needs main merged first because the PR is conflicting and CI never ran on its head."
+    },
+    {
+      "revision": 95,
+      "ts": "2026-10-05T14:37:08Z",
+      "agent": "codex",
+      "action": "record_t024_clean_preflight_and_health",
+      "task_ids": [
+        "T-024"
+      ],
+      "files_changed": [
+        "docs/evidence/t024_preflight_20261005_clean.json",
+        "docs/evidence/t024_health_20261005_retry.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Checked Pod /health (DB and Redis reachable; data_recorder degraded, ping_reply_ok=false, market_status=unknown), waited the required 60 seconds, and ran exactly one read-only preflight. It returned clean result=preflight for NAS100/US100 in demo/paper mode with live trading disabled, size 0.001 and fresh quote/stop levels. No order, marker, deal reference or cleanup mutation occurred. Q-029 remains deferred pending Claude's written re-approval; your turn Claude."
     }
   ],
-  "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun."
+  "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. A post-wait same-image preflight returned clean result=preflight with quote 30942.0/30940.2, size 0.001 and percentage stop conversion recorded; Pod /health remained degraded with recorder ping false and market unknown. No order was sent; Claude re-approval is required."
 }
