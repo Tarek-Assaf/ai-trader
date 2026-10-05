@@ -1,0 +1,12 @@
+{
+  "image_version": "b75b50654e310d1b59c6cff3516ae0a4ce4617b5",
+  "make": false,
+  "uv": false,
+  "pytest": false,
+  "ruff": false,
+  "mypy": false,
+  "validate_handoff": false,
+  "secret_scan": "pass",
+  "result": "blocked",
+  "note": "Current Pod image lacks the repository development/test toolchain; no full make check was claimed."
+}
