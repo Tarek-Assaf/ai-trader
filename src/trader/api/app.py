@@ -16,6 +16,7 @@ from trader.core.logging import configure_logging
 from trader.core.settings import EnvironmentSettings
 from trader.data.instruments import InstrumentMapper
 from trader.execution.control import build_control_sources
+from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
 
 _LOG = logging.getLogger(__name__)
@@ -58,6 +59,18 @@ async def lifespan(_app: FastAPI) -> Any:
             settings.capital_api_password,
         )
     )
+    _app.state.capital_account_fields = None
+    if settings.role in {"all", "core"} and has_capital_credentials:
+        try:
+            _app.state.capital_account_fields = capital_account_field_map_from_config(
+                configs["settings"].model_dump()
+            )
+        except ValueError as exc:
+            # Fail closed for P&L reconciliation and order wiring, but keep the API and the
+            # owner kill/pause/resume endpoints up: control must never depend on this check.
+            _LOG.error(
+                "Capital.com account mapping not verified; reconciliation disabled (%s)", exc
+            )
     if settings.role in {"all", "core"} and has_capital_credentials:
         try:
             capital_client = CapitalComClient(settings)

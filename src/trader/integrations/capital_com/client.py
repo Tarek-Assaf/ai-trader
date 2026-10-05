@@ -30,9 +30,16 @@ _RESOLUTIONS = frozenset(
 class CapitalComError(RuntimeError):
     """Sanitized API error; deliberately excludes response bodies and headers."""
 
-    def __init__(self, status_code: int | None, path: str) -> None:
+    def __init__(
+        self,
+        status_code: int | None,
+        path: str,
+        *,
+        error_code: str | None = None,
+    ) -> None:
         self.status_code = status_code
         self.path = path
+        self.error_code = error_code
         status = f"HTTP {status_code}" if status_code is not None else "transport error"
         super().__init__(f"Capital.com {status} for {path}")
 
@@ -142,7 +149,11 @@ class CapitalComClient:
                         path,
                         response.status_code,
                     )
-                    raise CapitalComError(response.status_code, path)
+                    raise CapitalComError(
+                        response.status_code,
+                        path,
+                        error_code=self._response_error_code(response),
+                    )
                 return response
             retry_after = response.headers.get("Retry-After", "")
             try:
@@ -151,6 +162,18 @@ class CapitalComClient:
                 delay = min(0.5 * (2**attempt), 5.0)
             self._sleep(delay)
         raise AssertionError("unreachable")
+
+    @staticmethod
+    def _response_error_code(response: httpx.Response) -> str | None:
+        """Extract only Capital.com's non-secret errorCode diagnostic."""
+        try:
+            payload = response.json()
+        except ValueError:
+            return None
+        if not isinstance(payload, Mapping):
+            return None
+        error_code = payload.get("errorCode")
+        return error_code if isinstance(error_code, str) else None
 
     def _open_session(self) -> None:
         with self._session_lock:
@@ -196,7 +219,11 @@ class CapitalComClient:
                 self._cst = None
                 self._security_token = None
             if auth_attempt == 1:
-                raise CapitalComError(401, path)
+                raise CapitalComError(
+                    401,
+                    path,
+                    error_code=self._response_error_code(response),
+                )
         raise AssertionError("unreachable")
 
     def ping(self) -> Mapping[str, Any]:

@@ -13,7 +13,7 @@ import os
 import sys
 import time
 import uuid
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from decimal import ROUND_FLOOR, Decimal
 from pathlib import Path
@@ -24,20 +24,29 @@ from trader.core.settings import EnvironmentSettings
 from trader.data.instruments import InstrumentMapper
 from trader.execution.brokers.base import Direction, OrderRequest, Position
 from trader.execution.brokers.capital_com import CapitalComBroker
+from trader.integrations.capital_com.client import CapitalComError
 from trader.integrations.capital_com.trading import CapitalComTradingClient
 
 WORKSPACE = Path("/workspace")
 LOCK_PATH = WORKSPACE / ".capital_demo_round_trip.once"
 POLL_SECONDS = 0.5
 POLL_ATTEMPTS = 20
+ACCOUNT_READ_ATTEMPTS = 3
+ACCOUNT_READ_BACKOFF_SECONDS = (1.0, 2.0)
 
 
 class ObservedTradingClient:
     """Delegate broker calls while retaining only safe trade-state observations."""
 
-    def __init__(self, client: CapitalComTradingClient) -> None:
+    def __init__(
+        self,
+        client: CapitalComTradingClient,
+        *,
+        sleep: Callable[[float], None] | None = None,
+    ) -> None:
         self.client = client
         self.environment = client.environment
+        self._sleep = sleep or time.sleep
         self.position_observations: list[dict[str, object]] = []
         self.references: dict[str, str] = {}
         self.deal_statuses: list[str] = []
@@ -49,7 +58,15 @@ class ObservedTradingClient:
         return self.client.market_details(epic)
 
     def account_info(self) -> Mapping[str, object]:
-        return self.client.account_info()
+        """Read accounts with bounded backoff; never retry order operations."""
+        for attempt in range(ACCOUNT_READ_ATTEMPTS):
+            try:
+                return self.client.account_info()
+            except CapitalComError:
+                if attempt == ACCOUNT_READ_ATTEMPTS - 1:
+                    raise
+                self._sleep(ACCOUNT_READ_BACKOFF_SECONDS[attempt])
+        raise AssertionError("unreachable")
 
     def get_positions(self) -> list[Mapping[str, Any]]:
         rows = self.client.get_positions()
@@ -132,6 +149,34 @@ def _safe_position(position: Position | None) -> dict[str, str | None] | None:
         "entry_level": str(position.level),
         "stop_level": str(position.stop_level) if position.stop_level is not None else None,
     }
+
+
+def _redact_account_response(response: Mapping[str, object]) -> dict[str, object]:
+    """Keep balance fields while excluding account identifiers and credentials."""
+    accounts = response.get("accounts")
+    if not isinstance(accounts, list):
+        raise ValueError("account_response_invalid")
+    redacted: list[dict[str, object]] = []
+    for account in accounts:
+        if not isinstance(account, Mapping):
+            continue
+        balance = account.get("balance")
+        if not isinstance(balance, Mapping):
+            continue
+        fields = ("balance", "profitLoss", "deposit", "available")
+        observed_values = {
+            field: str(balance[field])
+            for field in fields
+            if field in balance and balance[field] is not None
+        }
+        redacted.append(
+            {
+                "currency": account.get("currency"),
+                "fields_present": sorted(observed_values),
+                "observed_values": observed_values,
+            }
+        )
+    return {"account_count": len(redacted), "accounts": redacted}
 
 
 def _check_environment() -> EnvironmentSettings:
@@ -355,6 +400,7 @@ def run_round_trip(argv: list[str] | None = None) -> int:
         "deal_references": {},
         "timings_ms": {},
         "cleanup": {"attempted": False},
+        "account_observations": {},
         "error": None,
     }
     try:
@@ -372,14 +418,22 @@ def run_round_trip(argv: list[str] | None = None) -> int:
     broker: CapitalComBroker | None = None
     trading_client: CapitalComTradingClient | None = None
     order_attempted = False
+    current_step = "initialization"
     phase_started = time.monotonic()
     try:
         config_path = Path(__file__).resolve().parents[1] / "config" / "instruments.yaml"
         trading_client = CapitalComTradingClient(settings)
         observed = ObservedTradingClient(trading_client)
         broker = CapitalComBroker(observed, enable_demo_orders=True)
+        account_observations = report["account_observations"]
+        if not isinstance(account_observations, dict):
+            raise AssertionError("account observations must be a mapping")
+        current_step = "before_open_account_capture"
+        account_observations["before_open"] = _redact_account_response(observed.account_info())
+        current_step = "flat_account_check"
         if not _flat(broker):
             raise ValueError("account_must_have_no_open_positions_or_working_orders")
+        current_step = "market_preflight"
         (
             bid,
             ask,
@@ -435,10 +489,15 @@ def run_round_trip(argv: list[str] | None = None) -> int:
             stop_level=stop,
         )
         order_attempted = True
+        current_step = "open_order"
         open_started = time.monotonic()
         receipt = broker.place_order(request)
         report["deal_references"]["open"] = receipt.deal_reference
         report["opened_position"] = _safe_position(receipt.position)
+        current_step = "during_open_account_capture"
+        account_observations["during_open"] = _redact_account_response(observed.account_info())
+        current_step = "during_open_position_capture"
+        observed.get_positions()
         report["broker_observations"] = list(observed.position_observations)
         report["rounding"] = {
             "size_delta": str(receipt.position.size - size),
@@ -457,6 +516,7 @@ def run_round_trip(argv: list[str] | None = None) -> int:
             (time.monotonic() - open_started) * 1000, 3
         )
 
+        current_step = "modify_stop"
         tighten_started = time.monotonic()
         modify_reference = broker.modify_position(receipt.deal_id, stop_level=tightened_stop)
         report["deal_references"]["modify"] = modify_reference
@@ -480,10 +540,13 @@ def run_round_trip(argv: list[str] | None = None) -> int:
             (time.monotonic() - tighten_started) * 1000, 3
         )
 
+        current_step = "close_order"
         close_started = time.monotonic()
         report["deal_references"]["close"] = broker.close_position(receipt.deal_id)
+        current_step = "after_close_account_capture"
         if not _wait_for_flat(broker):
             raise ValueError("account_not_flat_after_close")
+        account_observations["after_close"] = _redact_account_response(observed.account_info())
         report["cleanup"] = {
             "attempted": False,
             "flat_confirmed": True,
@@ -496,6 +559,15 @@ def run_round_trip(argv: list[str] | None = None) -> int:
         report["result"] = "success"
     except Exception as exc:
         message = str(exc)
+        if isinstance(exc, CapitalComError):
+            report["capital_com_error"] = {
+                "call": (
+                    f"GET /{exc.path}" if current_step.endswith("account_capture") else exc.path
+                ),
+                "http_status": exc.status_code,
+                "error_code": exc.error_code,
+                "step": current_step,
+            }
         report["error"] = (
             message
             if message.startswith(

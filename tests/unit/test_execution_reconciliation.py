@@ -11,7 +11,9 @@ from trader.execution.journal import ExecutionJournal
 from trader.execution.pnl import BrokerAccountFigures, PnlTrade
 from trader.execution.reconciliation import (
     CapitalAccountFieldMap,
+    capital_account_field_map_from_config,
     normalize_capital_account,
+    normalize_capital_account_snapshot,
     reconcile_pnl,
 )
 
@@ -86,4 +88,48 @@ def test_initial_stop_is_used_for_r_multiple_and_mismatch_raises():
     with pytest.raises(ValueError, match="exceeds tolerance"):
         reconcile_pnl(
             [trade], journal, starting_balance=Decimal("1000"), currency="USD", broker=wrong
+        )
+
+
+def test_derived_equity_snapshot_and_runtime_verification_gate():
+    raw = {
+        "accounts": [
+            {
+                "accountId": "active",
+                "currency": "USD",
+                "balance": {
+                    "balance": "1000",
+                    "profitLoss": "-12.5",
+                    "deposit": "100",
+                    "available": "887.5",
+                },
+            }
+        ]
+    }
+    fields = CapitalAccountFieldMap("balance", "derived", verified=True)
+    snapshot = normalize_capital_account_snapshot(
+        raw, account_id="active", fields=fields, notional_exposure=Decimal("2000")
+    )
+    assert snapshot.equity == Decimal("987.5")
+    assert snapshot.available == Decimal("887.5")
+    assert snapshot.to_broker_figures().margin_used == Decimal("100")
+    with pytest.raises(ValueError, match="unverified hypothesis"):
+        normalize_capital_account_snapshot(
+            raw,
+            account_id="active",
+            fields=CapitalAccountFieldMap("balance", "derived"),
+            notional_exposure=Decimal("0"),
+        )
+    with pytest.raises(ValueError, match="unverified hypothesis"):
+        capital_account_field_map_from_config(
+            {
+                "capital_account_mapping": {
+                    "balance": "balance",
+                    "equity": "derived",
+                    "profit_loss": "profitLoss",
+                    "margin_used": "deposit",
+                    "available": "available",
+                    "verified": False,
+                }
+            }
         )
