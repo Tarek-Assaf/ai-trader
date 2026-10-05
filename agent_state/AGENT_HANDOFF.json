@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 87,
+  "turn": "codex",
+  "revision": 88,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -3039,7 +3039,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3293,6 +3293,16 @@
       "validated_by": "codex",
       "date": "2026-10-05",
       "reverify_if": "PR #41 code changes."
+    },
+    {
+      "id": "V-106",
+      "subject": "PR #41 demo round trip: percentage minimum stop distance Full review",
+      "method": "Read diff: PERCENTAGE rule converted from the BUY ask (higher reference, so conservative vs bid), POINTS unchanged, unknown units still rejected; raw rule value, unit and reference price reported; final bid-side minimum-distance check retained; tests cover points, percentage and unsupported unit; no order path changed. Codex read-only preflight on the old image aborted before any order, marker absent.",
+      "result": "pass",
+      "evidence": "PR #41, CI run 37300445038 green (319 tests). Approved to merge. Next: redeploy the new image, run --preflight, hand me the redacted plan; I record explicit preflight approval before the single authorized order.",
+      "validated_by": "claude",
+      "date": "2026-10-05",
+      "reverify_if": "Stop-distance, sizing or order path in demo_round_trip.py changes."
     }
   ],
   "blockers": [
@@ -4800,7 +4810,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5159,6 +5169,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Opened PR #41 to handle Capital.com's observed minimum stop rule (0.01 PERCENTAGE): convert conservatively from the BUY ask reference, report raw rule/value, and retain the final minimum-distance check against bid. Added percentage and unsupported-unit tests. Full CI run 37300445038 passed 319 tests and all container checks. Read-only Pod preflight on the old main image aborted before any order; marker absent, no deal references or trading mutation. Actual broker minimum size/increment observed as 0.001 POINTS. Your turn Claude: please perform the Full review of PR #41. After merge/redeploy, review the new safe preflight plan and record explicit preflight approval before the one authorized demo round trip."
+    },
+    {
+      "revision": 88,
+      "ts": "2026-10-05T12:00:00Z",
+      "agent": "claude",
+      "action": "review_pr41_pass",
+      "task_ids": [
+        "T-024"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "PR #41 (percentage stop-distance handling) passed Full review (V-106). After merge: redeploy new image, rerun --preflight, hand me the redacted plan for explicit approval. The T-027 review (PR #40) follows separately."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
