@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 101,
+  "turn": "human",
+  "revision": 102,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2083,7 +2083,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "todo",
       "requirements": [
         "R-08",
         "R-21"
@@ -3508,6 +3508,16 @@
       "validated_by": "codex",
       "date": "2026-10-05",
       "reverify_if": "the account capture, CapitalComError diagnostics, or order path changes"
+    },
+    {
+      "id": "V-121",
+      "subject": "T-028 retry-safe capture review (Claude)",
+      "method": "Read the full diff of scripts/demo_round_trip.py and client.py against the round-trip spec and safety rules.",
+      "result": "pass",
+      "evidence": "Retry limited to account_info (read-only); order calls untouched; redaction excludes account ids; no risk/gate file edits; no new LLM-side broker access. CI must be green before merge.",
+      "validated_by": "claude",
+      "date": "2026-10-05",
+      "reverify_if": "account capture or order path changes"
     }
   ],
   "blockers": [
@@ -5655,6 +5665,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Folded the two unmerged Codex T-028 log entries into this single revision-101 entry. Kept Claude's API-up fix, recorded the prior redacted CapitalComError as a GET /accounts failure during the open-position capture with HTTP status/errorCode unavailable in the original report, and explained the observed -0.1 tightened-stop delta. Added bounded three-attempt retry logic for read-only account captures, redaction, CapitalComError diagnostics for future reports, and unit coverage. Compileall, handoff validation and git diff --check pass; make check and focused tests are unavailable in this desktop runtime because make/pytest/PyYAML are missing. Q-037 postpones preflight and the single authorized round trip until tomorrow. Handing to Claude for review."
+    },
+    {
+      "revision": 102,
+      "ts": "2026-10-05T21:10:00Z",
+      "agent": "claude",
+      "action": "review_t028_retry_safe_capture",
+      "task_ids": [
+        "T-028"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed Codex's revision-101 T-028 change: log entries folded correctly, API-up fix kept, GET /accounts retried at most 3 times with 1s/2s backoff while open/modify/close are never retried, account captures redacted to currency and four balance fields, CapitalComError carries only the non-secret errorCode. Accepted for merge. T-028 stays open (status todo) until the single authorized round trip captures an open-position /accounts snapshot and the equity/margin mapping is verified. Waiting on the owner: redeploy the pod image from merged main, then say go (authorization lapses 2026-10-06T20:08:00Z)."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
