@@ -57,10 +57,14 @@ class PaperExecutionCosts:
         if not spreads or spreads.keys() != slippage.keys():
             raise ValueError("spread and slippage costs must cover the same epics")
         for epic, spread in spreads.items():
-            if not isinstance(epic, str) or not epic.strip() or not _valid_decimal(
-                spread, allow_zero=True
+            if (
+                not isinstance(epic, str)
+                or not epic.strip()
+                or not _valid_decimal(spread, allow_zero=True)
             ):
-                raise ValueError("spread costs require non-empty epics and finite non-negative points")
+                raise ValueError(
+                    "spread costs require non-empty epics and finite non-negative points"
+                )
         for epic, amount in slippage.items():
             if not _valid_decimal(amount, allow_zero=True):
                 raise ValueError(f"slippage cost for {epic} must be finite and non-negative")
@@ -71,7 +75,9 @@ class PaperExecutionCosts:
         try:
             return self.spread_points[epic], self.slippage_points[epic]
         except KeyError:
-            raise BrokerProtocolError("paper execution costs are not configured for this epic") from None
+            raise BrokerProtocolError(
+                "paper execution costs are not configured for this epic"
+            ) from None
 
 
 class PaperBroker:
@@ -205,9 +211,7 @@ class PaperBroker:
             updated = replace(
                 existing,
                 stop_level=stop_level,
-                profit_level=(
-                    profit_level if profit_level is not None else existing.profit_level
-                ),
+                profit_level=(profit_level if profit_level is not None else existing.profit_level),
             )
             self._positions[deal_id] = updated
             reference = self._reference("modify")
@@ -303,7 +307,9 @@ class PaperBroker:
     ) -> Decimal:
         if quote is not None:
             reference = quote.ask if order.direction is Direction.BUY else quote.bid
-            return reference + slippage if order.direction is Direction.BUY else reference - slippage
+            return (
+                reference + slippage if order.direction is Direction.BUY else reference - slippage
+            )
         half_spread = spread / Decimal("2")
         adverse_cost = half_spread + slippage
         return (
