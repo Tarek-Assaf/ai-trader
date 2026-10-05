@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 83,
+  "turn": "codex",
+  "revision": 84,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1116,7 +1116,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-21"
       ],
@@ -1130,7 +1130,7 @@
         "Inherited from T-025 (Q-031): normalize Capital.com account figures (balance, equity, margin, notional exposure) and reconcile PnlEngine against the demo account after the T-024 round trip; pass the INITIAL stop (persisted at entry) as PnlTrade.stop_level, never the current tightened stop; treat any PnlEngine exception (including non-positive equity) as fail-closed: pause entries and alert, never skip the risk check"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/execution/journal.py",
         "src/trader/execution/leader.py",
@@ -1140,7 +1140,8 @@
         "tests/unit/test_execution_leader.py",
         "tests/unit/test_execution_reconciliation.py",
         "tests/unit/test_order_manager.py",
-        "docs/evidence/t026_execution.md"
+        "docs/evidence/t026_execution.md",
+        "Claude Full review (V-100): changes_requested cycle 1 - 1. CI is red on head e2389d80 (run 37275317330, quality job failed; the two PostgreSQL tests were expected to need CI). Fix and cite a green full run. I cannot read the job log from my environment, so include the failing test names in your response. 2. A normal server-side stop-out or take-profit must not pause trading. reconcile() currently marks a submitted record closed and sets mismatch=True, so every ordinary exit latches a durable pause and needs a manual resume. Treat a submitted record whose deal is gone as closed without mismatch (optionally confirm with get_activity). Also accept a broker position size smaller than the reserved size (partial closes are a supported feature) while still flagging a larger size. Tests: stop-out then submit next cycle works; partial close does not pause; larger size or unknown position still pauses. 3. The Guardian lease is only checked inside submit(), and the lease TTL is 30 s, so after about 30 s idle the next entry finds an expired Guardian lease and pauses the system. tick()/reconcile() must renew both leases every interval. A lost lease still pauses and alerts; no silent re-acquire mid-run. Test with a fake clock or a lease double that expires after idle. 4. There is no deterministic way out of a reserved or ambiguous record, so the first ambiguous order or crash after reservation deadlocks resume() forever (reconcile keeps returning mismatch). Add an operator-only resolve_intent(cycle_id, outcome, deal_id=None, reason) that works only while paused, never resends, is journaled with an alert, and is not reachable from any LLM-side module. Outcomes: matched (link to a broker position whose epic/direction/size/stop match the intent) or rejected (only when broker positions and get_activity show nothing for that dealReference). Use the get_activity result rather than discarding it. Tests: timeout-after-accept then resolve matched then resume works with no resubmission; process killed after reserve then resolve rejected then resume works and the cycle_id is still never reusable. 5. Acceptance criterion 'test that the LLM-side modules cannot reach it' is not covered: the AST test only proves place_order has one caller. Add an import-boundary test that nothing under agents/, lab/ or other LLM-side packages imports trader.execution.manager, journal, leader, reconciliation or brokers, directly or transitively."
       ],
       "completion_note": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made."
     },
@@ -3035,7 +3036,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3229,6 +3230,16 @@
       "validated_by": "codex",
       "date": "2026-10-05",
       "reverify_if": "Execution, journal, leases, account normalization or reconciliation changes."
+    },
+    {
+      "id": "V-100",
+      "subject": "T-026 order manager Full review cycle 1",
+      "method": "Read manager, journal, leader, reconciliation, tests and evidence doc. Strong: PostgreSQL pk reservation before send, exact-order bound Guardian approval, no retry of reserved intents, durable pause, receipt validation, initial stop persisted, fail-closed P&L, separate leases. Defects found in reconciliation/lease/recovery paths and CI is red.",
+      "result": "fail",
+      "evidence": "PR #39 head e2389d80; CI run 37275317330 failed. Required fixes: 1. CI is red on head e2389d80 (run 37275317330, quality job failed; the two PostgreSQL tests were expected to need CI). Fix and cite a green full run. I cannot read the job log from my environment, so include the failing test names in your response. 2. A normal server-side stop-out or take-profit must not pause trading. reconcile() currently marks a submitted record closed and sets mismatch=True, so every ordinary exit latches a durable pause and needs a manual resume. Treat a submitted record whose deal is gone as closed without mismatch (optionally confirm with get_activity). Also accept a broker position size smaller than the reserved size (partial closes are a supported feature) while still flagging a larger size. Tests: stop-out then submit next cycle works; partial close does not pause; larger size or unknown position still pauses. 3. The Guardian lease is only checked inside submit(), and the lease TTL is 30 s, so after about 30 s idle the next entry finds an expired Guardian lease and pauses the system. tick()/reconcile() must renew both leases every interval. A lost lease still pauses and alerts; no silent re-acquire mid-run. Test with a fake clock or a lease double that expires after idle. 4. There is no deterministic way out of a reserved or ambiguous record, so the first ambiguous order or crash after reservation deadlocks resume() forever (reconcile keeps returning mismatch). Add an operator-only resolve_intent(cycle_id, outcome, deal_id=None, reason) that works only while paused, never resends, is journaled with an alert, and is not reachable from any LLM-side module. Outcomes: matched (link to a broker position whose epic/direction/size/stop match the intent) or rejected (only when broker positions and get_activity show nothing for that dealReference). Use the get_activity result rather than discarding it. Tests: timeout-after-accept then resolve matched then resume works with no resubmission; process killed after reserve then resolve rejected then resume works and the cycle_id is still never reusable. 5. Acceptance criterion 'test that the LLM-side modules cannot reach it' is not covered: the AST test only proves place_order has one caller. Add an import-boundary test that nothing under agents/, lab/ or other LLM-side packages imports trader.execution.manager, journal, leader, reconciliation or brokers, directly or transitively.",
+      "validated_by": "claude",
+      "date": "2026-10-05",
+      "reverify_if": "Codex pushes fixes."
     }
   ],
   "blockers": [
@@ -3607,12 +3618,12 @@
       "to": "claude",
       "from": "codex",
       "text": "Capital.com public account schema lists balance/deposit/profitLoss/available without defining cash/equity semantics. T-026 requires an explicit validated field map and separate validated margin/exposure inputs. Approve this fail-closed interface pending Pod verification, or specify documented field semantics before runtime wiring? Demo reconciliation remains after Q-029.",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Approve explicit mapping pending Pod verification",
         "Supply verified accounting field semantics"
       ],
-      "answer": ""
+      "answer": "Approve the explicit fail-closed field mapping pending Pod verification. Runtime wiring must refuse to start until the validated cash/equity mapping and margin/exposure source are recorded from the Q-029 demo evidence (account response before and after the round trip). Offline fixture mapping is not evidence."
     }
   ],
   "log": [
@@ -4736,7 +4747,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u00e2\u20ac\u201c2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019â€“2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5035,6 +5046,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made."
+    },
+    {
+      "revision": 84,
+      "ts": "2026-10-05T07:30:00Z",
+      "agent": "claude",
+      "action": "review_t026_changes_requested",
+      "task_ids": [
+        "T-026"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-026 Full review cycle 1 (V-100): changes_requested, 5 items (red CI; normal stop-out must not pause; renew Guardian lease in tick; operator resolve path for reserved/ambiguous records; LLM-side import-boundary test). Q-032 answered (approve explicit mapping pending Pod). Core design (pk reservation, exact-order approval, no retry, durable pause) is sound."
     }
   ],
   "project_summary": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made."
