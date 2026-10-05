@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 102,
+  "turn": "codex",
+  "revision": 103,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2083,7 +2083,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "todo",
       "requirements": [
         "R-08",
         "R-21"
@@ -3114,7 +3114,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3478,6 +3478,26 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "Broker adapter order, modify or close code changes."
+    },
+    {
+      "id": "V-118",
+      "subject": "T-028 read-only part: derived-equity normalizer, verification gate, flat /accounts evidence",
+      "method": "Read the diff of reconciliation.py, app.py, settings.yaml, tests and both flat evidence files. Equity is derived (balance + profitLoss) only through an explicit map; verified defaults false and an unverified map is refused. Defect found and fixed by Claude: startup raised on an unverified map, which would take down the whole API and the owner kill/pause/resume endpoints on the Pod; app.py now catches it, logs an error, leaves capital_account_fields=None (reconciliation/order wiring stay off) and keeps the API up. Restored two older log timestamps the tool rewrote (append-only check); ruff format applied. CI is the authority for the test run (local deps could not be installed).",
+      "result": "pass",
+      "evidence": "docs/evidence/t028_accounts_mapping_20261005.json; docs/evidence/t028_reconcile_20261005.json; src/trader/api/app.py",
+      "reverify_if": "the field map, the unverified gate or app startup changes",
+      "validated_by": "claude",
+      "date": "2026-10-05"
+    },
+    {
+      "id": "V-119",
+      "subject": "T-028 second demo round trip report (Q-036)",
+      "method": "Read docs/evidence/t028_authorized_round_trip_20261005.json: one BUY US100 0.001, open and close observed, flat confirmed (0 positions, 0 working orders), no retry, authorization single use and now consumed. Gaps: no account snapshot during the open position (CapitalComError, call and status not recorded), no fresh before/after captures, and the tightened stop was 0.1 away from the request (first trip had zero deltas) with no explanation.",
+      "result": "pending",
+      "evidence": "docs/evidence/t028_authorized_round_trip_20261005.json",
+      "reverify_if": "a new round trip report is committed",
+      "validated_by": "claude",
+      "date": "2026-10-05"
     }
   ],
   "blockers": [
@@ -3912,6 +3932,30 @@
       ],
       "recommendation": "Keep the order deferred until the recorder reports healthy/TRADEABLE, because the runbook requires market status confirmation and the observed health is degraded.",
       "answer": "Re-approved: run the single order now. The recorder is a separate WebSocket path; the order script uses its own REST session and its own checks (market TRADEABLE, quote, flat account, rules), and it just passed cleanly. Recorder degraded is tracked as a defect (Q-022). Conditions: same image tag as the clean preflight, marker absent, env paper/demo/live disabled, account flat. Run `cd /app && python scripts/demo_round_trip.py` exactly once; levels are recomputed from the live quote (the clean preflight plan was bid 30940.2 / ask 30942.0, min distance 3.0942, margin 1.8, open stop 30935.3, tightened 30935.4, size 0.001, all verified by hand). If it aborts before the marker is created, you may rerun after the cause is understood; once the marker exists, no retry. Any rejected_flat, ambiguous result or unconfirmed cleanup: stop and ask the owner. Afterwards commit outputs per docs/specs/pod_test_outputs.md section 1 and set the turn to Claude. In parallel, investigate the recorder: ping_reply_ok false, market_status unknown, last_update_at null with reconnect_count 0 (it never received data) and report the cause."
+    },
+    {
+      "id": "Q-036",
+      "from": "claude",
+      "to": "human",
+      "status": "answered",
+      "text": "T-028 needs one OPEN-position snapshot of the Capital.com demo /accounts response to verify cash vs equity vs margin. Do you authorize a second tiny demo round trip on the Pod for that?",
+      "options": [
+        "Authorize one more demo round trip (T-028 capture)",
+        "Wait for the first normal demo trade"
+      ],
+      "answer": "Owner authorized (in chat, 2026-10-05 22:52 Asia/Riyadh = 19:52 UTC) exactly ONE more Capital.com DEMO round trip on the Pod, scope and limits in docs/specs/t028_second_round_trip.md. This is the action-time authorization; Codex must not wait for a further owner confirmation but must stop on any deviation. The authorization is single-use and lapses at 2026-10-06T19:52:00Z. Q-029 authorization remains consumed. CONSUMED 2026-10-05T19:55Z: Codex ran the trip (open and close ok, flat); the account snapshot during the open position failed with CapitalComError, so verification is still open (see Q-037)."
+    },
+    {
+      "id": "Q-037",
+      "from": "claude",
+      "to": "human",
+      "status": "open",
+      "text": "The second demo round trip left the account flat but the /accounts capture during the open position failed (CapitalComError), so the equity/margin mapping is still unverified. Do you authorize ONE more tiny demo round trip, after Codex first reports the exact error (status code, which call, redacted) and makes the READ-only /accounts capture retry-safe (reads may be retried with backoff; the order must never be retried)? Alternative: wait and capture the account during the first normal demo trade.",
+      "options": [
+        "Authorize one more demo round trip once Codex confirms the capture fix",
+        "Wait for the first normal demo trade"
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -5035,7 +5079,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5315,7 +5359,7 @@
     },
     {
       "revision": 83,
-      "ts": "2026-10-05T09:56:37.132076+03:00",
+      "ts": "2026-10-05T06:56:37.132076+00:00",
       "agent": "codex",
       "action": "prepare_t026_execution_for_full_review",
       "task_ids": [
@@ -5350,7 +5394,7 @@
     },
     {
       "revision": 85,
-      "ts": "2026-10-05T10:16:12.179745+03:00",
+      "ts": "2026-10-05T07:16:12.179745+00:00",
       "agent": "codex",
       "action": "address_t026_full_review_cycle_1",
       "task_ids": [
@@ -5616,6 +5660,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Recorded one additional owner-authorized demo round trip. US100 opened and closed with flat cleanup confirmed, but CapitalComError prevented capturing the account while open. No retry was attempted; T-028 remains ready for Claude review with the verification gap explicit."
+    },
+    {
+      "revision": 103,
+      "ts": "2026-10-05T20:20:00Z",
+      "agent": "claude",
+      "action": "review_t028_partial",
+      "task_ids": [
+        "T-028"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/api/app.py",
+        "docs/specs/t028_second_round_trip.md"
+      ],
+      "summary": "T-028 read-only part passed (V-118). Round trip report is partial (V-119): flat and safe, but no during-open /accounts capture. Claude fixed app startup so an unverified map disables reconciliation instead of crashing the API. Q-037 asks the owner for one more trip. T-028 stays open. For Codex now: (1) append the exact redacted error (call, HTTP status, step) and explain the 0.1 tightened-stop delta in the evidence; (2) make the /accounts read retry-safe with backoff while the order is never retried; (3) continue non-pod tasks meanwhile; do NOT place another order until Q-037 is answered."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
