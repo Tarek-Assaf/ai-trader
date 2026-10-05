@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "source_path": "/workspace/demo_round_trip_20261005T152207Z_3408637e.json",
+  "pod_image": "c91aa61f4c9392374ebd9ea20bedaabe25a6c296",
+  "result": "success",
+  "symbol": "NAS100",
+  "epic": "US100",
+  "environment": "demo",
+  "mode": "paper",
+  "live_trading_enabled": false,
+  "requested_reference_price": "30975.1",
+  "requested_size": "0.001",
+  "broker_observations": [
+    {
+      "deal_id": "00000000-6815-9eff-0496-1fc40055311e",
+      "direction": "BUY",
+      "epic": "US100",
+      "level": 30975.1,
+      "size": 0.001,
+      "stop_level": 30968.4
+    }
+  ],
+  "stop_levels": {
+    "minimum_stop_distance": "3.09751",
+    "minimum_stop_distance_rule": {
+      "reference_price": "30975.1",
+      "unit": "PERCENTAGE",
+      "value": "0.01"
+    },
+    "open_requested": "30968.4",
+    "open_observed": "30968.4",
+    "tightened_requested": "30968.5",
+    "tightened_observed": "30968.5",
+    "tightened_distance_from_bid": "4.8",
+    "safety_margin": "1.8",
+    "tick_size": "0.1"
+  },
+  "rounding": {
+    "open_stop_delta": "0.0",
+    "tightened_stop_delta": "0.0",
+    "size_delta": "0.000",
+    "size_delta_after_modify": "0.000"
+  },
+  "deal_references": {
+    "open": "o_1f70e3d9-9f09-4192-b755-6b46fe4baaf4",
+    "modify": "p_00000000-6815-9eff-0496-1fc40055311e",
+    "close": "p_00000000-6815-9eff-0496-1fc40055311e"
+  },
+  "timings_ms": {
+    "preflight": 846.584,
+    "open_and_stop_verify": 331.756,
+    "tighten_and_verify": 457.063,
+    "close_and_flat_verify": 380.952,
+    "total": 2023.979
+  },
+  "cleanup": {
+    "attempted": false,
+    "flat_confirmed": true,
+    "positions_remaining": 0,
+    "working_orders_remaining": 0
+  },
+  "final_state": {
+    "flat_confirmed": true,
+    "positions_remaining": 0,
+    "working_orders_remaining": 0
+  }
+}
