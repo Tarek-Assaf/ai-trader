@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime, UTC
 from decimal import Decimal
 from types import MappingProxyType
 
@@ -206,15 +206,12 @@ class PnlEngine:
             raise ValueError("broker and P&L currencies must match")
         current_time = _aware(as_of, "as_of")
 
-        if any(
-            not isinstance(point, EquityPoint)
-            for point in equity_history
-        ):
+        if any(not isinstance(point, EquityPoint) for point in equity_history):
             raise ValueError("equity_history must contain EquityPoint values")
         previous_points = tuple(equity_history)
         if any(
             earlier.timestamp > later.timestamp
-            for earlier, later in zip(previous_points, previous_points[1:])
+            for earlier, later in zip(previous_points, previous_points[1:], strict=True)
         ):
             raise ValueError("equity_history must be chronological")
         if previous_points and previous_points[-1].timestamp > current_time:
@@ -247,9 +244,7 @@ class PnlEngine:
                 )
                 net = gross - trade.fees + trade.financing
                 risk = (
-                    abs(trade.entry_price - trade.stop_level)
-                    * trade.size
-                    * trade.value_per_point
+                    abs(trade.entry_price - trade.stop_level) * trade.size * trade.value_per_point
                 )
                 realized_gross += gross
                 realized_net += net
@@ -283,9 +278,7 @@ class PnlEngine:
 
         exposure_by_epic = dict(sorted(exposure_by_epic.items()))
         total_exposure = sum(exposure_by_epic.values(), start=_ZERO)
-        peak_equity = max(
-            (starting_balance, *(point.equity for point in previous_points), equity)
-        )
+        peak_equity = max((starting_balance, *(point.equity for point in previous_points), equity))
         drawdown = peak_equity - equity
         drawdown_pct = drawdown / peak_equity * _HUNDRED
         margin_usage_pct = margin_used / equity * _HUNDRED
