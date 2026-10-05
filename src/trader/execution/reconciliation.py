@@ -23,13 +23,64 @@ class CapitalAccountFieldMap:
 
     cash_balance: str
     equity: str
+    profit_loss: str = "profitLoss"
+    margin_used: str = "deposit"
+    available: str = "available"
+    verified: bool = False
 
     def __post_init__(self) -> None:
         fields = {"balance", "deposit", "profitLoss", "available"}
-        if self.cash_balance not in fields or self.equity not in fields:
+        if self.cash_balance not in fields or self.equity not in fields | {"derived"}:
             raise ValueError("unsupported Capital.com account field mapping")
-        if self.cash_balance == self.equity:
+        if (
+            self.profit_loss not in fields
+            or self.margin_used not in fields
+            or self.available not in fields
+        ):
+            raise ValueError("unsupported Capital.com account field mapping")
+        if self.cash_balance == self.equity or self.cash_balance == "derived":
             raise ValueError("cash and equity need independently validated fields")
+
+    @classmethod
+    def from_mapping(cls, mapping: Mapping[str, object]) -> "CapitalAccountFieldMap":
+        """Build a map from checked-in config without silently accepting omissions."""
+        required = {"balance", "equity", "profit_loss", "margin_used", "available", "verified"}
+        if set(mapping) != required:
+            raise ValueError("capital account mapping must contain exactly the declared fields")
+        values = {key: mapping[key] for key in required}
+        if not all(isinstance(values[key], str) for key in required - {"verified"}):
+            raise ValueError("capital account mapping field names must be strings")
+        if not isinstance(values["verified"], bool):
+            raise ValueError("capital account mapping verified flag must be boolean")
+        return cls(
+            values["balance"], values["equity"], values["profit_loss"],
+            values["margin_used"], values["available"], values["verified"]
+        )
+
+    def require_verified(self) -> None:
+        if not self.verified:
+            raise ValueError("Capital.com account mapping is an unverified hypothesis")
+
+
+@dataclass(frozen=True, slots=True)
+class CapitalAccountSnapshot:
+    """Normalized Capital.com account values, including free funds."""
+
+    account_id: str
+    currency: str
+    balance: Decimal
+    profit_loss: Decimal
+    equity: Decimal
+    margin_used: Decimal
+    available: Decimal
+    notional_exposure: Decimal
+    mapping_verified: bool
+
+    def to_broker_figures(self) -> BrokerAccountFigures:
+        return BrokerAccountFigures(
+            balance=self.balance, equity=self.equity, currency=self.currency,
+            margin_used=self.margin_used, notional_exposure=self.notional_exposure,
+        )
 
 
 def _number(value: object) -> Decimal:
@@ -52,7 +103,24 @@ def normalize_capital_account(
     margin_used: Decimal,
     notional_exposure: Decimal,
 ) -> BrokerAccountFigures:
-    """Select the explicit active account; reject absent or duplicate rows."""
+    """Normalize the active account using an explicit map and valuation inputs."""
+    return normalize_capital_account_snapshot(
+        response, account_id=account_id, fields=fields,
+        notional_exposure=notional_exposure, require_verified=False,
+    ).to_broker_figures()
+
+
+def normalize_capital_account_snapshot(
+    response: Mapping[str, object],
+    *,
+    account_id: str,
+    fields: CapitalAccountFieldMap,
+    notional_exposure: Decimal,
+    require_verified: bool = True,
+) -> CapitalAccountSnapshot:
+    """Select the account and derive equity only through the declared map."""
+    if require_verified:
+        fields.require_verified()
     accounts = response.get("accounts")
     if not account_id or not isinstance(accounts, list):
         raise ValueError("active account id and account list are required")
@@ -66,13 +134,31 @@ def normalize_capital_account(
     currency = account.get("currency")
     if not isinstance(balances, Mapping) or not isinstance(currency, str):
         raise ValueError("account balances or currency are missing")
-    return BrokerAccountFigures(
-        balance=_number(balances.get(fields.cash_balance)),
-        equity=_number(balances.get(fields.equity)),
-        currency=currency,
-        margin_used=margin_used,
-        notional_exposure=notional_exposure,
+    balance = _number(balances.get(fields.cash_balance))
+    profit_loss = _number(balances.get(fields.profit_loss))
+    equity = (
+        balance + profit_loss
+        if fields.equity == "derived"
+        else _number(balances.get(fields.equity))
     )
+    margin_used = _number(balances.get(fields.margin_used))
+    available = _number(balances.get(fields.available))
+    return CapitalAccountSnapshot(
+        account_id=account_id, currency=currency, balance=balance,
+        profit_loss=profit_loss, equity=equity, margin_used=margin_used,
+        available=available, notional_exposure=_number(notional_exposure),
+        mapping_verified=fields.verified,
+    )
+
+
+def capital_account_field_map_from_config(config: Mapping[str, object]) -> CapitalAccountFieldMap:
+    """Read the settings section and fail closed until verification is recorded."""
+    section = config.get("capital_account_mapping")
+    if not isinstance(section, Mapping):
+        raise ValueError("capital_account_mapping config is required")
+    fields = CapitalAccountFieldMap.from_mapping(section)
+    fields.require_verified()
+    return fields
 
 
 def reconcile_pnl(

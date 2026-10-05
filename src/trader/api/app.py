@@ -16,6 +16,7 @@ from trader.core.logging import configure_logging
 from trader.core.settings import EnvironmentSettings
 from trader.data.instruments import InstrumentMapper
 from trader.execution.control import build_control_sources
+from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
 
 _LOG = logging.getLogger(__name__)
@@ -58,6 +59,8 @@ async def lifespan(_app: FastAPI) -> Any:
             settings.capital_api_password,
         )
     )
+    if settings.role in {"all", "core"} and has_capital_credentials:
+        capital_account_field_map_from_config(configs["settings"].model_dump())
     if settings.role in {"all", "core"} and has_capital_credentials:
         try:
             capital_client = CapitalComClient(settings)

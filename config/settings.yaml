@@ -27,3 +27,14 @@ agents:
 
 log_level: INFO
 report_timezone: UTC         # change when the owner chooses a local reporting time
+
+# Capital.com account semantics are deliberately unverified until an open-position
+# snapshot proves the balance/equity relationship. Application startup refuses to
+# wire P&L reconciliation while this remains false.
+capital_account_mapping:
+  balance: balance
+  equity: derived
+  profit_loss: profitLoss
+  margin_used: deposit
+  available: available
+  verified: false

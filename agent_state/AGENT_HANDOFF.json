@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 100,
+  "turn": "claude",
+  "revision": 101,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,9 +34,11 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "The single owner-confirmed T-024 demo round trip succeeded once on main image c91aa61f4c9392374ebd9ea20bedaabe25a6c296: NAS100/US100 BUY size 0.001, broker-side stop verified, tightened once, closed, and account flat with zero positions/working orders and zero rounding deltas. T-024 remains pending Claude review of the redacted report plus Capital.com account cash/equity and margin/exposure mapping/reconcile_pnl. T-060 remains blocked on the fresh restore drill. Handing to Claude.",
+    "summary": "T-024 is done. T-028 read-only account mapping is implemented and ready for Claude review; the flat demo capture records the four fields and derived-equity hypothesis, while open-position verification remains pending without a second owner authorization. T-060 remains blocked on the fresh restore drill.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
-    "known_failing": [],
+    "known_failing": [
+      "Focused tests could not run in this desktop runtime because pytest and PyYAML are unavailable; compileall and git diff --check pass."
+    ],
     "environment": {
       "runtime": "RunPod Docker",
       "python": "3.12",
@@ -2080,7 +2082,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-08",
         "R-21"
@@ -2096,10 +2098,20 @@
         "Verification needs one OPEN position snapshot (flat accounts cannot distinguish cash from equity). Do NOT place another order without a new owner authorization; capture the account response before, during and after the first normal demo trade instead (paper-demo phase), or ask the owner to authorize a second tiny round trip",
         "Run reconcile_pnl against the demo account figures with the persisted initial stop and record the deltas; any mismatch pauses entries and alerts"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/execution/reconciliation.py",
+        "src/trader/api/app.py",
+        "config/settings.yaml",
+        "docs/evidence/t028_accounts_mapping_20261005.json",
+        "docs/evidence/t028_reconcile_20261005.json",
+        "tests/unit/test_execution_reconciliation.py"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t028_accounts_mapping_20261005.json",
+        "docs/evidence/t028_reconcile_20261005.json"
+      ],
+      "completion_note": "Read-only flat demo /accounts capture and derived-equity normalizer are implemented behind an explicit verified mapping gate. Runtime refuses Capital.com startup until verified=true. Open-position verification remains pending because the flat account cannot distinguish cash from equity and no second order was authorized."
     }
   ],
   "decisions": [
@@ -5301,7 +5313,7 @@
     },
     {
       "revision": 83,
-      "ts": "2026-10-05T06:56:37.132076+00:00",
+      "ts": "2026-10-05T09:56:37.132076+03:00",
       "agent": "codex",
       "action": "prepare_t026_execution_for_full_review",
       "task_ids": [
@@ -5336,7 +5348,7 @@
     },
     {
       "revision": 85,
-      "ts": "2026-10-05T07:16:12.179745+00:00",
+      "ts": "2026-10-05T10:16:12.179745+03:00",
       "agent": "codex",
       "action": "address_t026_full_review_cycle_1",
       "task_ids": [
@@ -5569,6 +5581,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-024 demo round trip reviewed and passed (V-117): one BUY 0.001, stop attached and verified, tightened once, closed, flat confirmed, zero rounding, no retry. T-024 done. Account mapping split into new T-028 (needs an open-position snapshot; no further order without owner authorization). Next for Codex: T-028 read-only part (flat /accounts capture, derived-equity normalizer behind an unverified flag), T-060, Phase 3 (T-030, T-031)."
+    },
+    {
+      "revision": 101,
+      "ts": "2026-10-05T18:00:00Z",
+      "agent": "codex",
+      "action": "implement_t028_account_mapping",
+      "task_ids": [
+        "T-028"
+      ],
+      "files_changed": [
+        "src/trader/execution/reconciliation.py",
+        "src/trader/api/app.py",
+        "config/settings.yaml",
+        "docs/evidence/t028_accounts_mapping_20261005.json",
+        "docs/evidence/t028_reconcile_20261005.json",
+        "tests/unit/test_execution_reconciliation.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-028 read-only flat /accounts evidence and an explicit derived-equity normalizer are implemented. Startup refuses Capital.com wiring until the configured field map is verified. Open-position verification is explicitly pending; no second order was placed. Desktop focused tests are blocked by missing pytest/PyYAML."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
