@@ -13,10 +13,15 @@ lease. Reconciliation mismatches latch a durable pause and notify through the
 injected alert channel. A service loop must call `tick()`; startup reconciles
 before permitting entries. Explicit `resume()` requires a clean reconciliation.
 
-An ambiguous reservation remains paused for operator investigation. Positions
-and activity are inspected, but absence of a position is never treated as
-permission to resend. An unknown broker position is retained in the read model
-and pauses entries. No automatic close is attempted by reconciliation.
+An ambiguous reservation remains paused for operator investigation. The
+operator-only `resolve_intent()` can link an exactly matching broker position
+or record rejection when both positions and activity since reservation are
+empty. It journals the reason and alerts; it never releases the cycle ID or
+resends. A clean `resume()` is still required. Positions and activity are
+inspected, but position absence is never permission to resend. Unknown broker
+positions and enlarged sizes pause entries. Ordinary bracket exits and partial
+closes heal the read model without pausing. Both service leases renew during
+reconciliation. No automatic close is attempted by reconciliation.
 
 ## Account normalization limitation
 

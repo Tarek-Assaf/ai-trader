@@ -106,6 +106,7 @@ class OrderManager:
         with self._mutex:
             try:
                 self._execution_lease.check()
+                self._guardian_lease.check()
                 positions = tuple(self._broker.get_positions())
                 if len({position.deal_id for position in positions}) != len(positions):
                     raise ValueError("duplicate broker deal ids")
@@ -127,7 +128,8 @@ class OrderManager:
                     if (
                         position.epic != order.epic
                         or position.direction != order.direction
-                        or position.size != order.size
+                        or position.size <= 0
+                        or position.size > order.size
                         or not safe_stop
                     ):
                         mismatch = True
@@ -142,7 +144,6 @@ class OrderManager:
                         mismatch = True
                     elif state == "submitted" and record["deal_id"] not in active_ids:
                         self._journal.mark(record["execution_order"]["client_order_id"], "closed")
-                        mismatch = True
                 self._positions = positions
                 self._check_pnl(positions)
                 self._last_reconcile = datetime.now(UTC)
@@ -168,6 +169,59 @@ class OrderManager:
                 raise ExecutionPaused("broker state is unresolved")
             self._journal.clear_pause()
             self._paused = False
+
+    def resolve_intent(
+        self,
+        cycle_id: str,
+        outcome: str,
+        *,
+        deal_id: str | None = None,
+        reason: str,
+    ) -> None:
+        """Operator control-plane recovery; never send or release a reservation.
+
+        Without a broker deal reference, rejection requires an entirely empty
+        position and activity result over the reservation interval. This is
+        conservative: unrelated activity requires further operator investigation.
+        No agent/LLM tool may expose this method.
+        """
+        with self._mutex:
+            if not self._paused or not reason.strip():
+                raise ExecutionPaused("resolution requires a pause and operator reason")
+            try:
+                self._execution_lease.check()
+                self._guardian_lease.check()
+                record = self._journal.get(cycle_id)
+                if record is None or record["execution_state"] not in {"reserved", "ambiguous"}:
+                    raise ValueError("intent is not unresolved")
+                order = restored_order(record["execution_order"])
+                positions = tuple(self._broker.get_positions())
+                start = datetime.fromisoformat(record["reserved_at"])
+                activity = self._broker.get_activity(start, datetime.now(UTC))
+                if outcome == "matched":
+                    matches = [p for p in positions if p.deal_id == deal_id]
+                    if len(matches) != 1:
+                        raise ValueError("broker position is absent or duplicated")
+                    position = matches[0]
+                    if (
+                        position.epic != order.epic
+                        or position.direction != order.direction
+                        or position.size != order.size
+                        or position.stop_level != order.stop_level
+                    ):
+                        raise ValueError("position does not match reserved intent")
+                    state = "submitted"
+                elif outcome == "rejected":
+                    if deal_id is not None or positions or activity:
+                        raise ValueError("broker evidence does not prove rejection")
+                    state = "rejected"
+                else:
+                    raise ValueError("unsupported resolution outcome")
+                self._journal.mark(cycle_id, state, deal_id=deal_id, resolution_reason=reason)
+                self._alert("operator_intent_resolved")
+            except Exception:
+                self._pause("operator_intent_resolution_failed")
+                raise ExecutionPaused("operator resolution failed") from None
 
     def submit(self, cycle_id: str, order: OrderRequest) -> OrderReceipt | None:
         with self._mutex:

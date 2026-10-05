@@ -149,7 +149,14 @@ class ExecutionJournal:
         except Exception:
             raise JournalError("execution recovery read failed") from None
 
-    def mark(self, cycle_id: str, state: str, *, deal_id: str | None = None) -> None:
+    def mark(
+        self,
+        cycle_id: str,
+        state: str,
+        *,
+        deal_id: str | None = None,
+        resolution_reason: str | None = None,
+    ) -> None:
         """Record outcome without changing order parameters or initial stop."""
         try:
             with self._engine.begin() as connection:
@@ -164,6 +171,17 @@ class ExecutionJournal:
                 payload["execution_state"] = state
                 if deal_id is not None:
                     payload["deal_id"] = deal_id
+                if resolution_reason is not None:
+                    resolutions = list(payload.get("operator_resolutions", []))
+                    resolutions.append(
+                        {
+                            "state": state,
+                            "deal_id": deal_id,
+                            "reason": resolution_reason,
+                            "at": datetime.now(UTC).isoformat(),
+                        }
+                    )
+                    payload["operator_resolutions"] = resolutions
                 connection.execute(
                     update(self._table).where(self._table.c.id == cycle_id).values(payload=payload)
                 )

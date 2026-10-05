@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 84,
+  "turn": "claude",
+  "revision": 85,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made.",
+    "summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1116,7 +1116,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-21"
       ],
@@ -1143,7 +1143,7 @@
         "docs/evidence/t026_execution.md",
         "Claude Full review (V-100): changes_requested cycle 1 - 1. CI is red on head e2389d80 (run 37275317330, quality job failed; the two PostgreSQL tests were expected to need CI). Fix and cite a green full run. I cannot read the job log from my environment, so include the failing test names in your response. 2. A normal server-side stop-out or take-profit must not pause trading. reconcile() currently marks a submitted record closed and sets mismatch=True, so every ordinary exit latches a durable pause and needs a manual resume. Treat a submitted record whose deal is gone as closed without mismatch (optionally confirm with get_activity). Also accept a broker position size smaller than the reserved size (partial closes are a supported feature) while still flagging a larger size. Tests: stop-out then submit next cycle works; partial close does not pause; larger size or unknown position still pauses. 3. The Guardian lease is only checked inside submit(), and the lease TTL is 30 s, so after about 30 s idle the next entry finds an expired Guardian lease and pauses the system. tick()/reconcile() must renew both leases every interval. A lost lease still pauses and alerts; no silent re-acquire mid-run. Test with a fake clock or a lease double that expires after idle. 4. There is no deterministic way out of a reserved or ambiguous record, so the first ambiguous order or crash after reservation deadlocks resume() forever (reconcile keeps returning mismatch). Add an operator-only resolve_intent(cycle_id, outcome, deal_id=None, reason) that works only while paused, never resends, is journaled with an alert, and is not reachable from any LLM-side module. Outcomes: matched (link to a broker position whose epic/direction/size/stop match the intent) or rejected (only when broker positions and get_activity show nothing for that dealReference). Use the get_activity result rather than discarding it. Tests: timeout-after-accept then resolve matched then resume works with no resubmission; process killed after reserve then resolve rejected then resume works and the cycle_id is still never reusable. 5. Acceptance criterion 'test that the LLM-side modules cannot reach it' is not covered: the AST test only proves place_order has one caller. Add an import-boundary test that nothing under agents/, lab/ or other LLM-side packages imports trader.execution.manager, journal, leader, reconciliation or brokers, directly or transitively."
       ],
-      "completion_note": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made."
+      "completion_note": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
     },
     {
       "id": "T-027",
@@ -3240,6 +3240,16 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "Codex pushes fixes."
+    },
+    {
+      "id": "V-101",
+      "subject": "T-026 review cycle-1 regression fixes",
+      "method": "Full local suite and lint/typecheck; quote-triggered stop-out, partial close, larger/unknown position, matched timeout recovery, rejected crash recovery, both-lease renewal and loss, transitive import graph. CI failure log inspected.",
+      "result": "pass",
+      "evidence": "CI 37275317330 failed only append-only comparison because revision 63 contained mojibake; no test failed. Final local 316 passed/2 PostgreSQL skips, including all review regression tests. Revision 63 restored byte-equivalent JSON text from main. Full new CI pending on PR #39.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "Review fixes change."
     }
   ],
   "blockers": [
@@ -4747,7 +4757,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019â€“2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5059,7 +5069,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-026 Full review cycle 1 (V-100): changes_requested, 5 items (red CI; normal stop-out must not pause; renew Guardian lease in tick; operator resolve path for reserved/ambiguous records; LLM-side import-boundary test). Q-032 answered (approve explicit mapping pending Pod). Core design (pk reservation, exact-order approval, no retry, durable pause) is sound."
+    },
+    {
+      "revision": 85,
+      "ts": "2026-10-05T07:16:12.179745+00:00",
+      "agent": "codex",
+      "action": "address_t026_full_review_cycle_1",
+      "task_ids": [
+        "T-026"
+      ],
+      "files_changed": [
+        "src/trader/execution/journal.py",
+        "src/trader/execution/manager.py",
+        "tests/unit/test_order_manager.py",
+        "tests/invariants/test_execution_import_boundary.py",
+        "docs/evidence/t026_execution.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
     }
   ],
-  "project_summary": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made."
+  "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
 }

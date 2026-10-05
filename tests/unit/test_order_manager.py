@@ -195,3 +195,71 @@ def test_process_killed_after_reservation_never_resubmits(tmp_path):
     with pytest.raises(ExecutionPaused):
         manager.submit("cycle-1", order)
     assert broker.calls == 0 and manager.paused and alerts
+    manager.resolve_intent("cycle-1", "rejected", reason="operator verified empty broker state")
+    manager.resume()
+    assert manager.submit("cycle-1", order) is None
+    assert broker.calls == 0
+
+
+def test_accepted_timeout_can_be_matched_and_resumed_without_resubmission(tmp_path):
+    manager, broker, journal, _, _, order = setup(tmp_path)
+    broker.timeout = True
+    with pytest.raises(ExecutionPaused):
+        manager.submit("cycle-1", order)
+    deal = broker.get_positions()[0].deal_id
+    with pytest.raises(ExecutionPaused):
+        manager.resolve_intent("cycle-1", "rejected", reason="not actually rejected")
+    manager.resolve_intent("cycle-1", "matched", deal_id=deal, reason="broker position verified")
+    assert journal.get("cycle-1")["operator_resolutions"]
+    manager.resume()
+    assert manager.submit("cycle-1", order) is None
+    assert broker.calls == 1
+
+
+def test_normal_exit_and_partial_close_allow_next_cycle(tmp_path):
+    manager, broker, _, _, _, order = setup(tmp_path)
+    receipt = manager.submit("cycle-1", order)
+    broker.close_partial(receipt.deal_id, Decimal("0.5"))
+    assert manager.reconcile() and not manager.paused
+    # A real quote update triggers PaperBroker's server-side bracket handling.
+    closed = broker.update_quote("US100", bid=Decimal("85"), ask=Decimal("87"))
+    assert receipt.deal_id in closed
+    assert manager.reconcile() and not manager.paused
+    broker.update_quote("US100", bid=Decimal("99"), ask=Decimal("101"))
+    assert manager.submit("cycle-2", replace(order, client_order_id="cycle-2"))
+
+
+@pytest.mark.parametrize("mismatch", ["larger", "unknown"])
+def test_larger_or_unknown_broker_position_pauses(tmp_path, mismatch):
+    manager, broker, _, _, alerts, order = setup(tmp_path)
+    receipt = manager.submit("cycle-1", order)
+    if mismatch == "larger":
+        broker._positions[receipt.deal_id] = replace(receipt.position, size=Decimal("2"))
+    else:
+        broker.place_order(replace(order, client_order_id="external"))
+    assert not manager.reconcile()
+    assert manager.paused and alerts
+
+
+def test_tick_renews_both_leases_and_lost_guardian_pauses(tmp_path):
+    manager, _, _, _, alerts, _ = setup(tmp_path)
+
+    class ExpiringLease:
+        checks = 0
+        fail = False
+
+        def check(self):
+            self.checks += 1
+            if self.fail:
+                raise RuntimeError("expired")
+
+    guardian = ExpiringLease()
+    manager._guardian_lease = guardian
+    manager._last_reconcile = None
+    manager.tick()
+    assert guardian.checks == 1
+    guardian.fail = True
+    manager._last_reconcile = None
+    with pytest.raises(ExecutionPaused):
+        manager.tick()
+    assert manager.paused and alerts
