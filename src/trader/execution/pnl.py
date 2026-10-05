@@ -210,7 +210,7 @@ class PnlEngine:
         previous_points = tuple(equity_history)
         if any(
             earlier.timestamp > later.timestamp
-            for earlier, later in zip(previous_points, previous_points[1:], strict=True)
+            for earlier, later in zip(previous_points, previous_points[1:], strict=False)
         ):
             raise ValueError("equity_history must be chronological")
         if previous_points and previous_points[-1].timestamp > current_time:
