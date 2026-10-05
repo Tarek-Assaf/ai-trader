@@ -9,6 +9,12 @@ from sqlalchemy import create_engine
 from trader.core.db import tables
 from trader.execution.brokers.base import Direction, OrderRequest
 from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
+from trader.execution.control import (
+    CompositeControlSource,
+    ControlMode,
+    FlagFileControlSource,
+    RedisControlSource,
+)
 from trader.execution.journal import ExecutionJournal
 from trader.execution.manager import BoundApproval, ExecutionPaused, OrderManager
 from trader.risk.guardian import RiskDecision
@@ -29,6 +35,11 @@ class Broker(PaperBroker):
     calls = 0
     timeout = False
 
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.working_orders = []
+        self.fail_close = False
+
     def place_order(self, order):
         self.calls += 1
         receipt = super().place_order(order)
@@ -36,8 +47,32 @@ class Broker(PaperBroker):
             raise TimeoutError("accepted but reply lost")
         return receipt
 
+    def get_open_orders(self):
+        return tuple(self.working_orders)
 
-def setup(tmp_path, *, pnl=None, approve=None):
+    def cancel_working_order(self, deal_id):
+        self.working_orders = [
+            order
+            for order in self.working_orders
+            if order.get("workingOrderData", {}).get("dealId") != deal_id
+        ]
+        if any(
+            order.get("workingOrderData", {}).get("dealId") == deal_id
+            for order in self.working_orders
+        ):
+            raise ValueError("working order could not be canceled")
+        return f"paper-cancel-{deal_id}"
+
+    def close_position(self, deal_id):
+        if self.fail_close:
+            self.fail_close = False
+            raise OSError("temporary close failure")
+        return super().close_position(deal_id)
+
+
+def setup(
+    tmp_path, *, pnl=None, approve=None, control_source=None, control_writer=None, manage=None
+):
     engine = create_engine(f"sqlite:///{tmp_path / 'execution.db'}")
     tables["trade_intents"].create(engine)
     tables["snapshots"].create(engine)
@@ -56,6 +91,13 @@ def setup(tmp_path, *, pnl=None, approve=None):
     def approval(order, cycle):
         return BoundApproval(order, cycle, RiskDecision(True, order.size, (), ()))
 
+    if control_writer is None:
+        control_writer = RedisControlSource(Redis())
+    if control_source is None:
+        control_source = CompositeControlSource(
+            (FlagFileControlSource(tmp_path / "control"), control_writer)
+        )
+
     manager = OrderManager(
         broker,
         journal,
@@ -64,12 +106,36 @@ def setup(tmp_path, *, pnl=None, approve=None):
         approve or approval,
         pnl or (lambda positions: None),
         alerts.append,
+        control_source,
+        control_writer,
+        manage or (lambda positions: None),
     )
     manager.startup()
     order = OrderRequest(
         "cycle-1", "US100", Direction.BUY, Decimal("1"), Decimal("100"), Decimal("90")
     )
     return manager, broker, journal, lease, alerts, order
+
+
+class Redis:
+    def __init__(self):
+        self.values = {}
+        self.fail = False
+
+    def get(self, key):
+        if self.fail:
+            raise OSError("unavailable")
+        return self.values.get(key)
+
+    def set(self, key, value):
+        if self.fail:
+            raise OSError("unavailable")
+        self.values[key] = value
+
+    def delete(self, key):
+        if self.fail:
+            raise OSError("unavailable")
+        self.values.pop(key, None)
 
 
 def test_duplicate_trigger_never_submits_twice(tmp_path):
@@ -263,3 +329,194 @@ def test_tick_renews_both_leases_and_lost_guardian_pauses(tmp_path):
     with pytest.raises(ExecutionPaused):
         manager.tick()
     assert manager.paused and alerts
+
+
+def test_pause_keeps_managing_existing_positions_and_rejects_new_entries(tmp_path):
+    redis = Redis()
+    writer = RedisControlSource(redis)
+    source = CompositeControlSource((FlagFileControlSource(tmp_path / "control"), writer))
+    managed = []
+    manager, broker, _, _, _, order = setup(
+        tmp_path, control_source=source, control_writer=writer, manage=managed.append
+    )
+    manager.submit("cycle-1", order)
+    position = broker.get_positions()[0]
+    writer.set(ControlMode.PAUSE)
+    manager.tick()
+    assert broker.get_positions() == (position,)
+    assert managed[-1] == (position,)
+    with pytest.raises(ExecutionPaused):
+        manager.submit("cycle-2", replace(order, client_order_id="cycle-2"))
+    writer.set(ControlMode.RESUME)
+    manager.tick()
+    assert not manager.paused
+
+
+def test_startup_pause_reconciles_positions_before_management(tmp_path):
+    redis = Redis()
+    writer = RedisControlSource(redis)
+    source = CompositeControlSource((FlagFileControlSource(tmp_path / "control"), writer))
+    manager, broker, journal, _, alerts, order = setup(
+        tmp_path, control_source=source, control_writer=writer
+    )
+    manager.submit("cycle-1", order)
+    position = broker.get_positions()[0]
+    writer.set(ControlMode.PAUSE)
+    managed = []
+
+    def approval(request, cycle):
+        return BoundApproval(request, cycle, RiskDecision(True, request.size, (), ()))
+
+    restarted = OrderManager(
+        broker,
+        journal,
+        Lease(),
+        Lease(),
+        approval,
+        lambda positions: None,
+        alerts.append,
+        source,
+        writer,
+        managed.append,
+    )
+    restarted.startup()
+    assert restarted.paused
+    assert restarted.positions == (position,)
+    restarted.tick()
+    assert managed == [(position,)]
+
+
+def test_kill_flattens_and_survives_restart_until_explicit_resume(tmp_path):
+    redis = Redis()
+    writer = RedisControlSource(redis)
+    source = CompositeControlSource((FlagFileControlSource(tmp_path / "control"), writer))
+    manager, broker, journal, _, _, order = setup(
+        tmp_path, control_source=source, control_writer=writer
+    )
+    manager.submit("cycle-1", order)
+    writer.set(ControlMode.KILL)
+    manager.tick()
+    assert broker.get_positions() == ()
+    assert manager.paused and journal.is_killed()
+
+    def approval(request, cycle):
+        return BoundApproval(request, cycle, RiskDecision(True, request.size, (), ()))
+
+    restarted = OrderManager(
+        broker,
+        journal,
+        Lease(),
+        Lease(),
+        approval,
+        lambda positions: None,
+        lambda reason: None,
+        source,
+        writer,
+        lambda positions: None,
+    )
+    restarted.startup()
+    next_order = replace(order, client_order_id="cycle-2")
+    assert restarted.paused
+    with pytest.raises(ExecutionPaused):
+        restarted.submit("cycle-2", replace(next_order, client_order_id="cycle-2"))
+    writer.set(ControlMode.RESUME)
+    restarted.tick()
+    assert not restarted.paused and not journal.is_killed()
+    assert restarted.submit("cycle-2", replace(next_order, client_order_id="cycle-2"))
+
+
+def test_kill_during_order_closes_new_fill_before_returning(tmp_path):
+    redis = Redis()
+    writer = RedisControlSource(redis)
+    source = CompositeControlSource((FlagFileControlSource(tmp_path / "control"), writer))
+    manager, broker, journal, _, _, order = setup(
+        tmp_path, control_source=source, control_writer=writer
+    )
+    original_place = broker.place_order
+
+    def kill_after_accept(request):
+        receipt = original_place(request)
+        writer.set(ControlMode.KILL)
+        return receipt
+
+    broker.place_order = kill_after_accept
+    with pytest.raises(ExecutionPaused, match="kill activated during order submission"):
+        manager.submit("cycle-1", order)
+    assert broker.calls == 1
+    assert broker.get_positions() == ()
+    assert journal.is_killed()
+
+
+def test_kill_is_checked_after_approval_and_before_order_call(tmp_path):
+    redis = Redis()
+    writer = RedisControlSource(redis)
+    source = CompositeControlSource((FlagFileControlSource(tmp_path / "control"), writer))
+
+    def approval(request, cycle):
+        writer.set(ControlMode.KILL)
+        return BoundApproval(request, cycle, RiskDecision(True, request.size, (), ()))
+
+    manager, broker, journal, _, _, order = setup(
+        tmp_path, approve=approval, control_source=source, control_writer=writer
+    )
+    with pytest.raises(ExecutionPaused, match="control activated before broker submission"):
+        manager.submit("cycle-1", order)
+    assert broker.calls == 0 and journal.is_killed()
+    assert journal.get("cycle-1")["execution_state"] == "rejected"
+
+
+def test_kill_cancels_working_orders_and_retries_failed_flatten(tmp_path):
+    redis = Redis()
+    writer = RedisControlSource(redis)
+    source = CompositeControlSource((FlagFileControlSource(tmp_path / "control"), writer))
+    manager, broker, journal, _, alerts, order = setup(
+        tmp_path, control_source=source, control_writer=writer
+    )
+    manager.submit("cycle-1", order)
+    broker.working_orders.append({"workingOrderData": {"dealId": "working-1"}})
+    broker.fail_close = True
+    writer.set(ControlMode.KILL)
+    manager.tick()
+    assert broker.get_positions() and broker.get_open_orders() == ()
+    assert manager.paused and journal.is_killed() and alerts
+    manager.tick()
+    assert broker.get_positions() == () and broker.get_open_orders() == ()
+
+
+def test_volume_flag_is_independent_and_kill_precedes_pause(tmp_path):
+    flags = tmp_path / "control"
+    flags.mkdir()
+    redis = Redis()
+    writer = RedisControlSource(redis)
+    source = CompositeControlSource((FlagFileControlSource(flags), writer))
+    (flags / "pause.flag").touch()
+    assert source.read() is ControlMode.PAUSE
+    (flags / "kill.flag").touch()
+    assert source.read() is ControlMode.KILL
+
+
+def test_control_source_failure_fails_closed(tmp_path):
+    redis = Redis()
+    redis.fail = True
+    writer = RedisControlSource(redis)
+    source = CompositeControlSource((FlagFileControlSource(tmp_path / "control"), writer))
+    manager, broker, _, _, alerts, order = setup(tmp_path, control_source=source)
+    with pytest.raises(ExecutionPaused):
+        manager.submit("cycle-1", order)
+    assert broker.calls == 0 and manager.paused and alerts
+
+
+def test_resume_resets_external_alert_latches_for_second_pause(tmp_path):
+    redis = Redis()
+    writer = RedisControlSource(redis)
+    source = CompositeControlSource((FlagFileControlSource(tmp_path / "control"), writer))
+    manager, _, _, _, alerts, _ = setup(tmp_path, control_source=source, control_writer=writer)
+    writer.set(ControlMode.PAUSE)
+    manager.tick()
+    assert alerts.count("external_pause") == 1
+    writer.set(ControlMode.RESUME)
+    manager.tick()
+    assert not manager.paused
+    writer.set(ControlMode.PAUSE)
+    manager.tick()
+    assert alerts.count("external_pause") == 2

@@ -75,6 +75,50 @@ class ExecutionJournal:
         except Exception:
             raise JournalError("execution pause persistence failed") from None
 
+    def save_kill(self, reason: str) -> None:
+        """Durably latch kill across service restarts until explicit owner recovery."""
+        table = tables["snapshots"]
+        try:
+            with self._engine.begin() as connection:
+                exists = connection.execute(
+                    select(table.c.id).where(table.c.id == "execution-kill")
+                ).scalar_one_or_none()
+                if exists is None:
+                    connection.execute(
+                        insert(table).values(id="execution-kill", payload={"reason": reason})
+                    )
+                else:
+                    connection.execute(
+                        update(table)
+                        .where(table.c.id == "execution-kill")
+                        .values(payload={"reason": reason})
+                    )
+        except Exception:
+            raise JournalError("execution kill persistence failed") from None
+
+    def is_killed(self) -> bool:
+        table = tables["snapshots"]
+        try:
+            with self._engine.connect() as connection:
+                return (
+                    connection.execute(
+                        select(table.c.id).where(table.c.id == "execution-kill")
+                    ).scalar_one_or_none()
+                    is not None
+                )
+        except Exception:
+            raise JournalError("execution kill read failed") from None
+
+    def clear_kill(self) -> None:
+        from sqlalchemy import delete
+
+        try:
+            with self._engine.begin() as connection:
+                table = tables["snapshots"]
+                connection.execute(delete(table).where(table.c.id == "execution-kill"))
+        except Exception:
+            raise JournalError("execution kill reset failed") from None
+
     def is_paused(self) -> bool:
         table = tables["snapshots"]
         try:

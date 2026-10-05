@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import threading
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
 from trader.execution.brokers.base import BrokerAdapter, OrderReceipt, OrderRequest, Position
+from trader.execution.control import (
+    ControlMode,
+    ControlSource,
+    ControlUnavailable,
+    ControlWriter,
+)
 from trader.execution.journal import ExecutionJournal, restored_order
 from trader.risk.guardian import RiskDecision
 
@@ -50,6 +56,9 @@ class OrderManager:
         approve: Callable[[OrderRequest, str], BoundApproval],
         check_pnl: Callable[[Sequence[Position]], None],
         alert: Callable[[str], None],
+        control_source: ControlSource,
+        control_writer: ControlWriter,
+        manage_positions: Callable[[Sequence[Position]], None],
         *,
         reconcile_interval_seconds: int = 5,
     ) -> None:
@@ -63,11 +72,16 @@ class OrderManager:
         self._check_pnl = check_pnl
         self._alert = alert
         self._interval = timedelta(seconds=reconcile_interval_seconds)
+        self._control_source = control_source
+        self._control_writer = control_writer
+        self._manage_positions = manage_positions
         self._last_reconcile: datetime | None = None
         self._positions: tuple[Position, ...] = ()
         self._paused = True
         self._started = False
         self._mutex = threading.RLock()
+        self._kill_alerted = False
+        self._external_pause_latched = False
 
     @property
     def paused(self) -> bool:
@@ -95,7 +109,16 @@ class OrderManager:
                 self._execution_lease.acquire()
                 self._guardian_lease.acquire()
                 self._started = True
-                if self.reconcile() and not self._journal.is_paused():
+                mode = self._read_controls()
+                if mode is ControlMode.KILL or self._journal.is_killed():
+                    self._apply_controls()
+                    return
+                if not self.reconcile():
+                    return
+                mode = self._apply_controls()
+                if mode is not ControlMode.RUN:
+                    return
+                if not self._journal.is_paused() and not self._journal.is_killed():
                     self._paused = False
             except Exception:
                 self._pause("execution_startup_failed")
@@ -155,20 +178,169 @@ class OrderManager:
                 raise ExecutionPaused("reconciliation failed") from None
 
     def tick(self) -> None:
-        """Call from the deterministic service loop, independently of the LLM."""
-        if (
-            self._last_reconcile is None
-            or datetime.now(UTC) - self._last_reconcile >= self._interval
-        ):
-            self.reconcile()
+        """Check emergency controls and service open positions on every loop."""
+        with self._mutex:
+            try:
+                self._execution_lease.check()
+            except Exception:
+                self._pause("execution_lease_lost")
+                return
+            mode = self._apply_controls()
+            if mode is ControlMode.KILL:
+                return
+            try:
+                # The injected routine may manage existing stops but must not create entries.
+                self._manage_positions(self._positions)
+            except Exception:
+                self._pause("position_management_failed")
+                return
+            if (
+                self._last_reconcile is None
+                or datetime.now(UTC) - self._last_reconcile >= self._interval
+            ):
+                self.reconcile()
 
     def resume(self) -> None:
-        """Explicit operator recovery, permitted only after a clean reconciliation."""
+        """Explicit owner recovery after controls clear and broker state is safe."""
         with self._mutex:
-            if not self._started or not self.reconcile():
+            if not self._started:
+                raise ExecutionPaused("execution has not started")
+            try:
+                self._execution_lease.check()
+                self._guardian_lease.check()
+            except Exception:
+                self._pause("execution_resume_lease_check_failed")
+                raise ExecutionPaused("execution lease is unavailable") from None
+            if self._control_writer is not None:
+                try:
+                    self._control_writer.set(ControlMode.RUN)
+                except Exception:
+                    raise ExecutionPaused("control source could not be cleared") from None
+            mode = self._read_controls()
+            if mode is not ControlMode.RUN:
+                raise ExecutionPaused("an external pause or kill trigger is still active")
+            was_killed = self._journal.is_killed()
+            if was_killed and not self._flatten_everything():
+                raise ExecutionPaused("kill is latched until all broker orders are closed")
+            if not self.reconcile():
                 raise ExecutionPaused("broker state is unresolved")
+            if was_killed:
+                self._journal.clear_kill()
             self._journal.clear_pause()
             self._paused = False
+            self._external_pause_latched = False
+            self._kill_alerted = False
+
+    def _read_controls(self) -> ControlMode:
+        if self._control_source is None:
+            return ControlMode.RUN
+        try:
+            return self._control_source.read()
+        except ControlUnavailable:
+            self._pause("execution_control_unavailable")
+            return ControlMode.PAUSE
+        except Exception:
+            self._pause("execution_control_unavailable")
+            return ControlMode.PAUSE
+
+    def _apply_controls(self) -> ControlMode:
+        """Latch external controls; kill repeatedly attempts to flatten broker state."""
+        mode = self._read_controls()
+        if mode is ControlMode.RESUME:
+            try:
+                self.resume()
+            except ExecutionPaused:
+                try:
+                    return ControlMode.KILL if self._journal.is_killed() else ControlMode.PAUSE
+                except Exception:
+                    return ControlMode.PAUSE
+            return ControlMode.RUN
+        try:
+            killed = self._journal.is_killed()
+        except Exception:
+            self._pause("execution_control_state_unavailable")
+            return ControlMode.PAUSE
+        if mode is ControlMode.KILL or killed:
+            try:
+                if not killed:
+                    self._journal.save_kill("external_kill")
+                if not self._journal.is_paused():
+                    self._journal.save_pause("external_kill")
+            except Exception:
+                self._paused = True
+                try:
+                    self._alert("execution_kill_persistence_failed")
+                except Exception:
+                    pass
+            self._paused = True
+            if not self._kill_alerted:
+                try:
+                    self._alert("execution_kill_latched")
+                except Exception:
+                    pass
+                self._kill_alerted = True
+            self._flatten_everything()
+            return ControlMode.KILL
+        if mode is ControlMode.PAUSE:
+            if not self._external_pause_latched:
+                self._pause("external_pause")
+                self._external_pause_latched = True
+            else:
+                self._paused = True
+            return ControlMode.PAUSE
+        return ControlMode.RUN
+
+    def _flatten_everything(self) -> bool:
+        """Attempt every close/cancel, then verify no broker exposure remains."""
+        complete = True
+        try:
+            positions = tuple(self._broker.get_positions())
+        except Exception:
+            positions = ()
+            complete = False
+        for position in positions:
+            try:
+                self._broker.close_position(position.deal_id)
+            except Exception:
+                complete = False
+        try:
+            working_orders = tuple(self._broker.get_open_orders())
+        except Exception:
+            working_orders = ()
+            complete = False
+        for order in working_orders:
+            deal_id = self._working_order_id(order)
+            if deal_id is None:
+                complete = False
+                continue
+            try:
+                self._broker.cancel_working_order(deal_id)
+            except Exception:
+                complete = False
+        try:
+            remaining_positions = tuple(self._broker.get_positions())
+            remaining_orders = tuple(self._broker.get_open_orders())
+            self._positions = remaining_positions
+            complete = complete and not remaining_positions and not remaining_orders
+        except Exception:
+            complete = False
+        if not complete:
+            try:
+                self._alert("execution_kill_flatten_incomplete")
+            except Exception:
+                pass
+        return complete
+
+    @staticmethod
+    def _working_order_id(order: object) -> str | None:
+        if not isinstance(order, Mapping):
+            return None
+        data = order.get("workingOrderData")
+        if isinstance(data, Mapping):
+            value = data.get("dealId")
+        else:
+            value = order.get("deal_id")
+        return value.strip() if isinstance(value, str) and value.strip() else None
 
     def resolve_intent(
         self,
@@ -225,6 +397,11 @@ class OrderManager:
 
     def submit(self, cycle_id: str, order: OrderRequest) -> OrderReceipt | None:
         with self._mutex:
+            if not self._started:
+                raise ExecutionPaused("execution has not started")
+            mode = self._apply_controls()
+            if mode is not ControlMode.RUN:
+                raise ExecutionPaused("external pause or kill is active")
             if not self._started or self._paused:
                 raise ExecutionPaused("entries are paused")
             try:
@@ -250,6 +427,13 @@ class OrderManager:
             except Exception:
                 self._pause("entry_preflight_failed")
                 raise ExecutionPaused("entry preflight failed") from None
+            mode = self._apply_controls()
+            if mode is not ControlMode.RUN:
+                try:
+                    self._journal.mark(cycle_id, "rejected")
+                except Exception:
+                    self._pause("control_blocked_order_persistence_failed")
+                raise ExecutionPaused("control activated before broker submission")
             try:
                 receipt = self._broker.place_order(order)
                 if (
@@ -263,7 +447,6 @@ class OrderManager:
                     raise ValueError("broker receipt mismatch")
                 self._journal.mark(cycle_id, "submitted", deal_id=receipt.deal_id)
                 self.reconcile()
-                return receipt
             except Exception:
                 self._pause("order_outcome_ambiguous")
                 try:
@@ -277,3 +460,7 @@ class OrderManager:
                 raise ExecutionPaused(
                     "order outcome requires reconciliation; do not retry"
                 ) from None
+            mode = self._apply_controls()
+            if mode is ControlMode.KILL:
+                raise ExecutionPaused("kill activated during order submission")
+            return receipt
