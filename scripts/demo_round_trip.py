@@ -380,9 +380,17 @@ def run_round_trip(argv: list[str] | None = None) -> int:
         broker = CapitalComBroker(observed, enable_demo_orders=True)
         if not _flat(broker):
             raise ValueError("account_must_have_no_open_positions_or_working_orders")
-        (bid, ask, size, size_step, tick, epic, minimum_stop_distance, stop_distance_unit, stop_distance_value) = _market_inputs(
-            observed, config_path
-        )
+        (
+            bid,
+            ask,
+            size,
+            size_step,
+            tick,
+            epic,
+            minimum_stop_distance,
+            stop_distance_unit,
+            stop_distance_value,
+        ) = _market_inputs(observed, config_path)
         spread, margin, stop, tightened_stop = _stop_plan(bid, ask, tick, minimum_stop_distance)
         report["epic"] = epic
         report["requested_size"] = str(size)
