@@ -7,6 +7,8 @@ from decimal import Decimal
 
 import pytest
 
+from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
+
 from trader.execution.brokers.base import (
     BrokerAdapter,
     BrokerError,
@@ -14,8 +16,6 @@ from trader.execution.brokers.base import (
     Direction,
     OrderRequest,
 )
-
-from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
 
 
 NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
