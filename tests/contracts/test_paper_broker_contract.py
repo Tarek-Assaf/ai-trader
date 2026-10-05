@@ -7,30 +7,21 @@ from decimal import Decimal
 
 import pytest
 
-from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
-
-from trader.execution.brokers.base import (
-    BrokerAdapter,
-    BrokerError,
-    BrokerProtocolError,
-    Direction,
-    OrderRequest,
-)
-
+from trader.execution.brokers import base as broker_base, paper as paper_broker
 
 NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 
 
-def _as_broker_adapter(broker: BrokerAdapter) -> BrokerAdapter:
-    """Static structural check that PaperBroker implements the shared contract."""
+def _as_broker_adapter(broker: broker_base.BrokerAdapter) -> broker_base.BrokerAdapter:
+    """Static structural check that paper_broker.PaperBroker implements the shared contract."""
     return broker
 
 
-def make_broker(*, clock=None) -> PaperBroker:
-    broker = PaperBroker(
+def make_broker(*, clock=None) -> paper_broker.PaperBroker:
+    broker = paper_broker.PaperBroker(
         starting_cash=Decimal("1000"),
         currency="USD",
-        costs=PaperExecutionCosts(
+        costs=paper_broker.PaperExecutionCosts(
             spread_points={"US100": Decimal("2")},
             slippage_points={"US100": Decimal("0.5")},
         ),
@@ -42,15 +33,15 @@ def make_broker(*, clock=None) -> PaperBroker:
 
 def make_order(
     *,
-    direction: Direction = Direction.BUY,
+    direction: broker_base.Direction = broker_base.Direction.BUY,
     client_order_id: str = "cycle-1",
     size: Decimal = Decimal("2"),
-) -> OrderRequest:
-    if direction is Direction.BUY:
+) -> broker_base.OrderRequest:
+    if direction is broker_base.Direction.BUY:
         stop, target = Decimal("95"), Decimal("110")
     else:
         stop, target = Decimal("105"), Decimal("90")
-    return OrderRequest(
+    return broker_base.OrderRequest(
         client_order_id=client_order_id,
         epic="US100",
         direction=direction,
@@ -91,7 +82,7 @@ def test_paper_broker_satisfies_adapter_contract_and_models_costs() -> None:
 
     broker.modify_position(receipt.deal_id, stop_level=Decimal("96"))
     assert broker.get_positions()[0].stop_level == Decimal("96")
-    with pytest.raises(BrokerError, match="may not loosen"):
+    with pytest.raises(broker_base.BrokerError, match="may not loosen"):
         broker.modify_position(receipt.deal_id, stop_level=Decimal("95"))
 
     broker.update_quote("US100", bid=Decimal("104"), ask=Decimal("106"))
@@ -112,14 +103,14 @@ def test_paper_broker_satisfies_adapter_contract_and_models_costs() -> None:
 @pytest.mark.parametrize(
     ("direction", "bid", "ask", "reason", "exit_level"),
     [
-        (Direction.BUY, Decimal("94"), Decimal("96"), "stop_loss", Decimal("93.5")),
-        (Direction.BUY, Decimal("111"), Decimal("113"), "take_profit", Decimal("110.5")),
-        (Direction.SELL, Decimal("104"), Decimal("106"), "stop_loss", Decimal("106.5")),
-        (Direction.SELL, Decimal("89"), Decimal("91"), "take_profit", Decimal("91.5")),
+        (broker_base.Direction.BUY, Decimal("94"), Decimal("96"), "stop_loss", Decimal("93.5")),
+        (broker_base.Direction.BUY, Decimal("111"), Decimal("113"), "take_profit", Decimal("110.5")),
+        (broker_base.Direction.SELL, Decimal("104"), Decimal("106"), "stop_loss", Decimal("106.5")),
+        (broker_base.Direction.SELL, Decimal("89"), Decimal("91"), "take_profit", Decimal("91.5")),
     ],
 )
 def test_attached_brackets_trigger_on_executable_side(
-    direction: Direction,
+    direction: broker_base.Direction,
     bid: Decimal,
     ask: Decimal,
     reason: str,
@@ -138,7 +129,7 @@ def test_attached_brackets_trigger_on_executable_side(
 
 
 def test_sell_fill_applies_half_spread_and_adverse_slippage() -> None:
-    receipt = make_broker().place_order(make_order(direction=Direction.SELL))
+    receipt = make_broker().place_order(make_order(direction=broker_base.Direction.SELL))
     assert receipt.position.level == Decimal("98.5")
 
 
@@ -149,7 +140,7 @@ def test_quote_fill_uses_executable_bid_or_ask_without_double_counting_spread() 
     buy = broker.place_order(make_order(client_order_id="buy"))
     assert buy.position.level == Decimal("103.5")
 
-    sell = broker.place_order(make_order(direction=Direction.SELL, client_order_id="sell"))
+    sell = broker.place_order(make_order(direction=broker_base.Direction.SELL, client_order_id="sell"))
     assert sell.position.level == Decimal("98.5")
 
 
@@ -157,24 +148,24 @@ def test_duplicate_order_id_is_rejected_without_second_position() -> None:
     broker = make_broker()
     broker.place_order(make_order())
 
-    with pytest.raises(BrokerError, match="already been submitted"):
+    with pytest.raises(broker_base.BrokerError, match="already been submitted"):
         broker.place_order(make_order())
 
     assert len(broker.get_positions()) == 1
 
 
 def test_missing_cost_configuration_fails_closed() -> None:
-    broker = PaperBroker(
+    broker = paper_broker.PaperBroker(
         starting_cash=Decimal("1000"),
         currency="USD",
-        costs=PaperExecutionCosts(
+        costs=paper_broker.PaperExecutionCosts(
             spread_points={"GOLD": Decimal("1")},
             slippage_points={"GOLD": Decimal("0.2")},
         ),
         clock=lambda: NOW,
     )
 
-    with pytest.raises(BrokerProtocolError, match="not configured"):
+    with pytest.raises(broker_base.BrokerProtocolError, match="not configured"):
         broker.place_order(make_order())
 
     assert broker.get_positions() == ()
@@ -199,12 +190,12 @@ def test_stop_wins_if_a_gap_crosses_both_bracket_levels() -> None:
 
 def test_cost_model_rejects_unpaired_or_negative_inputs() -> None:
     with pytest.raises(ValueError, match="same epics"):
-        PaperExecutionCosts(
+        paper_broker.PaperExecutionCosts(
             spread_points={"US100": Decimal("2")},
             slippage_points={"GOLD": Decimal("0.5")},
         )
     with pytest.raises(ValueError, match="non-negative"):
-        PaperExecutionCosts(
+        paper_broker.PaperExecutionCosts(
             spread_points={"US100": Decimal("2")},
             slippage_points={"US100": Decimal("-0.5")},
         )
