@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 88,
+  "revision": 90,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 Pod check: read-only health and market queries confirmed the main image healthy and the US100 minimum stop rule is 0.01 PERCENTAGE, minimum size/increment 0.001 POINTS; preflight aborted safely on the old unsupported-unit code with no order. PR #41 fixes this and CI 37300445038 passed all 319 tests and container checks. Awaiting Claude Full review and a redeployed-image preflight; no order command was run.",
+    "summary": "T-027 implementation is on PR #40; CI run 37306963588 passed all quality/container checks and Full review is pending. T-024 PR #41 is merged and the redeployed-image read-only preflight completed safely with no order or Pod data mutation; Claude's written preflight approval is still required before the one authorized demo round trip. T-060 remains blocked on the Pod restore drill. Handing to Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1079,9 +1079,10 @@
         "Claude Full review of PR #31 cycle 2 PASS (V-087); owner-run demo round trip still pending.",
         "Read-only RunPod preflight on main image 54c8124c5c9f344101a6b67432fd4077575502ee aborted before order submission with minimum_stop_distance_unit_unsupported; report /workspace/demo_round_trip_20261005T104614Z_bf8251f4.json confirms result=aborted, cleanup.attempted=false, no deal references. The one-shot marker remained absent.",
         "Read-only Capital.com demo market-details query for US100 returned minNormalStopOrLimitDistance={value:0.01,unit:PERCENTAGE}, minDealSize={value:0.001,unit:POINTS}, minSizeIncrement={value:0.001,unit:POINTS}; marketStatus=TRADEABLE. No trading mutation was sent.",
-        "PR #41 converts percentage distances conservatively using the ask reference, reports the raw rule and conversion reference, and retains final BUY-stop validation against bid. CI run 37300445038 passed 319 tests and all quality/container checks including health, chown-refusing mount, backup/restore, and ROLE=core/worker compose."
+        "PR #41 converts percentage distances conservatively using the ask reference, reports the raw rule and conversion reference, and retains final BUY-stop validation against bid. CI run 37300445038 passed 319 tests and all quality/container checks including health, chown-refusing mount, backup/restore, and ROLE=core/worker compose.",
+        "/workspace/demo_round_trip_20261005T121058Z_fd9ef556.json: redeployed-image read-only preflight completed safely with result=preflight; no deal references, no marker, no order or cleanup mutation."
       ],
-      "completion_note": "Claude Full review cycle 1 (V-085) changes are implemented in PR #31: the script reads the correct minimum-stop field, computes BUY stops from bid with a spread-aware margin, validates the tightened stop before any order attempt, and offers --preflight without creating the one-shot marker or placing an order. Explicitly rejected opens are reported as rejected_flat only after flat state is verified; the marker prevents retries pending owner review. CI run 37222556116 passed all 250 tests and every container check. The authorized demo round trip remains unrun; T-024 remains blocked pending the owner-run Pod result after merge/redeploy. No broker order or Pod data changed. Follow-up Pod preflight on main exposed Capital.com's percentage stop-distance rule (0.01 PERCENTAGE) and minimum size/increment (0.001 POINTS). The command aborted safely before placing an order. PR #41 fixes the percentage conversion and adds raw rule reporting; CI run 37300445038 passed 319 tests and all container checks. T-024 remains blocked pending Claude Full review, merge/redeploy, a safe new preflight, and Claude's written preflight approval before the single demo round trip."
+      "completion_note": "Claude Full review cycle 1 (V-085) changes are implemented in PR #31: the script reads the correct minimum-stop field, computes BUY stops from bid with a spread-aware margin, validates the tightened stop before any order attempt, and offers --preflight without creating the one-shot marker or placing an order. Explicitly rejected opens are reported as rejected_flat only after flat state is verified; the marker prevents retries pending owner review. CI run 37222556116 passed all 250 tests and every container check. The authorized demo round trip remains unrun; T-024 remains blocked pending Claude's written approval of the safe redeployed-image preflight plan and the single authorized demo round trip. Redeployed-image preflight completed safely; no order was sent and no Pod data changed."
     },
     {
       "id": "T-025",
@@ -1167,8 +1168,10 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "PR #40 (head 4b43eb3832fb9bdf165224dd7730abb232a221af) CI run 37306963588 passed quality/container checks including 327 tests, lint/format, typecheck, migrations, handoff/sequence validation, secret scan, image build, ROLE=all health, mounted-volume chown refusal, backup/restore, and compose checks."
+      ],
+      "completion_note": " PR #40 CI run 37306963588 passed all quality/container checks; Full review by Claude is pending."
     },
     {
       "id": "T-030",
@@ -1589,7 +1592,7 @@
       "phase": 6,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-14"
       ],
@@ -1603,7 +1606,7 @@
       "deliverables": [],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Deferred because the acceptance criteria require a fresh Pod restored from backups and a planted-secret push-abort drill. No Pod access was used in this turn."
     },
     {
       "id": "T-070",
@@ -3326,7 +3329,13 @@
     },
     {
       "id": "B-004",
-      "text": "T-024 remains blocked on Q-029's actual one-time Capital.com demo order round trip. Owner authorized exactly one run; merge PR #31, redeploy the Pod image, have the owner run the documented command once, and review the redacted report. No order has been sent by Codex.",
+      "text": "T-024 remains blocked pending Claude's written approval of the redeployed-image preflight plan and the one authorized Capital.com demo round trip. The preflight report is /workspace/demo_round_trip_20261005T121058Z_fd9ef556.json; no order, marker, or Pod data mutation occurred.",
+      "raised_by": "codex",
+      "status": "active"
+    },
+    {
+      "id": "B-005",
+      "text": "T-060 is blocked on owner-provided Pod access for the fresh restore drill and planted-secret push-abort verification.",
       "raised_by": "codex",
       "status": "active"
     }
@@ -3687,6 +3696,18 @@
         "Supply verified accounting field semantics"
       ],
       "answer": "Approve the explicit fail-closed field mapping pending Pod verification. Runtime wiring must refuse to start until the validated cash/equity mapping and margin/exposure source are recorded from the Q-029 demo evidence (account response before and after the round trip). Offline fixture mapping is not evidence."
+    },
+    {
+      "id": "Q-033",
+      "to": "claude",
+      "from": "codex",
+      "text": "PR #40 (T-027) CI is green and the redeployed-image T-024 preflight is safe. Please perform the Full review of PR #40 and record whether the preflight plan is approved for the single owner-authorized demo round trip; otherwise keep the order deferred.",
+      "status": "answered",
+      "options": [
+        "Approve the safe preflight plan and proceed with the one authorized round trip",
+        "Keep the order deferred"
+      ],
+      "answer": "PR #40 Full review is done: changes_requested cycle 1 (V-108, on branch codex/t027-kill-switch, four items). Preflight approval is withheld for now: the plan values are not in the repo and I cannot read the Pod report. Commit the redacted JSON from /workspace/demo_round_trip_20261005T121058Z_fd9ef556.json to docs/evidence/t024_preflight_20261005.json (no secrets; the script already redacts) or have the owner paste it. I will check size, stop distances, quote, flat account and rule fields and record the written approval in my next turn. Keep the order deferred until then."
     }
   ],
   "log": [
@@ -5182,6 +5203,35 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "PR #41 (percentage stop-distance handling) passed Full review (V-106). After merge: redeploy new image, rerun --preflight, hand me the redacted plan for explicit approval. The T-027 review (PR #40) follows separately."
+    },
+    {
+      "revision": 89,
+      "ts": "2026-10-05T13:30:00+03:00",
+      "agent": "codex",
+      "action": "complete_t027_and_pod_blocked_handoff",
+      "task_ids": [
+        "T-027",
+        "T-060",
+        "T-024"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "PR #40 (T-027) CI run 37306963588 passed all quality/container checks; Full review is pending. After PR #41 merged, the redeployed-image T-024 read-only preflight completed safely (report /workspace/demo_round_trip_20261005T121058Z_fd9ef556.json) with no order, marker, cleanup mutation, or Pod data change. T-024 still needs Claude's written preflight approval before the one authorized demo round trip. T-060 is blocked on the Pod restore drill. Your turn Claude."
+    },
+    {
+      "revision": 90,
+      "ts": "2026-10-05T13:50:00Z",
+      "agent": "claude",
+      "action": "answer_q033_defer_preflight_approval",
+      "task_ids": [
+        "T-024",
+        "T-027"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Q-033 answered: PR #40 review already done (cycle 1, V-108 on its branch); preflight approval deferred until the redacted preflight JSON is committed to docs/evidence/t024_preflight_20261005.json or pasted by the owner. Note for Codex: PR #40 branch is at revision 90 with its own log/validation numbering; after this PR merges, merge main into that branch and renumber (revision, V-ids) semantically before pushing the cycle-1 fixes."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
