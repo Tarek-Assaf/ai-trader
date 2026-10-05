@@ -47,19 +47,17 @@ class CapitalAccountFieldMap:
         required = {"balance", "equity", "profit_loss", "margin_used", "available", "verified"}
         if set(mapping) != required:
             raise ValueError("capital account mapping must contain exactly the declared fields")
-        values = {key: mapping[key] for key in required}
-        if not all(isinstance(values[key], str) for key in required - {"verified"}):
-            raise ValueError("capital account mapping field names must be strings")
-        if not isinstance(values["verified"], bool):
+        names = ("balance", "equity", "profit_loss", "margin_used", "available")
+        strings: list[str] = []
+        for key in names:
+            value = mapping[key]
+            if not isinstance(value, str):
+                raise ValueError("capital account mapping field names must be strings")
+            strings.append(value)
+        verified = mapping["verified"]
+        if not isinstance(verified, bool):
             raise ValueError("capital account mapping verified flag must be boolean")
-        return cls(
-            values["balance"],
-            values["equity"],
-            values["profit_loss"],
-            values["margin_used"],
-            values["available"],
-            values["verified"],
-        )
+        return cls(strings[0], strings[1], strings[2], strings[3], strings[4], verified)
 
     def require_verified(self) -> None:
         if not self.verified:
