@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 80,
+  "revision": 82,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-043 is approved by Claude (V-094) and merged in PR #35. Codex completed T-023 on Full-tier PR #36; CI run 37264121761 passed on head 1e401b9c23139d2f1054d512a975f69b1a95eadf (V-095). PaperBroker uses executable quotes and explicit per-epic spread/slippage costs, failing closed when costs are absent; no numeric market defaults were invented while T-017 calibration is pending on the Pod. Q-030 asks Claude to confirm this fail-closed behavior or approve runtime defaults. T-025 P&L is next after T-023 Full review. T-024 remains blocked only on the owner-run Q-029 demo round trip; T-060 backup code can follow, while restore drill and T-017 remain Pod-dependent. Q-024 lake QA/T-080 are complete. No Pod data or broker orders were changed.",
+    "summary": "T-025 P&L engine is on Full-tier PR #37; CI run 37266298716 passed all checks on code head 5297359ab8d15c4dae08350d053962997519232e. The pure engine requires explicit account-currency point value, open-position exposure and margin, calculates realized/unrealized P&L, costs, R, equity/drawdown and reconciliation deltas. Tests reconcile a PaperBroker round trip/account; actual Capital.com demo reconciliation remains unverified because normalized exposure/margin figures are not available. Q-031 asks Claude how to close that acceptance gap. T-082/Q-024 import, rerun and lake QA are already recorded complete. Q-029 demo round trip remains an owner-authorized Pod command not yet run. No Pod data or broker orders were changed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1085,7 +1085,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-08"
       ],
@@ -1095,10 +1095,20 @@
       "acceptance_criteria": [
         "reconciles with demo account figures"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/execution/pnl.py",
+        "tests/unit/test_pnl.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "PR #37 (Full tier): https://github.com/Tarek-Assaf/ai-trader/pull/37.",
+        "PnlEngine calculates realized/unrealized gross and net P&L, fees, financing, R-multiples, balance/equity, equity history/drawdown, per-epic exposure, margin use, leverage, and explicit reconciliation deltas/alert flag.",
+        "Tests use a deterministic PaperBroker round trip and normalized PaperBroker account figures, plus long/short arithmetic, open-position metrics, mismatch tolerance, duplicate IDs, currency mismatch, and required valuation inputs.",
+        "GitHub Actions CI run 37266298716 passed on code head 5297359ab8d15c4dae08350d053962997519232e: lint/format, mypy, 296 tests, migrations, handoff/sequence validation, secret scan, image build, ROLE=all runtime/persistence, chown-refusing mount, PostgreSQL backup/restore, and core/worker compose.",
+        "Claude Full review (V-098): pass; Capital.com demo reconciliation moved to T-026 (Q-031 answered)."
+      ],
+      "completion_note": "Implementation is ready for Claude's Full review. Reconciliation is demonstrated against PaperBroker account figures only. Actual Capital.com demo-account reconciliation is not claimed: the current adapter does not expose normalized margin/notional exposure and no demo-account capture was available. Q-031 asks whether that external reconciliation should remain a follow-up to the Pod/demo integration."
     },
     {
       "id": "T-026",
@@ -1116,7 +1126,8 @@
       "acceptance_criteria": [
         "duplicate order impossible in chaos test",
         "mismatch pauses entries and alerts",
-        "Order manager is the only caller of BrokerAdapter.place_order, requires a Risk Guardian approval for the exact OrderRequest, persists client_order_id/intent before the call, and reconciles broker positions after any ambiguous or failed place_order (a position may be open even if the call raised); test that the LLM-side modules cannot reach it"
+        "Order manager is the only caller of BrokerAdapter.place_order, requires a Risk Guardian approval for the exact OrderRequest, persists client_order_id/intent before the call, and reconciles broker positions after any ambiguous or failed place_order (a position may be open even if the call raised); test that the LLM-side modules cannot reach it",
+        "Inherited from T-025 (Q-031): normalize Capital.com account figures (balance, equity, margin, notional exposure) and reconcile PnlEngine against the demo account after the T-024 round trip; pass the INITIAL stop (persisted at entry) as PnlTrade.stop_level, never the current tightened stop; treat any PnlEngine exception (including non-positive equity) as fail-closed: pause entries and alert, never skip the risk check"
       ],
       "deliverables": [],
       "review_cycles": 0,
@@ -3178,6 +3189,26 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "Fill, bracket, cost or modify logic changes."
+    },
+    {
+      "id": "V-097",
+      "subject": "T-025 P&L engine CI and PaperBroker reconciliation",
+      "method": "CI linted/formatted and type-checked the pure Decimal calculator; ran the PaperBroker round-trip/account reconciliation and unit tests for long/short realized/unrealized values, fees/financing, R-multiple, equity curve/drawdown, per-epic exposure, margin/leverage, tolerance alert, duplicate trade IDs, currency mismatch, and required mark/exposure/margin inputs.",
+      "result": "pass",
+      "evidence": "PR #37 code head 5297359ab8d15c4dae08350d053962997519232e; GitHub Actions CI run 37266298716 passed lint/format, mypy, 296 tests, migrations, handoff and append-only sequence validation, secret scan, image build, ROLE=all health/persistence, mounted-volume chown refusal, PostgreSQL backup/restore, and core/worker compose. Capital.com demo reconciliation was not exercised; see Q-031.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "Claude requests changes or P&L valuation, reconciliation, exposure, margin, or drawdown behavior changes."
+    },
+    {
+      "id": "V-098",
+      "subject": "T-025 P&L engine Full review",
+      "method": "Read pnl.py and tests: Decimal-only, finite/positive validation, long/short sign, fees and signed financing, R-multiple from entry-to-stop risk, peak includes starting balance, drawdown %, per-epic exposure, margin %, leverage, explicit reconciliation deltas with tolerance and alert flag, currency match, chronological equity history, no IO, no guessed valuation inputs. Reconciles to PaperBroker account figures in test.",
+      "result": "pass",
+      "evidence": "PR #37 code head 5297359a, CI run 37266298716 green (296 tests). Non-blocking, carried to T-026: stop_level must be the initial stop (a tightened stop above entry raises); non-positive equity raises ValueError so callers must fail closed; Capital.com demo reconciliation pending normalization.",
+      "validated_by": "claude",
+      "date": "2026-10-05",
+      "reverify_if": "P&L formulas, reconciliation or field semantics change."
     }
   ],
   "blockers": [
@@ -3538,6 +3569,18 @@
         "C: Approve specific conservative defaults"
       ],
       "answer": "A: keep failing closed until explicit per-epic costs are supplied. No guessed defaults; T-017 calibration supplies real numbers."
+    },
+    {
+      "id": "Q-031",
+      "to": "claude",
+      "from": "codex",
+      "text": "T-025 acceptance currently says it must reconcile with demo account figures. PR #37's pure engine reconciles against deterministic PaperBroker account figures, but it also needs normalized margin and notional exposure; the current CapitalComBroker account response does not supply those normalized fields, and no Capital.com demo snapshot is available without the Pod. Is the PaperBroker account reconciliation enough to review/approve the engine while recording Capital.com reconciliation as a Pod follow-up, or should T-025 remain blocked/split until the broker account normalization and demo figures are available?",
+      "status": "answered",
+      "options": [
+        "Review the engine now; track Capital.com normalization/demo reconciliation as a follow-up (recommended)",
+        "Keep T-025 blocked until Capital.com figures can be captured and normalized"
+      ],
+      "answer": "Review now. Engine approved on PaperBroker reconciliation; Capital.com normalization and demo reconciliation added to T-026 acceptance criteria (after T-024 round trip)."
     }
   ],
   "log": [
@@ -4909,7 +4952,36 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-023 Full review passed (V-096); Q-030 answered A (fail closed until costs supplied). Next for Codex: T-025, T-026 (idempotency key = cycle_id), T-027, T-060."
+    },
+    {
+      "revision": 81,
+      "ts": "2026-10-05 05:09:57 UTC",
+      "agent": "codex",
+      "action": "complete_t025_for_full_review",
+      "task_ids": [
+        "T-025"
+      ],
+      "files_changed": [
+        "src/trader/execution/pnl.py",
+        "tests/unit/test_pnl.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented the deterministic account-currency P&L engine and offline tests on Full-tier PR #37. It calculates realized/unrealized P&L, fees/financing, R-multiples, equity/drawdown, exposure/margin/leverage and explicit reconciliation deltas; valuation inputs are required rather than guessed. CI run 37266298716 passed on code head 5297359ab8d15c4dae08350d053962997519232e (V-097). PaperBroker account reconciliation is tested; Capital.com demo figures remain open under Q-031 because the current adapter does not provide normalized margin/exposure and no Pod snapshot was supplied. T-082/Q-024 are already complete. Handing PR #37 to Claude for Full review."
+    },
+    {
+      "revision": 82,
+      "ts": "2026-10-05T05:30:00Z",
+      "agent": "claude",
+      "action": "review_t025_pass",
+      "task_ids": [
+        "T-025",
+        "T-026"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-025 Full review passed (V-098); Q-031 answered (review now, Capital.com reconciliation moved into T-026 criteria with initial-stop and fail-closed notes). Next for Codex: T-026, T-027, T-060. Pod terminal tasks are handed to Codex by the owner; follow infra/runpod/README.md Codex-operated section for the demo round trip."
     }
   ],
-  "project_summary": "T-043 cycle-1 review fixes are implemented on PR #35 and pass full CI run 37231051969 (V-093); Claude Full review cycle 2 is next. The PR targets main and contains only T-043 graph/tool/prompt/tests plus its handoff. Next pod-free work after approval: T-023 PaperBroker using default spread/slippage, then T-025 P&L, T-026 order manager and T-027 LLM-free kill switch, followed by T-060 backup-job code. T-060's fresh-Pod restore drill and T-017 recorder calibration remain Pod-dependent. Q-024 lake QA is complete (T-080 V-082); Q-029 demo round trip still awaits the owner-run Pod command. No Pod data or broker orders were changed."
+  "project_summary": "T-023 passed Claude Full review (V-096). T-025 implementation is ready for Claude Full review on PR #37 after CI run 37266298716 passed on code head 5297359ab8d15c4dae08350d053962997519232e. PaperBroker reconciliation is tested; Capital.com demo-account reconciliation remains open under Q-031 pending normalized account figures. T-082 and Q-024 lake import/rerun/QA are complete. Q-029 Capital.com demo order round trip remains a separate owner-run Pod action. No Pod data or broker orders changed."
 }
