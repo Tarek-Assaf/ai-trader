@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 90,
+  "revision": 92,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-027 implementation is on PR #40; CI run 37306963588 passed all quality/container checks and Full review is pending. T-024 PR #41 is merged and the redeployed-image read-only preflight completed safely with no order or Pod data mutation; Claude's written preflight approval is still required before the one authorized demo round trip. T-060 remains blocked on the Pod restore drill. Handing to Claude.",
+    "summary": "PR #40 (T-027) Full review cycle 1 is changes_requested (V-108); Codex must address TOTP replay/attempt limiting, kill downgrade prevention, latch reset and reverse import-boundary coverage. T-024 PR #41 is merged; the redeployed-image read-only preflight JSON is now committed in PR #42, but Claude's written approval remains pending before the one authorized demo round trip. T-060 remains blocked on the Pod restore drill. Handing to Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1080,7 +1080,8 @@
         "Read-only RunPod preflight on main image 54c8124c5c9f344101a6b67432fd4077575502ee aborted before order submission with minimum_stop_distance_unit_unsupported; report /workspace/demo_round_trip_20261005T104614Z_bf8251f4.json confirms result=aborted, cleanup.attempted=false, no deal references. The one-shot marker remained absent.",
         "Read-only Capital.com demo market-details query for US100 returned minNormalStopOrLimitDistance={value:0.01,unit:PERCENTAGE}, minDealSize={value:0.001,unit:POINTS}, minSizeIncrement={value:0.001,unit:POINTS}; marketStatus=TRADEABLE. No trading mutation was sent.",
         "PR #41 converts percentage distances conservatively using the ask reference, reports the raw rule and conversion reference, and retains final BUY-stop validation against bid. CI run 37300445038 passed 319 tests and all quality/container checks including health, chown-refusing mount, backup/restore, and ROLE=core/worker compose.",
-        "/workspace/demo_round_trip_20261005T121058Z_fd9ef556.json: redeployed-image read-only preflight completed safely with result=preflight; no deal references, no marker, no order or cleanup mutation."
+        "/workspace/demo_round_trip_20261005T121058Z_fd9ef556.json: redeployed-image read-only preflight completed safely with result=preflight; no deal references, no marker, no order or cleanup mutation.",
+        "docs/evidence/t024_preflight_20261005.json: redacted redeployed-image read-only preflight evidence; result=preflight, flat/no deal references, no marker, no cleanup mutation."
       ],
       "completion_note": "Claude Full review cycle 1 (V-085) changes are implemented in PR #31: the script reads the correct minimum-stop field, computes BUY stops from bid with a spread-aware margin, validates the tightened stop before any order attempt, and offers --preflight without creating the one-shot marker or placing an order. Explicitly rejected opens are reported as rejected_flat only after flat state is verified; the marker prevents retries pending owner review. CI run 37222556116 passed all 250 tests and every container check. The authorized demo round trip remains unrun; T-024 remains blocked pending Claude's written approval of the safe redeployed-image preflight plan and the single authorized demo round trip. Redeployed-image preflight completed safely; no order was sent and no Pod data changed."
     },
@@ -1155,7 +1156,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "changes_requested",
       "requirements": [
         "R-12"
       ],
@@ -1167,11 +1168,12 @@
         "works with LLM provider unreachable"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
-        "PR #40 (head 4b43eb3832fb9bdf165224dd7730abb232a221af) CI run 37306963588 passed quality/container checks including 327 tests, lint/format, typecheck, migrations, handoff/sequence validation, secret scan, image build, ROLE=all health, mounted-volume chown refusal, backup/restore, and compose checks."
+        "PR #40 (head 4b43eb3832fb9bdf165224dd7730abb232a221af) CI run 37306963588 passed quality/container checks including 327 tests, lint/format, typecheck, migrations, handoff/sequence validation, secret scan, image build, ROLE=all health, mounted-volume chown refusal, backup/restore, and compose checks.",
+        "Claude Full review cycle 1 (V-108): changes requested for TOTP replay/attempt limiting, kill-not-downgraded-by-pause, alert/latch reset after resume, and reverse import-boundary coverage."
       ],
-      "completion_note": " PR #40 CI run 37306963588 passed all quality/container checks; Full review by Claude is pending."
+      "completion_note": " PR #40 CI run 37306963588 passed all quality/container checks; Full review by Claude is pending. Claude Full review cycle 1 requested four fixes (V-108); no Pod or broker calls."
     },
     {
       "id": "T-030",
@@ -3306,6 +3308,36 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "Stop-distance, sizing or order path in demo_round_trip.py changes."
+    },
+    {
+      "id": "V-107",
+      "subject": "T-027 offline kill-switch safety and LLM independence",
+      "method": "Run full offline pytest suite, Ruff lint/format checks, strict mypy for src/trader and repository secret scan; review control precedence, owner authentication, pause/kill persistence and LLM independence.",
+      "result": "pass",
+      "evidence": "Local: 327 passed, 2 skipped (PostgreSQL integration requires DATABASE_URL); Ruff check and format pass; mypy src/trader passes; scripts/secret_scan.py passes. Full GitHub CI and container checks pending.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "Execution control, OrderManager wiring or owner authentication changes."
+    },
+    {
+      "id": "V-108",
+      "subject": "T-027 kill switch Full review cycle 1",
+      "method": "Read control sources, API, TOTP, manager changes, journal latch and evidence doc.",
+      "result": "fail",
+      "evidence": "PR #40 head 4b43eb3832fb9bdf165224dd7730abb232a221af; CI quality passed. Required fixes: reject TOTP replay and add failed-attempt lockout; prevent pause from downgrading kill; reset alert/latch flags after resume; extend reverse import-boundary coverage so execution/control/API/control/TOTP cannot import LLM-side modules. Non-blocking: keep Redis private to the Pod.",
+      "validated_by": "claude",
+      "date": "2026-10-05",
+      "reverify_if": "Codex pushes fixes."
+    },
+    {
+      "id": "V-109",
+      "subject": "T-024 redeployed-image preflight plan: written approval for the single demo round trip",
+      "method": "Read docs/evidence/t024_preflight_20261005.json and recomputed the plan by hand: demo environment, paper mode, live trading disabled; market US100 (NAS100) quote bid 30762.8 / ask 30764.6, spread 1.8; minimum stop rule 0.01 PERCENTAGE converted from ask = 3.07646 points; margin = max(5 ticks 0.5, spread 1.8, 10% of minimum 0.31) = 1.8; open stop floor_to_tick(bid - 3.07646 - 1.8) = 30757.9 (4.9 below bid); tightened stop 30758.0 is 4.8 below bid, above the 3.07646 minimum; size 0.001 (minimum, step 0.001); no deal references, no cleanup, no marker, no order.",
+      "result": "pass",
+      "evidence": "APPROVED: Codex may run the single authorized Q-029 round trip exactly once: `cd /app && python scripts/demo_round_trip.py`, BUY US100/NAS100 size 0.001 on the demo account only. Conditions: same image tag as the preflight (otherwise rerun --preflight and hand it back), env TRADING_MODE=paper BROKER_ENV=demo LIVE_TRADING_ENABLED=false, account flat, marker absent, market TRADEABLE; the script recomputes levels from the live quote so price levels will differ, the method is what is approved. No retry, never remove the marker. Any rejected_flat, ambiguous result or unconfirmed cleanup: stop and ask the owner. Afterwards commit the outputs listed in docs/specs/pod_test_outputs.md section 1. Risk note: the open stop is only about 4.9 points below bid, so a fast move could stop the position out before the tighten step; that would consume the one attempt and the owner would decide on another.",
+      "validated_by": "claude",
+      "date": "2026-10-05",
+      "reverify_if": "Image tag, stop plan, sizing or order code changes before the order runs."
     }
   ],
   "blockers": [
@@ -5232,6 +5264,34 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Q-033 answered: PR #40 review already done (cycle 1, V-108 on its branch); preflight approval deferred until the redacted preflight JSON is committed to docs/evidence/t024_preflight_20261005.json or pasted by the owner. Note for Codex: PR #40 branch is at revision 90 with its own log/validation numbering; after this PR merges, merge main into that branch and renumber (revision, V-ids) semantically before pushing the cycle-1 fixes."
+    },
+    {
+      "revision": 91,
+      "ts": "2026-10-05T14:05:00+03:00",
+      "agent": "codex",
+      "action": "record_t024_preflight_and_t027_review_findings",
+      "task_ids": [
+        "T-024",
+        "T-027"
+      ],
+      "files_changed": [
+        "docs/evidence/t024_preflight_20261005.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Committed the redacted T-024 preflight report as docs/evidence/t024_preflight_20261005.json. It records a safe result=preflight for NAS100/US100 in demo/paper mode with live trading disabled, minimum size step 0.001, 0.01 PERCENTAGE stop rule converted from ask 30764.6, open stop 30757.9, tightened stop 30758.0, no deal references, no marker, and no cleanup mutation. No order or Pod data changed. Recorded Claude V-108 changes_requested for PR #40 (T-027): TOTP replay/attempt limiter, kill downgrade prevention, latch reset after resume, and reverse import-boundary test. Your turn Claude."
+    },
+    {
+      "revision": 92,
+      "ts": "2026-10-05T14:20:00Z",
+      "agent": "claude",
+      "action": "approve_t024_preflight",
+      "task_ids": [
+        "T-024"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-024 preflight plan approved in writing (V-109); Codex may run the single authorized demo round trip once, under the stated conditions, then commit outputs per docs/specs/pod_test_outputs.md. PR #40 (T-027) fixes remain with Codex (merge main into that branch and renumber before pushing)."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
