@@ -109,13 +109,14 @@ def normalize_capital_account(
     notional_exposure: Decimal,
 ) -> BrokerAccountFigures:
     """Normalize the active account using an explicit map and valuation inputs."""
-    return normalize_capital_account_snapshot(
+    figures = normalize_capital_account_snapshot(
         response,
         account_id=account_id,
         fields=fields,
         notional_exposure=notional_exposure,
         require_verified=False,
     ).to_broker_figures()
+    return replace(figures, margin_used=margin_used)
 
 
 def normalize_capital_account_snapshot(

@@ -438,6 +438,21 @@ def test_preflight_is_read_only_and_does_not_create_one_shot_marker(
     class ReadOnlyClient:
         environment = "demo"
 
+        def account_info(self) -> dict[str, object]:
+            return {
+                "accounts": [
+                    {
+                        "currency": "USD",
+                        "balance": {
+                            "balance": 1000,
+                            "profitLoss": 0,
+                            "deposit": 1000,
+                            "available": 1000,
+                        },
+                    }
+                ]
+            }
+
         def get_positions(self) -> list[dict[str, Any]]:
             return []
 
