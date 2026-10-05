@@ -42,7 +42,7 @@ class CapitalAccountFieldMap:
             raise ValueError("cash and equity need independently validated fields")
 
     @classmethod
-    def from_mapping(cls, mapping: Mapping[str, object]) -> "CapitalAccountFieldMap":
+    def from_mapping(cls, mapping: Mapping[str, object]) -> CapitalAccountFieldMap:
         """Build a map from checked-in config without silently accepting omissions."""
         required = {"balance", "equity", "profit_loss", "margin_used", "available", "verified"}
         if set(mapping) != required:
@@ -53,8 +53,12 @@ class CapitalAccountFieldMap:
         if not isinstance(values["verified"], bool):
             raise ValueError("capital account mapping verified flag must be boolean")
         return cls(
-            values["balance"], values["equity"], values["profit_loss"],
-            values["margin_used"], values["available"], values["verified"]
+            values["balance"],
+            values["equity"],
+            values["profit_loss"],
+            values["margin_used"],
+            values["available"],
+            values["verified"],
         )
 
     def require_verified(self) -> None:
@@ -78,8 +82,11 @@ class CapitalAccountSnapshot:
 
     def to_broker_figures(self) -> BrokerAccountFigures:
         return BrokerAccountFigures(
-            balance=self.balance, equity=self.equity, currency=self.currency,
-            margin_used=self.margin_used, notional_exposure=self.notional_exposure,
+            balance=self.balance,
+            equity=self.equity,
+            currency=self.currency,
+            margin_used=self.margin_used,
+            notional_exposure=self.notional_exposure,
         )
 
 
@@ -105,8 +112,11 @@ def normalize_capital_account(
 ) -> BrokerAccountFigures:
     """Normalize the active account using an explicit map and valuation inputs."""
     return normalize_capital_account_snapshot(
-        response, account_id=account_id, fields=fields,
-        notional_exposure=notional_exposure, require_verified=False,
+        response,
+        account_id=account_id,
+        fields=fields,
+        notional_exposure=notional_exposure,
+        require_verified=False,
     ).to_broker_figures()
 
 
@@ -144,9 +154,14 @@ def normalize_capital_account_snapshot(
     margin_used = _number(balances.get(fields.margin_used))
     available = _number(balances.get(fields.available))
     return CapitalAccountSnapshot(
-        account_id=account_id, currency=currency, balance=balance,
-        profit_loss=profit_loss, equity=equity, margin_used=margin_used,
-        available=available, notional_exposure=_number(notional_exposure),
+        account_id=account_id,
+        currency=currency,
+        balance=balance,
+        profit_loss=profit_loss,
+        equity=equity,
+        margin_used=margin_used,
+        available=available,
+        notional_exposure=_number(notional_exposure),
         mapping_verified=fields.verified,
     )
 
