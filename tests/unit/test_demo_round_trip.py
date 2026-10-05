@@ -121,7 +121,8 @@ def test_account_info_retries_only_reads_with_bounded_backoff() -> None:
     sleeps: list[float] = []
     client = FlakyClient()
     observed = round_trip.ObservedTradingClient(
-        client, sleep=sleeps.append  # type: ignore[arg-type]
+        client,
+        sleep=sleeps.append,  # type: ignore[arg-type]
     )
 
     assert observed.account_info()["accounts"]
@@ -142,7 +143,8 @@ def test_account_info_stops_after_three_read_failures() -> None:
     sleeps: list[float] = []
     client = FailingClient()
     observed = round_trip.ObservedTradingClient(
-        client, sleep=sleeps.append  # type: ignore[arg-type]
+        client,
+        sleep=sleeps.append,  # type: ignore[arg-type]
     )
 
     with pytest.raises(round_trip.CapitalComError, match="accounts"):
