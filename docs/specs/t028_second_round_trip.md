@@ -1,4 +1,9 @@
-# T-028 second demo round trip (owner-authorized)
+# T-028 verification round trip (owner-authorized, up to two uses)
+
+Status: the FIRST use (Q-036, 2026-10-05T19:52Z) ran at 19:55Z: open/close ok, flat, but no during-open /accounts capture (CapitalComError). The SECOND use is authorized by Q-037 (2026-10-05T20:08Z, single use, lapses 2026-10-06T20:08:00Z) with the preconditions in Q-037's answer. After that, any further order needs a new owner authorization.
+
+Instrument: Capital.com epic US100 (our internal name NAS100).
+
 
 Authorization: the owner said in chat on 2026-10-05 22:52 Asia/Riyadh (19:52 UTC): "you have the authorization from now to do a second round trip". Recorded as a Q entry in agent_state/AGENT_HANDOFF.json. It is the action-time confirmation: do not ask again, and do not exceed anything below.
 

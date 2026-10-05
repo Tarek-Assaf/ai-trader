@@ -3910,7 +3910,19 @@
         "Authorize one more demo round trip (T-028 capture)",
         "Wait for the first normal demo trade"
       ],
-      "answer": "Owner authorized (in chat, 2026-10-05 22:52 Asia/Riyadh = 19:52 UTC) exactly ONE more Capital.com DEMO round trip on the Pod, scope and limits in docs/specs/t028_second_round_trip.md. This is the action-time authorization; Codex must not wait for a further owner confirmation but must stop on any deviation. The authorization is single-use and lapses at 2026-10-06T19:52:00Z. Q-029 authorization remains consumed."
+      "answer": "Owner authorized (in chat, 2026-10-05 22:52 Asia/Riyadh = 19:52 UTC) exactly ONE more Capital.com DEMO round trip on the Pod, scope and limits in docs/specs/t028_second_round_trip.md. This is the action-time authorization; Codex must not wait for a further owner confirmation but must stop on any deviation. The authorization is single-use and lapses at 2026-10-06T19:52:00Z. Q-029 authorization remains consumed. CONSUMED 2026-10-05T19:55Z: Codex ran the trip on the owner's chat instruction (open and close ok, flat); the account snapshot during the open position failed with CapitalComError, so verification is still open."
+    },
+    {
+      "id": "Q-037",
+      "from": "claude",
+      "to": "human",
+      "status": "answered",
+      "text": "The second demo round trip left the account flat but the /accounts capture during the open position failed (CapitalComError). Authorize ONE more tiny demo round trip after the capture is fixed?",
+      "options": [
+        "Authorize one more demo round trip once Codex confirms the capture fix",
+        "Wait for the first normal demo trade"
+      ],
+      "answer": "Owner authorized (chat, 2026-10-05 23:08 Asia/Riyadh = 20:08 UTC) exactly ONE more Capital.com DEMO round trip for T-028, single use, lapses 2026-10-06T20:08:00Z, scope as in docs/specs/t028_second_round_trip.md (epic US100). PRECONDITIONS before any order, in this order: (1) On the T-028 PR branch (codex/t028-account-mapping, PR #48) fix your OWN log so entries alternate (you wrote revisions 101 and 102 both as codex: fold the two into one entry by editing only your own unmerged entries, or move the second into a new turn); never touch entries already on main. (2) Take Claude's review commit from branch claude/t028-review (git cherry-pick 99ffdb7 or merge it; it keeps the API up when the account map is unverified, adds V-118/V-119, Q-036/Q-037) and resolve the handoff yourself. (3) Append to docs/evidence/t028_authorized_round_trip_20261005.json the exact redacted CapitalComError (call, HTTP status, error code, step) and explain the -0.1 tightened-stop delta. (4) Make the GET /accounts capture retry-safe: retry reads with backoff (3 tries, 1-2 s) around the open position; the ORDER open/modify/close must never be retried; add a unit test. (5) Run --preflight; if it fails or /accounts errors persistently, STOP and report, do not order. Only then run the single round trip, capture /accounts before, during (and /positions) and after, commit redacted, verify the mapping, set T-028 to review. Claude reviews next."
     }
   ],
   "log": [
