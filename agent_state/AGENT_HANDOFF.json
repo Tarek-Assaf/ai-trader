@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 100,
+  "turn": "codex",
+  "revision": 101,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -133,7 +133,8 @@
         "C-003",
         "T-020",
         "T-021",
-        "T-025"
+        "T-025",
+        "T-028"
       ]
     },
     {
@@ -267,6 +268,7 @@
         "C-040",
         "T-002",
         "T-026",
+        "T-028",
         "T-043",
         "T-052"
       ]
@@ -1046,7 +1048,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "done",
       "requirements": [
         "R-10",
         "R-11"
@@ -1057,8 +1059,7 @@
       ],
       "acceptance_criteria": [
         "demo order round trip with stop attached",
-        "contract tests pass",
-        "After the Q-029 round trip (from T-026/Q-032): verify the Capital.com account cash/equity field mapping and margin/exposure source from the before/after account responses, record the validated mapping in config, and run reconcile_pnl against the demo account; runtime wiring must refuse to start without that recorded mapping"
+        "contract tests pass"
       ],
       "deliverables": [],
       "review_cycles": 2,
@@ -1085,7 +1086,8 @@
         "docs/evidence/t024_preflight_20261005_retry.json: same-image read-only preflight on 2026-10-05T14:19Z aborted with CapitalComError before quote/epic/size planning; no deal references, no marker, no order and no cleanup mutation.",
         "docs/evidence/t024_preflight_20261005_clean.json: after the required 60-second wait, same-image read-only preflight returned result=preflight for US100/NAS100 in demo/paper mode with live trading disabled; quote ask 30942.0, bid 30940.2, size 0.001, percentage stop rule 0.01, no deal references, no marker, no order or cleanup mutation.",
         "docs/evidence/t024_health_20261005_retry.json: /health after retry reported DB/Redis reachable but data_recorder degraded, ping_reply_ok=false and market_status=unknown; this is recorded for Claude's review.",
-        "docs/evidence/t024_demo_round_trip_20261005.json: the single owner-confirmed demo round trip succeeded on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296. BUY US100/NAS100 size 0.001 opened with stop 30968.4, broker-side stop verified, tightened once to 30968.5, closed, and final flat verification found 0 positions and 0 working orders; all rounding deltas were zero."
+        "docs/evidence/t024_demo_round_trip_20261005.json: the single owner-confirmed demo round trip succeeded on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296. BUY US100/NAS100 size 0.001 opened with stop 30968.4, broker-side stop verified, tightened once to 30968.5, closed, and final flat verification found 0 positions and 0 working orders; all rounding deltas were zero.",
+        "Claude Full review of the demo round trip (V-117): pass. Account mapping moved to T-028."
       ],
       "completion_note": "Claude Full review cycle 1 (V-085) changes are implemented in PR #31: the script reads the correct minimum-stop field, computes BUY stops from bid with a spread-aware margin, validates the tightened stop before any order attempt, and offers --preflight without creating the one-shot marker or placing an order. Explicitly rejected opens are reported as rejected_flat only after flat state is verified; the marker prevents retries pending owner review. CI run 37222556116 passed all 250 tests and every container check. The authorized demo round trip remains unrun; T-024 remains blocked pending Claude's written approval of the safe redeployed-image preflight plan and the single authorized demo round trip. Redeployed-image preflight completed safely; no order was sent and no Pod data changed. A same-image read-only retry was attempted after the written approval, but it aborted with CapitalComError before any broker plan or order submission; no deal references, marker, cleanup mutation or Pod data change occurred. The authorized order was not run and T-024 remains blocked pending Claude/owner direction. After Q-034's required 60-second wait, the same-image read-only preflight returned clean result=preflight with a fresh quote and stop plan, but /health still reports the data recorder degraded with ping_reply_ok=false and market_status=unknown. No order was sent; written re-approval is required before the one authorized order. The single owner-confirmed demo round trip ran once on the healthy main image and succeeded: broker-side stop attached and verified, tightened once, position closed, and final account flat with zero positions and working orders. Exact deal references and zero rounding deltas are in docs/evidence/t024_demo_round_trip_20261005.json. The Capital.com cash/equity and margin/exposure mapping plus reconcile_pnl acceptance item still needs Claude review and evidence."
     },
@@ -2071,6 +2073,33 @@
         "Claude Light review of PR #27 (V-079): diff limited to one guard condition plus a regression test; CI green on code head cb5a5b8."
       ],
       "completion_note": "Implementation is ready for Claude's Light review. Year and current-month routes were confirmed from the visible HistData selector; code uses existing monthly archives whenever the provider lists months, and yearly archives otherwise. Annual M1 ZIP and expansion caps are 512 MiB and 2 GiB. The importer splits and resumes by month, records first-seen hashes as cache integrity only, and falls back to that month's ticks only for M1-conflict months. No new dependency was added and no pod data was touched. Remaining acceptance is the post-merge NSXUSD/XAUUSD pod import, zero-row rerun, and recorded row/gap/overlap QA through the existing open Q-024. Claude Light review passed (V-073); post-merge pod import and zero-row rerun remain tracked in Q-024. Follow-up defect from PR #25 is fixed in PR #27: yearly M1 accepts datemonth when absent, empty, or equal to the requested year; other values remain rejected, and monthly YYYYMM validation is unchanged. The real observed yearly field set has a regression test; CI run 37207724960 passed all quality and container checks. Ready for Claude Light review. Pod import/rerun and row/gap/overlap QA remain pending under Q-024; no Pod data changed."
+    },
+    {
+      "id": "T-028",
+      "title": "Capital.com account normalization (cash, equity, margin, exposure) verified on the demo account and wired to PnlEngine reconciliation",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-08",
+        "R-21"
+      ],
+      "depends_on": [
+        "T-024",
+        "T-025",
+        "T-026"
+      ],
+      "acceptance_criteria": [
+        "Normalizer supports Capital.com accounts[].balance fields with derived equity: assume the IG-style model (balance = cash excluding open P&L, profitLoss = unrealised P&L, equity = balance + profitLoss, deposit = margin used, available = free funds) as an UNVERIFIED hypothesis, behind an explicit validated field map; runtime wiring refuses to start until the verified mapping is recorded in config",
+        "Read-only now: commit a redacted GET /accounts response while the demo account is flat (docs/evidence), showing the four balance fields and currency; no order",
+        "Verification needs one OPEN position snapshot (flat accounts cannot distinguish cash from equity). Do NOT place another order without a new owner authorization; capture the account response before, during and after the first normal demo trade instead (paper-demo phase), or ask the owner to authorize a second tiny round trip",
+        "Run reconcile_pnl against the demo account figures with the persisted initial stop and record the deltas; any mismatch pauses entries and alerts"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -3071,7 +3100,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3425,6 +3454,16 @@
       "validated_by": "codex",
       "date": "2026-10-05",
       "reverify_if": "Order path, stop/size rounding or account mapping code changes."
+    },
+    {
+      "id": "V-117",
+      "subject": "T-024 demo round trip report (Q-029) Full review",
+      "method": "Read docs/evidence/t024_demo_round_trip_20261005.json against the approved plan: result success, demo, paper, live disabled; one BUY US100 size 0.001 filled at 30975.1 (the ask); broker stop observed 30968.4 equal to requested (4.8 below bid class distance, above the 3.09751 minimum); tightened once to 30968.5 and observed equal; rounding deltas all zero; one deal id with open, modify and close references; closed and final state flat with zero positions and zero working orders; no cleanup needed; total 2.0 s; one run, no retry.",
+      "result": "pass",
+      "evidence": "docs/evidence/t024_demo_round_trip_20261005.json (image c91aa61f). T-024 acceptance (demo order round trip with stop attached, contract tests) is met, the adapter is proven end to end against Capital.com demo. The cash/equity/margin mapping criterion moved to new task T-028 because a flat account cannot distinguish the fields and no further order is authorized. Note: pre-order account response was not captured, so before/after figures are unavailable.",
+      "validated_by": "claude",
+      "date": "2026-10-05",
+      "reverify_if": "Broker adapter order, modify or close code changes."
     }
   ],
   "blockers": [
@@ -3450,12 +3489,18 @@
       "id": "B-004",
       "text": "T-024 demo round trip succeeded once, but the remaining acceptance item is to verify Capital.com cash/equity and margin/exposure field mapping from before/after account responses and run reconcile_pnl; no further order is authorized.",
       "raised_by": "codex",
-      "status": "active"
+      "status": "resolved"
     },
     {
       "id": "B-005",
       "text": "T-060 is blocked on owner-provided Pod access for the fresh restore drill and planted-secret push-abort verification.",
       "raised_by": "codex",
+      "status": "active"
+    },
+    {
+      "id": "B-006",
+      "text": "T-028: the Capital.com cash/equity/margin mapping cannot be verified on a flat account; it needs an open-position snapshot from the first normal demo trade or a new owner-authorized tiny round trip. Until verified, order-manager runtime wiring must refuse to start.",
+      "raised_by": "claude",
       "status": "active"
     }
   ],
@@ -4976,7 +5021,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5510,6 +5555,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "After explicit owner confirmation, ran the single authorized demo round trip once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296. BUY US100/NAS100 size 0.001 opened with broker stop 30968.4, stop was verified and tightened once to 30968.5, position closed, and final flat verification confirmed zero positions and zero working orders. Deal references and zero rounding deltas are recorded in the redacted report. No retry. T-024 still needs the account cash/equity and margin/exposure mapping/reconcile_pnl acceptance review. Your turn Claude."
+    },
+    {
+      "revision": 101,
+      "ts": "2026-10-05T15:50:00Z",
+      "agent": "claude",
+      "action": "review_t024_round_trip_pass",
+      "task_ids": [
+        "T-024",
+        "T-028"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-024 demo round trip reviewed and passed (V-117): one BUY 0.001, stop attached and verified, tightened once, closed, flat confirmed, zero rounding, no retry. T-024 done. Account mapping split into new T-028 (needs an open-position snapshot; no further order without owner authorization). Next for Codex: T-028 read-only part (flat /accounts capture, derived-equity normalizer behind an unverified flag), T-060, Phase 3 (T-030, T-031)."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
