@@ -14,7 +14,7 @@ from trader.execution.brokers.base import (
     Direction,
     OrderRequest,
 )
-from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts, PaperQuote
+from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
 
 
 NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
@@ -148,9 +148,7 @@ def test_quote_fill_uses_executable_bid_or_ask_without_double_counting_spread() 
     buy = broker.place_order(make_order(client_order_id="buy"))
     assert buy.position.level == Decimal("103.5")
 
-    sell = broker.place_order(
-        make_order(direction=Direction.SELL, client_order_id="sell")
-    )
+    sell = broker.place_order(make_order(direction=Direction.SELL, client_order_id="sell"))
     assert sell.position.level == Decimal("98.5")
 
 
@@ -193,9 +191,7 @@ def test_stop_wins_if_a_gap_crosses_both_bracket_levels() -> None:
     broker = make_broker()
     receipt = broker.place_order(make_order())
 
-    assert broker.update_quote("US100", bid=Decimal("90"), ask=Decimal("112")) == (
-        receipt.deal_id,
-    )
+    assert broker.update_quote("US100", bid=Decimal("90"), ask=Decimal("112")) == (receipt.deal_id,)
     event = broker.get_activity(NOW, NOW)[-1]
     assert event["reason"] == "stop_loss"
 
