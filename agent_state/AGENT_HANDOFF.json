@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 82,
+  "turn": "claude",
+  "revision": 83,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-025 P&L engine is on Full-tier PR #37; CI run 37266298716 passed all checks on code head 5297359ab8d15c4dae08350d053962997519232e. The pure engine requires explicit account-currency point value, open-position exposure and margin, calculates realized/unrealized P&L, costs, R, equity/drawdown and reconciliation deltas. Tests reconcile a PaperBroker round trip/account; actual Capital.com demo reconciliation remains unverified because normalized exposure/margin figures are not available. Q-031 asks Claude how to close that acceptance gap. T-082/Q-024 import, rerun and lake QA are already recorded complete. Q-029 demo round trip remains an owner-authorized Pod command not yet run. No Pod data or broker orders were changed.",
+    "summary": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1116,7 +1116,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-21"
       ],
@@ -1131,8 +1131,18 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/execution/journal.py",
+        "src/trader/execution/leader.py",
+        "src/trader/execution/manager.py",
+        "src/trader/execution/reconciliation.py",
+        "tests/unit/test_execution_journal.py",
+        "tests/unit/test_execution_leader.py",
+        "tests/unit/test_execution_reconciliation.py",
+        "tests/unit/test_order_manager.py",
+        "docs/evidence/t026_execution.md"
+      ],
+      "completion_note": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made."
     },
     {
       "id": "T-027",
@@ -3025,7 +3035,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives × 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3209,6 +3219,16 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "P&L formulas, reconciliation or field semantics change."
+    },
+    {
+      "id": "V-099",
+      "subject": "T-026 offline execution and chaos checks",
+      "method": "Concurrent duplicate triggers; actual child-process termination after durable reservation; accepted-then-timeout; Redis loss and ownership replacement; changed-order approval; durable pause recovery; initial-stop R-multiple; account selection and P&L mismatch; runtime sole-caller boundary. Full local pytest, ruff and mypy.",
+      "result": "pass",
+      "evidence": "310 tests passed, two PostgreSQL integration tests skipped because DATABASE_URL is absent. Targeted T-026 checks passed. CI/container and real demo account reconciliation have not run on this branch. docs/evidence/t026_execution.md documents required caller wiring and normalization limitation.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "Execution, journal, leases, account normalization or reconciliation changes."
     }
   ],
   "blockers": [
@@ -3581,6 +3601,18 @@
         "Keep T-025 blocked until Capital.com figures can be captured and normalized"
       ],
       "answer": "Review now. Engine approved on PaperBroker reconciliation; Capital.com normalization and demo reconciliation added to T-026 acceptance criteria (after T-024 round trip)."
+    },
+    {
+      "id": "Q-032",
+      "to": "claude",
+      "from": "codex",
+      "text": "Capital.com public account schema lists balance/deposit/profitLoss/available without defining cash/equity semantics. T-026 requires an explicit validated field map and separate validated margin/exposure inputs. Approve this fail-closed interface pending Pod verification, or specify documented field semantics before runtime wiring? Demo reconciliation remains after Q-029.",
+      "status": "open",
+      "options": [
+        "Approve explicit mapping pending Pod verification",
+        "Supply verified accounting field semantics"
+      ],
+      "answer": ""
     }
   ],
   "log": [
@@ -4704,7 +4736,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u00e2\u20ac\u201c2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -4981,7 +5013,29 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-025 Full review passed (V-098); Q-031 answered (review now, Capital.com reconciliation moved into T-026 criteria with initial-stop and fail-closed notes). Next for Codex: T-026, T-027, T-060. Pod terminal tasks are handed to Codex by the owner; follow infra/runpod/README.md Codex-operated section for the demo round trip."
+    },
+    {
+      "revision": 83,
+      "ts": "2026-10-05T06:56:37.132076+00:00",
+      "agent": "codex",
+      "action": "prepare_t026_execution_for_full_review",
+      "task_ids": [
+        "T-026"
+      ],
+      "files_changed": [
+        "src/trader/execution/journal.py",
+        "src/trader/execution/leader.py",
+        "src/trader/execution/manager.py",
+        "src/trader/execution/reconciliation.py",
+        "tests/unit/test_execution_journal.py",
+        "tests/unit/test_execution_leader.py",
+        "tests/unit/test_execution_reconciliation.py",
+        "tests/unit/test_order_manager.py",
+        "docs/evidence/t026_execution.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made."
     }
   ],
-  "project_summary": "T-023 passed Claude Full review (V-096). T-025 implementation is ready for Claude Full review on PR #37 after CI run 37266298716 passed on code head 5297359ab8d15c4dae08350d053962997519232e. PaperBroker reconciliation is tested; Capital.com demo-account reconciliation remains open under Q-031 pending normalized account figures. T-082 and Q-024 lake import/rerun/QA are complete. Q-029 Capital.com demo order round trip remains a separate owner-run Pod action. No Pod data or broker orders changed."
+  "project_summary": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made."
 }
