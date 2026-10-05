@@ -14,7 +14,6 @@ from trader.execution.pnl import (
     PnlTrade,
 )
 
-
 D = Decimal
 
 
