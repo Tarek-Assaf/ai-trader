@@ -14,6 +14,7 @@ from trader.execution.brokers.base import (
     Direction,
     OrderRequest,
 )
+
 from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
 
 
