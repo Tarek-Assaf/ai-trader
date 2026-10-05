@@ -228,6 +228,8 @@ class OrderManager:
                 self._journal.clear_kill()
             self._journal.clear_pause()
             self._paused = False
+            self._external_pause_latched = False
+            self._kill_alerted = False
 
     def _read_controls(self) -> ControlMode:
         if self._control_source is None:
