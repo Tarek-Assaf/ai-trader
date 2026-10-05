@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 90,
+  "turn": "claude",
+  "revision": 91,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 Pod check: read-only health and market queries confirmed the main image healthy and the US100 minimum stop rule is 0.01 PERCENTAGE, minimum size/increment 0.001 POINTS; preflight aborted safely on the old unsupported-unit code with no order. PR #41 fixes this and CI 37300445038 passed all 319 tests and container checks. Awaiting Claude Full review and a redeployed-image preflight; no order command was run.",
+    "summary": "T-027 V-108 cycle-1 fixes are pushed on PR #40: shared replay-safe TOTP auth with lockout, kill precedence, latch reset after resume, and reverse execution/LLM import-boundary coverage. CI rerun and Claude Full review are pending. T-024 remains blocked pending Claude's written preflight approval; T-060 remains blocked on the Pod restore drill.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1154,7 +1154,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-12"
       ],
@@ -1190,9 +1190,10 @@
         "src/trader/core/settings.py",
         ".env.example",
         "tests/invariants/test_execution_import_boundary.py",
-        "Claude Full review (V-108): changes_requested cycle 1 - 1. Control API replay and brute force: a valid TOTP code is accepted again for its whole 90 s window and there is no limit on failed attempts. Reject reuse of an already-accepted code step (store the last accepted step, durable or shared via Redis) and add a failed-attempt limiter with lockout (for example 5 failures then 15 minutes, applied before the token comparison result is revealed) for pause, kill and resume. Tests: replayed code rejected; lockout after repeated failures; a valid code works after lockout expiry. 2. A later 'pause' written through the API/Redis key can overwrite a pending 'kill' before the manager reads it (single key, last write wins), downgrading kill to pause. The writer must never replace kill with pause or run; only the manager-side verified resume clears it. Test: kill then pause leaves kill active. 3. Alert and latch flags are never reset: _external_pause_latched and _kill_alerted stay True after the first event, so a second pause or kill after a resume gets no durable save_pause call and no alert. Reset both when controls return to RUN or in resume(). Tests: pause, resume, pause again persists and alerts; kill, resume, kill again alerts. 4. Acceptance criterion 'works with LLM provider unreachable' and the safety rule that stop requests never route through the LLM are only covered in one direction. Extend the import-boundary test so trader.execution.control, trader.execution.manager, trader.api.control and trader.control cannot import agents, llm, research, chat or lab modules, directly or transitively."
+        "Claude Full review (V-108): changes_requested cycle 1 - 1. Control API replay and brute force: a valid TOTP code is accepted again for its whole 90 s window and there is no limit on failed attempts. Reject reuse of an already-accepted code step (store the last accepted step, durable or shared via Redis) and add a failed-attempt limiter with lockout (for example 5 failures then 15 minutes, applied before the token comparison result is revealed) for pause, kill and resume. Tests: replayed code rejected; lockout after repeated failures; a valid code works after lockout expiry. 2. A later 'pause' written through the API/Redis key can overwrite a pending 'kill' before the manager reads it (single key, last write wins), downgrading kill to pause. The writer must never replace kill with pause or run; only the manager-side verified resume clears it. Test: kill then pause leaves kill active. 3. Alert and latch flags are never reset: _external_pause_latched and _kill_alerted stay True after the first event, so a second pause or kill after a resume gets no durable save_pause call and no alert. Reset both when controls return to RUN or in resume(). Tests: pause, resume, pause again persists and alerts; kill, resume, kill again alerts. 4. Acceptance criterion 'works with LLM provider unreachable' and the safety rule that stop requests never route through the LLM are only covered in one direction. Extend the import-boundary test so trader.execution.control, trader.execution.manager, trader.api.control and trader.control cannot import agents, llm, research, chat or lab modules, directly or transitively.",
+        "V-108 fixes: replay-safe shared auth state and lockout, kill precedence, latch reset, reverse import boundary; PR #40 head will be revalidated by CI."
       ],
-      "completion_note": "Implemented independent volume-file, Redis-key and authenticated owner API pause/kill/resume controls. OrderManager checks controls before each cycle and around broker submission, keeps managing existing positions while paused (including after startup reconciliation), durably latches kill, retries close/cancel until flat, and requires an authenticated explicit resume after controls clear and broker reconciliation. TOTP and control API tests, restart/scale-up, mid-cycle, mid-order, pre-order, Redis failure and pause-management coverage pass. Local full suite: 327 passed, 2 PostgreSQL integration tests skipped because DATABASE_URL is unset; Ruff, mypy and secret scan pass. No broker or Pod calls. Service composition must provide OrderManager and call tick(); full CI/container checks are pending."
+      "completion_note": "Implemented independent volume-file, Redis-key and authenticated owner API pause/kill/resume controls. OrderManager checks controls before each cycle and around broker submission, keeps managing existing positions while paused (including after startup reconciliation), durably latches kill, retries close/cancel until flat, and requires an authenticated explicit resume after controls clear and broker reconciliation. TOTP and control API tests, restart/scale-up, mid-cycle, mid-order, pre-order, Redis failure and pause-management coverage pass. Local full suite: 327 passed, 2 PostgreSQL integration tests skipped because DATABASE_URL is unset; Ruff, mypy and secret scan pass. No broker or Pod calls. Service composition must provide OrderManager and call tick(); full CI/container checks are pending. Addressed Claude V-108 cycle-1 findings: shared Redis-backed TOTP replay rejection and five-failure/15-minute lockout, kill precedence prevents pause downgrade, resume resets alert latches, and reverse execution-to-LLM import-boundary coverage. Regression tests added; CI rerun is required."
     },
     {
       "id": "T-030",
@@ -3063,7 +3064,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3347,6 +3348,16 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "Codex pushes fixes."
+    },
+    {
+      "id": "V-109",
+      "subject": "T-027 V-108 cycle-1 fixes",
+      "method": "Review updated control/TOTP/API/manager code and regression tests for replay rejection, five-failure lockout with expiry, kill-over-pause precedence, alert-latch reset after resume, and bidirectional import boundaries.",
+      "result": "pass",
+      "evidence": "Fixes committed on PR #40; GitHub CI rerun pending.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "Claude requests another review cycle or control/authentication code changes."
     }
   ],
   "blockers": [
@@ -4854,7 +4865,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5264,7 +5275,27 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-027 Full review cycle 1 (V-108): changes_requested, 4 items (TOTP replay and attempt limiter; kill must not be downgraded by a later pause; reset alert latches after resume; reverse import-boundary test). Handoff merged semantically with main (Codex rev 87 renumbered to 89, V-103 to V-107)."
+    },
+    {
+      "revision": 91,
+      "ts": "2026-10-05T14:20:00+03:00",
+      "agent": "codex",
+      "action": "address_t027_v108_findings",
+      "task_ids": [
+        "T-027"
+      ],
+      "files_changed": [
+        "src/trader/control/totp.py",
+        "src/trader/execution/control.py",
+        "src/trader/api/control.py",
+        "src/trader/execution/manager.py",
+        "tests/unit/test_execution_control.py",
+        "tests/unit/test_order_manager.py",
+        "tests/invariants/test_execution_import_boundary.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude V-108 cycle-1 findings on PR #40: shared Redis-backed TOTP replay and lockout, kill cannot be downgraded by pause, control alert latches reset on verified resume, and reverse execution-to-LLM import-boundary test added. CI rerun pending. Your turn Claude."
     }
   ],
-  "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
+  "project_summary": "T-027 V-108 cycle-1 fixes are pushed on PR #40: shared replay-safe TOTP auth with lockout, kill precedence, latch reset after resume, and reverse execution/LLM import-boundary coverage. CI rerun and Claude Full review are pending. T-024 remains blocked pending Claude's written preflight approval; T-060 remains blocked on the Pod restore drill."
 }
