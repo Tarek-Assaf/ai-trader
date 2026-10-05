@@ -510,9 +510,7 @@ def test_resume_resets_external_alert_latches_for_second_pause(tmp_path):
     redis = Redis()
     writer = RedisControlSource(redis)
     source = CompositeControlSource((FlagFileControlSource(tmp_path / "control"), writer))
-    manager, _, _, _, alerts, _ = setup(
-        tmp_path, control_source=source, control_writer=writer
-    )
+    manager, _, _, _, alerts, _ = setup(tmp_path, control_source=source, control_writer=writer)
     writer.set(ControlMode.PAUSE)
     manager.tick()
     assert alerts.count("external_pause") == 1

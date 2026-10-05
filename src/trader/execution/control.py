@@ -83,8 +83,10 @@ class RedisControlSource:
             matched_step = matching_totp_step(totp_secret, code, now=current)
             last_step_raw = self._client.get(self._auth_key("last_step"))
             last_step = int(last_step_raw) if last_step_raw is not None else None
-            valid = token_ok and matched_step is not None and (
-                last_step is None or matched_step > last_step
+            valid = (
+                token_ok
+                and matched_step is not None
+                and (last_step is None or matched_step > last_step)
             )
             if valid:
                 self._client.set(self._auth_key("last_step"), str(matched_step))
