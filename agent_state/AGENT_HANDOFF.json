@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 86,
+  "turn": "claude",
+  "revision": 87,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls.",
+    "summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 Pod check: read-only health and market queries confirmed the main image healthy and the US100 minimum stop rule is 0.01 PERCENTAGE, minimum size/increment 0.001 POINTS; preflight aborted safely on the old unsupported-unit code with no order. PR #41 fixes this and CI 37300445038 passed all 319 tests and container checks. Awaiting Claude Full review and a redeployed-image preflight; no order command was run.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1061,7 +1061,7 @@
         "After the Q-029 round trip (from T-026/Q-032): verify the Capital.com account cash/equity field mapping and margin/exposure source from the before/after account responses, record the validated mapping in config, and run reconcile_pnl against the demo account; runtime wiring must refuse to start without that recorded mapping"
       ],
       "deliverables": [],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "src/trader/execution/brokers/base.py",
         "src/trader/execution/brokers/capital_com.py",
@@ -1076,9 +1076,12 @@
         "PR #31 review cycle 1 addressed: broker minimum stop uses minNormalStopOrLimitDistance (fallback minStopOrProfitDistance), BUY stops use bid and spread-aware margin, and preflight is read-only before the one-shot marker.",
         "CI run 37222556116 on head b7d710eff3748a36b1c31744a4a5c1f8b2e399a7: all 250 tests passed; lint/format, typecheck, migrations, handoff/sequence validation, secret scan, image build, ROLE=all health, mounted-volume chown refusal, backup/restore and role compose checks passed (V-086).",
         "Codex addressed Claude Full review cycle 1 (V-085); handing PR #31 back to Claude for cycle 2. No broker order was sent and no Pod data changed.",
-        "Claude Full review of PR #31 cycle 2 PASS (V-087); owner-run demo round trip still pending."
+        "Claude Full review of PR #31 cycle 2 PASS (V-087); owner-run demo round trip still pending.",
+        "Read-only RunPod preflight on main image 54c8124c5c9f344101a6b67432fd4077575502ee aborted before order submission with minimum_stop_distance_unit_unsupported; report /workspace/demo_round_trip_20261005T104614Z_bf8251f4.json confirms result=aborted, cleanup.attempted=false, no deal references. The one-shot marker remained absent.",
+        "Read-only Capital.com demo market-details query for US100 returned minNormalStopOrLimitDistance={value:0.01,unit:PERCENTAGE}, minDealSize={value:0.001,unit:POINTS}, minSizeIncrement={value:0.001,unit:POINTS}; marketStatus=TRADEABLE. No trading mutation was sent.",
+        "PR #41 converts percentage distances conservatively using the ask reference, reports the raw rule and conversion reference, and retains final BUY-stop validation against bid. CI run 37300445038 passed 319 tests and all quality/container checks including health, chown-refusing mount, backup/restore, and ROLE=core/worker compose."
       ],
-      "completion_note": "Claude Full review cycle 1 (V-085) changes are implemented in PR #31: the script reads the correct minimum-stop field, computes BUY stops from bid with a spread-aware margin, validates the tightened stop before any order attempt, and offers --preflight without creating the one-shot marker or placing an order. Explicitly rejected opens are reported as rejected_flat only after flat state is verified; the marker prevents retries pending owner review. CI run 37222556116 passed all 250 tests and every container check. The authorized demo round trip remains unrun; T-024 remains blocked pending the owner-run Pod result after merge/redeploy. No broker order or Pod data changed."
+      "completion_note": "Claude Full review cycle 1 (V-085) changes are implemented in PR #31: the script reads the correct minimum-stop field, computes BUY stops from bid with a spread-aware margin, validates the tightened stop before any order attempt, and offers --preflight without creating the one-shot marker or placing an order. Explicitly rejected opens are reported as rejected_flat only after flat state is verified; the marker prevents retries pending owner review. CI run 37222556116 passed all 250 tests and every container check. The authorized demo round trip remains unrun; T-024 remains blocked pending the owner-run Pod result after merge/redeploy. No broker order or Pod data changed. Follow-up Pod preflight on main exposed Capital.com's percentage stop-distance rule (0.01 PERCENTAGE) and minimum size/increment (0.001 POINTS). The command aborted safely before placing an order. PR #41 fixes the percentage conversion and adds raw rule reporting; CI run 37300445038 passed 319 tests and all container checks. T-024 remains blocked pending Claude Full review, merge/redeploy, a safe new preflight, and Claude's written preflight approval before the single demo round trip."
     },
     {
       "id": "T-025",
@@ -3036,7 +3039,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3260,6 +3263,36 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "Reconciliation, lease, resolution or import-boundary logic changes."
+    },
+    {
+      "id": "V-103",
+      "subject": "T-024 read-only Pod preflight on main image",
+      "method": "Ran scripts/demo_round_trip.py --preflight on the healthy main image with BROKER_ENV=demo, TRADING_MODE=paper, LIVE_TRADING_ENABLED=false; inspected the redacted report and one-shot marker.",
+      "result": "fail",
+      "evidence": "/workspace/demo_round_trip_20261005T104614Z_bf8251f4.json: aborted with minimum_stop_distance_unit_unsupported; no deal references, no cleanup attempt, no order, and no one-shot marker.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "The percentage stop-distance conversion fix is deployed and preflight is rerun."
+    },
+    {
+      "id": "V-104",
+      "subject": "T-024 observed Capital.com demo stop and size rules",
+      "method": "Read-only market-details query for US100; printed only market status, quote, stop-distance rule, minimum deal size, and size increment.",
+      "result": "pass",
+      "evidence": "Market was TRADEABLE; minNormalStopOrLimitDistance was 0.01 PERCENTAGE; minDealSize and minSizeIncrement were both 0.001 POINTS. No order or account mutation.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "Broker dealing rules change."
+    },
+    {
+      "id": "V-105",
+      "subject": "T-024 percentage stop-distance fix CI",
+      "method": "GitHub Actions full quality/container workflow on PR #41 head 76f538a28716451c3faafe9e108fcebeea0144fb.",
+      "result": "pass",
+      "evidence": "CI run 37300445038 passed lint/format, typecheck, migrations, all 319 tests, handoff validation, sequence validation, secret scan, image build, ROLE=all health/persistence, mounted volume refusing chown, PostgreSQL backup/restore, and ROLE=core/worker Compose checks.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "PR #41 code changes."
     }
   ],
   "blockers": [
@@ -4767,7 +4800,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5111,6 +5144,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-026 Full review cycle 2 passed (V-102). Pod-dependent account-mapping verification moved to T-024 criteria. Note for T-027/T-030: resume and resolve_intent are owner-channel only (authenticated, 2FA), never agent tools. Next for Codex: T-027, T-060. T-026 no longer depends on T-024 (its pod verification now lives in T-024 criteria)."
+    },
+    {
+      "revision": 87,
+      "ts": "2026-10-05T11:08:30Z",
+      "agent": "codex",
+      "action": "fix_t024_percentage_stop_preflight",
+      "task_ids": [
+        "T-024"
+      ],
+      "files_changed": [
+        "scripts/demo_round_trip.py",
+        "tests/unit/test_demo_round_trip.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Opened PR #41 to handle Capital.com's observed minimum stop rule (0.01 PERCENTAGE): convert conservatively from the BUY ask reference, report raw rule/value, and retain the final minimum-distance check against bid. Added percentage and unsupported-unit tests. Full CI run 37300445038 passed 319 tests and all container checks. Read-only Pod preflight on the old main image aborted before any order; marker absent, no deal references or trading mutation. Actual broker minimum size/increment observed as 0.001 POINTS. Your turn Claude: please perform the Full review of PR #41. After merge/redeploy, review the new safe preflight plan and record explicit preflight approval before the one authorized demo round trip."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
