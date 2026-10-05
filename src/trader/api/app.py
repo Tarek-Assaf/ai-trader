@@ -9,11 +9,13 @@ from typing import Any
 
 from fastapi import FastAPI
 
+from trader.api.control import router as control_router
 from trader.api.health import health_payload
 from trader.core.config import load_all_configs
 from trader.core.logging import configure_logging
 from trader.core.settings import EnvironmentSettings
 from trader.data.instruments import InstrumentMapper
+from trader.execution.control import build_control_sources
 from trader.integrations.capital_com.client import CapitalComClient
 
 _LOG = logging.getLogger(__name__)
@@ -24,6 +26,18 @@ async def lifespan(_app: FastAPI) -> Any:
     """Fail startup on invalid settings or config; register secret redaction."""
     settings = EnvironmentSettings()
     configure_logging(settings.sensitive_values())
+    redis_url = settings.redis_url.get_secret_value() if settings.redis_url is not None else None
+    if settings.role == "all":
+        redis_url = redis_url or "redis://127.0.0.1:6379/0"
+    _app.state.execution_control_source = None
+    _app.state.execution_control_writer = None
+    if redis_url:
+        try:
+            control_source, control_writer = build_control_sources(redis_url=redis_url)
+            _app.state.execution_control_source = control_source
+            _app.state.execution_control_writer = control_writer
+        except Exception as exc:
+            _LOG.warning("Execution control unavailable (%s)", type(exc).__name__)
     default_dir = Path("/app/config") if Path("/app/config").is_dir() else Path("config")
     baked_ceilings = Path("/app/baked/risk_ceilings.yaml")
     if not baked_ceilings.is_file():
@@ -64,6 +78,7 @@ async def lifespan(_app: FastAPI) -> Any:
 
 
 app = FastAPI(title="AI Trader", version="0.1.0", lifespan=lifespan)
+app.include_router(control_router)
 
 
 @app.get("/health")
