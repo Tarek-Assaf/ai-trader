@@ -154,17 +154,30 @@ def test_market_preflight_uses_broker_minimum_size_stop_distance_and_quote(
         lambda path: SimpleNamespace(model_dump=lambda: config),
     )
 
-    bid, ask, size, step, tick, epic, minimum_distance = round_trip._market_inputs(
-        round_trip.ObservedTradingClient(FakeClient()), round_trip.Path("config/instruments.yaml")
+    (
+        bid,
+        ask,
+        size,
+        step,
+        tick,
+        epic,
+        minimum_distance,
+        unit,
+        rule_value,
+    ) = round_trip._market_inputs(
+        round_trip.ObservedTradingClient(FakeClient()),
+        round_trip.Path("config/instruments.yaml"),
     )
 
-    assert (bid, ask, size, step, tick, epic, minimum_distance) == (
+    assert (bid, ask, size, step, tick, epic, minimum_distance, unit, rule_value) == (
         Decimal("19999.8"),
         Decimal("20000.0"),
         Decimal("0.1"),
         Decimal("0.1"),
         Decimal("0.1"),
         "US100",
+        Decimal("2"),
+        "POINTS",
         Decimal("2"),
     )
 
@@ -259,7 +272,7 @@ def test_market_inputs_falls_back_to_min_stop_or_profit_distance(
     assert result[-1] == Decimal("3")
 
 
-def test_market_inputs_rejects_non_points_stop_distance(
+def test_market_inputs_converts_percentage_stop_distance_conservatively(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     config = {
@@ -284,7 +297,47 @@ def test_market_inputs_rejects_non_points_stop_distance(
     details = client.market_details("US100")
     rules = details["dealingRules"]
     assert isinstance(rules, dict)
-    rules["minNormalStopOrLimitDistance"] = {"value": 2, "unit": "PERCENTAGE"}
+    rules["minNormalStopOrLimitDistance"] = {"value": "0.01", "unit": "PERCENTAGE"}
+    client.market_payload = details
+
+    result = round_trip._market_inputs(
+        round_trip.ObservedTradingClient(client),
+        round_trip.Path("config/instruments.yaml"),
+    )
+
+    assert result[-3:] == (
+        Decimal("2.00000"),
+        "PERCENTAGE",
+        Decimal("0.01"),
+    )
+
+
+def test_market_inputs_rejects_unknown_stop_distance_unit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    config = {
+        "version": 1,
+        "instruments": {
+            "NAS100": {
+                "display_name": "Nasdaq-100",
+                "aliases": ["NAS100"],
+                "capital_epic": "US100",
+                "histdata_code": "NSXUSD",
+                "asset_class": "index",
+                "value_per_point": None,
+            }
+        },
+    }
+    monkeypatch.setattr(
+        round_trip,
+        "load_config_file",
+        lambda path: SimpleNamespace(model_dump=lambda: config),
+    )
+    client = FakeClient()
+    details = client.market_details("US100")
+    rules = details["dealingRules"]
+    assert isinstance(rules, dict)
+    rules["minNormalStopOrLimitDistance"] = {"value": 2, "unit": "CURRENCY"}
     client.market_payload = details
 
     with pytest.raises(ValueError, match="minimum_stop_distance_unit_unsupported"):
@@ -344,6 +397,8 @@ def test_preflight_is_read_only_and_does_not_create_one_shot_marker(
             Decimal("0.1"),
             "US100",
             Decimal("2"),
+            "POINTS",
+            Decimal("2"),
         ),
     )
 
@@ -353,4 +408,5 @@ def test_preflight_is_read_only_and_does_not_create_one_shot_marker(
     assert result == 0
     assert '"result": "preflight"' in output
     assert '"tightened_requested": "19997.4"' in output
+    assert '"unit": "POINTS"' in output
     assert not round_trip.LOCK_PATH.exists()
