@@ -113,7 +113,7 @@ def test_paper_broker_satisfies_adapter_contract_and_models_costs() -> None:
             Decimal("110.5"),
         ),
         (broker_base.Direction.SELL, Decimal("104"), Decimal("106"), "stop_loss", Decimal("106.5")),
-        (broker_base.Direction.SELL, Decimal("89"), Decimal("91"), "take_profit", Decimal("91.5")),
+        (broker_base.Direction.SELL, Decimal("88"), Decimal("89"), "take_profit", Decimal("89.5")),
     ],
 )
 def test_attached_brackets_trigger_on_executable_side(
