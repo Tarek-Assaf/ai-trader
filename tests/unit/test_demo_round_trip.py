@@ -154,8 +154,19 @@ def test_market_preflight_uses_broker_minimum_size_stop_distance_and_quote(
         lambda path: SimpleNamespace(model_dump=lambda: config),
     )
 
-    bid, ask, size, step, tick, epic, minimum_distance, unit, rule_value = round_trip._market_inputs(
-        round_trip.ObservedTradingClient(FakeClient()), round_trip.Path("config/instruments.yaml")
+    (
+        bid,
+        ask,
+        size,
+        step,
+        tick,
+        epic,
+        minimum_distance,
+        unit,
+        rule_value,
+    ) = round_trip._market_inputs(
+        round_trip.ObservedTradingClient(FakeClient()),
+        round_trip.Path("config/instruments.yaml"),
     )
 
     assert (bid, ask, size, step, tick, epic, minimum_distance, unit, rule_value) == (
