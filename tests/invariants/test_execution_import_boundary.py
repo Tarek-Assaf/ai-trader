@@ -28,7 +28,7 @@ def test_llm_packages_cannot_reach_execution_modules_transitively():
         graph[name] = imports
     forbidden = tuple(
         f"trader.execution.{part}"
-        for part in ("manager", "journal", "leader", "reconciliation", "brokers")
+        for part in ("control", "manager", "journal", "leader", "reconciliation", "brokers")
     )
     roots = (
         "trader.agents",

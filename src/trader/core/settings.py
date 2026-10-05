@@ -36,6 +36,7 @@ class EnvironmentSettings(BaseSettings):
     telegram_bot_token: SecretStr | None = None
     telegram_owner_chat_ids: str | None = None
     owner_totp_secret: SecretStr | None = None
+    control_api_token: SecretStr | None = None
     smtp_host: str | None = None
     smtp_port: int | None = None
     smtp_user: SecretStr | None = None

@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 86,
+  "turn": "claude",
+  "revision": 87,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls.",
+    "summary": "T-027 is implemented on a Full-tier review PR: independent volume flags/Redis controls, owner-authenticated TOTP API, fail-closed reads, pause-position management, durable kill/flatten retries and explicit owner recovery. Offline checks pass locally (327 tests passed, two PostgreSQL integration skips; Ruff, mypy, secret scan pass). Full CI/container checks are pending. No Pod or broker calls. Next queue item T-060 includes a Pod restore drill and remains deferred until Pod access.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [],
     "environment": {
@@ -1151,7 +1151,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-12"
       ],
@@ -1162,10 +1162,33 @@
         "kill takes effect before next order",
         "works with LLM provider unreachable"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/execution/control.py",
+        "src/trader/execution/manager.py",
+        "src/trader/execution/journal.py",
+        "src/trader/api/control.py",
+        "src/trader/api/app.py",
+        "src/trader/control/totp.py",
+        "tests/unit/test_execution_control.py",
+        "tests/unit/test_order_manager.py",
+        "docs/evidence/t027_kill_switch.md"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/execution/control.py",
+        "src/trader/execution/manager.py",
+        "src/trader/execution/journal.py",
+        "src/trader/api/control.py",
+        "src/trader/api/app.py",
+        "src/trader/control/totp.py",
+        "tests/unit/test_execution_control.py",
+        "tests/unit/test_order_manager.py",
+        "docs/evidence/t027_kill_switch.md",
+        "src/trader/core/settings.py",
+        ".env.example",
+        "tests/invariants/test_execution_import_boundary.py"
+      ],
+      "completion_note": "Implemented independent volume-file, Redis-key and authenticated owner API pause/kill/resume controls. OrderManager checks controls before each cycle and around broker submission, keeps managing existing positions while paused (including after startup reconciliation), durably latches kill, retries close/cancel until flat, and requires an authenticated explicit resume after controls clear and broker reconciliation. TOTP and control API tests, restart/scale-up, mid-cycle, mid-order, pre-order, Redis failure and pause-management coverage pass. Local full suite: 327 passed, 2 PostgreSQL integration tests skipped because DATABASE_URL is unset; Ruff, mypy and secret scan pass. No broker or Pod calls. Service composition must provide OrderManager and call tick(); full CI/container checks are pending."
     },
     {
       "id": "T-030",
@@ -3036,7 +3059,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3260,6 +3283,16 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "Reconciliation, lease, resolution or import-boundary logic changes."
+    },
+    {
+      "id": "V-103",
+      "subject": "T-027 offline kill-switch safety and LLM independence",
+      "method": "Run full offline pytest suite, Ruff lint/format checks, strict mypy for src/trader and repository secret scan. Review tests for file/Redis control precedence and fail-closed behavior, owner token+TOTP API auth, pause management including startup reconciliation, kill-before-submit and mid-order flatten, working-order cancellation retry, kill persistence through restart, and explicit resume after flatten.",
+      "result": "pass",
+      "evidence": "Local: 327 passed, 2 skipped (PostgreSQL integration requires DATABASE_URL); Ruff check and format pass; mypy src/trader passes; scripts/secret_scan.py passes. Full GitHub CI and container checks pending.",
+      "validated_by": "codex",
+      "date": "2026-10-05",
+      "reverify_if": "Execution control, OrderManager wiring or owner authentication changes."
     }
   ],
   "blockers": [
@@ -4767,7 +4800,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5111,7 +5144,32 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-026 Full review cycle 2 passed (V-102). Pod-dependent account-mapping verification moved to T-024 criteria. Note for T-027/T-030: resume and resolve_intent are owner-channel only (authenticated, 2FA), never agent tools. Next for Codex: T-027, T-060. T-026 no longer depends on T-024 (its pod verification now lives in T-024 criteria)."
+    },
+    {
+      "revision": 87,
+      "ts": "2026-10-05T08:18:00Z",
+      "agent": "codex",
+      "action": "complete_t027_kill_switch_for_full_review",
+      "task_ids": [
+        "T-027"
+      ],
+      "files_changed": [
+        ".env.example",
+        "src/trader/api/app.py",
+        "src/trader/api/control.py",
+        "src/trader/control/totp.py",
+        "src/trader/core/settings.py",
+        "src/trader/execution/control.py",
+        "src/trader/execution/journal.py",
+        "src/trader/execution/manager.py",
+        "tests/invariants/test_execution_import_boundary.py",
+        "tests/unit/test_execution_control.py",
+        "tests/unit/test_order_manager.py",
+        "docs/evidence/t027_kill_switch.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-027 pause/kill controls with volume flags, shared Redis state and an owner-authenticated API requiring control token plus TOTP. The deterministic OrderManager checks controls before/around submission; pause keeps existing positions managed, kill durably latches and retries closes/cancels through restart, and only explicit owner resume clears it after flat-state verification. Full local suite: 327 passed, two PostgreSQL tests skipped without DATABASE_URL; Ruff, mypy and secret scan pass. No Pod or broker calls; CI/container checks pending. Handing off for Claude Full review."
     }
   ],
-  "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
+  "project_summary": "T-027 is implemented on a Full-tier review PR: independent volume flags/Redis controls, owner-authenticated TOTP API, fail-closed reads, pause-position management, durable kill/flatten retries and explicit owner recovery. Offline checks pass locally (327 tests passed, two PostgreSQL integration skips; Ruff, mypy, secret scan pass). Full CI/container checks are pending. No Pod or broker calls. Next queue item T-060 includes a Pod restore drill and remains deferred until Pod access."
 }
