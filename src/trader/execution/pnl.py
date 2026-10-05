@@ -47,12 +47,14 @@ class PnlTrade:
     entry_price: Decimal
     stop_level: Decimal
     value_per_point: Decimal
+    # These are mandatory even for closed trades (pass zero); for open trades
+    # they must come from the normalized broker position, never a guessed value.
+    notional_exposure: Decimal
+    margin_used: Decimal
     exit_price: Decimal | None = None
     mark_price: Decimal | None = None
     fees: Decimal = _ZERO
     financing: Decimal = _ZERO
-    notional_exposure: Decimal = _ZERO
-    margin_used: Decimal = _ZERO
 
     def __post_init__(self) -> None:
         if not isinstance(self.trade_id, str) or not self.trade_id.strip():
