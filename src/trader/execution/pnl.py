@@ -10,7 +10,6 @@ from types import MappingProxyType
 
 from trader.execution.brokers.base import Direction
 
-
 _ZERO = Decimal("0")
 _HUNDRED = Decimal("100")
 
