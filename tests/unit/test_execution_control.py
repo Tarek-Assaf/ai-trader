@@ -106,3 +106,33 @@ def test_control_api_requires_token_and_second_factor(monkeypatch):
         )
         assert accepted.status_code == 202
         assert redis.values[writer._key] == "kill"
+
+
+def _totp_at(secret: str, now: float) -> str:
+    key = base64.b32decode(secret)
+    counter = int(now // 30)
+    digest = hmac.new(key, struct.pack(">Q", counter), hashlib.sha1).digest()
+    offset = digest[-1] & 0x0F
+    binary = struct.unpack(">I", digest[offset : offset + 4])[0] & 0x7FFFFFFF
+    return f"{binary % 1_000_000:06d}"
+
+
+def test_control_auth_rejects_replay_and_locks_out_then_expires():
+    secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+    writer = RedisControlSource(FakeRedis())
+    now = 120.0
+    code = _totp_at(secret, now)
+    assert writer.authorize("token", "token", secret, code, now=now)
+    assert not writer.authorize("token", "token", secret, code, now=now)
+    for _ in range(4):
+        assert not writer.authorize("token", "wrong", secret, code, now=now)
+    assert not writer.authorize("token", "token", secret, code, now=now)
+    later = now + 901
+    assert writer.authorize("token", "token", secret, _totp_at(secret, later), now=later)
+
+
+def test_redis_writer_never_downgrades_kill_to_pause():
+    writer = RedisControlSource(FakeRedis())
+    writer.set(ControlMode.KILL)
+    writer.set(ControlMode.PAUSE)
+    assert writer.read() is ControlMode.KILL
