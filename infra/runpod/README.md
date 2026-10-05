@@ -127,6 +127,20 @@ The script uses the Capital.com secrets already configured on the Pod and prints
 
 The adapter currently requires exact equality for broker-confirmed size and stop values. If Capital.com rounds either value, the adapter treats that as a mismatch and requests a close. The report retains the last broker-observed size and stop plus their deltas so the rounding can be reviewed; a failed round trip does not imply a successful validation.
 
+### If Codex operates the Pod terminal (Q-029 handover)
+
+The owner may hand the Pod terminal steps to Codex. The authorization is unchanged: **exactly one** demo round trip, NAS100 only, demo account only. Codex must follow this order and stop at the first failed check.
+
+1. Confirm the Pod runs the latest image (`ghcr.io/tarek-assaf/ai-trader:<sha>` matching main) and `/health` is healthy.
+2. Confirm the environment, without printing secrets: `TRADING_MODE=paper`, `BROKER_ENV=demo`, `LIVE_TRADING_ENABLED=false`. Stop if any differs.
+3. Confirm `/workspace/.capital_demo_round_trip.once` does not exist. If it exists, the one attempt is already consumed: stop and report.
+4. Run `cd /app && python scripts/demo_round_trip.py --preflight`. Wait until the market is open (Monday after about 02:15 Riyadh; `nas100_market_not_tradeable` means wait and rerun the preflight only).
+5. Hand the redacted preflight JSON to Claude and wait for Claude's written "preflight approved" in the handoff (Claude checks size, stop distance, minimum-stop rules and flat account). Do not run the order command before that.
+6. Run `cd /app && python scripts/demo_round_trip.py` once. Never rerun, never remove the marker, never edit the script to retry.
+7. Commit the saved report to the evidence record (`docs/evidence/`) and add it to the handoff.
+
+Required output to hand back (redacted JSON from `/workspace/demo_round_trip_*.json`, no credentials): `result`, `report_path`, `epic`, `requested_size` and `broker_observed_size`, `stop_levels`, `broker_observed_stop`, the `rounding` deltas, `deal_references` (open, modify, close), `timings_ms`, any cleanup attempts, final flat-account confirmation, and the Pod image tag. Claude marks T-024 done only after reading that report. Any `rejected_flat`, ambiguous result or unconfirmed cleanup: stop and ask the owner.
+
 ## 8. Import HistData history
 
 The importer reads HistData's live archive selector before downloading. It uses yearly M1 ZIPs where only yearly archives are listed and monthly ZIPs where months are listed. Use a dry run first to see the provider's current coverage; absent early months and years are not requested. The selector currently shows NSXUSD from 2010 (first available month November) and XAUUSD from 2009 (first available month March). Do not substitute a guessed start year.
