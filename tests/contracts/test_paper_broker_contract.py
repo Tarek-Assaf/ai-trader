@@ -7,13 +7,14 @@ from decimal import Decimal
 
 import pytest
 
-from trader.execution.brokers import base as broker_base, paper as paper_broker
+import trader.execution.brokers.base as broker_base
+import trader.execution.brokers.paper as paper_broker
 
 NOW = datetime(2026, 10, 5, 12, 0, tzinfo=UTC)
 
 
 def _as_broker_adapter(broker: broker_base.BrokerAdapter) -> broker_base.BrokerAdapter:
-    """Static structural check that paper_broker.PaperBroker implements the shared contract."""
+    """Static structural check that PaperBroker implements the shared contract."""
     return broker
 
 
@@ -104,7 +105,13 @@ def test_paper_broker_satisfies_adapter_contract_and_models_costs() -> None:
     ("direction", "bid", "ask", "reason", "exit_level"),
     [
         (broker_base.Direction.BUY, Decimal("94"), Decimal("96"), "stop_loss", Decimal("93.5")),
-        (broker_base.Direction.BUY, Decimal("111"), Decimal("113"), "take_profit", Decimal("110.5")),
+        (
+            broker_base.Direction.BUY,
+            Decimal("111"),
+            Decimal("113"),
+            "take_profit",
+            Decimal("110.5"),
+        ),
         (broker_base.Direction.SELL, Decimal("104"), Decimal("106"), "stop_loss", Decimal("106.5")),
         (broker_base.Direction.SELL, Decimal("89"), Decimal("91"), "take_profit", Decimal("91.5")),
     ],
@@ -140,7 +147,9 @@ def test_quote_fill_uses_executable_bid_or_ask_without_double_counting_spread() 
     buy = broker.place_order(make_order(client_order_id="buy"))
     assert buy.position.level == Decimal("103.5")
 
-    sell = broker.place_order(make_order(direction=broker_base.Direction.SELL, client_order_id="sell"))
+    sell = broker.place_order(
+        make_order(direction=broker_base.Direction.SELL, client_order_id="sell")
+    )
     assert sell.position.level == Decimal("98.5")
 
 
