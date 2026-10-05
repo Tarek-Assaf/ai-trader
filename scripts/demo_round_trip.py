@@ -153,7 +153,7 @@ def _check_environment() -> EnvironmentSettings:
 
 def _market_inputs(
     client: ObservedTradingClient, config_path: Path
-) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal, str, Decimal]:
+) -> tuple[Decimal, Decimal, Decimal, Decimal, Decimal, str, Decimal, str, Decimal]:
     raw_config = load_config_file(config_path).model_dump()
     mapper = InstrumentMapper(raw_config, client)
     terms = mapper.get("NAS100")
@@ -173,14 +173,31 @@ def _market_inputs(
         min_distance_rule = rules.get("minStopOrProfitDistance")
     if not isinstance(min_distance_rule, Mapping):
         raise ValueError("minimum_stop_distance_missing")
-    if str(min_distance_rule.get("unit", "")).upper() != "POINTS":
+    min_distance_unit = str(min_distance_rule.get("unit", "")).upper()
+    min_distance_value = _decimal(min_distance_rule.get("value"), "minimum_stop_distance")
+    if min_distance_unit == "POINTS":
+        min_stop_distance = min_distance_value
+    elif min_distance_unit == "PERCENTAGE":
+        # Use the higher BUY quote as a conservative reference, then verify the
+        # final stop against bid, the side that triggers a long position's stop.
+        min_stop_distance = ask * min_distance_value / Decimal("100")
+    else:
         raise ValueError("minimum_stop_distance_unit_unsupported")
-    min_stop_distance = _decimal(min_distance_rule.get("value"), "minimum_stop_distance")
     minimum_size = terms.min_size
     step = terms.size_step
     if minimum_size > terms.max_size or (minimum_size - terms.min_size) % step != 0:
         raise ValueError("minimum_size_not_valid_for_broker_increment")
-    return bid, ask, minimum_size, step, terms.tick_size, terms.capital_epic, min_stop_distance
+    return (
+        bid,
+        ask,
+        minimum_size,
+        step,
+        terms.tick_size,
+        terms.capital_epic,
+        min_stop_distance,
+        min_distance_unit,
+        min_distance_value,
+    )
 
 
 def _floor_to_tick(value: Decimal, tick: Decimal) -> Decimal:
@@ -363,7 +380,7 @@ def run_round_trip(argv: list[str] | None = None) -> int:
         broker = CapitalComBroker(observed, enable_demo_orders=True)
         if not _flat(broker):
             raise ValueError("account_must_have_no_open_positions_or_working_orders")
-        (bid, ask, size, size_step, tick, epic, minimum_stop_distance) = _market_inputs(
+        (bid, ask, size, size_step, tick, epic, minimum_stop_distance, stop_distance_unit, stop_distance_value) = _market_inputs(
             observed, config_path
         )
         spread, margin, stop, tightened_stop = _stop_plan(bid, ask, tick, minimum_stop_distance)
@@ -377,6 +394,11 @@ def run_round_trip(argv: list[str] | None = None) -> int:
             "tightened_requested": str(tightened_stop),
             "tick_size": str(tick),
             "minimum_stop_distance": str(minimum_stop_distance),
+            "minimum_stop_distance_rule": {
+                "value": str(stop_distance_value),
+                "unit": stop_distance_unit,
+                "reference_price": str(ask) if stop_distance_unit == "PERCENTAGE" else None,
+            },
             "safety_margin": str(margin),
             "tightened_distance_from_bid": str(bid - tightened_stop),
         }
