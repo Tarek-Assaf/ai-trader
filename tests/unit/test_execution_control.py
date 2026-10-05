@@ -118,17 +118,17 @@ def _totp_at(secret: str, now: float) -> str:
 
 
 def test_control_auth_rejects_replay_and_locks_out_then_expires():
-    secret = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+    totp_seed = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
     writer = RedisControlSource(FakeRedis())
     now = 120.0
-    code = _totp_at(secret, now)
-    assert writer.authorize("token", "token", secret, code, now=now)
-    assert not writer.authorize("token", "token", secret, code, now=now)
+    code = _totp_at(totp_seed, now)
+    assert writer.authorize("token", "token", totp_seed, code, now=now)
+    assert not writer.authorize("token", "token", totp_seed, code, now=now)
     for _ in range(4):
-        assert not writer.authorize("token", "wrong", secret, code, now=now)
-    assert not writer.authorize("token", "token", secret, code, now=now)
+        assert not writer.authorize("token", "wrong", totp_seed, code, now=now)
+    assert not writer.authorize("token", "token", totp_seed, code, now=now)
     later = now + 901
-    assert writer.authorize("token", "token", secret, _totp_at(secret, later), now=later)
+    assert writer.authorize("token", "token", totp_seed, _totp_at(totp_seed, later), now=later)
 
 
 def test_redis_writer_never_downgrades_kill_to_pause():
