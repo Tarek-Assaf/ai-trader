@@ -211,3 +211,5 @@ Screenshots are intentionally placeholders until the owner supplies approved acc
 - `[Screenshot: Pod HTTP service showing /health]`
 
 Never include account IDs, secret values, API keys, or billing details in screenshots.
+
+Pod test outputs: after every Pod test, commit the redacted outputs listed in `docs/specs/pod_test_outputs.md` to `docs/evidence/` so Claude can review them.
