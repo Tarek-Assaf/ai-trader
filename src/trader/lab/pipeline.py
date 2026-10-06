@@ -6,7 +6,7 @@ import json
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -69,7 +69,7 @@ class IdeaGenerator:
             (Message(role="user", content=prompt),),
             StrategySpec,
         )
-        return result.value
+        return cast(StrategySpec, result.value)
 
     async def post_mortem(self, *, summary: Mapping[str, Any]) -> PostMortem:
         prompt = (
@@ -83,7 +83,7 @@ class IdeaGenerator:
             (Message(role="user", content=prompt),),
             PostMortem,
         )
-        return result.value
+        return cast(PostMortem, result.value)
 
 
 def _perturb(spec: StrategySpec, factor: float) -> StrategySpec:
