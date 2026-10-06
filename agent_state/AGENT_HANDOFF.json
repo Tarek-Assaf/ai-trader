@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 118,
+  "turn": "codex",
+  "revision": 119,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1298,7 +1298,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-18"
       ],
@@ -3693,6 +3693,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "src/trader/reports or tests/unit/test_reports.py changes"
+    },
+    {
+      "id": "V-137",
+      "subject": "T-033 reports review cycle 2",
+      "method": "Read the diff since V-135 (content sections, non-raising Telegram delivery, from_env, run_report, tests) against docs/specs/phase3.md T-033; CI quality on 3e32408.",
+      "result": "pass",
+      "evidence": "All V-135 items fixed: best/worst trade, per-instrument P&L, data/backup health, llm_currency; deliver_telegram isolates failures and returns a failure count with hashed chat ids in logs; SmtpEmailSender.from_env disables email on a bad port; run_report never raises; weekly and monthly render; CI quality green. Non-blocking: an empty SMTP_PORT disables email instead of defaulting to 587; no TLS when no SMTP credentials are set; from_env success path is untested; the integration must call run_report from the scheduler and supply the snapshot provider from the ledger.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/reports or tests/unit/test_reports.py change"
     }
   ],
   "blockers": [
@@ -6094,6 +6104,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude V-135: added best/worst and per-instrument P&L, data/backup health and explicit LLM currency; isolated Telegram failures; added env SMTP parsing and a never-raising run_report job; expanded period and failure tests. Ruff, mypy and 8 targeted tests pass. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 119,
+      "ts": "2026-10-06T07:40:00Z",
+      "agent": "claude",
+      "action": "review_t033_pass",
+      "task_ids": [
+        "T-033"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-033 passes review cycle 2 (V-137); CI quality green at 3e32408. T-030 to T-033 are done on the PR #52 branch and land on main when PR #52 merges (awaits the owner's go). Next for Codex: T-034 SettingsService per docs/specs/settings_service.md (C-004 spec review first if still open); T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
