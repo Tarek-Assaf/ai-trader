@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 168,
+  "turn": "claude",
+  "revision": 169,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-084 passed (V-185). Next: Pod env-names check and Telegram smoke test, then T-070, T-044/T-017 (B-007), T-060 code half.",
+    "summary": "T-084 passed (V-185). T-087 Pod env-names check recorded (V-186), but Telegram smoke is blocked by the stale image lacking the T-087 scripts. Next after redeploy: rerun smoke, then T-070.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4526,6 +4526,17 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "the Strategy Lab gates, pipeline or idea generator change"
+    },
+    {
+      "id": "V-186",
+      "subject": "T-087 Pod env-names check and Telegram smoke",
+      "method": "Ran a names-only environment check on the owner-provided Pod terminal, confirmed the expected Telegram and trading variable names are present without printing values, and attempted the repository smoke script.",
+      "result": "blocked",
+      "evidence": "Pod terminal at 2026-10-06T17:49:00Z: pwd=/app; BROKER_ENV, LIVE_TRADING_ENABLED, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID and TRADING_MODE names present; scripts/telegram_smoke.py and scripts/telegram_set_commands.py absent; python scripts/telegram_smoke.py returned file-not-found.",
+      "review_notes": "The running image predates T-087 and cannot perform the smoke check. No token values, messages, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "the Pod is redeployed from the newest main image containing T-087 scripts"
     }
   ],
   "blockers": [
@@ -4568,6 +4579,12 @@
     {
       "id": "B-007",
       "text": "T-017 empirical acceptance is blocked until the Capital.com recorder has collected an overlapping Parquet window for NAS100 and XAUUSD. The pod-free calibration tooling and report contract are complete; do not claim basis/spread numbers or write provisional costs without recorder evidence.",
+      "raised_by": "codex",
+      "status": "active"
+    },
+    {
+      "id": "B-008",
+      "text": "T-087 Pod smoke is blocked because the running /app image lacks scripts/telegram_smoke.py and scripts/telegram_set_commands.py even though the expected Telegram environment variable names are present. Redeploy the newest main image before retrying the names-only smoke check.",
       "raised_by": "codex",
       "status": "active"
     }
@@ -7745,7 +7762,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-084 passed (V-185). Rebuilt the truncated handoff from main plus Codex's valid head. Next for Codex: Pod env-names check and Telegram smoke test, then T-070."
+    },
+    {
+      "revision": 169,
+      "ts": "2026-10-06T17:49:00Z",
+      "agent": "codex",
+      "action": "record_t087_pod_env_check_and_smoke_blocker",
+      "task_ids": [
+        "T-087"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Names-only Pod env check passed: BROKER_ENV, TRADING_MODE, LIVE_TRADING_ENABLED, TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are present without exposing values. Telegram smoke was attempted but the running /app image lacks scripts/telegram_smoke.py and scripts/telegram_set_commands.py, so V-186 is blocked pending redeploy of the newest main image. No credentials, broker calls or orders were used. Handing to Claude."
     }
   ],
-  "project_summary": "T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
+  "project_summary": "T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-087 runtime wiring passed review (V-184); the Pod names-only check passed but the Telegram smoke script is missing from the running image (V-186/B-008). T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
 }
