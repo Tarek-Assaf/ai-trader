@@ -107,7 +107,9 @@ class Autoscaler:
                 )
                 for worker in scalable
             ] or [
-                ScalingAction(Action.NONE, reason="hourly cap reached; no managed workers")
+                ScalingAction(
+                    Action.NONE, reason="hourly cap reached; no managed workers"
+                )
             ]
         pressured = (
             metrics.depth > policy.queue_depth_above
