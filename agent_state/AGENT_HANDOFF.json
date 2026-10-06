@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 115,
+  "turn": "claude",
+  "revision": 116,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-032 visualization review fixes are complete and handed to Claude at revision 114. T-030 and T-031 are done pending green CI. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-060 remains blocked on the fresh restore drill.",
+    "summary": "T-033 reports are implemented and handed to Claude for review at revision 116. T-030, T-031 and T-032 are done pending green CI. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-060 remains blocked on the fresh restore drill.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1298,7 +1298,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-18"
       ],
@@ -1310,9 +1310,13 @@
         "email delivery configurable"
       ],
       "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/reports/core.py: deterministic daily/weekly/monthly snapshot renderer with P&L, trades, risk, strategy, stage, cost, LLM budget and issue sections",
+        "src/trader/reports/core.py: plain-text/HTML report document, owner Telegram summary/chart delivery and SMTP multipart email adapter",
+        "tests/unit/test_reports.py: fixture snapshot rendering, Telegram summary plus chart delivery, SMTP multipart delivery and disabled-email no-op"
+      ],
+      "completion_note": "Implemented T-033 deterministic reports for daily, weekly and monthly periods. ReportSnapshot accepts PnlEngine output and typed ledger aggregates; rendering includes gross/net P&L, fees, financing, account/equity, drawdown, margin and exposure, win rate, expectancy, per-instrument and strategy performance, stage changes, risk events, LLM spend/cap and open issues. Plain text and escaped HTML are generated without an LLM changing figures. Telegram delivery sends the summary and chart PNGs; SMTP delivery emits multipart plain text and HTML and is a logged no-op when SMTP or recipient settings are absent. Added fixture tests. Ruff, format, mypy and four targeted tests pass. No Pod, broker or order calls. Handing to Claude for review."
     },
     {
       "id": "T-040",
@@ -3655,6 +3659,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/viz, the /chart path in channels/telegram.py or the matplotlib pin change"
+    },
+    {
+      "id": "V-134",
+      "subject": "T-033 report rendering and delivery",
+      "method": "Ran Ruff check/format, mypy on reports and tests, and tests/unit/test_reports.py with deterministic PnlEngine fixtures; inspected SMTP no-op and multipart paths.",
+      "result": "pass",
+      "evidence": "4 targeted tests passed; report HTML escapes commentary; Telegram summary and chart bytes are delivered; configured SMTP produces plain/HTML multipart; missing SMTP is a no-op; no secrets are included in report content.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/reports or tests/unit/test_reports.py changes"
     }
   ],
   "blockers": [
@@ -6011,6 +6025,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-032 passes review cycle 2 (V-133); CI quality green at 294bcdc. T-030, T-031 and T-032 are done on the PR #52 branch and land on main when PR #52 merges (awaits the owner's go). Next for Codex: T-033 reports per docs/specs/phase3.md; T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
+    },
+    {
+      "revision": 116,
+      "ts": "2026-10-06T07:02:13.207Z",
+      "agent": "codex",
+      "action": "implement_t033_reports",
+      "task_ids": [
+        "T-033"
+      ],
+      "files_changed": [
+        "src/trader/reports/__init__.py",
+        "src/trader/reports/core.py",
+        "tests/unit/test_reports.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented deterministic daily/weekly/monthly reports with P&L, risk, strategy, stage, LLM budget and issue metrics; added Telegram summary/chart delivery and SMTP multipart plain/HTML delivery with safe unconfigured no-op. Added fixture tests. Ruff, mypy and 4 targeted tests pass. No Pod, broker or order calls. Handing to Claude."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
