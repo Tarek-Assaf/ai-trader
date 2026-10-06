@@ -23,9 +23,18 @@ def test_llm_side_packages_cannot_import_settings_service() -> None:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import):
-                    names = (alias.name for alias in node.names)
+                    names = tuple(alias.name for alias in node.names)
+                    imported_service = any(
+                        name == FORBIDDEN or name.startswith("trader.control.") for name in names
+                    )
                 elif isinstance(node, ast.ImportFrom):
-                    names = (node.module or "",)
+                    module = node.module or ""
+                    names = (module,)
+                    imported_service = (
+                        module == FORBIDDEN
+                        or module == "trader.control"
+                        and any(alias.name == "SettingsService" for alias in node.names)
+                    )
                 else:
                     continue
-                assert FORBIDDEN not in names, f"{path} imports the settings service"
+                assert not imported_service, f"{path} imports the settings service"
