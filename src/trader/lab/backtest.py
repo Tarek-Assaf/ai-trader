@@ -11,7 +11,7 @@ from __future__ import annotations
 import math
 import random
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 from trader.data.resample import Candle, resample_ohlc
@@ -115,6 +115,8 @@ class _OpenTrade:
     trailing_activation: float | None
     spread: float
     slippage: float
+    best_price: float
+    trailing_stop: float | None
 
 
 def walk_forward_splits(
@@ -200,6 +202,85 @@ def _trade_from_exit(
     )
 
 
+def _exit_on_bar(
+    spec: StrategySpec,
+    position: _OpenTrade,
+    bar: Candle,
+) -> tuple[str, float] | None:
+    """Return the conservative first exit, accounting for opening gaps."""
+    static_stop = (
+        position.entry_price - position.stop_distance
+        if spec.direction == "long"
+        else position.entry_price + position.stop_distance
+    )
+    stop_level = static_stop
+    if position.trailing_stop is not None:
+        stop_level = max(stop_level, position.trailing_stop) if spec.direction == "long" else min(
+            stop_level, position.trailing_stop
+        )
+    target_level = (
+        position.entry_price + position.target_distance
+        if spec.direction == "long" and position.target_distance is not None
+        else position.entry_price - position.target_distance
+        if position.target_distance is not None
+        else None
+    )
+    if spec.direction == "long":
+        stop_reason = (
+            "trailing"
+            if position.trailing_stop is not None and stop_level == position.trailing_stop
+            else "stop"
+        )
+        if bar.open <= stop_level:
+            return stop_reason, bar.open
+        if bar.low <= stop_level:
+            return stop_reason, stop_level
+        if target_level is not None:
+            if bar.open >= target_level:
+                return "target", bar.open
+            if bar.high >= target_level:
+                return "target", target_level
+    else:
+        stop_reason = (
+            "trailing"
+            if position.trailing_stop is not None and stop_level == position.trailing_stop
+            else "stop"
+        )
+        if bar.open >= stop_level:
+            return stop_reason, bar.open
+        if bar.high >= stop_level:
+            return stop_reason, stop_level
+        if target_level is not None:
+            if bar.open <= target_level:
+                return "target", bar.open
+            if bar.low <= target_level:
+                return "target", target_level
+    return None
+
+
+def _ratchet_trailing(position: _OpenTrade, direction: str) -> _OpenTrade:
+    if position.trailing_distance is None or position.trailing_activation is None:
+        return position
+    favorable = (
+        position.best_price - position.entry_price
+        if direction == "long"
+        else position.entry_price - position.best_price
+    )
+    if favorable < position.trailing_activation:
+        return position
+    candidate = (
+        position.best_price - position.trailing_distance
+        if direction == "long"
+        else position.best_price + position.trailing_distance
+    )
+    if position.trailing_stop is None:
+        return replace(position, trailing_stop=candidate)
+    ratchet = max(position.trailing_stop, candidate) if direction == "long" else min(
+        position.trailing_stop, candidate
+    )
+    return replace(position, trailing_stop=ratchet)
+
+
 def run_backtest(
     spec: StrategySpec,
     candles: Iterable[Candle],
@@ -259,45 +340,34 @@ def run_backtest(
     peak = equity
     max_drawdown = 0.0
     curve: list[tuple[datetime, float]] = []
+    last_exit_index = -1
     for index, bar in enumerate(bars):
         if position is not None:
-            stop_level = (
-                position.entry_price - position.stop_distance
-                if spec.direction == "long"
-                else position.entry_price + position.stop_distance
-            )
-            target_level = (
-                position.entry_price + position.target_distance
-                if spec.direction == "long" and position.target_distance is not None
-                else position.entry_price - position.target_distance
-                if position.target_distance is not None
-                else None
-            )
-            reason: str | None = None
-            exit_level: float | None = None
-            if spec.direction == "long":
-                if bar.low <= stop_level:
-                    reason, exit_level = "stop", stop_level
-                elif target_level is not None and bar.high >= target_level:
-                    reason, exit_level = "target", target_level
-            else:
-                if bar.high >= stop_level:
-                    reason, exit_level = "stop", stop_level
-                elif target_level is not None and bar.low <= target_level:
-                    reason, exit_level = "target", target_level
+            if index > position.entry_index:
+                position = _ratchet_trailing(position, spec.direction)
+            exit = _exit_on_bar(spec, position, bar)
             held = index - position.entry_index
             if (
-                reason is None
+                exit is None
                 and position.time_stop_bars is not None
                 and held >= position.time_stop_bars
             ):
-                reason, exit_level = "time_stop", bar.close
-            if reason is not None and exit_level is not None:
+                exit = ("time_stop", bar.close)
+            if exit is not None:
+                reason, exit_level = exit
                 trade = _trade_from_exit(spec, position, bar, exit_level, reason, multiplier)
                 trades.append(trade)
                 equity += trade.net_pnl
                 position = None
-        if position is None and index > 0:
+                last_exit_index = index
+            elif index >= position.entry_index:
+                favorable = (
+                    max(position.best_price, bar.high)
+                    if spec.direction == "long"
+                    else min(position.best_price, bar.low)
+                )
+                position = replace(position, best_price=favorable)
+        if position is None and index > 0 and last_exit_index != index:
             signal = signals.get(bars[index - 1].ts_utc)
             if signal is not None and index < len(bars):
                 spread, slippage = model.for_bar(spec.instrument, bar.ts_utc)
@@ -313,10 +383,29 @@ def run_backtest(
                     trailing_activation=trailing_activation,
                     spread=spread,
                     slippage=slippage,
+                    best_price=bar.open,
+                    trailing_stop=None,
                 )
-        peak = max(peak, equity)
-        max_drawdown = max(max_drawdown, peak - equity)
-        curve.append((bar.ts_utc, equity))
+                entry_exit = _exit_on_bar(spec, position, bar)
+                if entry_exit is not None:
+                    reason, exit_level = entry_exit
+                    trade = _trade_from_exit(spec, position, bar, exit_level, reason, multiplier)
+                    trades.append(trade)
+                    equity += trade.net_pnl
+                    position = None
+                    last_exit_index = index
+        marked_equity = equity
+        if position is not None:
+            unrealized = (
+                (bar.close - position.entry_price) * position.size
+                if spec.direction == "long"
+                else (position.entry_price - bar.close) * position.size
+            )
+            estimated_cost = (position.spread + 2 * position.slippage) * position.size * multiplier
+            marked_equity += unrealized - estimated_cost
+        peak = max(peak, marked_equity)
+        max_drawdown = max(max_drawdown, peak - marked_equity)
+        curve.append((bar.ts_utc, marked_equity))
     if position is not None:
         trade = _trade_from_exit(
             spec, position, bars[-1], bars[-1].close, "end_of_data", multiplier
@@ -324,6 +413,8 @@ def run_backtest(
         trades.append(trade)
         equity += trade.net_pnl
         curve[-1] = (bars[-1].ts_utc, equity)
+        peak = max(peak, equity)
+        max_drawdown = max(max_drawdown, peak - equity)
     windows = (
         walk_forward_splits(
             bars,
