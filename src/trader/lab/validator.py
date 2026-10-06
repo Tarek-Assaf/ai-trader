@@ -15,13 +15,15 @@ from trader.lab.ledger import ExperimentLedgerProtocol
 
 
 class HoldoutAccessError(PermissionError):
-    """Raised when a holdout request is malformed or outside the sealed root."""
+    """Raised when a holdout request violates the sealed-read contract."""
 
 
 class HoldoutReader:
-    """Read each strategy hash once and record the read in the experiment ledger."""
+    """Read each strategy hash once and record that read durably."""
 
     def __init__(self, root: str | Path, *, ledger: Any = None, audit: Any = None) -> None:
+        if ledger is None:
+            raise HoldoutAccessError("holdout reader requires a durable experiment ledger")
         self._root = Path(root).resolve()
         self._ledger = ledger
         self._audit = audit
@@ -30,6 +32,11 @@ class HoldoutReader:
     def read(self, spec_hash: str, path: str | Path) -> bytes:
         if not spec_hash.strip() or spec_hash in self._read_hashes:
             raise HoldoutAccessError("holdout is readable only once per spec hash")
+        if any(
+            item.strategy_hash == spec_hash and item.holdout_accessed
+            for item in self._ledger.records()
+        ):
+            raise HoldoutAccessError("holdout is readable only once per spec hash")
         candidate = Path(path).resolve()
         if self._root not in candidate.parents and candidate != self._root:
             raise HoldoutAccessError("holdout path is outside the sealed root")
@@ -37,19 +44,19 @@ class HoldoutReader:
             raise HoldoutAccessError("sealed holdout file does not exist")
         content = candidate.read_bytes()
         self._read_hashes.add(spec_hash)
-        if self._ledger is not None:
-            from trader.lab.ledger import ExperimentRecord
+        from trader.lab.ledger import ExperimentRecord
 
-            self._ledger.append(
-                ExperimentRecord(
-                    strategy_hash=spec_hash,
-                    parameters={},
-                    data_start=datetime.now(UTC),
-                    data_end=datetime.now(UTC),
-                    metrics={"holdout_bytes": len(content)},
-                    holdout_accessed=True,
-                )
+        now = datetime.now(UTC)
+        self._ledger.append(
+            ExperimentRecord(
+                strategy_hash=spec_hash,
+                parameters={},
+                data_start=now,
+                data_end=now,
+                metrics={"holdout_bytes": len(content)},
+                holdout_accessed=True,
             )
+        )
         if self._audit is not None:
             from trader.core.audit import AuditEvent
 
@@ -97,9 +104,7 @@ class Gate1Config:
 
             payload = yaml.safe_load(target.read_text(encoding="utf-8"))
             gate = payload["gate1_backtest_to_paper"]
-        except ImportError:
-            gate = _minimal_yaml_gate(target)
-        except (KeyError, TypeError, OSError) as exc:
+        except (ImportError, KeyError, TypeError, OSError) as exc:
             raise ValueError("strategy_lab.yaml gate1_backtest_to_paper is invalid") from exc
         expected = {
             "min_trades",
@@ -123,57 +128,38 @@ class Gate1Config:
         return cls(**{key: gate[key] for key in expected})
 
 
-def _minimal_yaml_gate(path: Path) -> dict[str, Any]:
-    values: dict[str, Any] = {}
-    active = False
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.strip() == "gate1_backtest_to_paper:":
-            active = True
-            continue
-        if active and line and not line.startswith(" "):
-            break
-        if active and ":" in line:
-            key, raw = (part.strip() for part in line.split(":", 1))
-            raw = raw.split("#", 1)[0].strip()
-            values[key] = (
-                raw.lower() == "true"
-                if raw.lower() in {"true", "false"}
-                else float(raw)
-                if "." in raw
-                else int(raw)
-            )
-    return values
-
-
 @dataclass(frozen=True, slots=True)
 class ValidationResult:
     passed: bool
     reasons: tuple[str, ...]
     adjusted_alpha: float
     trials: int
-    holdout_read: bool = False
+    strategy_hash: str
+    holdout_read: bool
     metrics: Mapping[str, Any] = field(default_factory=dict)
 
 
 def _number(value: Any) -> float:
     try:
-        number = float(value)
+        result = float(value)
     except (TypeError, ValueError) as exc:
         raise ValueError("gate metrics must be numeric") from exc
-    if not math.isfinite(number):
+    if not math.isfinite(result):
         raise ValueError("gate metrics must be finite")
-    return number
+    return result
 
 
 def validate_gate1(
     metrics: Mapping[str, Any],
     *,
+    holdout_spec_hash: str,
     ledger: ExperimentLedgerProtocol | None = None,
     trials: int | None = None,
     config: Gate1Config | None = None,
-    holdout_spec_hash: str | None = None,
 ) -> ValidationResult:
-    """Apply Gate 1, deriving trial count and holdout evidence internally."""
+    """Apply Gate 1, deriving trial and holdout evidence from durable state."""
+    if not holdout_spec_hash.strip():
+        raise ValueError("holdout_spec_hash is required")
     configured = config or Gate1Config.from_config()
     ledger_count = ledger.count() if ledger is not None else 0
     if trials is not None and trials < ledger_count:
@@ -226,19 +212,19 @@ def validate_gate1(
         reasons.append("adjusted_significance_failed")
     if metrics.get("cost_stress_net_positive") is not True:
         reasons.append("cost_stress_failed")
-    if holdout_spec_hash is not None:
-        seen = ledger is not None and any(
-            item.strategy_hash == holdout_spec_hash and item.holdout_accessed
-            for item in ledger.records()
-        )
-        if not seen:
-            reasons.append("holdout_read_not_recorded")
+    seen = ledger is not None and any(
+        item.strategy_hash == holdout_spec_hash and item.holdout_accessed
+        for item in ledger.records()
+    )
+    if not seen:
+        reasons.append("holdout_read_not_recorded")
     return ValidationResult(
         not reasons,
         tuple(reasons),
         adjusted,
         count,
-        holdout_spec_hash is not None,
+        holdout_spec_hash,
+        seen,
         metrics,
     )
 
@@ -253,17 +239,12 @@ class StrategyValidator:
         self.ledger = ledger
         self.config = config
 
-    def validate(
-        self,
-        metrics: Mapping[str, Any],
-        *,
-        holdout_spec_hash: str | None = None,
-    ) -> ValidationResult:
+    def validate(self, metrics: Mapping[str, Any], *, holdout_spec_hash: str) -> ValidationResult:
         return validate_gate1(
             metrics,
+            holdout_spec_hash=holdout_spec_hash,
             ledger=self.ledger,
             config=self.config,
-            holdout_spec_hash=holdout_spec_hash,
         )
 
 
