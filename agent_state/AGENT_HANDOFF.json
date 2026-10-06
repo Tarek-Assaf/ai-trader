@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 131,
+  "turn": "claude",
+  "revision": 132,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-017 tooling passes review-cycle 2 and remains blocked on B-007 for empirical Capital.com overlap data. T-083 follow-ups are implemented: separate HistData tick input, config-backed named sessions combined with MarketHours, and fail-closed tradable-session cost export. No empirical costs were guessed; T-028 remains gated by Q-037 Pod/market preconditions.",
+    "summary": "T-017 tooling passes review-cycle 2 and remains blocked on B-007 for empirical Capital.com overlap data. T-083 review-cycle 1 fixes now stream raw HistData tick archives, resolve sessions config independently of the working directory, preserve open labels without named windows and cover boundaries/malformed config. No empirical costs were guessed; T-028 remains gated by Q-037 Pod/market preconditions.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -2186,7 +2186,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-05"
       ],
@@ -2207,11 +2207,12 @@
       "review_cycles": 1,
       "evidence": [
         "src/trader/data/calibration.py",
+        "src/trader/data/importers/histdata_ticks.py",
         "config/sessions.yaml",
         "tests/unit/test_calibration.py",
-        "V-149"
+        "V-151"
       ],
-      "completion_note": "Added a separate --histdata-ticks input so the 1m HistData bar lake is never treated as tick data; missing ticks are reported and cost export refuses without spread samples. Loaded named UTC sessions from config/sessions.yaml and combined them with MarketHours so closed/break minutes are excluded from cost guards. Cost-model export now refuses empty results or no tradable-session samples and ignores closed/break buckets. Streamed capital rows without tuple materialization. Added boundary, closed/break guard and Parquet runner tests. No empirical costs or broker settings were changed; no Pod, broker or order calls.",
+      "completion_note": "Addressed V-150: added --histdata-tick-archives to stream validated raw DAT_ASCII_<SYMBOL>_T_*.zip quotes using the shared HistData timestamp/quote validation, with an end-to-end archive runner fixture; kept --histdata-ticks for tick Parquet. Session config now resolves from the repository package path by default, supports --sessions, malformed files fail clearly, and MarketHours open minutes fall back to open when no named windows are supplied. Added explicit boundary and malformed-config tests. Python compileall and git diff --check pass; this desktop lacks pytest, Ruff and mypy. No Pod, broker or order calls.",
       "review_notes": [
         "Verified fixed: tick input no longer reuses lake bar files, missing tick spreads produce a warning and block the export, named sessions from config/sessions.yaml combined with MarketHours, closed/break buckets excluded, empty export refused, capital rows streamed. I applied the ruff E731 lambda fix and ruff format only (CI lint was failing).",
         "1. The new --histdata-ticks input has no producer: the importer keeps only 1m bar Parquet in the lake (importers/histdata.py), so no tick Parquet will exist on the Pod and the export will always refuse. Add --histdata-tick-archives <dir> that streams the raw HistData tick archives (DAT_ASCII_<SYMBOL>_T_YYYYMM.zip, the same ones histdata_download.py caches under the raw dir) and yields timestamp, bid and ask rows without storing ticks (reuse the validation and timestamp parsing from importers/histdata_ticks.py). Test with a tiny generated zip end to end through main().",
@@ -3913,6 +3914,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/data/calibration.py, config/sessions.yaml or tests/unit/test_calibration.py change"
+    },
+    {
+      "id": "V-151",
+      "subject": "T-083 review cycle 1 fixes",
+      "method": "Ran Python compileall and git diff --check; reviewed raw tick archive streaming against histdata_ticks validation and the runner/test path. The desktop runtime still lacks pytest, Ruff and mypy.",
+      "result": "pass",
+      "evidence": "src/trader/data/calibration.py, src/trader/data/importers/histdata_ticks.py, config/sessions.yaml, tests/unit/test_calibration.py, compileall, git diff --check",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "T-083 calibration or HistData tick importer files change"
     }
   ],
   "blockers": [
@@ -6539,7 +6550,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-083 changes_requested cycle 1 of 2 (V-150): I fixed ruff lint and format; four items remain, mainly a raw tick-archive input so the Pod run can produce HistData spreads. T-017 stays blocked on B-007. T-028 waits for the owner to hand over the Pod terminal after 16:30 Riyadh."
+    },
+    {
+      "revision": 132,
+      "ts": "2026-10-06T11:35:00Z",
+      "agent": "codex",
+      "action": "address_t083_review_cycle_1",
+      "task_ids": [
+        "T-083"
+      ],
+      "files_changed": [
+        "src/trader/data/calibration.py",
+        "src/trader/data/importers/histdata_ticks.py",
+        "tests/unit/test_calibration.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude V-150: added --histdata-tick-archives to stream raw HistData tick archives with shared validation and an end-to-end zip fixture; added --sessions plus package-relative default config resolution; open MarketHours minutes label open without named windows; added boundary and malformed-config tests. Python compileall and git diff --check pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. Handing to Claude for review."
     }
   ],
-  "project_summary": "T-083 calibration follow-ups implemented and ready for Claude review. T-017 remains blocked on B-007 for empirical recorder overlap; no Pod, broker or order calls."
+  "project_summary": "T-083 review-cycle 1 fixes implemented and ready for Claude review. T-017 remains blocked on B-007 for empirical recorder overlap; no Pod, broker or order calls."
 }
