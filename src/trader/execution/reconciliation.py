@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
+from time import sleep
 
 from trader.execution.journal import ExecutionJournal
 from trader.execution.pnl import BrokerAccountFigures, PnlEngine, PnlReport, PnlTrade
@@ -129,8 +130,10 @@ def normalize_capital_account_snapshot(
     fields: CapitalAccountFieldMap,
     notional_exposure: Decimal,
     require_verified: bool = True,
+    reread: Callable[[], Mapping[str, object]] | None = None,
+    reread_delay_seconds: float = 0.25,
 ) -> CapitalAccountSnapshot:
-    """Select the account and derive equity, cash and margin through the declared map."""
+    """Select the account and derive equity only through the declared map."""
     if require_verified:
         fields.require_verified()
     accounts = response.get("accounts")
@@ -153,17 +156,28 @@ def normalize_capital_account_snapshot(
         if fields.equity == "derived"
         else _number(balances.get(fields.equity))
     )
-    available = _number(balances.get(fields.available))
-    if available < 0:
-        raise ValueError("account available must be non-negative")
     cash = balance - profit_loss
     margin_used = (
-        balance - available
+        balance - _number(balances.get(fields.available))
         if fields.margin_used == "derived"
         else _number(balances.get(fields.margin_used))
     )
+    available = _number(balances.get(fields.available))
+    if available < 0:
+        raise ValueError("account available must be non-negative")
     deposit = _number(balances.get("deposit"))
     if balance == 0 and profit_loss == -deposit:
+        if reread is not None:
+            sleep(reread_delay_seconds)
+            return normalize_capital_account_snapshot(
+                reread(),
+                account_id=account_id,
+                fields=fields,
+                notional_exposure=notional_exposure,
+                require_verified=require_verified,
+                reread=None,
+                reread_delay_seconds=reread_delay_seconds,
+            )
         raise ValueError("invalid anomalous Capital.com account snapshot")
     if margin_used < 0:
         raise ValueError("derived Capital.com margin must be non-negative")
