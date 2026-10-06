@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 171,
+  "turn": "codex",
+  "revision": 172,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-070 implementation is ready for review: queue, autoscaler, RunPod adapter, worker runner and focused safety tests landed on the active branch. CI/load-test execution remains for review.",
+    "summary": "T-070 returned to Codex (changes_requested cycle 1, V-188). Pod redeploy from the newest main image is with the owner (Q-041); then the Telegram smoke test. Next: T-044/T-017 (B-007), then T-060 code half.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -1760,7 +1760,7 @@
       "phase": 7,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-22"
       ],
@@ -1780,7 +1780,7 @@
         "src/trader/workers/worker.py",
         "tests/unit/test_scaling.py"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/scaling/queue.py",
         "src/trader/scaling/autoscaler.py",
@@ -1789,7 +1789,10 @@
         "src/trader/workers/worker.py",
         "tests/unit/test_scaling.py"
       ],
-      "completion_note": "Implemented Redis Streams queue primitives with P0-P3 priority ordering, idempotency markers, bounded retries and dead-letter routing; added overload shedding that preserves P0/P1. Added a bounded autoscaler policy with queue-depth/age pressure, idle scale-down, worker and hourly-spend caps, orphan reconciliation, and explicit core/singleton protection. Added a validated, redacted RunPod worker API adapter and a ROLE=worker runner that rejects singleton task types and applies timeout/retry handling. Added focused queue, shedding, cap and singleton tests. GitHub browser commits 8e46b14, 46a514d, 3ad6acb and the worker/test commits; CI and full make check remain for Claude review."
+      "completion_note": "Implemented Redis Streams queue primitives with P0-P3 priority ordering, idempotency markers, bounded retries and dead-letter routing; added overload shedding that preserves P0/P1. Added a bounded autoscaler policy with queue-depth/age pressure, idle scale-down, worker and hourly-spend caps, orphan reconciliation, and explicit core/singleton protection. Added a validated, redacted RunPod worker API adapter and a ROLE=worker runner that rejects singleton task types and applies timeout/retry handling. Added focused queue, shedding, cap and singleton tests. GitHub browser commits 8e46b14, 46a514d, 3ad6acb and the worker/test commits; CI and full make check remain for Claude review.",
+      "review_notes": [
+        "Cycle 1. Blocking: (1) CI will fail: ruff reports 124 errors in the T-070 files (43 E702 and 28 E701 multiple statements per line, 40 E501 line too long, imports) and 6 files are not ruff-formatted. Run ruff check --fix, ruff format, then fix the rest by hand; mypy src/trader must stay clean. Do not paste dense one-line code. (2) Singleton protection is not fail-safe: Worker.is_scalable() allows anything with role=='worker' and no core/singleton tag, and RunPodClient._pod defaults a missing role to 'worker', so an untagged core pod would be scaled down. Make it default-deny: only pods carrying the tag managed_by=ai-trader-autoscaler are ever terminated, in evaluate() and reconcile_orphans(); add tests where an untagged pod, a core pod and a singleton-tagged pod are never targeted in the idle, spend-cap and orphan paths. (3) Acceptance 'load test scales up and down' is not met: test_scaling.py only covers create and the spend cap. Add a simulated load test: rising depth and age creates workers up to max_workers, then idle for idle_minutes terminates down to min_workers, never below. (4) RunPodClient does not satisfy the RunPodWorkerApi protocol the autoscaler uses: list_workers returns PodInfo (no is_scalable or cpu_percent) and create_worker needs image and env but the protocol passes only tags. Add an adapter or align the types, and test the autoscaler against the real client with an httpx MockTransport. The endpoint https://api.runpod.io/v2/pods looks like the serverless API; check the current RunPod REST docs for pod create, list and terminate and cite the doc in the evidence. No live calls. (5) WorkerRunner timeout is not enforced: 'with ThreadPoolExecutor' waits for the handler on exit, so a hung handler blocks the worker. Use pool.shutdown(wait=False, cancel_futures=True) or a subprocess boundary, and test with a handler that sleeps past the timeout. (6) Priority ordering is only sorted inside one claimed batch; with count=1 P3 can run before P0. Use one stream per priority and claim P0 first, or document and test the limit. Non-blocking: flaky tests/unit/test_capital_rate_limit.py::test_two_clients_reuse_one_session_with_shared_http_client failed once on CI and passed on rerun (shared session cache across tests); isolate the cache in a fixture. Process: JSON-aware edits only, run validate_handoff.py with --previous against main's copy before handing off."
+      ]
     },
     {
       "id": "C-100",
@@ -4573,6 +4576,17 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "T-070 files or scaling config change"
+    },
+    {
+      "id": "V-189",
+      "subject": "T-070 review cycle 1 (Claude): queue, workers, autoscaler",
+      "method": "Read the diff at b0d8a60, ran ruff check, ruff format --check and mypy locally on the changed files, compared the tests with the two acceptance criteria.",
+      "result": "fail",
+      "evidence": "src/trader/scaling/queue.py; src/trader/scaling/autoscaler.py; src/trader/integrations/runpod/client.py; src/trader/workers/worker.py; tests/unit/test_scaling.py",
+      "review_notes": "Cycle 1. Blocking: (1) CI will fail: ruff reports 124 errors in the T-070 files (43 E702 and 28 E701 multiple statements per line, 40 E501 line too long, imports) and 6 files are not ruff-formatted. Run ruff check --fix, ruff format, then fix the rest by hand; mypy src/trader must stay clean. Do not paste dense one-line code. (2) Singleton protection is not fail-safe: Worker.is_scalable() allows anything with role=='worker' and no core/singleton tag, and RunPodClient._pod defaults a missing role to 'worker', so an untagged core pod would be scaled down. Make it default-deny: only pods carrying the tag managed_by=ai-trader-autoscaler are ever terminated, in evaluate() and reconcile_orphans(); add tests where an untagged pod, a core pod and a singleton-tagged pod are never targeted in the idle, spend-cap and orphan paths. (3) Acceptance 'load test scales up and down' is not met: test_scaling.py only covers create and the spend cap. Add a simulated load test: rising depth and age creates workers up to max_workers, then idle for idle_minutes terminates down to min_workers, never below. (4) RunPodClient does not satisfy the RunPodWorkerApi protocol the autoscaler uses: list_workers returns PodInfo (no is_scalable or cpu_percent) and create_worker needs image and env but the protocol passes only tags. Add an adapter or align the types, and test the autoscaler against the real client with an httpx MockTransport. The endpoint https://api.runpod.io/v2/pods looks like the serverless API; check the current RunPod REST docs for pod create, list and terminate and cite the doc in the evidence. No live calls. (5) WorkerRunner timeout is not enforced: 'with ThreadPoolExecutor' waits for the handler on exit, so a hung handler blocks the worker. Use pool.shutdown(wait=False, cancel_futures=True) or a subprocess boundary, and test with a handler that sleeps past the timeout. (6) Priority ordering is only sorted inside one claimed batch; with count=1 P3 can run before P0. Use one stream per priority and claim P0 first, or document and test the limit. Non-blocking: flaky tests/unit/test_capital_rate_limit.py::test_two_clients_reuse_one_session_with_shared_http_client failed once on CI and passed on rerun (shared session cache across tests); isolate the cache in a fixture. Process: JSON-aware edits only, run validate_handoff.py with --previous against main's copy before handing off.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "Codex hands T-070 back"
     }
   ],
   "blockers": [
@@ -7859,6 +7873,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented T-070 queue, worker and autoscaler primitives with tests; no Pod API calls, credentials or orders. Handing to Claude for review."
+    },
+    {
+      "revision": 172,
+      "ts": "2026-10-06T19:05:00Z",
+      "agent": "claude",
+      "action": "review_t070_cycle1_changes_requested",
+      "task_ids": [
+        "T-070"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-070 changes_requested cycle 1 (V-189): 124 ruff errors and unformatted files, singleton protection not default-deny, no scale-up/down load test, RunPod client does not fit the autoscaler protocol, worker timeout not enforced, priority only ordered within a batch. Q-041 (Pod redeploy) still open with the owner. Turn to codex."
     }
   ],
   "project_summary": "T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-087 runtime wiring passed review (V-184); the Pod names-only check passed but the Telegram smoke script is missing from the running image (V-186/B-008). T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
