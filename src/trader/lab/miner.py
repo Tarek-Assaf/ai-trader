@@ -1,50 +1,52 @@
 """Deterministic candidate pattern mining for the Strategy Lab.
 
-The miner deliberately emits ordinary :class:`StrategySpec` values.  It does
-not execute generated code, read the holdout, call an LLM, or talk to a broker.
-Every candidate is recorded in the experiment ledger before an optional
-validator is called, so failed candidates still count towards multiple-testing
-correction.
+Candidates are ordinary :class:`StrategySpec` values. The miner never
+executes generated code, opens the sealed holdout, calls an LLM, or talks to a
+broker. Every backtested variant is recorded before optional validation.
 """
 
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Literal
+from typing import Any, Literal, Mapping, Protocol
 
 from trader.data.resample import Candle
+from trader.lab.backtest import BacktestResult, CostModel, run_backtest
 from trader.lab.engine import evaluate_entries
 from trader.lab.ledger import ExperimentLedger, ExperimentLedgerProtocol, ExperimentRecord
-from trader.lab.spec import (
-    ComplexityLimits,
-    IndicatorCondition,
-    StopExit,
-    StrategySpec,
-)
+from trader.lab.metrics import gate1_metrics
+from trader.lab.spec import ComplexityLimits, IndicatorCondition, StopExit, StrategySpec, TargetExit
 from trader.lab.validator import ValidationResult, strategy_hash
 
 PatternName = Literal[
     "opening_range",
     "session_effect",
     "volatility_compression",
+    "volatility_expansion",
     "mean_reversion",
-    "event_reaction",
 ]
 PATTERN_NAMES: tuple[PatternName, ...] = (
     "opening_range",
     "session_effect",
     "volatility_compression",
+    "volatility_expansion",
     "mean_reversion",
-    "event_reaction",
 )
+DEFERRED_PATTERN_NAMES = ("event_reaction",)
+
+
+class GateValidator(Protocol):
+    def __call__(
+        self, metrics: Mapping[str, Any], *, holdout_spec_hash: str
+    ) -> ValidationResult: ...
 
 
 @dataclass(frozen=True, slots=True)
 class PatternCandidate:
-    """One declarative strategy hypothesis emitted by :class:`PatternMiner`."""
+    """One tested strategy hypothesis emitted by :class:`PatternMiner`."""
 
     name: PatternName
     strategy: StrategySpec
@@ -52,15 +54,15 @@ class PatternCandidate:
     signals: int
     strategy_hash: str
     validation: ValidationResult | None = None
+    backtest: BacktestResult | None = None
+    metrics: Mapping[str, Any] = field(default_factory=dict)
 
     @property
     def promoted(self) -> bool:
-        """Whether the supplied validator accepted this candidate."""
         return self.validation is not None and self.validation.passed
 
     @property
     def spec(self) -> StrategySpec:
-        """Compatibility alias used by callers that call these specs directly."""
         return self.strategy
 
     @property
@@ -70,8 +72,6 @@ class PatternCandidate:
 
 @dataclass(frozen=True, slots=True)
 class MiningResult:
-    """Immutable result of one scan, including all tested hypotheses."""
-
     candidates: tuple[PatternCandidate, ...]
     hypotheses_tested: int
     promoted: tuple[PatternCandidate, ...]
@@ -81,15 +81,12 @@ class MiningResult:
         return tuple(item.strategy for item in self.candidates)
 
     @property
-    def total_hypotheses(self) -> int:
-        return self.hypotheses_tested
-
-    @property
     def promoted_strategies(self) -> tuple[StrategySpec, ...]:
         return tuple(item.strategy for item in self.promoted)
 
-
-Validator = Callable[..., ValidationResult | bool | None]
+    @property
+    def total_hypotheses(self) -> int:
+        return self.hypotheses_tested
 
 
 def _instrument(candles: Sequence[Candle], explicit: str | None) -> str:
@@ -103,10 +100,7 @@ def _instrument(candles: Sequence[Candle], explicit: str | None) -> str:
 
 
 def _validate_candles(candles: Sequence[Candle]) -> None:
-    if not candles:
-        return
-    keys = {item.series_key for item in candles}
-    if len(keys) > 1:
+    if len({item.series_key for item in candles}) > 1:
         raise ValueError("pattern mining requires one candle series")
     for item in candles:
         values = (item.open, item.high, item.low, item.close, item.volume)
@@ -114,43 +108,60 @@ def _validate_candles(candles: Sequence[Candle]) -> None:
             raise ValueError("candle values must be finite")
 
 
-def _condition(pattern: PatternName, direction: str) -> IndicatorCondition:
-    """Build one simple, bounded condition for a known pattern family."""
-    if pattern == "opening_range":
+def _median(values: Sequence[float]) -> float:
+    ordered = sorted(values)
+    if not ordered:
+        return 0.5
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[middle]
+    return (ordered[middle - 1] + ordered[middle]) / 2
+
+
+def _thresholds(name: PatternName, candles: Sequence[Candle]) -> tuple[float, ...]:
+    closes = [float(item.close) for item in candles]
+    ranges = [float(item.high - item.low) for item in candles]
+    baseline = closes[0] if closes else 100.0
+    if name == "opening_range":
+        opening = closes[: min(30, len(closes))]
+        baseline = max(opening) if opening else baseline
+        return (baseline, baseline + max(_median(ranges), 0.01))
+    if name == "session_effect":
+        return (baseline, _median(closes))
+    if name == "volatility_compression":
+        return (max(_median(ranges), 0.01), max(_median(ranges) * 0.75, 0.01))
+    if name == "volatility_expansion":
+        return (max(_median(ranges) * 1.25, 0.01), max(_median(ranges) * 1.5, 0.01))
+    return (30.0, 35.0, 65.0, 70.0)
+
+
+def _condition(
+    pattern: PatternName,
+    direction: Literal["long", "short"],
+    threshold: float,
+) -> IndicatorCondition:
+    if pattern in {"opening_range", "session_effect"}:
         return IndicatorCondition(
-            indicator="close",
+            indicator="close" if pattern == "opening_range" else "session_vwap",
             operator="gt" if direction == "long" else "lt",
-            threshold=100.0,
+            threshold=float(threshold),
         )
-    if pattern == "session_effect":
-        return IndicatorCondition(
-            indicator="session_vwap",
-            operator="gt" if direction == "long" else "lt",
-            threshold=100.0,
-        )
-    if pattern == "volatility_compression":
+    if pattern in {"volatility_compression", "volatility_expansion"}:
         return IndicatorCondition(
             indicator="atr",
             period=14,
-            operator="lt" if direction == "long" else "gt",
-            threshold=0.5,
-        )
-    if pattern == "mean_reversion":
-        return IndicatorCondition(
-            indicator="rsi",
-            period=14,
-            operator="lt" if direction == "long" else "gt",
-            threshold=30.0 if direction == "long" else 70.0,
+            operator=("lt" if pattern == "volatility_compression" else "gt"),
+            threshold=float(threshold),
         )
     return IndicatorCondition(
-        indicator="ema",
-        period=9,
-        operator="gt" if direction == "long" else "lt",
-        threshold=100.0,
+        indicator="rsi",
+        period=14,
+        operator="lt" if direction == "long" else "gt",
+        threshold=float(threshold),
     )
 
 
-def _session(pattern: PatternName) -> tuple[str, ...]:
+def _sessions(pattern: PatternName) -> tuple[str, ...]:
     if pattern == "opening_range":
         return ("london", "new_york")
     if pattern == "session_effect":
@@ -159,14 +170,7 @@ def _session(pattern: PatternName) -> tuple[str, ...]:
 
 
 class PatternMiner:
-    """Scan five documented pattern families into safe strategy specs.
-
-    ``validator`` is optional so a scan can be used offline to inspect
-    hypotheses.  When supplied, it is called after the ledger append.  It may
-    accept ``(metrics, holdout_spec_hash=...)``, ``(candidate, candles)`` or a
-    single ``metrics`` argument; this keeps the miner independent of the gate
-    implementation while allowing the real validator to be used unchanged.
-    """
+    """Mine bounded pattern grids and send derived metrics to Gate 1."""
 
     def __init__(
         self,
@@ -176,7 +180,12 @@ class PatternMiner:
         ledger: ExperimentLedgerProtocol | None = None,
         complexity_limits: ComplexityLimits | None = None,
         proposer: str = "pattern_miner",
-        validator: Validator | None = None,
+        validator: GateValidator | None = None,
+        cost_model: CostModel | None = None,
+        cost_stress_pct: float = 50.0,
+        train_bars: int | None = None,
+        test_bars: int | None = None,
+        step_bars: int | None = None,
     ) -> None:
         if instrument is not None and (
             not instrument
@@ -184,10 +193,10 @@ class PatternMiner:
             or not all(c.isalnum() or c == "_" for c in instrument)
         ):
             raise ValueError("instrument must contain only letters, digits and underscores")
+        if not math.isfinite(cost_stress_pct) or cost_stress_pct < 0:
+            raise ValueError("cost_stress_pct must be finite and non-negative")
         self.instrument = instrument.upper() if instrument else None
         self.timeframe_minutes = timeframe_minutes
-        # Keep a ledger even for the convenience constructor: a scan must never
-        # silently omit failed hypotheses from the multiple-testing population.
         self.ledger = ledger or ExperimentLedger()
         self.complexity_limits = complexity_limits or ComplexityLimits(
             max_conditions_per_strategy=5,
@@ -195,11 +204,17 @@ class PatternMiner:
         )
         self.proposer = proposer
         self.validator = validator
+        self.cost_model = cost_model
+        self.cost_stress_pct = cost_stress_pct
+        self.train_bars = train_bars
+        self.test_bars = test_bars
+        self.step_bars = step_bars
 
     def _spec(
         self,
         name: PatternName,
         direction: Literal["long", "short"],
+        threshold: float,
         instrument: str,
     ) -> StrategySpec:
         return StrategySpec(
@@ -207,94 +222,109 @@ class PatternMiner:
             instrument=instrument,
             direction=direction,
             timeframe_minutes=self.timeframe_minutes,
-            entry_conditions=(_condition(name, direction),),
-            exit_rules=(StopExit(kind="stop", distance=1.5),),
-            tunable_parameters=(),
-            session_filters=_session(name),
+            entry_conditions=(_condition(name, direction, threshold),),
+            exit_rules=(
+                StopExit(kind="stop", distance=1.5),
+                TargetExit(kind="target", distance=1.0),
+            ),
+            session_filters=_sessions(name),
         )
-
-    @staticmethod
-    def _metrics(
-        name: PatternName,
-        direction: str,
-        signals: int,
-        candles: Sequence[Candle],
-    ) -> dict[str, Any]:
-        return {
-            "pattern": name,
-            "direction": direction,
-            "signals": signals,
-            "bars": len(candles),
-            "candidate": True,
-        }
-
-    @staticmethod
-    def _call_validator(
-        validator: Validator,
-        candidate: PatternCandidate,
-        metrics: Mapping[str, Any],
-    ) -> ValidationResult | None:
-        try:
-            result = validator(metrics, holdout_spec_hash=candidate.strategy_hash)
-        except TypeError:
-            try:
-                result = validator(candidate, metrics)
-            except TypeError:
-                result = validator(metrics)
-        if isinstance(result, ValidationResult):
-            return result
-        if isinstance(result, bool):
-            return ValidationResult(
-                passed=result,
-                reasons=() if result else ("validator_rejected",),
-                adjusted_alpha=0.0,
-                trials=candidate.hypotheses_tested,
-                strategy_hash=candidate.strategy_hash,
-                holdout_read=False,
-                metrics=metrics,
-            )
-        return None
 
     def scan(
         self,
         candles: Iterable[Candle],
         *,
-        validator: Validator | None = None,
+        validator: GateValidator | None = None,
+        neighbor_results: Sequence[BacktestResult] = (),
     ) -> MiningResult:
         source = tuple(candles)
-        validator = validator or self.validator
         _validate_candles(source)
         instrument = _instrument(source, self.instrument)
-        result: list[PatternCandidate] = []
-        total_hypotheses = len(PATTERN_NAMES) * 2
+        gate_validator = validator or self.validator
+        candidates: list[PatternCandidate] = []
         for name in PATTERN_NAMES:
             for direction in ("long", "short"):
-                spec = self._spec(name, direction, instrument)
-                spec_hash = strategy_hash(spec.model_dump(mode="json"))
-                signals = len(evaluate_entries(spec, source)) if source else 0
-                metrics = self._metrics(name, direction, signals, source)
-                if self.ledger is not None:
-                    start = source[0].ts_utc if source else datetime.now(UTC)
-                    end = source[-1].ts_utc if source else start
+                for threshold in _thresholds(name, source):
+                    if name == "mean_reversion" and (
+                        (direction == "long" and threshold > 50)
+                        or (direction == "short" and threshold < 50)
+                    ):
+                        continue
+                    spec = self._spec(name, direction, threshold, instrument)
+                    result = run_backtest(
+                        spec,
+                        source,
+                        cost_model=self.cost_model,
+                        train_bars=self.train_bars,
+                        test_bars=self.test_bars,
+                        step_bars=self.step_bars,
+                    )
+                    stress = run_backtest(
+                        spec,
+                        source,
+                        cost_model=self.cost_model,
+                        cost_stress_pct=self.cost_stress_pct,
+                        train_bars=self.train_bars,
+                        test_bars=self.test_bars,
+                        step_bars=self.step_bars,
+                    )
+                    metrics = dict(
+                        gate1_metrics(
+                            result,
+                            cost_stress=stress,
+                            neighbor_results=neighbor_results,
+                        )
+                    )
+                    metrics.update(
+                        {"pattern": name, "direction": direction, "threshold": threshold}
+                    )
+                    spec_hash = strategy_hash(spec.model_dump(mode="json"))
                     self.ledger.append(
                         ExperimentRecord(
                             strategy_hash=spec_hash,
-                            parameters={"pattern": name, "direction": direction},
-                            data_start=start,
-                            data_end=end,
+                            parameters={
+                                "pattern": name,
+                                "direction": direction,
+                                "threshold": threshold,
+                            },
+                            data_start=source[0].ts_utc if source else datetime.now(UTC),
+                            data_end=source[-1].ts_utc if source else datetime.now(UTC),
                             metrics=metrics,
                             proposer=self.proposer,
                         )
                     )
-                candidate = PatternCandidate(name, spec, total_hypotheses, signals, spec_hash)
-                validation = (
-                    self._call_validator(validator, candidate, metrics) if validator else None
-                )
-                result.append(
-                    PatternCandidate(name, spec, total_hypotheses, signals, spec_hash, validation)
-                )
-        promoted = tuple(item for item in result if item.promoted)
-        return MiningResult(tuple(result), total_hypotheses, promoted)
+                    validation = (
+                        gate_validator(metrics, holdout_spec_hash=spec_hash)
+                        if gate_validator is not None
+                        else None
+                    )
+                    candidates.append(
+                        PatternCandidate(
+                            name=name,
+                            strategy=spec,
+                            hypotheses_tested=self.ledger.count(),
+                            signals=len(evaluate_entries(spec, source)) if source else 0,
+                            strategy_hash=spec_hash,
+                            validation=validation,
+                            backtest=result,
+                            metrics=metrics,
+                        )
+                    )
+        total = self.ledger.count()
+        normalized = tuple(
+            PatternCandidate(
+                name=item.name,
+                strategy=item.strategy,
+                hypotheses_tested=total,
+                signals=item.signals,
+                strategy_hash=item.strategy_hash,
+                validation=item.validation,
+                backtest=item.backtest,
+                metrics=item.metrics,
+            )
+            for item in candidates
+        )
+        return MiningResult(normalized, total, tuple(item for item in normalized if item.promoted))
 
     mine = scan
 
@@ -304,15 +334,16 @@ def mine_patterns(
     *,
     instrument: str | None = None,
     ledger: ExperimentLedgerProtocol | None = None,
-    validator: Validator | None = None,
+    validator: GateValidator | None = None,
 ) -> MiningResult:
-    """Convenience wrapper for one deterministic scan."""
-    return PatternMiner(instrument=instrument, ledger=ledger).scan(candles, validator=validator)
+    return PatternMiner(instrument=instrument, ledger=ledger, validator=validator).scan(candles)
 
 
 __all__ = [
-    "PATTERN_NAMES",
+    "DEFERRED_PATTERN_NAMES",
+    "GateValidator",
     "MiningResult",
+    "PATTERN_NAMES",
     "PatternCandidate",
     "PatternMiner",
     "mine_patterns",
