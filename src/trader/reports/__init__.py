@@ -7,6 +7,7 @@ from trader.reports.core import (
     SmtpEmailSender,
     build_report,
     deliver_telegram,
+    run_report,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "SmtpEmailSender",
     "build_report",
     "deliver_telegram",
+    "run_report",
 ]

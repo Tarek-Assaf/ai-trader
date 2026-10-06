@@ -6,7 +6,13 @@ from email.message import EmailMessage
 from typing import Any, ClassVar, cast
 
 from trader.execution.pnl import BrokerAccountFigures, PnlEngine
-from trader.reports import ReportSnapshot, SmtpEmailSender, build_report, deliver_telegram
+from trader.reports import (
+    ReportSnapshot,
+    SmtpEmailSender,
+    build_report,
+    deliver_telegram,
+    run_report,
+)
 
 
 def _snapshot(*, charts: tuple[bytes, ...] = ()) -> ReportSnapshot:
@@ -33,10 +39,16 @@ def _snapshot(*, charts: tuple[bytes, ...] = ()) -> ReportSnapshot:
         winning_trades=3,
         expectancy=Decimal("12.50"),
         strategy_pnl={"trend": Decimal("50")},
+        instrument_pnl={"NAS100": Decimal("50")},
+        best_trade="trade-4 (+USD 30)",
+        worst_trade="trade-2 (-USD 10)",
         strategy_stage_changes=("trend: stage 2 -> stage 3",),
         risk_events=("daily loss limit monitored",),
+        data_health="healthy",
+        backup_health="fresh",
         llm_spend=Decimal("0.40"),
         llm_cap=Decimal("2.00"),
+        llm_currency="USD",
         issues=("No open issues",),
         chart_images=charts,
     )
@@ -48,6 +60,9 @@ def test_report_renders_deterministic_plain_and_html_outputs() -> None:
     assert "Realized net: USD 0.00" in document.plain_text
     assert "Win rate: 75.00%" in document.plain_text
     assert "Watch the next session <carefully>." in document.plain_text
+    assert "P&L by instrument" in document.plain_text
+    assert "Best trade: trade-4 (+USD 30)" in document.plain_text
+    assert "Data: healthy" in document.plain_text
     assert "&lt;carefully&gt;" in document.html
     assert "USD 0.00" in document.html
 
@@ -69,6 +84,29 @@ def test_report_delivery_sends_summary_and_charts() -> None:
     deliver_telegram(build_report(_snapshot(charts=(b"png",))), transport, ["owner"])
     assert transport.messages[0][0] == "owner"
     assert transport.photos == [("owner", b"png", "Daily report chart 1")]
+
+
+def test_telegram_delivery_continues_after_transport_failures() -> None:
+    class FailingTransport(_FakeTelegram):
+        def send_message(self, chat_id: str, text: str, *, reply_markup: Any = None) -> None:
+            raise RuntimeError("offline")
+
+        def send_photo(self, chat_id: str, photo: bytes, *, caption: str = "") -> None:
+            raise RuntimeError("offline")
+
+    transport = FailingTransport()
+    assert deliver_telegram(build_report(_snapshot(charts=(b"png",))), transport, ["owner"]) == 2
+
+
+def test_all_report_periods_render() -> None:
+    for period in ("daily", "weekly", "monthly"):
+        snapshot = _snapshot()
+        snapshot = ReportSnapshot(
+            period=period,
+            generated_at=snapshot.generated_at,
+            pnl=snapshot.pnl,
+        )
+        assert period.title() in build_report(snapshot).plain_text
 
 
 class _FakeSMTP:
@@ -113,3 +151,21 @@ def test_smtp_sender_uses_plain_and_html_parts_without_secret_logging() -> None:
 def test_missing_smtp_configuration_is_a_noop() -> None:
     sender = SmtpEmailSender(None, None, None, None, None)
     assert not sender.send(build_report(_snapshot()))
+
+
+def test_smtp_from_env_bad_port_disables_delivery() -> None:
+    sender = SmtpEmailSender.from_env(
+        {
+            "SMTP_HOST": "smtp.example",
+            "SMTP_PORT": "not-a-port",
+            "REPORT_EMAIL_TO": "owner@example.com",
+        }
+    )
+    assert not sender.send(build_report(_snapshot()))
+
+
+def test_run_report_never_raises_when_snapshot_provider_fails() -> None:
+    def failing_provider(_period: str) -> ReportSnapshot:
+        raise RuntimeError("database offline")
+
+    assert run_report("daily", failing_provider, None, None, ["owner"]) is None

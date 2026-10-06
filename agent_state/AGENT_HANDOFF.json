@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 117,
+  "turn": "claude",
+  "revision": 118,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-033 reports are implemented and handed to Claude for review at revision 116. T-030, T-031 and T-032 are done pending green CI. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-060 remains blocked on the fresh restore drill.",
+    "summary": "T-033 review fixes are complete and handed to Claude at revision 118. T-030, T-031 and T-032 are done pending green CI. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-060 remains blocked on the fresh restore drill.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1298,7 +1298,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-18"
       ],
@@ -1314,17 +1314,13 @@
       "evidence": [
         "src/trader/reports/core.py: deterministic daily/weekly/monthly snapshot renderer with P&L, trades, risk, strategy, stage, cost, LLM budget and issue sections",
         "src/trader/reports/core.py: plain-text/HTML report document, owner Telegram summary/chart delivery and SMTP multipart email adapter",
-        "tests/unit/test_reports.py: fixture snapshot rendering, Telegram summary plus chart delivery, SMTP multipart delivery and disabled-email no-op"
+        "tests/unit/test_reports.py: fixture snapshot rendering, Telegram summary plus chart delivery, SMTP multipart delivery and disabled-email no-op",
+        "src/trader/reports/core.py: best/worst trades, per-instrument P&L, data/backup health and explicit LLM currency are rendered",
+        "src/trader/reports/core.py: failure-isolated Telegram delivery, from_env SMTP configuration and never-raising run_report scheduler entry",
+        "tests/unit/test_reports.py: all three periods, delivery failures, bad SMTP port and failing snapshot provider are covered"
       ],
-      "completion_note": "Implemented T-033 deterministic reports for daily, weekly and monthly periods. ReportSnapshot accepts PnlEngine output and typed ledger aggregates; rendering includes gross/net P&L, fees, financing, account/equity, drawdown, margin and exposure, win rate, expectancy, per-instrument and strategy performance, stage changes, risk events, LLM spend/cap and open issues. Plain text and escaped HTML are generated without an LLM changing figures. Telegram delivery sends the summary and chart PNGs; SMTP delivery emits multipart plain text and HTML and is a logged no-op when SMTP or recipient settings are absent. Added fixture tests. Ruff, format, mypy and four targeted tests pass. No Pod, broker or order calls. Handing to Claude for review.",
-      "review_notes": [
-        "1. Spec content gaps (docs/specs/phase3.md T-033): add best and worst trade, a per-instrument P&L split (only exposure is shown now), and data health and backup health lines (plain strings in ReportSnapshot, shown as 'unknown' when not supplied). Weekly and monthly must render too: add tests for all three periods.",
-        "2. 'Never fail the report': deliver_telegram lets any transport exception escape, so one bad chat or photo aborts the rest and the email. Wrap each send, log a sanitized warning (no report text, no token, hashed chat id), continue, and return a bool or count of failures. Add a test with a transport that raises.",
-        "3. Email settings: add SmtpEmailSender.from_env(environ) reading SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, REPORT_EMAIL_TO (a bad or missing port must disable email and log once, not raise). Test it. Never log the password.",
-        "4. Add a small run_report(period, snapshot_provider, telegram, email, owner_chat_ids) job entry that builds, delivers to both channels and never raises (a failing snapshot_provider is logged and returns), so the scheduler in config/schedule.yaml can call it. Test it with a failing provider.",
-        "5. The LLM budget lines use the account currency but LLM spend is USD; add an llm_currency field defaulting to 'USD' and format with it.",
-        "CI quality is green; no lint or type fixes were needed from me."
-      ]
+      "completion_note": "Addressed Claude V-135 review cycle 1. Added best and worst trade, per-instrument P&L, data health, backup health and an explicit USD llm_currency so LLM spend is not mislabeled as account currency. Telegram delivery now catches each summary/photo failure, logs only a hashed chat id and continues. SmtpEmailSender.from_env reads SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and REPORT_EMAIL_TO; malformed ports disable delivery without raising. Added run_report(period, snapshot_provider, telegram, email, owner_chat_ids), which catches snapshot and delivery failures so the scheduler never receives an exception. Tests cover daily/weekly/monthly rendering and all failure paths. Ruff, format, mypy and eight targeted tests pass. No Pod, broker or order calls. Handing to Claude for review.",
+      "review_notes": []
     },
     {
       "id": "T-040",
@@ -3687,6 +3683,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/reports or tests/unit/test_reports.py change"
+    },
+    {
+      "id": "V-136",
+      "subject": "T-033 reports review cycle 2 fixes",
+      "method": "Ran Ruff check/format, mypy on reports and tests, and tests/unit/test_reports.py with deterministic PnlEngine fixtures; inspected delivery isolation, environment parsing and scheduler entry.",
+      "result": "pass",
+      "evidence": "8 targeted tests passed; best/worst and per-instrument P&L plus data/backup health render; all periods render; Telegram failures are counted and isolated; malformed SMTP port is a no-op; run_report catches provider failures; llm_currency is explicit.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/reports or tests/unit/test_reports.py changes"
     }
   ],
   "blockers": [
@@ -6072,6 +6078,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-033 changes_requested cycle 1 of 2 (V-135): add best/worst trade, per-instrument P&L and data/backup health; make Telegram delivery non-raising; add SmtpEmailSender.from_env and a never-raising run_report job; test all three periods; llm_currency field. No code edits from me (CI green). T-028 still gated on the owner handing over the Pod terminal and the market being open. PR #52 awaits the owner's merge go."
+    },
+    {
+      "revision": 118,
+      "ts": "2026-10-06T07:22:08.576Z",
+      "agent": "codex",
+      "action": "address_t033_review_cycle_1",
+      "task_ids": [
+        "T-033"
+      ],
+      "files_changed": [
+        "src/trader/reports/__init__.py",
+        "src/trader/reports/core.py",
+        "tests/unit/test_reports.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude V-135: added best/worst and per-instrument P&L, data/backup health and explicit LLM currency; isolated Telegram failures; added env SMTP parsing and a never-raising run_report job; expanded period and failure tests. Ruff, mypy and 8 targeted tests pass. No Pod, broker or order calls. Handing to Claude."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
