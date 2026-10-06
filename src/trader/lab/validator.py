@@ -85,9 +85,10 @@ def validate_gate1(
     *,
     ledger: ExperimentLedger | None = None,
     trials: int | None = None,
-    config: Gate1Config = Gate1Config(),
+    config: Gate1Config | None = None,
     holdout_read: bool = False,
 ) -> ValidationResult:
+    config = config if config is not None else Gate1Config()
     """Apply Gate 1 using named metrics and fail closed when one is absent."""
     count = trials if trials is not None else (ledger.count() if ledger is not None else 1)
     adjusted = bonferroni_alpha(config.alpha, max(1, count))
@@ -162,10 +163,10 @@ class StrategyValidator:
         self,
         *,
         ledger: ExperimentLedger | None = None,
-        config: Gate1Config = Gate1Config(),
+        config: Gate1Config | None = None,
     ) -> None:
         self.ledger = ledger
-        self.config = config
+        self.config = config if config is not None else Gate1Config()
 
     def validate(
         self, metrics: Mapping[str, Any], *, holdout_read: bool = False

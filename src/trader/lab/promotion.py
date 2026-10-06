@@ -103,17 +103,13 @@ class PromotionGate:
             actual = metrics.get(key.removeprefix("min_"))
             if actual is None or _as_decimal(actual) < _as_decimal(expected):
                 reasons.append(f"{key}_failed")
-        if (
-            target == "micro_live"
-            and int(metrics.get("risk_rule_violations", 1))
-            > int(gate.get("max_risk_rule_violations", 0))
+        if target == "micro_live" and int(metrics.get("risk_rule_violations", 1)) > int(
+            gate.get("max_risk_rule_violations", 0)
         ):
             reasons.append("risk_rule_violations")
-        if (
-            target == "live"
-            and _as_decimal(metrics.get("max_drawdown_vs_backtest_ratio"))
-            > _as_decimal(gate.get("max_drawdown_vs_backtest_ratio", 1))
-        ):
+        if target == "live" and _as_decimal(
+            metrics.get("max_drawdown_vs_backtest_ratio")
+        ) > _as_decimal(gate.get("max_drawdown_vs_backtest_ratio", 1)):
             reasons.append("drawdown_ratio")
         return reasons
 
@@ -121,12 +117,17 @@ class PromotionGate:
         if self._audit is not None:
             from trader.core.audit import AuditEvent
 
-            self._audit.append(AuditEvent("strategy_stage_changed", {
-                "strategy_id": decision.strategy_id,
-                "from": decision.previous_stage,
-                "to": decision.stage,
-                "capital_cap": str(decision.capital_cap),
-            }))
+            self._audit.append(
+                AuditEvent(
+                    "strategy_stage_changed",
+                    {
+                        "strategy_id": decision.strategy_id,
+                        "from": decision.previous_stage,
+                        "to": decision.stage,
+                        "capital_cap": str(decision.capital_cap),
+                    },
+                )
+            )
         if self._alert is not None:
             self._alert(f"strategy_stage_changed:{decision.strategy_id}:{decision.stage}")
 
