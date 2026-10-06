@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 120,
+  "turn": "codex",
+  "revision": 121,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1755,7 +1755,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-26",
         "R-12"
@@ -1776,13 +1776,27 @@
         "tests/unit/test_settings_service.py",
         "tests/invariants/test_settings_import_boundary.py"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/control/settings_service.py",
         "tests/unit/test_settings_service.py",
         "tests/invariants/test_settings_import_boundary.py"
       ],
-      "completion_note": "Implemented typed setting requests with an allow-list, baked ceilings/floors, tightening and loosening classification, fail-closed halt/TOTP gates, three-failure one-hour TOTP lockout with replay protection, expiring confirm/cancel flow, cooldown scheduling, YAML persistence, version-store writes, audit events and owner notifications. Focused tests cover bounds, floors, TOTP, lockout, replay, halt, cooldown, cancellation, persistence and import boundaries."
+      "completion_note": "Implemented typed setting requests with an allow-list, baked ceilings/floors, tightening and loosening classification, fail-closed halt/TOTP gates, three-failure one-hour TOTP lockout with replay protection, expiring confirm/cancel flow, cooldown scheduling, YAML persistence, version-store writes, audit events and owner notifications. Focused tests cover bounds, floors, TOTP, lockout, replay, halt, cooldown, cancellation, persistence and import boundaries.",
+      "review_notes": [
+        "BLOCKERS (safety):",
+        "1. Loosening applies immediately by default: cooldown_seconds defaults to 0.0, so a confirmed loosening takes effect at once. The cooldown must be required (no default of 0), loosening must take effect at the next trading-day start per the spec (loosening_cooldown config, default next_trading_day_start), and effective_at must be computed at confirm time, not request time.",
+        "2. The halt check runs only at request time. Re-check at confirm and again in apply_due (take a halt_active callable on the service, not a flag per call): a loosening requested before a halt must not apply during a halt. Refusals at those points are audited and notified.",
+        "3. Re-validate at confirm: recompute direction against the CURRENT value, and re-run bounds, consistency and halt checks, so two pending changes (for example daily and weekly loss) or a changed value cannot slip a stale tightening-labelled loosening past the TOTP gate. Refuse a second pending change on the same key.",
+        "4. Fail closed on missing bounds: _check_bounds treats a missing ceiling or floor as no limit. A settable key with no entry in risk_ceilings.yaml must be refused, and add a test that every key in _SETTABLE_KEYS has a bound in the real config/risk_ceilings.yaml.",
+        "5. Value validation: reject zero and negative values for every key, require whole numbers for the count keys (max_open_positions_*, max_concurrent_live_strategies, max_orders_per_hour, gate trade/window/week counts), and reject new_value types other than int or float or Decimal. A tightening to -1 or 0 currently passes.",
+        "6. Apply must be transactional (spec: any error leaves current settings unchanged). Today _apply mutates self._values first, then persists and appends to the version store; yaml.safe_dump raises RepresenterError on Decimal (I confirmed) and the in-memory value is already changed. Persist and store first (version store append, then atomic temp-file plus rename write), mutate memory last, and roll back on any exception with an alert. Normalize stored values to int or float.",
+        "7. Persistence layout: _persist writes the whole values dict to one file, so risk keys and strategy-lab gate keys end up mixed in one file and other file content is lost. Map each key to its file (risk.yaml or strategy_lab.yaml), load the full document, change only that key and write that file atomically under /workspace/config/.",
+        "8. Spec-required behavior still missing: (a) restart keeps a scheduled loosening pending: persist scheduled changes through the version store (save/load) and test a restart; (b) startup reconcile: if the config file and settings_versions disagree use the stricter value, alert, and refuse trading until the owner resolves it (a function that returns a refusal flag is enough; wiring comes later); (c) every outcome is audited and notified, including refusals in request_change (bounds, halt, no TOTP, unchanged, unknown key), which currently only raise; (d) /revert_change as revert(change_id) that goes through request_change like any other change.",
+        "9. Concurrency: Telegram handlers and the scheduler (apply_due) share the service. Add a threading.Lock around request, confirm, cancel and apply_due, and test that one change id cannot be confirmed twice.",
+        "10. Import boundary test only matches the exact module name. Use a prefix match on trader.control (and the name SettingsService) so 'from trader.control import SettingsService' and 'import trader.control' are caught; add a negative self-test with a temp file.",
+        "Non-blocking: notify on the lockout itself (a distinct alert), and the audit payload should include approved_by and method."
+      ]
     },
     {
       "id": "C-005",
@@ -3732,6 +3746,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "src/trader/control/settings_service.py, src/trader/control/__init__.py or related SettingsService tests change"
+    },
+    {
+      "id": "V-140",
+      "subject": "T-034 SettingsService review cycle 1",
+      "method": "Read src/trader/control/settings_service.py, totp.py, tests and the import-boundary test against docs/specs/settings_service.md and config/risk_ceilings.yaml; checked CI quality on d28205c; confirmed yaml.safe_dump fails on Decimal.",
+      "result": "fail",
+      "evidence": "Good: TOTP replay and lockout, ceilings and floors, no import by LLM areas today, tightening immediate, confirmation expiry. Fail: loosening applies immediately by default (cooldown 0), halt only checked at request, no re-validation at confirm, missing bounds fail open, zero/negative values accepted, non-transactional apply with a Decimal persistence crash, mixed-file persistence, restart persistence and startup reconcile missing, refusals not audited, no lock, import test bypassable.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/control, config/risk_ceilings.yaml or the settings tests change"
     }
   ],
   "blockers": [
@@ -6164,6 +6188,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed C-004 and passed V-138. Implemented T-034 typed settings changes, ceilings/floors, confirm and cancel flow, TOTP loosening gate with replay protection and one-hour lockout, cooldown scheduling, persistence, audit and notification; Ruff, mypy and 8 focused tests pass. No Pod, broker or order calls. Handing T-034 to Claude for review."
+    },
+    {
+      "revision": 121,
+      "ts": "2026-10-06T08:05:00Z",
+      "agent": "claude",
+      "action": "review_t034_changes_requested",
+      "task_ids": [
+        "T-034"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-034 changes_requested cycle 1 of 2 (V-140): ten items in the task review_notes, six are safety blockers (loosening is immediate by default, halt only checked at request, no re-validation at confirm, missing bounds fail open, zero/negative values accepted, non-transactional apply). No code edits from me. PR #52 (T-030 to T-033) still needs the owner's manual merge on GitHub. T-028 stays gated on the owner handing over the Pod terminal and the market being open."
     }
   ],
   "project_summary": "T-034 implements deterministic, owner-confirmed risk and Strategy Lab setting changes with allow-listed keys, baked ceilings/floors, fail-closed halt/TOTP gates, replay-safe lockout, confirmation expiry, cooldown scheduling, YAML persistence, version-store writes, audit events and owner notification. Focused validation V-139 passes. No Pod, broker or order calls."
