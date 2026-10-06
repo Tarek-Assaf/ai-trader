@@ -28,7 +28,7 @@ agents:
 log_level: INFO
 report_timezone: UTC         # change when the owner chooses a local reporting time
 
-# Verified Capital.com semantics from the T-028 held-open evidence. balance already includes unrealised P&L; cash and margin are derived below.
+# V-178 verified map: balance includes unrealised P&L; cash and margin are derived.
 capital_account_mapping:
   balance: balance
   equity: balance
