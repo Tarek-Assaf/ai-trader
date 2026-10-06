@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 158,
+  "turn": "claude",
+  "revision": 159,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-028 review cycle 2 failed (V-176): the 1.0 US100 round trip lasted 3 s and the open snapshot is not distinct from flat, so the equity/margin mapping is still unverified. Codex must run one more held-open (>=60 s, polled every 5 s) demo trade on the newest image under D-027 before 23:08 Riyadh. A third failure goes to the owner.",
+    "summary": "T-028 Q-040 held-open preflight is recorded (V-177) with account_observations.before_open and the Pod image tag. Execution is blocked by B-009 because the available normal-path script derives 0.001 from broker terms.min_size and has no reviewed 1.0 override; no order was submitted.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2207,7 +2207,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-08",
         "R-21"
@@ -2248,7 +2248,7 @@
         "/workspace/demo_round_trip_20261006T140010Z_02d5ffff.json",
         "/workspace/t028_q040_attempts_20261006.json"
       ],
-      "completion_note": "Q-040 larger demo evidence is complete. Preflight ran before the US open and records account_observations.before_open flat at 1000/1000/1000/0 with the expected image tag. Attempt 1 failed before order submission on sanitized HTTP 429 POST /session; the retry account check was clean. Attempt 2 succeeded with exactly one BUY 1.0 US100 demo position through the normal order path with Risk Guardian approval, stop attached and tightened, before/during/after account snapshots, and a normal-path close. Final state was flat with zero positions and zero working orders. No Pod URL, token, headers or bodies are recorded."
+      "completion_note": "Q-040 held-open execution is blocked pending a reviewed normal-path 1.0 US100 size control. Read-only preflight completed with account_observations.before_open and pod image tag; the available script derived requested_size=0.001 from broker terms.min_size, so no unauthorized 0.001 order was placed."
     },
     {
       "id": "T-083",
@@ -4324,6 +4324,17 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "a held-open poll series of /accounts is committed"
+    },
+    {
+      "id": "V-177",
+      "subject": "T-028 Q-040 held-open preflight and exact-size gate",
+      "method": "Ran the read-only held-open preflight on the owner-provided Pod before the market-open gate, then inspected the normal-path script sizing source.",
+      "result": "blocked",
+      "evidence": "Preflight report /workspace/demo_round_trip_20261006T191808Z_8962aae5.json contains account_observations.before_open, result=preflight, and pod_image_tag; it reports requested_size=0.001. The script derives size from broker terms.min_size and has no supported size override, so it cannot submit the explicitly authorized 1.0 US100 trade without a reviewed code/image change.",
+      "review_notes": "No order was submitted. No retry was attempted because there was no failed order attempt and the available normal path did not meet the authorized size.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "newest main image or reviewed normal-path change supports an explicit 1.0 US100 request"
     }
   ],
   "blockers": [
@@ -4366,6 +4377,12 @@
     {
       "id": "B-007",
       "text": "T-017 empirical acceptance is blocked until the Capital.com recorder has collected an overlapping Parquet window for NAS100 and XAUUSD. The pod-free calibration tooling and report contract are complete; do not claim basis/spread numbers or write provisional costs without recorder evidence.",
+      "raised_by": "codex",
+      "status": "active"
+    },
+    {
+      "id": "B-009",
+      "text": "T-028 Q-040 held-open execution is blocked: the running normal-path script preflight derives requested_size=0.001 from broker terms.min_size and exposes no supported 1.0 US100 override. Do not place the 0.001 order; review the image/code path before retrying.",
       "raised_by": "codex",
       "status": "active"
     }
@@ -6231,7 +6248,7 @@
     },
     {
       "revision": 83,
-      "ts": "2026-10-05T06:56:37.132076+00:00",
+      "ts": "2026-10-05T09:56:37.132076+03:00",
       "agent": "codex",
       "action": "prepare_t026_execution_for_full_review",
       "task_ids": [
@@ -6266,7 +6283,7 @@
     },
     {
       "revision": 85,
-      "ts": "2026-10-05T07:16:12.179745+00:00",
+      "ts": "2026-10-05T10:16:12.179745+03:00",
       "agent": "codex",
       "action": "address_t026_full_review_cycle_1",
       "task_ids": [
@@ -6668,7 +6685,7 @@
     },
     {
       "revision": 112,
-      "ts": "2026-10-06T06:16:56.850Z",
+      "ts": "2026-10-06T06:16:56.85Z",
       "agent": "codex",
       "action": "implement_t032_visualization",
       "task_ids": [
@@ -6698,7 +6715,7 @@
     },
     {
       "revision": 114,
-      "ts": "2026-10-06T06:41:44.180Z",
+      "ts": "2026-10-06T06:41:44.18Z",
       "agent": "codex",
       "action": "address_t032_review_cycle_1",
       "task_ids": [
@@ -7387,7 +7404,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-028 changes_requested (cycle 2, V-176): trade 3 s long, during_open timestamp equals before_open, no polling, image tag unverified. D-027 trade still unused; Codex to run one held-open (>=60 s, 5 s polling) trade on the newest main image. Turn to codex."
+    },
+    {
+      "revision": 159,
+      "ts": "2026-10-06T19:33:09Z",
+      "agent": "codex",
+      "action": "record_t028_q040_exact_size_gate",
+      "task_ids": [
+        "T-028"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-028 Q-040 preflight verified account_observations.before_open and recorded the pod image tag. The available normal-path script requested 0.001 from broker terms.min_size and has no supported 1.0 override, so no order was submitted and no retry was attempted. Added V-177/B-009 and handed T-028 to Claude for review."
     }
   ],
-  "project_summary": "T-028 Q-040 larger demo round trip completed with one bounded retry and redacted Pod evidence; ready for Claude review. T-085 is review-passed. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
+  "project_summary": "T-028 Q-040 held-open preflight is recorded (V-177); execution is blocked by B-009 on the exact 1.0 US100 size gate. T-086 account mapping is implemented and handed to Claude for review. T-087 runtime wiring passed review (V-184); its Pod smoke remains blocked on the stale image (V-186/B-008)."
 }
