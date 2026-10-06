@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 151,
+  "turn": "claude",
+  "revision": 152,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-054 review-cycle 1 fixes are implemented and handed to Claude (V-169): explicit later OOS slices, session-based regimes, non-trivial neighbors, cheap-gate holdout deferral, fail-closed holdout errors, invalid LLM discard/count and optional PromotionGate audit/alert integration. T-044 remains blocked on B-007; T-060 remains blocked on Pod access. No Pod, broker or order calls.",
+    "summary": "T-054 passed Claude review cycle 2 (V-170). T-028 Pod preflight and the authorized second demo round trip completed successfully on the expected demo image (V-171); redacted evidence and the attempt ledger are committed and originals remain under /workspace. T-028 is ready for Claude review. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2206,7 +2206,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-08",
         "R-21"
@@ -2234,9 +2234,15 @@
       "evidence": [
         "docs/evidence/t028_accounts_mapping_20261005.json",
         "docs/evidence/t028_reconcile_20261005.json",
-        "docs/evidence/t028_authorized_round_trip_20261005.json"
+        "docs/evidence/t028_authorized_round_trip_20261005.json",
+        "docs/evidence/t028_preflight_20261006.json",
+        "docs/evidence/t028_round_trip_20261006.json",
+        "docs/evidence/t028_attempts_20261006.json",
+        "/workspace/demo_round_trip_20261006T132441Z_231aa5e2.json",
+        "/workspace/demo_round_trip_20261006T133246Z_d96d2407.json",
+        "/workspace/t028_attempts_20261006.json"
       ],
-      "completion_note": "T-028 read-only mapping and Claude's API-up review fix are present. The prior round-trip report now records the unavailable HTTP/error-code diagnostics and explains the -0.1 tightened-stop delta. GET /accounts capture is retry-safe with three bounded read attempts (1 s then 2 s) and unit coverage; order operations are never retried. Pod preflight and the single authorized round trip are postponed until tomorrow per Q-037."
+      "completion_note": "T-028 Pod evidence is complete and ready for Claude review. The preflight ran before the US open and includes account_observations.before_open. After the market-open gate, attempt 1 aborted before client/order initialization with ConfigLoadError; the required account check was clean and the normal order path was retried once. Attempt 2 succeeded with exactly one BUY 0.001 US100 position, server stop, before/during/after redacted /accounts snapshots, an opened_position snapshot, modify and close, and final flat confirmation with zero positions and working orders. The expected image tag is recorded; the container did not expose a Docker image tag for independent introspection. Originals remain under /workspace. No Pod URL or token is recorded."
     },
     {
       "id": "T-083",
@@ -4206,6 +4212,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/lab/pipeline.py changes"
+    },
+    {
+      "id": "V-171",
+      "subject": "T-028 preflight and authorized second demo round trip",
+      "method": "Ran the read-only preflight before the US open and verified account_observations.before_open. After the market-open gate, the first attempt failed before client/order initialization with ConfigLoadError. The required account check was clean; the second attempt used the normal order path, attached and verified the server stop, captured before/during/after redacted /accounts and opened_position snapshots, modified and closed the position, and confirmed the account flat with zero positions and working orders.",
+      "result": "pass",
+      "evidence": "docs/evidence/t028_preflight_20261006.json; docs/evidence/t028_round_trip_20261006.json; docs/evidence/t028_attempts_20261006.json; originals under /workspace",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "owner authorizes another T-028 Pod run"
     }
   ],
   "blockers": [
@@ -7154,7 +7170,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-054 passed cycle 2 (V-170); ruff format by me. Remaining test gaps become follow-up T-084. Turn to codex: T-028 demo round trip (owner has handed over the pod terminal and permits retries on failure, chat 2026-10-06 16:22 Riyadh), then T-044/T-070/T-060/T-084. Decision D-026 records the owner's retry permission."
+    },
+    {
+      "revision": 152,
+      "ts": "2026-10-06T13:36:00Z",
+      "agent": "codex",
+      "action": "complete_t028_second_round_trip",
+      "task_ids": [
+        "T-028"
+      ],
+      "files_changed": [
+        "docs/evidence/t028_preflight_20261006.json",
+        "docs/evidence/t028_round_trip_20261006.json",
+        "docs/evidence/t028_attempts_20261006.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Ran the preflight before the US open with account_observations.before_open. After the open gate, attempt 1 failed before client/order initialization with ConfigLoadError; the required account check was clean. Attempt 2 used the normal order path and succeeded with one BUY 0.001 US100 trade, attached server stop, before/during/after redacted /accounts snapshots, an opened_position snapshot, modify and close, and final flat confirmation with zero positions and working orders. Expected image tag is recorded; the container did not expose a Docker image tag for independent introspection. Originals remain under /workspace. No Pod URL or token is recorded. T-028 is ready for Claude review."
     }
   ],
-  "project_summary": "T-054 review-cycle 1 fixes are implemented and handed to Claude (V-169): explicit later OOS slices, session-based regimes, non-trivial neighbors, cheap-gate holdout deferral, fail-closed holdout errors, invalid LLM discard/count and optional PromotionGate audit/alert integration. T-044 remains blocked on B-007; T-060 remains blocked on Pod access. No Pod, broker or order calls."
+  "project_summary": "T-054 passed Claude review cycle 2 (V-170). T-028 Pod preflight and the authorized second demo round trip completed successfully on the expected demo image (V-171); redacted evidence and the attempt ledger are committed and originals remain under /workspace. T-028 is ready for Claude review. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
 }
