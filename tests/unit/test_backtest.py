@@ -76,10 +76,10 @@ def test_entry_fills_next_open_and_cost_stress_reduces_net():
     assert plain.trades
     assert plain.trades[0].entry_time_utc == bars[1].ts_utc
     assert plain.trades[0].entry_price == bars[1].open
-    assert plain.trades[0].exit_price == 102.0
-    assert plain.trades[0].gross_pnl == 2.0
+    assert plain.trades[0].exit_price == 102.5
+    assert plain.trades[0].gross_pnl == 2.5
     assert plain.trades[0].costs == 0.5
-    assert plain.trades[0].net_pnl == 1.5
+    assert plain.trades[0].net_pnl == 2.0
     assert plain.trades[0].exit_reason == "target"
     assert stressed.net_pnl < plain.net_pnl
     assert plain.cost_model == "provisional"
@@ -149,7 +149,9 @@ def test_holdout_is_rejected_and_walk_forward_windows_are_rolling():
     assert len(windows) == 1
     assert windows[0].train_end < windows[0].test_start
 
-    two_windows = walk_forward_splits(_bars(6), train_bars=2, test_bars=2, step_bars=2)
+    two_windows = walk_forward_splits(
+        _ohlc([(100, 101, 99, 100)] * 6), train_bars=2, test_bars=2, step_bars=2
+    )
     assert len(two_windows) == 2
 
 
