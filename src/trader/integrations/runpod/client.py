@@ -78,7 +78,9 @@ class RunPodClient:
                 data.get("costPerHr", data.get("hourly_cost_usd", 0.0)) or 0.0
             ),
             tags=cls._tags(data.get("tags", ())),
-            cpu_percent=float(data.get("cpuPercent", data.get("cpu_percent", 0.0)) or 0.0),
+            cpu_percent=float(
+                data.get("cpuPercent", data.get("cpu_percent", 0.0)) or 0.0
+            ),
         )
 
     def list_workers(self) -> list[Worker]:
