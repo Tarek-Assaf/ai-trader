@@ -1,13 +1,12 @@
 import random
 from datetime import UTC, datetime, timedelta
 
-from trader.lab.backtest import CostModel, run_backtest
-from trader.lab.spec import ComplexityLimits, parse_strategy_spec
-from trader.lab.validator import Gate1Config, validate_gate1
-
 from trader.data.resample import Candle
+from trader.lab.backtest import CostModel, run_backtest
 from trader.lab.ledger import ExperimentLedger, ExperimentRecord
 from trader.lab.miner import PATTERN_NAMES, PatternMiner, mine_patterns
+from trader.lab.spec import ComplexityLimits, parse_strategy_spec
+from trader.lab.validator import Gate1Config, validate_gate1
 
 
 def _candles(count: int = 80) -> list[Candle]:
@@ -136,4 +135,3 @@ def test_derived_metrics_noise_variants_never_promote() -> None:
             ).passed:
                 promotions += 1
         assert promotions == 0
-
