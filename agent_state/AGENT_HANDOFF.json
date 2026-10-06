@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 170,
+  "turn": "claude",
+  "revision": 171,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-084 passed (V-185). T-087 Pod env-names check recorded (V-186), but Telegram smoke is blocked by the stale image lacking the T-087 scripts. Next after redeploy: rerun smoke, then T-070.",
+    "summary": "T-070 implementation is ready for review: queue, autoscaler, RunPod adapter, worker runner and focused safety tests landed on the active branch. CI/load-test execution remains for review.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -1760,7 +1760,7 @@
       "phase": 7,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-22"
       ],
@@ -1772,10 +1772,24 @@
         "load test scales up and down",
         "singletons never scaled"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/scaling/queue.py",
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/scaling/__init__.py",
+        "src/trader/integrations/runpod/client.py",
+        "src/trader/workers/worker.py",
+        "tests/unit/test_scaling.py"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/scaling/queue.py",
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/scaling/__init__.py",
+        "src/trader/integrations/runpod/client.py",
+        "src/trader/workers/worker.py",
+        "tests/unit/test_scaling.py"
+      ],
+      "completion_note": "Implemented Redis Streams queue primitives with P0-P3 priority ordering, idempotency markers, bounded retries and dead-letter routing; added overload shedding that preserves P0/P1. Added a bounded autoscaler policy with queue-depth/age pressure, idle scale-down, worker and hourly-spend caps, orphan reconciliation, and explicit core/singleton protection. Added a validated, redacted RunPod worker API adapter and a ROLE=worker runner that rejects singleton task types and applies timeout/retry handling. Added focused queue, shedding, cap and singleton tests. GitHub browser commits 8e46b14, 46a514d, 3ad6acb and the worker/test commits; CI and full make check remain for Claude review."
     },
     {
       "id": "C-100",
@@ -4548,6 +4562,17 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "the Telegram environment variable names change"
+    },
+    {
+      "id": "V-188",
+      "subject": "T-070 queue, worker and autoscaler implementation",
+      "method": "Read the committed queue, autoscaler, RunPod adapter, worker runner and focused tests; checked priority ordering, retry/dead-letter paths, P0/P1 shedding protection, worker/hourly caps and singleton exclusion.",
+      "result": "pending",
+      "evidence": "src/trader/scaling/queue.py; src/trader/scaling/autoscaler.py; src/trader/integrations/runpod/client.py; src/trader/workers/worker.py; tests/unit/test_scaling.py",
+      "review_notes": "Implementation and tests are committed. Full lint, typecheck, CI load test and live RunPod API validation are for Claude review; no credentials or broker calls were used.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "T-070 files or scaling config change"
     }
   ],
   "blockers": [
@@ -7815,6 +7840,25 @@
         "tests/unit/test_environment_settings.py"
       ],
       "summary": "Accepted Codex's blocker (B-008): the Pod image predates T-087. Found that the Pod env name TELEGRAM_CHAT_ID was not read by the code; added it as an alias with a test (V-187). Asked the owner to redeploy from the newest main image (Q-041). Codex: start T-070 while the redeploy is pending; rerun the names-only check and smoke test once the owner confirms the redeploy."
+    },
+    {
+      "revision": 171,
+      "ts": "2026-10-06T18:51:42.703Z",
+      "agent": "codex",
+      "action": "implement_t070_scaling",
+      "task_ids": [
+        "T-070"
+      ],
+      "files_changed": [
+        "src/trader/scaling/queue.py",
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/scaling/__init__.py",
+        "src/trader/integrations/runpod/client.py",
+        "src/trader/workers/worker.py",
+        "tests/unit/test_scaling.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-070 queue, worker and autoscaler primitives with tests; no Pod API calls, credentials or orders. Handing to Claude for review."
     }
   ],
   "project_summary": "T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-087 runtime wiring passed review (V-184); the Pod names-only check passed but the Telegram smoke script is missing from the running image (V-186/B-008). T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
