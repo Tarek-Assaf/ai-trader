@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "task_id": "T-086",
+  "source_evidence": "docs/evidence/t028_q040_held_open_round_trip_20261006.json",
+  "mapping": {
+    "balance": "balance",
+    "equity": "balance",
+    "profit_loss": "profitLoss",
+    "cash": "balance - profitLoss",
+    "margin_used": "balance - available",
+    "available": "available",
+    "deposit": "informational_only",
+    "verified": true
+  },
+  "snapshots": [
+    {
+      "name": "open",
+      "balance": "999.79",
+      "profitLoss": "0.00",
+      "deposit": "999.79",
+      "available": "999.48",
+      "derived_cash": "999.79",
+      "derived_equity": "999.79",
+      "derived_margin_used": "0.31",
+      "deltas_within_tolerance": true
+    },
+    {
+      "name": "held_open_last_poll",
+      "balance": "999.80",
+      "profitLoss": "0.01",
+      "deposit": "999.79",
+      "available": "999.49",
+      "derived_cash": "999.79",
+      "derived_equity": "999.80",
+      "derived_margin_used": "0.31",
+      "deltas_within_tolerance": true
+    },
+    {
+      "name": "after_close_lag",
+      "balance": "999.80",
+      "profitLoss": "0.01",
+      "deposit": "999.79",
+      "available": "999.49",
+      "derived_cash": "999.79",
+      "derived_equity": "999.80",
+      "derived_margin_used": "0.31",
+      "lag_tolerated": true,
+      "note": "available may lag briefly after close; no false mismatch alarm"
+    }
+  ],
+  "invalid_snapshot": {
+    "balance": "0",
+    "profitLoss": "-999.80",
+    "deposit": "999.80",
+    "available": "0",
+    "result": "rejected_fail_closed"
+  },
+  "reconcile_pnl": {
+    "persisted_initial_stop": true,
+    "mismatch_action": "pause_entries_and_alert",
+    "tolerance": "0.01"
+  }
+}
