@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import itertools
 import json
 import math
 import random
@@ -22,6 +23,7 @@ from typing import Any
 
 import yaml
 
+from trader.data.importers.histdata_ticks import iter_histdata_tick_rows
 from trader.data.market_hours import MarketHours
 
 try:
@@ -147,6 +149,64 @@ def _market_session(schedule: MarketHours, stamp: datetime) -> str:
     return "closed"
 
 
+def _minute(value: str) -> int:
+    hour_text, minute_text = value.split(":", maxsplit=1)
+    hour, minute = int(hour_text), int(minute_text)
+    if not 0 <= hour < 24 or not 0 <= minute < 60:
+        raise ValueError("session window is outside a UTC day")
+    return hour * 60 + minute
+
+
+def load_session_windows(path: str | Path | None = None) -> dict[str, tuple[int, int]]:
+    """Load the named UTC reporting windows shared by calibration runs."""
+    config_path = (
+        Path(path) if path is not None else Path(__file__).parents[3] / "config" / "sessions.yaml"
+    )
+    try:
+        payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as exc:
+        raise ValueError("sessions config is unreadable or malformed") from exc
+    if not isinstance(payload, Mapping) or not isinstance(payload.get("sessions"), Mapping):
+        raise ValueError("sessions config must contain a sessions mapping")
+    windows: dict[str, tuple[int, int]] = {}
+    for name, raw in payload["sessions"].items():
+        if not isinstance(name, str) or not isinstance(raw, Mapping):
+            raise ValueError("session config entries are malformed")
+        start, end = raw.get("start"), raw.get("end")
+        if not isinstance(start, str) or not isinstance(end, str):
+            raise ValueError(f"session {name} needs start and end")
+        start_minute, end_minute = _minute(start), _minute(end)
+        if start_minute >= end_minute:
+            raise ValueError(f"session {name} must not cross midnight")
+        windows[name] = (start_minute, end_minute)
+    return windows
+
+
+def _named_session(stamp: datetime, windows: Mapping[str, tuple[int, int]]) -> str:
+    minute = stamp.hour * 60 + stamp.minute
+    for name, (start, end) in windows.items():
+        if start <= minute < end:
+            return name
+    return "closed"
+
+
+def _session_label(
+    stamp: datetime,
+    *,
+    schedule: MarketHours | None,
+    windows: Mapping[str, tuple[int, int]] | None,
+) -> str:
+    if schedule is not None:
+        if not schedule.is_open(stamp):
+            return "break" if schedule.is_break(stamp) else "closed"
+        if windows is None:
+            return "open"
+        return _named_session(stamp, windows or {})
+    if windows is not None:
+        return _named_session(stamp, windows)
+    return _default_session(stamp)
+
+
 def _returns(values: Mapping[datetime, float]) -> dict[datetime, float]:
     points = sorted(values.items())
     result: dict[datetime, float] = {}
@@ -177,18 +237,19 @@ def calibrate(
     *,
     session_for: Callable[[datetime], str] | None = None,
     market_hours: MarketHours | None = None,
+    session_windows: Mapping[str, tuple[int, int]] | None = None,
     expected_lag_hours: int = 0,
     reservoir_size: int = DEFAULT_RESERVOIR_SIZE,
 ) -> CalibrationResult:
     """Compare bid bars and calculate bounded-memory spread distributions."""
-    if session_for is not None and market_hours is not None:
-        raise ValueError("provide session_for or market_hours, not both")
+    if session_for is not None and (market_hours is not None or session_windows is not None):
+        raise ValueError("provide session_for or market_hours/session_windows, not both")
     if session_for is None:
-        session_for = (
-            (lambda stamp: _market_session(market_hours, stamp))
-            if market_hours is not None
-            else _default_session
-        )
+
+        def session_label(stamp: datetime) -> str:
+            return _session_label(stamp, schedule=market_hours, windows=session_windows)
+
+        session_for = session_label
 
     hist: dict[datetime, float] = {}
     for row in hist_bars:
@@ -196,11 +257,10 @@ def calibrate(
         if value is not None:
             hist[_timestamp(row)] = value
 
-    capital_rows = tuple(capital_bars)
     capital: dict[datetime, float] = {}
     capital_spread = _Reservoir(reservoir_size)
     sessions: dict[str, dict[str, _Reservoir]] = {}
-    for row in capital_rows:
+    for row in capital_bars:
         stamp = _timestamp(row)
         if row.get("side", "bid") != "bid":
             continue
@@ -261,14 +321,21 @@ def calibrate(
     warnings: list[str] = []
     if not overlap:
         warnings.append("no overlapping HistData and Capital.com bid bars")
+    if hist_spread.count == 0:
+        warnings.append(
+            "HistData tick input unavailable; cost-model export will refuse without tick spreads"
+        )
     if best_lag is None:
         warnings.append("insufficient consecutive overlap for timezone correlation")
     elif best_lag != expected_lag_hours:
         warnings.append(
             f"best return correlation lag {best_lag}h differs from expected {expected_lag_hours}h"
         )
-    if market_hours is None and session_for is _default_session:
-        warnings.append("using fixture session fallback; supply broker MarketHours for production")
+    if market_hours is None and session_windows is None:
+        warnings.append(
+            "using fixture session fallback; supply broker MarketHours or session config "
+            "for production"
+        )
     session_stats = {
         session: {name: stats.distribution() for name, stats in metrics.items()}
         for session, metrics in sessions.items()
@@ -294,6 +361,8 @@ def _fmt(value: float | int | bool | None) -> str:
 def write_report(results: Iterable[CalibrationResult], path: str | Path) -> None:
     """Write full per-instrument and per-session Markdown statistics."""
     rows = list(results)
+    if not rows:
+        raise ValueError("refusing cost-model export: no calibration results")
     lines = [
         "# Basis and spread calibration",
         "",
@@ -367,9 +436,13 @@ def write_cost_model(
     if min_spread_samples < 1 or min_basis_samples < 1:
         raise ValueError("minimum sample counts must be positive")
     missing: list[str] = []
+    tradable_sessions = 0
     empty = Distribution(0, None, None, None)
     for result in rows:
         for session, metrics in result.session_stats.items():
+            if session in {"closed", "break"}:
+                continue
+            tradable_sessions += 1
             basis_count = metrics.get("basis", empty).count
             hist_count = metrics.get("histdata_spread", empty).count
             capital_count = metrics.get("capital_spread", empty).count
@@ -391,6 +464,8 @@ def write_cost_model(
         raise ValueError(
             "refusing cost-model export: insufficient samples (" + "; ".join(missing) + ")"
         )
+    if tradable_sessions == 0:
+        raise ValueError("refusing cost-model export: no tradable-session samples")
     lineage_value = dict(lineage)
     lineage_value.setdefault("generated_at", datetime.now(UTC).isoformat())
     lineage_value.setdefault("git_commit", _git_commit())
@@ -398,6 +473,8 @@ def write_cost_model(
     for result in rows:
         sessions: dict[str, Any] = {}
         for session, metrics in sorted(result.session_stats.items()):
+            if session in {"closed", "break"}:
+                continue
             sessions[session] = {
                 name: asdict(metrics[name])
                 for name in ("basis", "histdata_spread", "capital_spread")
@@ -435,19 +512,33 @@ def _file_lineage(paths: Sequence[Path]) -> dict[str, Any]:
     inputs: list[dict[str, Any]] = []
     for path in paths:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
-        row_count = ds.dataset(path, format="parquet").count_rows() if ds is not None else None
+        row_count = (
+            ds.dataset(path, format="parquet").count_rows()
+            if ds is not None and path.suffix.lower() == ".parquet"
+            else None
+        )
         inputs.append({"path": str(path), "sha256": digest, "row_count": row_count})
     return {"inputs": inputs}
+
+
+def _iter_histdata_ticks(paths: Sequence[Path], instrument: str) -> Iterable[Mapping[str, Any]]:
+    for path in paths:
+        if not path.name.startswith(f"DAT_ASCII_{instrument}_T_"):
+            continue
+        yield from _matching_rows(iter_histdata_tick_rows(path, instrument), instrument)
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--histdata", type=Path, required=True)
     parser.add_argument("--recorder", type=Path, required=True)
+    parser.add_argument("--histdata-ticks", type=Path)
+    parser.add_argument("--histdata-tick-archives", type=Path)
     parser.add_argument("--instrument", required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument("--cost-model", type=Path, required=True)
     parser.add_argument("--market-hours", type=Path)
+    parser.add_argument("--sessions", type=Path)
     parser.add_argument("--min-spread-samples", type=int, default=1000)
     parser.add_argument("--min-basis-samples", type=int, default=500)
     return parser
@@ -457,6 +548,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     hist_files = sorted(args.histdata.rglob("*.parquet"))
     capital_files = sorted(args.recorder.rglob("*.parquet"))
+    tick_files = (
+        sorted(args.histdata_ticks.rglob("*.parquet")) if args.histdata_ticks is not None else []
+    )
+    tick_archives = []
+    if args.histdata_tick_archives is not None:
+        tick_archives = (
+            [args.histdata_tick_archives]
+            if args.histdata_tick_archives.is_file()
+            else sorted(args.histdata_tick_archives.rglob("*.zip"))
+        )
     if not hist_files or not capital_files:
         raise SystemExit("both --histdata and --recorder must contain Parquet files")
     schedule = None
@@ -464,18 +565,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         schedule = MarketHours.from_market_details(
             json.loads(args.market_hours.read_text(encoding="utf-8"))
         )
+    session_windows = load_session_windows(args.sessions)
+    tick_rows = itertools.chain(
+        _matching_rows(_iter_parquet(tick_files), args.instrument),
+        _iter_histdata_ticks(tick_archives, args.instrument),
+    )
     result = calibrate(
         args.instrument,
         _matching_rows(_iter_parquet(hist_files), args.instrument),
         _matching_rows(_iter_parquet(capital_files), args.instrument),
-        _matching_rows(_iter_parquet(hist_files), args.instrument),
+        tick_rows,
         market_hours=schedule,
+        session_windows=session_windows,
     )
     write_report([result], args.report)
     write_cost_model(
         [result],
         args.cost_model,
-        _file_lineage([*hist_files, *capital_files]),
+        _file_lineage([*hist_files, *capital_files, *tick_files]),
         min_spread_samples=args.min_spread_samples,
         min_basis_samples=args.min_basis_samples,
     )
