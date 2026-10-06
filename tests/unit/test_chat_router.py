@@ -84,4 +84,3 @@ def test_llm_failure_keeps_control_path_available() -> None:
     result = run(router.route("tell me a story"))
     assert result.intent.intent == "unknown"
     assert "limited" in result.reply
-

@@ -16,13 +16,13 @@ from typing import Literal, Protocol
 from pydantic import BaseModel, ConfigDict, Field
 
 
-
 @dataclass(frozen=True, slots=True)
 class Message:
     """Small provider-neutral message contract used by the injected LLM client."""
 
     role: str
     content: str
+
 
 IntentName = Literal[
     "query",
@@ -214,4 +214,3 @@ class ChatRouter:
             flags=flags,
         )
         return RouteResult(intent, reply, used_llm)
-
