@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 106,
+  "turn": "codex",
+  "revision": 107,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1213,7 +1213,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-01",
         "R-18"
@@ -1235,7 +1235,7 @@
         "src/trader/channels/telegram.py: injectable transport, owner allow-list, deterministic commands, nonce-gated and kill-safe resume, sanitized transport errors, required control writer and bounded retry queue",
         "tests/unit/test_telegram_channel.py: owner/non-owner routing, all data commands, safe controls/audit, flatten failure, nonce cancel/expiry, kill/unreadable resume, authorization and token-log redaction"
       ],
-      "completion_note": "Addressed all Claude review cycle-1 fixes for T-030: Telegram bot-token failures are sanitized and httpx/httpcore logging is raised to WARNING; resume fails closed when mode is unreadable or KILL is latched and requires an explicit owner authorization; construction requires a control writer; flatten failures keep execution halted and are audited; cancel consumes its nonce and issue prunes expired entries. Expanded offline tests cover non-owner callbacks, owner data-command rendering, control audits, rejected nonces, cancel, kill/unreadable modes, flatten errors and token absence in logs. Compileall, handoff validation, secret scan and git diff --check pass; focused pytest and make check are unavailable in this desktop runtime because pytest/make/PyYAML are missing. No Pod, broker or order calls were made. Handing to Claude for review."
+      "completion_note": "Addressed all Claude review cycle-1 fixes for T-030: Telegram bot-token failures are sanitized and httpx/httpcore logging is raised to WARNING; resume fails closed when mode is unreadable or KILL is latched and requires an explicit owner authorization; construction requires a control writer; flatten failures keep execution halted and are audited; cancel consumes its nonce and issue prunes expired entries. Expanded offline tests cover non-owner callbacks, owner data-command rendering, control audits, rejected nonces, cancel, kill/unreadable modes, flatten errors and token absence in logs. Compileall, handoff validation, secret scan and git diff --check pass; focused pytest and make check are unavailable in this desktop runtime because pytest/make/PyYAML are missing. No Pod, broker or order calls were made. Handing to Claude for review. CLAUDE REVIEW 2: all seven cycle-1 fixes verified in code (sanitized transport errors and httpx/httpcore log levels, kill latch and unreadable mode fail closed, explicit owner authorization required, control writer required, flatten exceptions caught, cancel consumes nonce and issue prunes expired, tests added). Passed pending green CI on the merge PR. FOLLOW-UP for integration (T-034/app wiring, not this task): authorize_resume is an injected no-argument callable; nothing in the Telegram flow collects a TOTP code, so the app wiring must supply a callable backed by an owner-authenticated step (RedisControlSource.authorize with replay protection). current_mode must be wired to CompositeControlSource.read."
     },
     {
       "id": "T-031",
@@ -3121,7 +3121,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3555,6 +3555,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "telegram.py, tests/unit/test_telegram_channel.py or the T-030 review changes"
+    },
+    {
+      "id": "V-125",
+      "subject": "T-030 Telegram channel re-review (Claude)",
+      "method": "Diffed Codex's cycle-1 fixes against V-123 list; read telegram.py and tests; ruff check and format fixed on the changed files; mypy clean on telegram.py.",
+      "result": "pass",
+      "evidence": "src/trader/channels/telegram.py; tests/unit/test_telegram_channel.py (token-in-logs test, kill-not-resumable, cancel, flatten exception, non-owner callback, render routing). Merge only when CI is green.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "telegram.py, control writer wiring or nonce handling changes"
     }
   ],
   "blockers": [
@@ -5136,7 +5146,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5772,6 +5782,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Applied all six blocking T-030 review fixes from Claude V-123: sanitized token-bearing transport failures and raised httpx/httpcore logger levels; made resume fail closed for unreadable or latched KILL mode and require explicit owner authorization; required a control writer; caught flatten exceptions while keeping execution halted; consumed cancel nonces and pruned expired nonces; and added the requested routing, audit, safety and token-redaction tests. Compileall, handoff validation, secret scan and git diff --check pass; pytest and make check are unavailable in this desktop runtime. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 107,
+      "ts": "2026-10-06T05:55:00Z",
+      "agent": "claude",
+      "action": "review_t030_pass",
+      "task_ids": [
+        "T-030"
+      ],
+      "files_changed": [
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_telegram_channel.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-030 passes review cycle 2 (V-125). All V-123 fixes verified; I applied ruff lint/format fixes only to the two T-030 files (no logic change). T-030 done pending green CI on the merge PR. Integration follow-up recorded in the T-030 note: authorize_resume and current_mode must be wired to the owner-authenticated control path. Next for Codex: T-031 chat router per docs/specs/phase3.md and Addendum A (LLM path cannot reach control), and the T-028 round trip only after the owner hands over the Pod terminal and the market is open."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."

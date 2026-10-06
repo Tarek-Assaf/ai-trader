@@ -185,7 +185,7 @@ class TelegramChannel:
     @classmethod
     def from_owner_ids(
         cls, transport: TelegramTransport, owner_chat_ids: str, **kwargs: Any
-    ) -> "TelegramChannel":
+    ) -> TelegramChannel:
         """Build from the comma-separated environment setting."""
         return cls(transport, owner_chat_ids.split(","), **kwargs)
 
@@ -251,7 +251,7 @@ class TelegramChannel:
         """Queue a rate-limited alert; returns false when suppressed."""
         if not self._alerts.allow(alert.alert_key):
             return False
-        for owner in ([chat_id] if chat_id is not None else self._owner_ids):
+        for owner in [chat_id] if chat_id is not None else self._owner_ids:
             self._enqueue(owner, alert.text, None)
         return True
 

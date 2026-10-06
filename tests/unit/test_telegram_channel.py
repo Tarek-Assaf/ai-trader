@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 
 import pytest
 
@@ -151,9 +150,7 @@ def test_resume_requires_readable_mode_and_explicit_authorization() -> None:
     assert writer.set_modes == []
 
     transport = FakeTransport()
-    channel, writer = make_channel(
-        transport, current_mode=lambda: ControlMode.PAUSE
-    )
+    channel, writer = make_channel(transport, current_mode=lambda: ControlMode.PAUSE)
     channel.handle_message("owner", "/resume")
     markup = transport.messages[-1][2]
     nonce = markup["inline_keyboard"][0][0]["callback_data"].split(":", 1)[1]
