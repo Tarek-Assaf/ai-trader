@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 112,
+  "turn": "codex",
+  "revision": 113,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1269,7 +1269,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-13"
       ],
@@ -1281,12 +1281,18 @@
         "chart request via chat returns an image"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/viz/__init__.py: lazy headless matplotlib chart builders for candles/trades, equity, drawdown, session P&L, strategy comparison and spread, plus self-contained PNG/HTML writers",
         "tests/unit/test_viz.py: fixture rendering and non-empty PNG/HTML checks, including empty-data chart"
       ],
-      "completion_note": "Implemented the offline visualization module for T-032. Chart functions return matplotlib Figure objects and cover OHLC candles with trade markers, equity curves, drawdown, session P&L heatmaps, strategy comparison bars and spread by session. Empty inputs render a No data figure. PNG saving is explicit and HTML uses a self-contained embedded PNG, so no Plotly dependency was added. Matplotlib is imported lazily with a clear VisualizationUnavailable error in minimal runtimes; the desktop runtime lacks matplotlib, pytest and make, so focused rendering and full checks are unavailable here. Compileall, handoff validation, secret scan and git diff --check pass. No Pod, broker or order calls. Telegram chart wiring remains through the existing render/transport seam and is not state-changing. Handing to Claude for review."
+      "completion_note": "Implemented the offline visualization module for T-032. Chart functions return matplotlib Figure objects and cover OHLC candles with trade markers, equity curves, drawdown, session P&L heatmaps, strategy comparison bars and spread by session. Empty inputs render a No data figure. PNG saving is explicit and HTML uses a self-contained embedded PNG, so no Plotly dependency was added. Matplotlib is imported lazily with a clear VisualizationUnavailable error in minimal runtimes; the desktop runtime lacks matplotlib, pytest and make, so focused rendering and full checks are unavailable here. Compileall, handoff validation, secret scan and git diff --check pass. No Pod, broker or order calls. Telegram chart wiring remains through the existing render/transport seam and is not state-changing. Handing to Claude for review.",
+      "review_notes": [
+        "1. matplotlib is not in pyproject.toml dependencies or uv.lock, so tests/unit/test_viz.py skips itself in CI (importorskip) and 'charts generated from fixtures' is never verified. Add a pinned matplotlib (dependency or an extra that CI installs), update uv.lock, and make the tests fail, not skip, if it is missing.",
+        "2. Figures are created with pyplot and never closed; a long-running process leaks memory. Use matplotlib.figure.Figure directly (no pyplot global state), or close figures after save_png/save_html.",
+        "3. Acceptance criterion 'chart request via chat returns an image' is not met: add a small handler that maps a chart request to a builder and returns the PNG path through the existing Telegram render/transport seam (read-only, no control or broker access), with a test. If you think this belongs to T-033, say so in a question instead.",
+        "I already applied mechanical fixes (ruff format, return annotations, variable rename, mypy ignore_missing_imports for matplotlib.*)."
+      ]
     },
     {
       "id": "T-033",
@@ -3621,6 +3627,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "src/trader/viz or tests/unit/test_viz.py changes"
+    },
+    {
+      "id": "V-131",
+      "subject": "T-032 visualization module review cycle 1",
+      "method": "Read src/trader/viz and tests against T-032 criteria; ruff check/format and mypy on viz; inspected pyproject and uv.lock for matplotlib; read CI failure step (Lint and format).",
+      "result": "fail",
+      "evidence": "Lint/mypy issues fixed mechanically. matplotlib absent from dependencies and uv.lock so tests are skipped in CI; pyplot figures never closed; chat-to-image criterion not implemented.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/viz, tests/unit/test_viz.py or pyproject.toml change"
     }
   ],
   "blockers": [
@@ -5931,6 +5947,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented T-032 lazy headless chart builders for candles/trades, equity, drawdown, session P&L, strategy comparison and spread, with empty-data handling and PNG/self-contained HTML output; added fixture tests. Compileall, handoff validation, secret scan and git diff --check pass; matplotlib/pytest/make unavailable in desktop runtime. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 113,
+      "ts": "2026-10-06T06:45:00Z",
+      "agent": "claude",
+      "action": "review_t032_changes_requested",
+      "task_ids": [
+        "T-032"
+      ],
+      "files_changed": [
+        "src/trader/viz/__init__.py",
+        "pyproject.toml",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-032 changes_requested cycle 1 of 2 (V-131): add pinned matplotlib plus uv.lock so CI really runs the tests, avoid pyplot global state or close figures, and implement the chat chart-request path. I fixed lint/format/mypy only. PR #52 itself (T-030, T-031) is green earlier and still awaits the owner's merge go; T-028 remains gated on the owner handing over the Pod terminal and the market being open."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."

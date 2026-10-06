@@ -31,7 +31,7 @@ def _records(data: Any) -> list[Mapping[str, Any]]:
     return [row for row in data if isinstance(row, Mapping)]
 
 
-def _plot():
+def _plot() -> Any:
     try:
         import matplotlib
 
@@ -44,7 +44,7 @@ def _plot():
     return pyplot
 
 
-def _figure(title: str):
+def _figure(title: str) -> tuple[Any, Any]:
     pyplot = _plot()
     figure, axis = pyplot.subplots(figsize=(10, 5), constrained_layout=True)
     axis.set_title(title)
@@ -83,12 +83,12 @@ def candlestick(
     trade_rows = _records(trades)
     for trade in trade_rows:
         try:
-            index = float(trade.get("index", len(rows) - 1))
+            x_position = float(trade.get("index", len(rows) - 1))
             value = float(trade["price"])
         except (KeyError, TypeError, ValueError):
             continue
         label = str(trade.get("kind", "trade"))
-        axis.scatter([index], [value], label=label)
+        axis.scatter([x_position], [value], label=label)
     if trade_rows:
         axis.legend(loc="best")
     axis.set_xlabel("bar")
@@ -133,9 +133,7 @@ def drawdown(points: Iterable[Mapping[str, Any]], *, title: str = "Drawdown") ->
     return figure
 
 
-def session_pnl_heatmap(
-    rows: Iterable[Mapping[str, Any]], *, title: str = "Session P&L"
-) -> Any:
+def session_pnl_heatmap(rows: Iterable[Mapping[str, Any]], *, title: str = "Session P&L") -> Any:
     data = _records(rows)
     figure, axis = _figure(title)
     if not data:
