@@ -104,8 +104,10 @@ def test_llm_failure_keeps_control_path_available() -> None:
 
 
 def test_control_handler_is_required_and_resume_uses_confirm_handler() -> None:
-    with pytest.raises(ValueError, match="control handler"):
+    with pytest.raises(TypeError):
         ChatRouter()  # type: ignore[call-arg]
+    with pytest.raises(ValueError, match="control handler"):
+        ChatRouter(control_handler=None)  # type: ignore[arg-type]
     commands: list[str] = []
     router = ChatRouter(
         control_handler=lambda command: commands.append(command) or "control",
