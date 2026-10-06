@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from typing import Any
 
 import httpx
 import pytest
 
 from trader.core.settings import EnvironmentSettings
+from trader.integrations.capital_com import client as capital_client
 from trader.integrations.capital_com.client import CapitalComClient, CapitalComError
 from trader.integrations.capital_com.rate_limit import RedisRateLimiter
 
@@ -105,7 +106,20 @@ def test_order_mutation_429_is_not_retried() -> None:
     assert [request.method for request in calls] == ["POST"]
 
 
-def test_two_clients_reuse_one_session_with_shared_http_client() -> None:
+@pytest.fixture
+def isolated_capital_session_cache() -> Iterator[None]:
+    with capital_client._SHARED_SESSION_LOCK:
+        snapshot = capital_client._SHARED_SESSIONS.copy()
+        capital_client._SHARED_SESSIONS.clear()
+    try:
+        yield
+    finally:
+        with capital_client._SHARED_SESSION_LOCK:
+            capital_client._SHARED_SESSIONS.clear()
+            capital_client._SHARED_SESSIONS.update(snapshot)
+
+
+def test_two_clients_reuse_one_session_with_shared_http_client(isolated_capital_session_cache: None) -> None:
     sessions = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
