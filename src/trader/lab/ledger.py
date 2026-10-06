@@ -78,8 +78,8 @@ class ExperimentLedger:
         """Export a snapshot without changing the source ledger."""
         destination = Path(path)
         try:
-            import pyarrow as pa
-            import pyarrow.parquet as pq
+            import pyarrow as pa  # type: ignore[import-untyped]
+            import pyarrow.parquet as pq  # type: ignore[import-untyped]
         except ImportError as exc:  # pragma: no cover - dependency is pinned in CI
             raise RuntimeError("pyarrow is required for Parquet ledger export") from exc
         rows = [json.dumps(record.payload(), sort_keys=True) for record in self._records]
