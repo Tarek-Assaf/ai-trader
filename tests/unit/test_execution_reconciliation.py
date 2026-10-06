@@ -282,3 +282,39 @@ def test_after_close_available_lag_is_tolerated():
     )
     assert snapshot.available == Decimal("999.49")
     assert snapshot.margin_used == Decimal("0.31")
+
+
+def test_anomalous_snapshot_still_anomalous_after_reread_fails_closed():
+    fields = CapitalAccountFieldMap(
+        "balance", "balance", "profitLoss", "derived", "available", verified=True
+    )
+    anomalous = {
+        "accounts": [
+            {
+                "accountId": "active",
+                "currency": "USD",
+                "balance": {
+                    "balance": "0",
+                    "profitLoss": "-999.80",
+                    "deposit": "999.80",
+                    "available": "0",
+                },
+            }
+        ]
+    }
+    rereads: list[int] = []
+
+    def reread() -> dict[str, object]:
+        rereads.append(1)
+        return anomalous
+
+    with pytest.raises(ValueError, match="anomalous"):
+        normalize_capital_account_snapshot(
+            anomalous,
+            account_id="active",
+            fields=fields,
+            notional_exposure=Decimal("0"),
+            reread=reread,
+            reread_delay_seconds=0,
+        )
+    assert len(rereads) == 1
