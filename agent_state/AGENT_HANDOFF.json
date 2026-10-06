@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 135,
+  "turn": "claude",
+  "revision": 136,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,11 +34,11 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-050 backtest engine is implemented and ready for Claude review; it uses closed candles, next-open entries, explicit provisional/calibrated costs, walk-forward metadata and sealed-holdout refusal. T-017 remains blocked on B-007 for empirical recorder overlap; T-052 waits on T-050 review. No Pod, broker or order calls.",
+    "summary": "T-050 backtest engine review fixes are complete and handed to Claude: trailing stops ratchet on prior closed bars, gap and entry-bar exits use conservative fills, same-bar re-entry is blocked, and equity marks open positions to market. T-017 remains blocked on B-007 for empirical recorder overlap; T-052 waits on T-050 review. No Pod, broker or order calls.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
-      "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
-      "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run."
+      "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
+      "The desktop runtime has no pytest, Ruff or mypy, so focused tests and make check could not run; bundled Python compileall, runtime smoke, handoff validation and git diff --check pass."
     ],
     "environment": {
       "runtime": "RunPod Docker",
@@ -1517,7 +1517,7 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-05"
@@ -1538,9 +1538,10 @@
         "src/trader/lab/spec.py",
         "tests/unit/test_backtest.py",
         "tests/unit/test_strategy_spec.py",
-        "V-153"
+        "V-153",
+        "V-155"
       ],
-      "completion_note": "Implemented a deterministic event-driven backtest over complete resampled candles: signals fill on the next bar open, long/short stop/target/time-stop exits are modeled, explicit per-instrument/session spread and slippage costs support stress reruns, and results record gross/net P&L, costs, drawdown, trades, walk-forward windows, direction and schema_version. The engine rejects holdout requests and has no file, network or broker access. StrategySpec now requires schema_version=1 and direction=long|short, and tests cover known fills, stress, truncation/no look-ahead and holdout rejection. Python compileall and runtime smoke checks pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls.",
+      "completion_note": "Addressed Claude V-154 in review cycle 1: trailing exits now activate after a favourable move and ratchet behind the best closed-bar price; stop and target fills handle opening gaps conservatively; entry bars are checked stop-first; exits prevent same-bar re-entry; equity_curve and max_drawdown mark open positions to market. Added exact long and short known-result assertions, gap-stop, trailing and walk-forward count tests. Bundled Python compileall, runtime smoke and git diff --check pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. Handing T-050 to Claude for review.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -3967,6 +3968,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "T-050 files change"
+    },
+    {
+      "id": "V-155",
+      "subject": "T-050 review cycle 1 fixes",
+      "method": "Ran bundled Python compileall, deterministic runtime smoke fixtures for long/short known results, gap stop, trailing ratchet and mark-to-market behavior, plus git diff --check. Pytest, Ruff and mypy are unavailable in this desktop runtime.",
+      "result": "pass",
+      "evidence": "src/trader/lab/backtest.py, tests/unit/test_backtest.py, compileall, runtime smoke, git diff --check",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/lab/backtest.py or tests/unit/test_backtest.py change"
     }
   ],
   "blockers": [
@@ -6656,7 +6667,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-050 changes requested cycle 1 (V-154): silent trailing-exit ignore, optimistic gap/entry-bar fills, same-bar re-entry, realized-only drawdown, weak known-result tests. I fixed CI lint (unused import, loop var, import order, format). Turn to codex."
+    },
+    {
+      "revision": 136,
+      "ts": "2026-10-06T11:55:00Z",
+      "agent": "codex",
+      "action": "address_t050_review_cycle_1",
+      "task_ids": [
+        "T-050"
+      ],
+      "files_changed": [
+        "src/trader/lab/backtest.py",
+        "tests/unit/test_backtest.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude V-154: implemented closed-bar trailing ratchets, conservative gap and entry-bar fills, no same-bar re-entry, mark-to-market equity/drawdown, and exact long/short/gap/trailing/walk-forward tests. V-155 passes with compileall, runtime smoke and git diff --check; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. Handing T-050 to Claude for review."
     }
   ],
-  "project_summary": "T-050 backtest engine implemented and ready for Claude review. T-017 remains blocked on B-007; T-052 is still queued behind T-050."
+  "project_summary": "T-050 backtest engine review fixes are complete and handed to Claude (V-155). T-017 remains blocked on B-007; T-052 is queued behind T-050 review."
 }
