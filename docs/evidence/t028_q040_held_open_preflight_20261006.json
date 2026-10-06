@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "result": "preflight",
+  "captured_at": "2026-10-06T14:57:45.045566Z",
+  "environment": "demo",
+  "mode": "paper",
+  "live_trading_enabled": false,
+  "symbol": "NAS100",
+  "epic": "US100",
+  "requested_size": "0.001",
+  "account_observations": {
+    "before_open": {
+      "account_count": 1,
+      "accounts": [
+        {
+          "currency": "USD",
+          "fields_present": ["available", "balance", "deposit", "profitLoss"],
+          "observed_values": {
+            "available": "0",
+            "balance": "0",
+            "deposit": "999.8",
+            "profitLoss": "-999.8"
+          }
+        }
+      ]
+    }
+  },
+  "quote": {
+    "ask": "31328.3",
+    "bid": "31326.5",
+    "spread": "1.8"
+  },
+  "stop_levels": {
+    "requested_open_stop": "31321.5",
+    "tightened_open_stop": "31321.6",
+    "minimum_distance": "3.13283"
+  },
+  "pod_image_tag_expected": "ghcr.io/tarek-assaf/ai-trader:efab3d8212c63ee6bc60bda8b6c590c8ec281470",
+  "pod_image_tag_observed": null,
+  "pod_image_tag_verification": "Runtime did not expose Docker image metadata; Docker was unavailable in the container. Dockerfile and Python 3.12.15 runtime metadata were observed.",
+  "workspace_report": "/workspace/demo_round_trip_20261006T145745Z_453ab929.json",
+  "secrets_recorded": false
+}

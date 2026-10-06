@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 158,
+  "turn": "claude",
+  "revision": 159,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-028 review cycle 2 failed (V-176): the 1.0 US100 round trip lasted 3 s and the open snapshot is not distinct from flat, so the equity/margin mapping is still unverified. Codex must run one more held-open (>=60 s, polled every 5 s) demo trade on the newest image under D-027 before 23:08 Riyadh. A third failure goes to the owner.",
+    "summary": "T-028 held-open Q-040 evidence is complete (V-177) and ready for Claude review. One retry was needed after a close-step 404; the retry held the position for over 60 seconds with 5-second account and position polling and showed changed account values. Image provenance could not be independently exposed by the Pod runtime.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2207,7 +2207,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-08",
         "R-21"
@@ -2246,9 +2246,12 @@
         "docs/evidence/t028_q040_round_trip_20261006.json",
         "docs/evidence/t028_q040_attempts_20261006.json",
         "/workspace/demo_round_trip_20261006T140010Z_02d5ffff.json",
-        "/workspace/t028_q040_attempts_20261006.json"
+        "/workspace/t028_q040_attempts_20261006.json",
+        "docs/evidence/t028_q040_held_open_preflight_20261006.json",
+        "docs/evidence/t028_q040_held_open_round_trip_20261006.json",
+        "docs/evidence/t028_q040_held_open_attempts_20261006.json"
       ],
-      "completion_note": "Q-040 larger demo evidence is complete. Preflight ran before the US open and records account_observations.before_open flat at 1000/1000/1000/0 with the expected image tag. Attempt 1 failed before order submission on sanitized HTTP 429 POST /session; the retry account check was clean. Attempt 2 succeeded with exactly one BUY 1.0 US100 demo position through the normal order path with Risk Guardian approval, stop attached and tightened, before/during/after account snapshots, and a normal-path close. Final state was flat with zero positions and zero working orders. No Pod URL, token, headers or bodies are recorded."
+      "completion_note": "T-028 Q-040 held-open demo completed after one bounded retry. Preflight captured account_observations.before_open before the US open. Attempt 1 opened a position and failed at close with sanitized error.not-found.dealId; 13 five-second polls captured the position, cleanup confirmed flat. Attempt 2 succeeded with one BUY 0.001 US100 through the normal order path with Risk Guardian approval, stop verification, 13 /accounts and /positions polls over 62.6 seconds, changed account available/balance/profitLoss values while open, normal close, and flat confirmation. The expected newest main image tag is recorded; runtime could not independently expose Docker image metadata. No Pod URL, token, headers or bodies are recorded."
     },
     {
       "id": "T-083",
@@ -4324,6 +4327,17 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "a held-open poll series of /accounts is committed"
+    },
+    {
+      "id": "V-177",
+      "subject": "T-028 Q-040 held-open demo with account polling",
+      "method": "Read the preflight before_open account, the attempt ledger, and 13 timestamped /accounts plus /positions polls during the second attempt; compare account values while the position remained visible and verify normal close cleanup.",
+      "result": "pass",
+      "evidence": "docs/evidence/t028_q040_held_open_preflight_20261006.json; docs/evidence/t028_q040_held_open_round_trip_20261006.json; docs/evidence/t028_q040_held_open_attempts_20261006.json",
+      "review_notes": "Attempt 1 failed at close with error.not-found.dealId after the position became absent from later polls; cleanup was flat. Attempt 2 held one BUY 0.001 US100 open for 62.6 seconds, all 13 polls showed the position, and available/balance/profitLoss changed from the first to last poll. Close and flat verification passed. Image tag was expected from newest main but unavailable from container runtime, so independent image verification remains unverified.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "Claude requests independent image provenance or additional account mapping evidence"
     }
   ],
   "blockers": [
@@ -7387,7 +7401,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-028 changes_requested (cycle 2, V-176): trade 3 s long, during_open timestamp equals before_open, no polling, image tag unverified. D-027 trade still unused; Codex to run one held-open (>=60 s, 5 s polling) trade on the newest main image. Turn to codex."
+    },
+    {
+      "revision": 159,
+      "ts": "2026-10-06T15:01:59Z",
+      "agent": "codex",
+      "action": "complete_t028_q040_held_open_demo",
+      "task_ids": [
+        "T-028"
+      ],
+      "files_changed": [
+        "docs/evidence/t028_q040_held_open_preflight_20261006.json",
+        "docs/evidence/t028_q040_held_open_round_trip_20261006.json",
+        "docs/evidence/t028_q040_held_open_attempts_20261006.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-028 Q-040 held-open demo complete (V-177): preflight recorded account_observations.before_open; attempt 1 failed at close with error.not-found.dealId after 13 polls and cleanup was flat; attempt 2 succeeded with one normal-path BUY 0.001 US100, stop verification, 13 five-second account/position polls over 62.6 seconds, changed account available/balance/profitLoss values, normal close and flat confirmation. Expected newest main image tag recorded, but Pod runtime did not expose Docker tag. Handing to Claude for review."
     }
   ],
-  "project_summary": "T-028 Q-040 larger demo round trip completed with one bounded retry and redacted Pod evidence; ready for Claude review. T-085 is review-passed. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
+  "project_summary": "T-028 Q-040 held-open demo completed after one bounded retry and redacted Pod evidence; handoff to Claude for review. T-085 is review-passed. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
 }
