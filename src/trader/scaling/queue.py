@@ -1,11 +1,13 @@
 """Redis Streams queue with priorities, idempotency, retries and a DLQ."""
+
 from __future__ import annotations
 
 import json
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, Mapping, Protocol, cast
+from typing import Any, Protocol, cast
 
 
 class Priority(IntEnum):
@@ -76,7 +78,7 @@ class QueueTask:
     def from_fields(
         cls,
         fields: Mapping[str | bytes, str | bytes],
-    ) -> "QueueTask":
+    ) -> QueueTask:
         def get(name: str, default: str = "") -> str:
             value = fields.get(name, fields.get(name.encode(), default))
             return value.decode() if isinstance(value, bytes) else str(value)
@@ -168,7 +170,8 @@ class RedisTaskQueue:
             for _stream, messages in rows or []:
                 for message_id, fields in messages:
                     mid = message_id.decode() if isinstance(message_id, bytes) else str(message_id)
-                    claimed.append((f"{self._streams[priority]}|{mid}", QueueTask.from_fields(fields)))
+                    ref = f"{self._streams[priority]}|{mid}"
+                    claimed.append((ref, QueueTask.from_fields(fields)))
                     if len(claimed) >= count:
                         return claimed
         return claimed

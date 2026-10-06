@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 173,
+  "turn": "codex",
+  "revision": 174,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-070 review cycle 2 fixes are complete on the active branch (V-190 pending CI/Claude review): queue priority streams, default-deny autoscaler, RunPod Worker protocol adapter, non-blocking worker timeout and scale-up/down plus safety tests. Q-041 Pod redeploy remains with the owner; T-044/T-017 and T-060 remain blocked as recorded.",
+    "summary": "T-070 passed (). Pod redeploy from the newest main image is with the owner (Q-041); then the Telegram smoke test. Next: T-044/T-017 (B-007), then T-060 code half.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -1760,7 +1760,7 @@
       "phase": 7,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-22"
       ],
@@ -1780,7 +1780,7 @@
         "src/trader/workers/worker.py",
         "tests/unit/test_scaling.py"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "src/trader/scaling/queue.py",
         "src/trader/scaling/autoscaler.py",
@@ -1788,7 +1788,8 @@
         "src/trader/integrations/runpod/client.py",
         "src/trader/workers/worker.py",
         "tests/unit/test_scaling.py",
-        "https://docs.runpod.io/api-reference/pods"
+        "https://docs.runpod.io/api-reference/pods",
+        "V-191"
       ],
       "completion_note": "Cycle 2 addressed the review blockers: formatted queue, autoscaler, RunPod adapter, worker runner and tests; made autoscaler termination default-deny to managed_by=ai-trader-autoscaler workers; aligned RunPodClient with the RunPodWorkerApi Worker protocol; added global P0-P3 stream claiming, a scale-up/scale-down acceptance test, MockTransport coverage and a non-blocking timeout test. No Pod API calls, credentials or orders were used. CI make check and Claude review remain.",
       "review_notes": [
@@ -4600,6 +4601,17 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "T-070 files or scaling policy changes"
+    },
+    {
+      "id": "V-191",
+      "subject": "T-070 review cycle 2 (Claude): queue, workers, autoscaler",
+      "method": "Read autoscaler, RunPod client, worker and test list at af3eb45 against the six V-189 items; ran ruff check and format locally on the changed files; py_compile. CI quality runs the suite.",
+      "result": "pass",
+      "evidence": "src/trader/scaling/queue.py; src/trader/scaling/autoscaler.py; src/trader/integrations/runpod/client.py; src/trader/workers/worker.py; tests/unit/test_scaling.py",
+      "review_notes": "Pass. All six items addressed: default-deny scaling (only role=worker pods carrying managed_by=ai-trader-autoscaler are ever terminated, in evaluate and reconcile_orphans), scale-up/scale-down load test, RunPodClient returns Worker and satisfies the protocol (MockTransport test), non-blocking worker timeout, one stream per priority claimed P0 first. Claude applied mechanical lint (ruff check --fix, one long line, ruff format) on the T-070 files. Non-blocking: the RunPod endpoint https://api.runpod.io/v2 is unverified against the current pod API (Codex cited docs.runpod.io/api-reference/pods); a timed-out handler thread cannot be killed, only abandoned; the autoscaler is disabled by default and not wired into the runtime. Before any live use: verify the REST base URL and pod create/list/terminate shapes with a single read-only list call, and wire the autoscaler behind the enabled flag with the owner's cap.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "the RunPod API shape, the scaling policy or the managed-tag rule changes"
     }
   ],
   "blockers": [
@@ -7918,6 +7930,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed all blocking T-070 review findings in code and tests: formatting, managed-worker default-deny, global priority streams, RunPod autoscaler protocol, non-blocking timeout and scale-up/down acceptance coverage. No Pod/API calls, credentials or orders. Handing to Claude for make check and review."
+    },
+    {
+      "revision": 174,
+      "ts": "2026-10-06T19:50:00Z",
+      "agent": "claude",
+      "action": "review_t070_cycle2_pass",
+      "task_ids": [
+        "T-070"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/scaling/queue.py",
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/scaling/__init__.py",
+        "src/trader/integrations/runpod/client.py",
+        "src/trader/workers/worker.py",
+        "tests/unit/test_scaling.py"
+      ],
+      "summary": "T-070 passed (V-191). Mechanical lint and format applied. RunPod endpoint still unverified for live use. Q-041 (Pod redeploy) still with the owner. Next for Codex: when the owner confirms the redeploy, run the names-only check and smoke test; otherwise T-044/T-017 prep (B-007) and the flaky test_two_clients_reuse_one_session fixture."
     }
   ],
   "project_summary": "T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-087 runtime wiring passed review (V-184); the Pod names-only check passed but the Telegram smoke script is missing from the running image (V-186/B-008). T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."

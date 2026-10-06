@@ -1,12 +1,15 @@
 """Worker process loop for queue tasks; trading singletons stay on core."""
+
 from __future__ import annotations
 
 import time
-from concurrent.futures import Future, ThreadPoolExecutor, TimeoutError as FutureTimeout
+from collections.abc import Callable, Mapping
+from concurrent.futures import Future, ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FutureTimeout
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping
+from typing import Any
 
-from trader.scaling.queue import QueueTask, RedisTaskQueue
+from trader.scaling.queue import RedisTaskQueue
 
 SINGLETON_TASKS = frozenset(
     {
@@ -59,9 +62,7 @@ class WorkerRunner:
                     task,
                     error="unsupported worker task",
                 )
-                results.append(
-                    WorkerResult(task.task_id, "rejected", "unsupported worker task")
-                )
+                results.append(WorkerResult(task.task_id, "rejected", "unsupported worker task"))
                 continue
 
             pool = ThreadPoolExecutor(max_workers=1)

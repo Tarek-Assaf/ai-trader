@@ -80,9 +80,7 @@ def test_queue_serializes_sheds_and_claims_global_priority() -> None:
     assert redis.added[1][0].endswith(":p0")
     queue.claim("consumer", count=1, block_ms=0)
     assert redis.reads[0].endswith(":p0")
-    keep, dropped = RedisTaskQueue.shed(
-        [p0, p3, QueueTask("p2", {}, Priority.P2)], overload=True
-    )
+    keep, dropped = RedisTaskQueue.shed([p0, p3, QueueTask("p2", {}, Priority.P2)], overload=True)
     assert [task.priority for task in keep] == [Priority.P0]
     assert [task.priority for task in dropped] == [Priority.P3, Priority.P2]
 
@@ -91,10 +89,7 @@ def test_retry_dead_letters_after_limit() -> None:
     redis = FakeRedis()
     queue = RedisTaskQueue(redis)
     task = QueueTask("a", {}, Priority.P1, retries=1, max_retries=1)
-    assert (
-        queue.retry_or_dead_letter("trader:tasks:p1|1", task, error="failed")
-        == "dead-letter"
-    )
+    assert queue.retry_or_dead_letter("trader:tasks:p1|1", task, error="failed") == "dead-letter"
     assert redis.acks == ["1"]
     assert redis.added[0][0] == "trader:tasks:dead"
 
@@ -221,9 +216,7 @@ def test_runpod_adapter_matches_autoscaler_protocol() -> None:
 
 def test_worker_timeout_does_not_wait_for_handler() -> None:
     class Queue:
-        def claim(
-            self, consumer: str, *, count: int = 1
-        ) -> list[tuple[str, QueueTask]]:
+        def claim(self, consumer: str, *, count: int = 1) -> list[tuple[str, QueueTask]]:
             return [
                 (
                     "trader:tasks:p2|1",
@@ -231,9 +224,7 @@ def test_worker_timeout_does_not_wait_for_handler() -> None:
                 )
             ]
 
-        def retry_or_dead_letter(
-            self, message_ref: str, task: QueueTask, *, error: str
-        ) -> str:
+        def retry_or_dead_letter(self, message_ref: str, task: QueueTask, *, error: str) -> str:
             return "retry"
 
         def acknowledge(self, message_ref: str) -> int:
@@ -243,9 +234,7 @@ def test_worker_timeout_does_not_wait_for_handler() -> None:
         time.sleep(0.1)
 
     started = time.perf_counter()
-    results = WorkerRunner(
-        Queue(), consumer="c", handlers={"research": slow}
-    ).run_once()
+    results = WorkerRunner(Queue(), consumer="c", handlers={"research": slow}).run_once()
     elapsed = time.perf_counter() - started
     assert results[0].status == "timeout"
     assert elapsed < 0.08

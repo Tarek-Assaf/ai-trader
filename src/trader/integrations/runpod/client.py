@@ -1,4 +1,5 @@
 """Minimal RunPod worker API adapter with strict response validation."""
+
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
@@ -42,9 +43,7 @@ class RunPodClient:
 
     def _check(self, response: httpx.Response) -> Mapping[str, Any]:
         if response.status_code < 200 or response.status_code >= 300:
-            raise RunPodApiError(
-                f"RunPod request failed with status {response.status_code}"
-            )
+            raise RunPodApiError(f"RunPod request failed with status {response.status_code}")
         try:
             data = response.json()
         except ValueError as exc:
@@ -74,13 +73,9 @@ class RunPodClient:
             pod_id=pod_id,
             role=str(role or "unknown"),
             status=str(data.get("status", data.get("desiredStatus", "unknown"))),
-            hourly_cost_usd=float(
-                data.get("costPerHr", data.get("hourly_cost_usd", 0.0)) or 0.0
-            ),
+            hourly_cost_usd=float(data.get("costPerHr", data.get("hourly_cost_usd", 0.0)) or 0.0),
             tags=cls._tags(data.get("tags", ())),
-            cpu_percent=float(
-                data.get("cpuPercent", data.get("cpu_percent", 0.0)) or 0.0
-            ),
+            cpu_percent=float(data.get("cpuPercent", data.get("cpu_percent", 0.0)) or 0.0),
         )
 
     def list_workers(self) -> list[Worker]:
