@@ -112,24 +112,20 @@ def test_named_session_boundaries_from_config():
     assert _session_label(start, schedule=None, windows=windows) == "asia"
     assert _session_label(start + timedelta(minutes=479), schedule=None, windows=windows) == "asia"
     assert (
-        _session_label(start + timedelta(minutes=480), schedule=None, windows=windows)
-        == "london"
+        _session_label(start + timedelta(minutes=480), schedule=None, windows=windows) == "london"
     )
     assert (
-        _session_label(start + timedelta(minutes=779), schedule=None, windows=windows)
-        == "london"
+        _session_label(start + timedelta(minutes=779), schedule=None, windows=windows) == "london"
     )
     assert (
-        _session_label(start + timedelta(minutes=780), schedule=None, windows=windows)
-        == "new_york"
+        _session_label(start + timedelta(minutes=780), schedule=None, windows=windows) == "new_york"
     )
     assert (
         _session_label(start + timedelta(minutes=1319), schedule=None, windows=windows)
         == "new_york"
     )
     assert (
-        _session_label(start + timedelta(minutes=1320), schedule=None, windows=windows)
-        == "closed"
+        _session_label(start + timedelta(minutes=1320), schedule=None, windows=windows) == "closed"
     )
 
 

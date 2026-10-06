@@ -235,9 +235,9 @@ def calibrate(
     if session_for is not None and (market_hours is not None or session_windows is not None):
         raise ValueError("provide session_for or market_hours/session_windows, not both")
     if session_for is None:
-        session_for = lambda stamp: _session_label(
-            stamp, schedule=market_hours, windows=session_windows
-        )
+
+        def session_for(stamp: datetime) -> str:
+            return _session_label(stamp, schedule=market_hours, windows=session_windows)
 
     hist: dict[datetime, float] = {}
     for row in hist_bars:
@@ -524,9 +524,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     hist_files = sorted(args.histdata.rglob("*.parquet"))
     capital_files = sorted(args.recorder.rglob("*.parquet"))
     tick_files = (
-        sorted(args.histdata_ticks.rglob("*.parquet"))
-        if args.histdata_ticks is not None
-        else []
+        sorted(args.histdata_ticks.rglob("*.parquet")) if args.histdata_ticks is not None else []
     )
     if not hist_files or not capital_files:
         raise SystemExit("both --histdata and --recorder must contain Parquet files")
