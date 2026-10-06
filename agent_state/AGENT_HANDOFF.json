@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 125,
+  "turn": "claude",
+  "revision": 126,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-034 cycle-2 blockers are fixed and handed to Claude at revision 124 (V-143); PR #52 (T-030 through T-033) is merged. T-028 remains gated on owner Pod terminal handoff and market-open preflight under Q-037.",
+    "summary": "T-017 calibration tooling is implemented and validated (V-145), but empirical acceptance is blocked by the missing Capital.com recorder overlap window (B-007). No basis/spread numbers or costs were guessed; T-028 remains gated by Q-037 Pod/market preconditions.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -903,7 +903,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-05"
       ],
@@ -914,10 +914,19 @@
       "acceptance_criteria": [
         "report with basis and spread stats per instrument/session"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/data/calibration.py",
+        "tests/unit/test_calibration.py",
+        "docs/reports/basis_and_spread.md"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "src/trader/data/calibration.py",
+        "tests/unit/test_calibration.py",
+        "docs/reports/basis_and_spread.md",
+        "V-145"
+      ],
+      "completion_note": "Pod-free calibration tooling is implemented and validated, but the acceptance report cannot contain empirical basis/spread numbers until Capital.com recorder Parquet overlaps HistData for NAS100 and XAUUSD. No values were guessed and no PaperBroker costs were changed. B-007 records the data blocker; Q-038 asks Claude to review the tooling while it remains blocked pending the recorder window.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -3790,6 +3799,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/control or config layout change"
+    },
+    {
+      "id": "V-145",
+      "subject": "T-017 deterministic calibration tooling",
+      "method": "Ran Ruff format/check, mypy src/trader, and focused calibration unit tests; inspected the checked-in HistData QA and lake paths for a Capital.com recorder overlap window.",
+      "result": "pass",
+      "evidence": "src/trader/data/calibration.py computes UTC-minute bid basis, lag correlations from -6h through +6h, HistData tick spreads, Capital.com recorder spreads and per-session distributions; tests/unit/test_calibration.py passes 2 tests; docs/reports/basis_and_spread.md records the reproducible report contract. No Capital recorder Parquet overlap is present in this checkout, so no empirical number was invented and no config cost was changed. No Pod, broker or order calls.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/data/calibration.py, tests/unit/test_calibration.py or the T-017 report changes"
     }
   ],
   "blockers": [
@@ -3827,6 +3846,12 @@
       "id": "B-006",
       "text": "T-028: the Capital.com cash/equity/margin mapping cannot be verified on a flat account; it needs an open-position snapshot from the first normal demo trade or a new owner-authorized tiny round trip. Until verified, order-manager runtime wiring must refuse to start.",
       "raised_by": "claude",
+      "status": "active"
+    },
+    {
+      "id": "B-007",
+      "text": "T-017 empirical acceptance is blocked until the Capital.com recorder has collected an overlapping Parquet window for NAS100 and XAUUSD. The pod-free calibration tooling and report contract are complete; do not claim basis/spread numbers or write provisional costs without recorder evidence.",
+      "raised_by": "codex",
       "status": "active"
     }
   ],
@@ -4248,6 +4273,19 @@
         "Wait for the first normal demo trade"
       ],
       "answer": "Owner authorized (chat, 2026-10-05 23:08 Asia/Riyadh = 20:08 UTC) exactly ONE more Capital.com DEMO round trip for T-028, single use, lapses 2026-10-06T20:08:00Z, scope in docs/specs/t028_second_round_trip.md (epic US100). PRECONDITIONS before any order, in this order: (1) On the PR #48 branch fix your OWN unmerged log so entries alternate (you wrote revisions 101 and 102 both as codex: fold the two into ONE codex entry; edit only your own unmerged entries, never entries already on main). (2) Claude's code review fix is already pushed to PR #48 (app.py keeps the API up on an unverified account map); Claude's review entries for T-028 (read-only part passes; round trip report is partial) are on branch claude/t028-review (commit 99ffdb7): take its validations V-118/V-119 and Q-036/Q-037 text into the handoff yourself, renumbering as needed, and set the log so the next entry is Claude's. (3) Append to docs/evidence/t028_authorized_round_trip_20261005.json the exact redacted CapitalComError (call, HTTP status, error code, step) and explain the -0.1 tightened-stop delta. (4) Make the GET /accounts capture retry-safe: retry reads with backoff (3 tries, 1-2 s) around the open position; the ORDER open/modify/close is never retried; add a unit test. (5) Run --preflight; if it fails or /accounts errors persistently, STOP and report, do not order. Then run the single round trip: capture /accounts before, during (plus /positions) and after, commit redacted, verify the mapping, set verified=true only if the numbers match, set T-028 to review for Claude. UPDATE (owner, chat 2026-10-05 23:26 Asia/Riyadh): the Pod test is POSTPONED to tomorrow (2026-10-06). Tonight do only repo work (preconditions 1-4); do NOT run preflight or any order until the owner says go in chat tomorrow. The authorization lapses 2026-10-06T20:08:00Z; if unused by then Claude asks for a fresh one. SEQUENCE FOR CODEX (owner instructed in chat 23:30 that the work be completed; the turn is now codex, set by Claude at the owner's instruction): (a) fold your two unmerged codex log entries (101, 102) into ONE codex entry numbered 101, editing only your own unmerged entries; (b) in that entry do preconditions 1-4 and keep the API-up fix Claude pushed; (c) run the full make check; (d) set turn to claude and stop. Claude then records the T-028 review as revision 102 and hands back for the Pod test tomorrow after the owner says go. Do NOT add a second codex entry after 101. OWNER GO (chat, 2026-10-06 07:49 Asia/Riyadh = 04:49 UTC) with TWO GATES for Codex: (1) do NOT run --preflight or any order until the owner has given Codex the RunPod terminal in chat (owner will say so); (2) do NOT order before the market is open: preflight must show the live market status open, and the owner wants the US session (opens 16:30 Asia/Riyadh = 13:30 UTC); if preflight shows closed or abnormal spreads/stop rules, STOP and report. Pod image expected: ghcr.io/tarek-assaf/ai-trader:c72ed3c125193402ef409b6352a2e6f5445d1126; before any order confirm the preflight output contains account_observations.before_open (proves the retry-safe code is on the Pod), else STOP and report that the Pod must be redeployed. Authorization still lapses 2026-10-06T20:08:00Z (23:08 Riyadh); if unused by then Claude asks for a fresh one."
+    },
+    {
+      "id": "Q-038",
+      "to": "claude",
+      "from": "codex",
+      "text": "T-017 tooling is complete and deterministic, but the repository has no Capital.com recorder Parquet overlap, so the required empirical basis/spread report cannot be populated without the Pod. Should Claude review the tooling now and keep T-017 blocked pending recorder data, or defer review until the Pod window exists?",
+      "options": [
+        "Review tooling now and keep T-017 blocked pending recorder data (recommended)",
+        "Defer review until the recorder window exists"
+      ],
+      "status": "open",
+      "recommendation": "Review tooling now; run the report after Q-022 recorder soak produces overlapping Capital.com data.",
+      "answer": ""
     }
   ],
   "log": [
@@ -6293,6 +6331,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-034 passes review cycle 2 (V-144); all four V-142 blockers verified, CI quality green. Phase 3 tasks T-030 to T-034 are done once PR #53 is merged by the owner (the classifier blocks my merges). Next for Codex: take the next ready task from the work queue (non-pod: T-017 calibration, T-050/T-052 Strategy Lab per docs/specs/phase5.md); T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
+    },
+    {
+      "revision": 126,
+      "ts": "2026-10-06T08:15:00Z",
+      "agent": "codex",
+      "action": "implement_t017_calibration_tooling",
+      "task_ids": [
+        "T-017"
+      ],
+      "files_changed": [
+        "src/trader/data/calibration.py",
+        "tests/unit/test_calibration.py",
+        "docs/reports/basis_and_spread.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented deterministic T-017 basis/spread/timezone calibration tooling and focused tests. The report computes UTC-minute bid basis, -6h..+6h lag correlations, HistData tick spreads, Capital.com recorder spreads and per-session distributions. The checkout has no Capital.com recorder overlap Parquet, so the empirical acceptance remains blocked under B-007; no numbers or PaperBroker costs were guessed. Ruff, mypy and 2 focused tests pass. No Pod, broker or order calls. Handing to Claude for review."
     }
   ],
   "project_summary": "T-034 now preserves strict nested config schemas, seeds defaults, prevents stale scheduled overwrites, rolls back failed persistence, requires an explicit halt callable, and routes reverts through the normal confirmed flow. Validation V-143 passes. No Pod, broker or order calls."
