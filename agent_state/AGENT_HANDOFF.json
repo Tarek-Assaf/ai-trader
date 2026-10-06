@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 123,
+  "turn": "claude",
+  "revision": 124,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-034 review-cycle-2 fixes are complete and handed to Claude at revision 122 (V-141); T-030 through T-033 remain done on PR #52 pending merge. T-028 remains gated on owner Pod terminal handoff and market-open preflight under Q-037.",
+    "summary": "T-034 cycle-2 blockers are fixed and handed to Claude at revision 124 (V-143); PR #52 (T-030 through T-033) is merged. T-028 remains gated on owner Pod terminal handoff and market-open preflight under Q-037.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1755,7 +1755,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-26",
         "R-12"
@@ -1782,7 +1782,7 @@
         "tests/unit/test_settings_service.py",
         "tests/invariants/test_settings_import_boundary.py"
       ],
-      "completion_note": "Addressed Claude V-140 safety blockers: mandatory next-trading-day default cooldown, halt checks at request/confirm/apply_due, confirm-time revalidation and duplicate-key prevention, fail-closed bounds, positive/integer validation, transactional normalized atomic persistence, risk/strategy file mapping, pending persistence hooks, startup reconcile refusal, refusal audit/notification, revert, locking and prefix import-boundary coverage. Full local checks pass; no Pod, broker or order calls.",
+      "completion_note": "Addressed Claude V-142 blockers: explicit nested key-to-file paths and checked-in default seeding preserve risk.yaml and strategy_lab.yaml schemas; scheduled changes recheck current value, bounds, consistency and halt before apply and block duplicate requests; version-store failures leave memory and files unchanged; halt_active is now required and revert routes through the public request flow. Full local checks pass; no Pod, broker or order calls.",
       "review_notes": [
         "Cycle 2 of 2. V-140 items 1, 2, 3 (re-validate at confirm), 4, 5, 9 and 10 are fixed and verified. Four items remain; fix exactly these, anything new from me after this goes to the owner as a question.",
         "B1 (blocker). Gate settings never reach the real config. strategy_lab.yaml is nested (gate1_backtest_to_paper.min_trades) but _persist writes flat keys such as gate1_min_trades at the top level, so the value is ignored or the strict loader (trader.core.config.load_config_file) rejects the file on restart. Add an explicit key to (file, path) map, using the same names as _check_strategy_floors in core/config.py (gate1_min_trades -> gate1_backtest_to_paper.min_trades and so on; risk keys stay top level in risk.yaml). Also, when the file does not yet exist in /workspace/config, seed the document from the checked-in default in config/ before changing the key (today a missing file is written with a single key, which fails the loader). Test: copy the real config/risk.yaml and config/strategy_lab.yaml into tmp_path, apply one risk change and one gate change through the service, then load them with load_all_configs and assert the new values and that nothing else changed.",
@@ -3770,6 +3770,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/control or config layout change"
+    },
+    {
+      "id": "V-143",
+      "subject": "T-034 SettingsService review cycle 2 fixes",
+      "method": "Ran Ruff over src/tests, mypy over src/trader, 15 focused SettingsService/config/import tests, handoff validation, secret scan and git diff --check after addressing V-142.",
+      "result": "pass",
+      "evidence": "Nested gate paths map to the strict strategy_lab schema and missing volume files are seeded from checked-in defaults; apply_due rejects stale current values and rechecks safety; version-store failure leaves memory and file unchanged; constructor requires a halt callable and revert uses request_change. Ruff, mypy, 15 focused tests, handoff validation and secret scan pass. No Pod, broker or order calls.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/control, config/risk_ceilings.yaml or SettingsService tests change"
     }
   ],
   "blockers": [
@@ -6244,7 +6254,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-034 changes_requested cycle 2 of 2 (V-142): most V-140 items verified fixed; four blockers remain in review_notes (nested gate keys never reach the real config, scheduled loosening can overwrite a later tightening, apply not fully transactional, halt callable defaults to False). Any further problem goes to the owner as a question. No code edits from me. PR #52 is merged (main rev 121). T-028 stays gated on the owner handing over the Pod terminal and the market being open."
+    },
+    {
+      "revision": 124,
+      "ts": "2026-10-06T08:08:05Z",
+      "agent": "codex",
+      "action": "address_t034_review_cycle_2",
+      "task_ids": [
+        "T-034"
+      ],
+      "files_changed": [
+        "src/trader/control/settings_service.py",
+        "tests/unit/test_settings_service.py",
+        "tests/invariants/test_settings_import_boundary.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude V-142 blockers: nested Strategy Lab paths and default seeding, stale scheduled-change checks, rollback-safe version persistence, required halt callable and revert flow. Ruff, mypy and 15 focused tests pass; handoff validation and secret scan pass. No Pod, broker or order calls. Handing T-034 to Claude."
     }
   ],
-  "project_summary": "T-034 review-cycle-2 fixes harden SettingsService with mandatory next-day loosening cooldown, repeated halt/revalidation gates, fail-closed bounds and typed values, transactional atomic split-file persistence, pending/version reconciliation, audit/notification refusal handling, revert and concurrency locking. Validation V-141 passes. No Pod, broker or order calls."
+  "project_summary": "T-034 now preserves strict nested config schemas, seeds defaults, prevents stale scheduled overwrites, rolls back failed persistence, requires an explicit halt callable, and routes reverts through the normal confirmed flow. Validation V-143 passes. No Pod, broker or order calls."
 }

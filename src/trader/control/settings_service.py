@@ -132,6 +132,24 @@ class SettingsService:
         "gate3_min_weeks",
         "gate3_min_micro_trades",
     }
+    _KEY_PATHS = {
+        "gate1_min_trades": ("strategy_lab.yaml", ("gate1_backtest_to_paper", "min_trades")),
+        "gate1_min_out_of_sample_trades": (
+            "strategy_lab.yaml",
+            ("gate1_backtest_to_paper", "min_out_of_sample_trades"),
+        ),
+        "gate1_min_walk_forward_windows": (
+            "strategy_lab.yaml",
+            ("gate1_backtest_to_paper", "min_walk_forward_windows"),
+        ),
+        "gate2_min_weeks": ("strategy_lab.yaml", ("gate2_paper_to_micro_live", "min_weeks")),
+        "gate2_min_paper_trades": (
+            "strategy_lab.yaml",
+            ("gate2_paper_to_micro_live", "min_trades"),
+        ),
+        "gate3_min_weeks": ("strategy_lab.yaml", ("gate3_micro_to_live", "min_weeks")),
+        "gate3_min_micro_trades": ("strategy_lab.yaml", ("gate3_micro_to_live", "min_trades")),
+    }
 
     def __init__(
         self,
@@ -146,7 +164,7 @@ class SettingsService:
         config_dir: Path | None = None,
         clock: Callable[[], float] = time.time,
         cooldown_seconds: float | None = None,
-        halt_active: Callable[[], bool] | None = None,
+        halt_active: Callable[[], bool],
     ) -> None:
         if cooldown_seconds is not None and cooldown_seconds < 0:
             raise ValueError("cooldown_seconds cannot be negative")
@@ -155,7 +173,7 @@ class SettingsService:
         self._audit, self._notify, self._version_store = audit, notify, version_store
         self._config_path, self._config_dir = config_path, config_dir
         self._clock, self._cooldown = clock, cooldown_seconds
-        self._halt_active = halt_active or (lambda: False)
+        self._halt_active = halt_active
         self._pending: dict[str, PendingChange] = {}
         self._scheduled: dict[str, AppliedChange] = {}
         self._applied: dict[str, AppliedChange] = {}
@@ -202,7 +220,10 @@ class SettingsService:
             request = SettingsChangeRequest(request, new_value, reason)
         if request.key not in self._SETTABLE_KEYS or request.key not in self._values:
             raise SettingsRejected("setting key is not changeable")
-        if any(change.key == request.key for change in self._pending.values()):
+        self._prune_expired()
+        if any(change.key == request.key for change in self._pending.values()) or any(
+            change.key == request.key for change in self._scheduled.values()
+        ):
             raise SettingsRejected("a change for this setting is already pending")
         old = self._values[request.key]
         old_number, new_number = _number(old), self._request_number(request.new_value, request.key)
@@ -295,9 +316,17 @@ class SettingsService:
             applied: list[AppliedChange] = []
             for change in due:
                 self._scheduled.pop(change.change_id, None)
-                if self._is_halted(None):
-                    self._record("settings_change_rejected", change, reason="halt_active")
-                    self._message(f"Change {change.change_id} refused: halt is active.")
+                current = _number(self._values[change.key])
+                try:
+                    if current != _number(change.old_value):
+                        raise SettingsRejected("current value changed since confirmation")
+                    self._check_bounds(change.key, _number(change.new_value))
+                    self._check_consistency(change.key, _number(change.new_value))
+                    if self._is_halted(None):
+                        raise SettingsRejected("halt_active")
+                except SettingsRejected as exc:
+                    self._record("settings_change_rejected", change, reason=str(exc))
+                    self._message(f"Change {change.change_id} refused: {exc}.")
                     continue
                 self._apply(change)
                 applied.append(change)
@@ -328,11 +357,8 @@ class SettingsService:
             if applied is None:
                 self._refuse(change_id, "change is not available for revert")
                 raise SettingsRejected("change is not available for revert")
-            return self._request_change(
-                SettingsChangeRequest(applied.key, applied.old_value, reason=f"revert {change_id}"),
-                None,
-                halt_active=None,
-                reason=f"revert {change_id}",
+            return self.request_change(
+                SettingsChangeRequest(applied.key, applied.old_value, reason=f"revert {change_id}")
             )
 
     def reconcile_startup(self, version_values: Mapping[str, Any]) -> bool:
@@ -364,11 +390,14 @@ class SettingsService:
         normalized = _stored_number(applied.new_value)
         candidate = dict(self._values)
         candidate[applied.key] = normalized
+        path = self._path_for(applied.key)
+        snapshot = self._snapshot(path)
         try:
-            self._persist(applied.key, candidate)
             if self._version_store is not None:
                 self._version_store.append(applied)
+            self._persist(applied.key, candidate)
         except Exception as exc:
+            self._restore(path, snapshot)
             self._record(
                 "settings_change_rejected", applied, reason=f"apply_failed:{type(exc).__name__}"
             )
@@ -387,11 +416,25 @@ class SettingsService:
             return
         path.parent.mkdir(parents=True, exist_ok=True)
         current: dict[str, Any] = {}
+        if not path.exists():
+            default_path = Path(__file__).resolve().parents[3] / "config" / path.name
+            if default_path.is_file():
+                seeded = yaml.safe_load(default_path.read_text(encoding="utf-8"))
+                if isinstance(seeded, dict):
+                    current.update(seeded)
         if path.exists():
             loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
             if isinstance(loaded, dict):
                 current.update(loaded)
-        current[key] = _stored_number(values[key])
+        target = current
+        path_spec = self._KEY_PATHS.get(key, (path.name, (key,)))[1]
+        for part in path_spec[:-1]:
+            child = target.get(part)
+            if not isinstance(child, dict):
+                child = {}
+                target[part] = child
+            target = child
+        target[path_spec[-1]] = _stored_number(values[key])
         contents = yaml.safe_dump(current, sort_keys=True)
         with tempfile.NamedTemporaryFile(
             "w", encoding="utf-8", dir=path.parent, delete=False
@@ -405,7 +448,36 @@ class SettingsService:
             return self._config_path
         if self._config_dir is None:
             return None
-        return self._config_dir / ("strategy_lab.yaml" if key.startswith("gate") else "risk.yaml")
+        filename = self._KEY_PATHS.get(key, ("risk.yaml", ()))[0]
+        return self._config_dir / filename
+
+    @staticmethod
+    def _snapshot(path: Path | None) -> tuple[bool, bytes] | None:
+        if path is None or not path.exists():
+            return None
+        return True, path.read_bytes()
+
+    @staticmethod
+    def _restore(path: Path | None, snapshot: tuple[bool, bytes] | None) -> None:
+        if path is None:
+            return
+        if snapshot is None:
+            if path.exists():
+                path.unlink()
+            return
+        path.write_bytes(snapshot[1])
+
+    def _prune_expired(self) -> None:
+        now = self._clock()
+        expired = [
+            change_id
+            for change_id, change in self._pending.items()
+            if now - change.requested_at > 300
+        ]
+        for change_id in expired:
+            change = self._pending.pop(change_id)
+            self._record("settings_change_rejected", change, reason="confirmation_expired")
+            self._message(f"Change {change_id} refused: confirmation expired.")
 
     def _load_pending(self) -> None:
         if self._version_store is None:

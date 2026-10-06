@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import shutil
 import struct
 from pathlib import Path
 
@@ -18,6 +19,7 @@ from trader.control.settings_service import (
     SettingsService,
 )
 from trader.core.audit import AuditEvent
+from trader.core.config import load_all_configs
 
 OTP_SEED = "GEZDGNBVGY3TQOJQGE3TQOJQGEZDGNBVGY3TQOJQ"
 
@@ -47,12 +49,18 @@ class FakeVersions:
         self.changes.append(change)
 
 
+class FailingVersions:
+    def append(self, change: AppliedChange) -> None:
+        raise OSError("version store unavailable")
+
+
 def make_service(values: dict[str, object], now: list[float], **kwargs: object) -> SettingsService:
     ceilings = {
         "max": {"risk_per_trade_pct": 1.0, "max_daily_loss_pct": 4.0},
         "min": {"min_reward_risk": 1.0},
         "strategy_lab_floors": {"gate1_min_trades": 200},
     }
+    kwargs.setdefault("halt_active", lambda: False)
     return SettingsService(
         values,
         ceilings,
@@ -228,3 +236,51 @@ def test_positive_and_integer_validation_and_transactional_persistence(tmp_path)
     pending = service.request_change("risk_per_trade_pct", 0.25)
     assert service.confirm(pending)
     assert values["risk_per_trade_pct"] == 0.25
+
+
+def test_config_dir_preserves_nested_strategy_schema_and_defaults(tmp_path):
+    root = Path(__file__).parents[2]
+    volume = tmp_path / "config"
+    volume.mkdir()
+    for name in ("risk.yaml", "strategy_lab.yaml"):
+        shutil.copy(root / "config" / name, volume / name)
+    now = [100.0]
+    service = SettingsService(
+        {"risk_per_trade_pct": 0.5, "gate1_min_trades": 300},
+        yaml.safe_load((root / "config" / "risk_ceilings.yaml").read_text(encoding="utf-8")),
+        clock=lambda: now[0],
+        config_dir=volume,
+        halt_active=lambda: False,
+    )
+    service.confirm(service.request_change("risk_per_trade_pct", 0.25))
+    gate = service.request_change("gate1_min_trades", 350)
+    service.confirm(gate)
+    loaded = load_all_configs(root / "config", volume_config_dir=volume)
+    assert loaded["risk"].risk_per_trade_pct == 0.25
+    assert loaded["strategy_lab"].gate1_backtest_to_paper.min_trades == 350
+
+
+def test_scheduled_change_cannot_overwrite_a_newer_current_value():
+    now = [100.0]
+    values: dict[str, object] = {"risk_per_trade_pct": 0.5}
+    service = make_service(values, now, totp_secret=OTP_SEED, cooldown_seconds=60)
+    pending = service.request_change("risk_per_trade_pct", 0.75)
+    applied = service.confirm(pending, totp_code=totp_at(now[0]))
+    values["risk_per_trade_pct"] = 0.25
+    now[0] += 60
+    assert service.apply_due() == ()
+    assert values["risk_per_trade_pct"] == 0.25
+    assert applied.change_id not in service._scheduled
+
+
+def test_version_store_failure_keeps_memory_and_file_unchanged(tmp_path):
+    path = tmp_path / "risk.yaml"
+    path.write_text("risk_per_trade_pct: 0.5\nother: 1\n", encoding="utf-8")
+    now = [100.0]
+    values: dict[str, object] = {"risk_per_trade_pct": 0.5}
+    service = make_service(values, now, config_path=path, version_store=FailingVersions())
+    pending = service.request_change("risk_per_trade_pct", 0.25)
+    with pytest.raises(SettingsRejected, match="persisted"):
+        service.confirm(pending)
+    assert values["risk_per_trade_pct"] == 0.5
+    assert path.read_text(encoding="utf-8") == "risk_per_trade_pct: 0.5\nother: 1\n"
