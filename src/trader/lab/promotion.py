@@ -59,7 +59,7 @@ class PromotionGate:
         target = target_stage or self._next_stage(current_stage)
         if target not in STAGES:
             raise ValueError("unknown strategy stage")
-        reasons = self._reasons(current_stage, target, metrics, validation)
+        reasons = self._reasons(strategy_id, current_stage, target, metrics, validation)
         approved = not reasons
         cap = self._capital_cap(target)
         decision = PromotionDecision(
@@ -90,6 +90,7 @@ class PromotionGate:
 
     def _reasons(
         self,
+        strategy_id: str,
         current: str,
         target: str,
         metrics: Mapping[str, object],
@@ -136,7 +137,9 @@ class PromotionGate:
         if target == "paper" and (
             validation is None
             or not validation.passed
-            or validation.metrics.get("strategy_hash") != metrics.get("strategy_hash")
+            or not validation.strategy_hash
+            or not strategy_id
+            or validation.strategy_hash != strategy_id
         ):
             reasons.append("validation_result_missing_or_mismatched")
         for key, expected in gate.items():
