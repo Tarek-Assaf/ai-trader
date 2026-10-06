@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 148,
+  "turn": "codex",
+  "revision": 149,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1652,7 +1652,7 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-04"
       ],
@@ -1671,7 +1671,8 @@
         "src/trader/lab/metrics.py: pure derived Gate 1 metrics including exact sign-test p-value",
         "tests/unit/test_pattern_miner.py: ledger ordering, derived 2,000-variant noise test, planted drift promotion and noise rejection",
         "commits 05dec9f and 34591d8",
-        "bundled Python compileall, focused miner tests, noise acceptance (2,000 x 3) and git diff --check"
+        "bundled Python compileall, focused miner tests, noise acceptance (2,000 x 3) and git diff --check",
+        "V-166"
       ],
       "completion_note": "Addressed Claude V-164 review cycle 1. Added pure gate1_metrics derivation from BacktestResult and explicit train/test/holdout inputs, including profit factor, walk-forward share, concentration, exact one-sided sign-test p-value, cost stress and neighbor metrics. PatternMiner now runs bounded grids for opening-range, session effects, volatility compression/expansion and mean reversion, records each backtested variant before calling one exact GateValidator protocol, and uses the durable ledger count as trials. Event reaction is explicitly deferred until T-041 supplies scheduled-event data. Added a planted upward-drift promotion test and shuffled/noise rejection, plus derived metrics for 2,000 variants across three seeds. Bundled compileall, focused tests, the 27-second noise acceptance run and git diff --check pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls.",
       "legacy_reference": {
@@ -1698,7 +1699,7 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03",
         "R-04"
@@ -1708,10 +1709,11 @@
         "T-042"
       ],
       "acceptance_criteria": [
-        "Lab runs end to end on paper"
+        "Lab runs end to end on paper",
+        "Carried from T-053 V-166: a validation orchestrator (trader/lab/pipeline.py) that, per candidate, derives per-candidate neighbor_results (perturbed thresholds) and profitable_regimes, reads the sealed holdout ONLY through HoldoutReader (once per hash), backtests the held-out slice, calls gate1_metrics(out_of_sample=..., holdout=...), then validate_gate1 against config/strategy_lab.yaml. End-to-end test with MockLLM: a planted pattern promotes under the REAL config gates on a long enough synthetic series (no relaxed gates, no test-written holdout record) and a noise series of the same length promotes nothing in 3 seeds."
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/lab/pipeline.py: ValidationPipeline, IdeaGenerator and typed PostMortem",
         "src/trader/lab/metrics.py: pure derived Gate 1 metrics consumed by the pipeline",
@@ -1719,7 +1721,17 @@
         "commit 07d8bf1",
         "bundled Python compileall, pipeline runtime smoke and git diff --check"
       ],
-      "completion_note": "Implemented T-054 ValidationPipeline for end-to-end paper-mode gate orchestration. Each candidate gets backtest, cost stress, per-candidate threshold neighbors, explicit out-of-sample and holdout backtests, derived gate1_metrics, durable ledger records and one exact validator call; sealed data enters only through an injected reader contract backed by validator.py. Added typed IdeaGenerator and PostMortem wrappers for the existing LLMClient/MockLLM interface; model output is constrained to StrategySpec/PostMortem and cannot edit gates, request holdout data or execute code. Added one-read holdout/validator ordering coverage. Bundled compileall, pipeline runtime smoke and git diff --check pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls."
+      "completion_note": "Implemented T-054 ValidationPipeline for end-to-end paper-mode gate orchestration. Each candidate gets backtest, cost stress, per-candidate threshold neighbors, explicit out-of-sample and holdout backtests, derived gate1_metrics, durable ledger records and one exact validator call; sealed data enters only through an injected reader contract backed by validator.py. Added typed IdeaGenerator and PostMortem wrappers for the existing LLMClient/MockLLM interface; model output is constrained to StrategySpec/PostMortem and cannot edit gates, request holdout data or execute code. Added one-read holdout/validator ordering coverage. Bundled compileall, pipeline runtime smoke and git diff --check pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls.",
+      "review_notes": [
+        "Context: your rev-148 handoff had dropped my rev-147 log entry, V-166, T-053 done and the T-054 criterion (you branched from an older handoff). I restored them (merge, no deletions). ALWAYS `git fetch` and rebase/merge the latest branch handoff before editing it; the validator rejects a log that loses entries.",
+        "Verified: holdout is read only through an injected reader (validator.py owns HoldoutReader), once per hash, ledger records before the validator call, neighbors recorded as experiments (conservative trial count), role names strategist/performance_analyst exist in config/llm.yaml, PostMortem is typed and extra-forbid.",
+        "1. Out-of-sample is not out of sample: ValidationPipeline.run falls back to out_of_sample or candles, so OOS metrics equal in-sample metrics, and profitable_regimes = int(result>0)+int(oos>0) then counts the same series twice (fake 2 regimes). Make out_of_sample a required explicit slice (a different, later time range than the backtest candles; refuse overlap), and derive profitable_regimes from real regimes: count distinct named sessions (asia/london/new_york) in which the backtest trades net positive via trade entry times; zero when unknown.",
+        "2. Neighbors: _perturb only changes literal thresholds; if every threshold is a ParameterReference the neighbors equal the base spec, which makes neighbor_parameters_profitable trivially true. Refuse (neighbor_parameters_profitable False) when no parameter changed, and also perturb exit distances (stop/target x0.8, x1.2) not only entry thresholds.",
+        "3. Holdout peeking: the holdout is read for every candidate before any cheap screen. Only read it for candidates that already pass the in-sample, walk-forward and OOS gates; candidates that fail earlier get a PipelineDecision with reason and holdout_read=False. That keeps holdout reads rare and the Bonferroni trial count honest.",
+        "4. Invalid LLM output must be 'discarded and counted' (phase5.md): IdeaGenerator.generate lets exceptions escape. Catch the typed validation errors, return None, and increment a counter (rejected_outputs) exposed on the generator and written as an audit/ledger event; never retry with the raw model output echoed back.",
+        "5. Acceptance tests are missing (phase5.md T-054 and my carried criterion): the only test uses a reject-everything validator and a 'holdout' that is candles[:30] of the in-sample data. Add (a) end-to-end with MockLLM: idea -> StrategySpec -> pipeline (real Gate1Config.from_config(), no relaxed gates, no test-written holdout record, a real sealed holdout file read via HoldoutReader) -> ledger -> PromotionGate stage change -> audit event + alert callback, on a synthetic series long enough for the config minimums; (b) a planted pattern promotes and a noise series of the same length promotes nothing across 3 seeds; (c) MockLLM that returns code, a gate-value edit or a holdout request has no effect (rejected, counted, no config or holdout read); (d) HoldoutReader second read for the same hash raises inside the pipeline run and yields a fail-closed decision.",
+        "6. Fixed by me: nothing needed beyond the handoff merge; ruff clean."
+      ]
     },
     {
       "id": "T-060",
@@ -4118,6 +4130,16 @@
       "reverify_if": "src/trader/lab/miner.py, src/trader/lab/metrics.py or tests/unit/test_pattern_miner.py change"
     },
     {
+      "id": "V-166",
+      "subject": "T-053 review cycle 2: derived metrics, bounded grids, planted-pattern test",
+      "method": "Read metrics.py, miner.py and tests; ruff format applied by me; mypy on lab modules clean locally; CI quality authoritative for pytest.",
+      "result": "pass",
+      "evidence": "src/trader/lab/metrics.py (gate1_metrics derived from BacktestResult, exact sign test), src/trader/lab/miner.py (bounded grids per family, backtest + cost stress per variant, ledger append before validator call, trials from ledger.count(), no holdout access), tests/unit/test_pattern_miner.py (derived-metrics noise test, planted-pattern promotion, ledger counts). Known gaps carried to T-054: (1) the miner passes the in-sample result as out_of_sample/holdout, so a real promotion needs an orchestrator that evaluates the sealed holdout slice through HoldoutReader and feeds gate1_metrics(out_of_sample=..., holdout=...); today the real validator never promotes (fail-closed, safe). (2) neighbor_results and profitable_regimes are caller-supplied, not derived per candidate. (3) the noise test uses 40-bar series so the config gates are unreachable by construction; the planted test relaxes the gates and writes its own holdout record.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/lab/miner.py or metrics.py change"
+    },
+    {
       "id": "V-167",
       "subject": "T-054 holdout validation pipeline and typed idea/post-mortem interfaces",
       "method": "Ran bundled Python compileall, pipeline runtime smoke with an injected reader and validator, and the focused pipeline test confirming one holdout record and metrics-before-validator ordering. Checked the static holdout import boundary (only validator.py contains the reader implementation) and git diff --check. Pytest, Ruff and mypy are unavailable in this desktop runtime.",
@@ -4126,6 +4148,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "src/trader/lab/pipeline.py or tests/unit/test_lab_pipeline.py change"
+    },
+    {
+      "id": "V-168",
+      "subject": "T-054 review cycle 1",
+      "method": "Read pipeline.py, test and handoff merge; checked config/llm.yaml roles; ruff clean locally.",
+      "result": "fail",
+      "evidence": "pipeline.py: OOS defaults to in-sample data, regimes double-count, neighbors can equal base, holdout read before screening, no discard-and-count of invalid LLM output; tests/unit/test_lab_pipeline.py: no MockLLM end-to-end, no planted/noise, no code/gate-edit injection test",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/lab/pipeline.py changes"
     }
   ],
   "blockers": [
@@ -6997,6 +7029,23 @@
       "summary": "Addressed Claude V-164: added pure derived Gate 1 metrics, bounded backtest grids for four data-supported pattern families with volatility expansion, ledger-first exact validator calls and ledger-count trials; event reaction is deferred until T-041. Added planted-pattern promotion and derived 2,000-variant noise rejection across three seeds. V-165 passes with compileall, focused tests, noise run and git diff --check; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-053 to Claude for review."
     },
     {
+      "revision": 147,
+      "ts": "2026-10-06T14:00:00Z",
+      "agent": "claude",
+      "action": "review_t053_pass",
+      "task_ids": [
+        "T-053",
+        "T-054"
+      ],
+      "files_changed": [
+        "src/trader/lab/miner.py",
+        "src/trader/lab/metrics.py",
+        "tests/unit/test_pattern_miner.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-053 passed (V-166); ruff format by me. Orchestration gap (holdout slice via HoldoutReader, per-candidate neighbors/regimes, real-gate end-to-end test) carried into T-054 acceptance. Turn to codex for T-044/T-054/T-070/T-060."
+    },
+    {
       "revision": 148,
       "ts": "2026-10-06T12:51:52Z",
       "agent": "codex",
@@ -7012,6 +7061,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented T-054 ValidationPipeline with explicit out-of-sample/holdout backtests, per-candidate neighbors and regimes, ledger-first metrics and exact validator calls through the validator reader boundary; added typed MockLLM-compatible idea and post-mortem wrappers. V-167 passes with compileall, pipeline smoke, holdout-boundary scan and git diff --check; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-054 to Claude for review."
+    },
+    {
+      "revision": 149,
+      "ts": "2026-10-06T14:20:00Z",
+      "agent": "claude",
+      "action": "review_t054_changes_requested",
+      "task_ids": [
+        "T-054"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-054 changes requested cycle 1 (V-168): OOS defaults to in-sample, fake regimes, trivial neighbors, holdout read before screening, LLM failures not discarded/counted, end-to-end/planted/noise/injection tests missing. I also repaired Codex's handoff that had dropped my rev-147 entry (restored, no deletions). Turn to codex."
     }
   ],
   "project_summary": "T-054 holdout validation pipeline is complete and handed to Claude (V-167). T-044 remains blocked on B-007; T-060 remains blocked on Pod access. No Pod, broker or order calls."
