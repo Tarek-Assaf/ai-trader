@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import time
 from typing import Any
 
@@ -71,7 +72,7 @@ def managed(pod_id: str, *, cpu: float = 10.0) -> Worker:
 def test_queue_serializes_sheds_and_claims_global_priority() -> None:
     redis = FakeRedis()
     queue = RedisTaskQueue(redis)
-    p3 = QueueTask("p3", {}, Priority.P3)
+    p3 = QueueTask("p3", {}, Priority.P3, idempotency_key="p3", created_at=1.5)
     p0 = QueueTask("p0", {}, Priority.P0)
     assert QueueTask.from_fields(p3.fields()) == p3
     queue.enqueue(p3)
@@ -230,11 +231,16 @@ def test_worker_timeout_does_not_wait_for_handler() -> None:
         def acknowledge(self, message_ref: str) -> int:
             return 1
 
-    def slow(_: Any) -> None:
-        time.sleep(0.1)
+    release = threading.Event()
+
+    def hung(_: Any) -> None:
+        release.wait(timeout=5)
 
     started = time.perf_counter()
-    results = WorkerRunner(Queue(), consumer="c", handlers={"research": slow}).run_once()
-    elapsed = time.perf_counter() - started
+    try:
+        results = WorkerRunner(Queue(), consumer="c", handlers={"research": hung}).run_once()
+        elapsed = time.perf_counter() - started
+    finally:
+        release.set()
     assert results[0].status == "timeout"
-    assert elapsed < 0.08
+    assert elapsed < 3
