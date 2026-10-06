@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 119,
+  "turn": "claude",
+  "revision": 120,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-033 review fixes are complete and handed to Claude at revision 118. T-030, T-031 and T-032 are done pending green CI. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-060 remains blocked on the fresh restore drill.",
+    "summary": "T-034 SettingsService is implemented and handed to Claude for review at revision 120; C-004 spec review passed as V-138. T-030 through T-033 are done on PR #52 pending merge. T-028 remains gated on owner Pod terminal handoff and market-open preflight under Q-037.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1726,7 +1726,7 @@
       "phase": 2,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-26",
         "R-21"
@@ -1742,11 +1742,12 @@
       "deliverables": [
         "docs/specs/settings_service.md"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
-        "docs/specs/settings_service.md"
+        "docs/specs/settings_service.md",
+        "config/risk_ceilings.yaml"
       ],
-      "completion_note": "SettingsService spec written: settable keys, ceilings, tightening vs loosening, TOTP, cooldown, halt rule, audit, tests."
+      "completion_note": "Codex reviewed the C-004 specification against the implemented service: settable keys and direction rules are explicit, hard ceilings/floors and the TOTP confirmation flow are defined, halt and cooldown behavior are testable, and audit/notification outcomes are specified."
     },
     {
       "id": "T-034",
@@ -1754,7 +1755,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-26",
         "R-12"
@@ -1770,10 +1771,18 @@
         "loosening during a loss halt is rejected",
         "every change appears in audit_log and Telegram"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/control/settings_service.py",
+        "tests/unit/test_settings_service.py",
+        "tests/invariants/test_settings_import_boundary.py"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/control/settings_service.py",
+        "tests/unit/test_settings_service.py",
+        "tests/invariants/test_settings_import_boundary.py"
+      ],
+      "completion_note": "Implemented typed setting requests with an allow-list, baked ceilings/floors, tightening and loosening classification, fail-closed halt/TOTP gates, three-failure one-hour TOTP lockout with replay protection, expiring confirm/cancel flow, cooldown scheduling, YAML persistence, version-store writes, audit events and owner notifications. Focused tests cover bounds, floors, TOTP, lockout, replay, halt, cooldown, cancellation, persistence and import boundaries."
     },
     {
       "id": "C-005",
@@ -3703,6 +3712,26 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/reports or tests/unit/test_reports.py change"
+    },
+    {
+      "id": "V-138",
+      "subject": "C-004 SettingsService specification review",
+      "method": "Read docs/specs/settings_service.md and config/risk_ceilings.yaml against the C-004 acceptance criteria and T-034 implementation contract.",
+      "result": "pass",
+      "evidence": "Settable keys and tightening/loosening direction rules are listed; owner-confirmed ceilings and proposed floors are present; confirm expiry, RFC 6238 TOTP, three-failure lockout, halt refusal, cooldown, persistence, audit, notification and required tests are specified.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "docs/specs/settings_service.md or config/risk_ceilings.yaml changes"
+    },
+    {
+      "id": "V-139",
+      "subject": "T-034 SettingsService implementation",
+      "method": "Ran Ruff check, mypy on the service, focused SettingsService and config-write-boundary tests, and the LLM import-boundary invariant.",
+      "result": "pass",
+      "evidence": "Ruff clean; mypy clean for settings_service.py; 8 focused tests passed covering typed requests, ceilings/floors, immediate tightening, delayed/cancellable loosening, TOTP absence, halt refusal, lockout, replay and audit/notification/persistence; no LLM-side package imports the service. No Pod, broker or order calls.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/control/settings_service.py, src/trader/control/__init__.py or related SettingsService tests change"
     }
   ],
   "blockers": [
@@ -6117,7 +6146,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-033 passes review cycle 2 (V-137); CI quality green at 3e32408. T-030 to T-033 are done on the PR #52 branch and land on main when PR #52 merges (awaits the owner's go). Next for Codex: T-034 SettingsService per docs/specs/settings_service.md (C-004 spec review first if still open); T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
+    },
+    {
+      "revision": 120,
+      "ts": "2026-10-06T07:38:01Z",
+      "agent": "codex",
+      "action": "implement_t034_settings_service",
+      "task_ids": [
+        "T-034",
+        "C-004"
+      ],
+      "files_changed": [
+        "src/trader/control/__init__.py",
+        "src/trader/control/settings_service.py",
+        "tests/unit/test_settings_service.py",
+        "tests/invariants/test_settings_import_boundary.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed C-004 and passed V-138. Implemented T-034 typed settings changes, ceilings/floors, confirm and cancel flow, TOTP loosening gate with replay protection and one-hour lockout, cooldown scheduling, persistence, audit and notification; Ruff, mypy and 8 focused tests pass. No Pod, broker or order calls. Handing T-034 to Claude for review."
     }
   ],
-  "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
+  "project_summary": "T-034 implements deterministic, owner-confirmed risk and Strategy Lab setting changes with allow-listed keys, baked ceilings/floors, fail-closed halt/TOTP gates, replay-safe lockout, confirmation expiry, cooldown scheduling, YAML persistence, version-store writes, audit events and owner notification. Focused validation V-139 passes. No Pod, broker or order calls."
 }
