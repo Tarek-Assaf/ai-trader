@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
+from time import sleep
 
 from trader.execution.journal import ExecutionJournal
 from trader.execution.pnl import BrokerAccountFigures, PnlEngine, PnlReport, PnlTrade
@@ -34,12 +35,12 @@ class CapitalAccountFieldMap:
             raise ValueError("unsupported Capital.com account field mapping")
         if (
             self.profit_loss not in fields
-            or self.margin_used not in fields
+            or self.margin_used not in fields | {"derived"}
             or self.available not in fields
         ):
             raise ValueError("unsupported Capital.com account field mapping")
-        if self.cash_balance == self.equity or self.cash_balance == "derived":
-            raise ValueError("cash and equity need independently validated fields")
+        if self.cash_balance == "derived":
+            raise ValueError("the raw balance field is required to derive cash")
 
     @classmethod
     def from_mapping(cls, mapping: Mapping[str, object]) -> CapitalAccountFieldMap:
@@ -71,6 +72,7 @@ class CapitalAccountSnapshot:
     account_id: str
     currency: str
     balance: Decimal
+    cash: Decimal
     profit_loss: Decimal
     equity: Decimal
     margin_used: Decimal
@@ -105,7 +107,7 @@ def normalize_capital_account(
     *,
     account_id: str,
     fields: CapitalAccountFieldMap,
-    margin_used: Decimal,
+    margin_used: Decimal | None = None,
     notional_exposure: Decimal,
 ) -> BrokerAccountFigures:
     """Normalize the active account using an explicit map and valuation inputs."""
@@ -116,7 +118,9 @@ def normalize_capital_account(
         notional_exposure=notional_exposure,
         require_verified=False,
     ).to_broker_figures()
-    return replace(figures, margin_used=margin_used)
+    if margin_used is not None:
+        return replace(figures, margin_used=margin_used)
+    return figures
 
 
 def normalize_capital_account_snapshot(
@@ -126,6 +130,8 @@ def normalize_capital_account_snapshot(
     fields: CapitalAccountFieldMap,
     notional_exposure: Decimal,
     require_verified: bool = True,
+    reread: Callable[[], Mapping[str, object]] | None = None,
+    reread_delay_seconds: float = 0.25,
 ) -> CapitalAccountSnapshot:
     """Select the account and derive equity only through the declared map."""
     if require_verified:
@@ -150,12 +156,36 @@ def normalize_capital_account_snapshot(
         if fields.equity == "derived"
         else _number(balances.get(fields.equity))
     )
-    margin_used = _number(balances.get(fields.margin_used))
+    cash = balance - profit_loss
+    margin_used = (
+        balance - _number(balances.get(fields.available))
+        if fields.margin_used == "derived"
+        else _number(balances.get(fields.margin_used))
+    )
     available = _number(balances.get(fields.available))
+    if available < 0:
+        raise ValueError("account available must be non-negative")
+    deposit = _number(balances.get("deposit"))
+    if balance == 0 and profit_loss == -deposit:
+        if reread is not None:
+            sleep(reread_delay_seconds)
+            return normalize_capital_account_snapshot(
+                reread(),
+                account_id=account_id,
+                fields=fields,
+                notional_exposure=notional_exposure,
+                require_verified=require_verified,
+                reread=None,
+                reread_delay_seconds=reread_delay_seconds,
+            )
+        raise ValueError("invalid anomalous Capital.com account snapshot")
+    if margin_used < 0:
+        raise ValueError("derived Capital.com margin must be non-negative")
     return CapitalAccountSnapshot(
         account_id=account_id,
         currency=currency,
         balance=balance,
+        cash=cash,
         profit_loss=profit_loss,
         equity=equity,
         margin_used=margin_used,

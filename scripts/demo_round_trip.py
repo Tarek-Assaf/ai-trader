@@ -223,8 +223,6 @@ def _market_inputs(
     if min_distance_unit == "POINTS":
         min_stop_distance = min_distance_value
     elif min_distance_unit == "PERCENTAGE":
-        # Use the higher BUY quote as a conservative reference, then verify the
-        # final stop against bid, the side that triggers a long position's stop.
         min_stop_distance = ask * min_distance_value / Decimal("100")
     else:
         raise ValueError("minimum_stop_distance_unit_unsupported")
@@ -272,6 +270,18 @@ def _wait_for_flat(broker: CapitalComBroker) -> bool:
         if attempt + 1 < POLL_ATTEMPTS:
             time.sleep(POLL_SECONDS)
     return False
+
+
+def _close_position_or_already_closed(broker: CapitalComBroker, deal_id: str) -> str:
+    """Close through the broker path, accepting only a verified stop close."""
+    try:
+        return broker.close_position(deal_id)
+    except CapitalComError as exc:
+        if exc.error_code != "error.not-found.dealId":
+            raise
+        if any(position.deal_id == deal_id for position in broker.get_positions()):
+            raise
+        return "already-closed"
 
 
 def _cleanup(broker: CapitalComBroker) -> dict[str, object]:
@@ -369,7 +379,6 @@ def _write_report(report: dict[str, object]) -> Path | None:
         print(json.dumps(report, indent=2, sort_keys=True))
         return path
     except OSError:
-        # Never print an exception string: file-system paths may contain local details.
         print(json.dumps({"result": "report_write_failed", "error": "OSError"}, sort_keys=True))
         return None
 
@@ -472,7 +481,7 @@ def run_round_trip(argv: list[str] | None = None) -> int:
         try:
             fd = os.open(LOCK_PATH, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
             try:
-                os.write(fd, b"Capital.com demo round trip attempted; do not remove to rerun.\\n")
+                os.write(fd, b"Capital.com demo round trip attempted; do not remove to rerun.\n")
             finally:
                 os.close(fd)
         except FileExistsError:
@@ -542,7 +551,11 @@ def run_round_trip(argv: list[str] | None = None) -> int:
 
         current_step = "close_order"
         close_started = time.monotonic()
-        report["deal_references"]["close"] = broker.close_position(receipt.deal_id)
+        report["deal_references"]["close"] = _close_position_or_already_closed(
+            broker, receipt.deal_id
+        )
+        if report["deal_references"]["close"] == "already-closed":
+            report["close_result"] = "already_closed_stop_hit"
         current_step = "after_close_account_capture"
         if not _wait_for_flat(broker):
             raise ValueError("account_not_flat_after_close")
