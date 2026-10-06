@@ -6,7 +6,16 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 
-from trader.data.calibration import calibrate, main, write_cost_model, write_report
+from trader.data.calibration import (
+    CalibrationResult,
+    Distribution,
+    _session_label,
+    calibrate,
+    load_session_windows,
+    main,
+    write_cost_model,
+    write_report,
+)
 
 
 def _rows(start: datetime, count: int = 10):
@@ -94,14 +103,98 @@ def test_cost_model_refuses_small_sessions_and_writes_lineage(tmp_path):
     assert "capital_spread:" in text
 
 
+def test_named_session_boundaries_from_config():
+    windows = load_session_windows()
+    assert windows["asia"] == (0, 480)
+    assert windows["london"] == (480, 780)
+    assert windows["new_york"] == (780, 1320)
+    start = datetime(2026, 1, 5, tzinfo=UTC)
+    assert _session_label(start, schedule=None, windows=windows) == "asia"
+    assert _session_label(start + timedelta(minutes=479), schedule=None, windows=windows) == "asia"
+    assert (
+        _session_label(start + timedelta(minutes=480), schedule=None, windows=windows)
+        == "london"
+    )
+    assert (
+        _session_label(start + timedelta(minutes=779), schedule=None, windows=windows)
+        == "london"
+    )
+    assert (
+        _session_label(start + timedelta(minutes=780), schedule=None, windows=windows)
+        == "new_york"
+    )
+    assert (
+        _session_label(start + timedelta(minutes=1319), schedule=None, windows=windows)
+        == "new_york"
+    )
+    assert (
+        _session_label(start + timedelta(minutes=1320), schedule=None, windows=windows)
+        == "closed"
+    )
+
+
+def test_cost_model_ignores_closed_and_break_buckets(tmp_path):
+    empty = Distribution(0, None, None, None)
+    sample = Distribution(1, 1.0, 1.0, 1.0)
+    no_sessions = CalibrationResult(
+        instrument="X",
+        basis=sample,
+        histdata_spread=sample,
+        capital_spread=sample,
+        best_lag_hours=0,
+        lag_correlations={},
+        expected_lag_hours=0,
+        timezone_ok=True,
+        session_stats={},
+        warnings=(),
+    )
+    with pytest.raises(ValueError, match="no tradable-session samples"):
+        write_cost_model(
+            [no_sessions],
+            tmp_path / "no-sessions.yaml",
+            {},
+            min_spread_samples=1,
+            min_basis_samples=1,
+        )
+    result = CalibrationResult(
+        instrument="X",
+        basis=sample,
+        histdata_spread=sample,
+        capital_spread=sample,
+        best_lag_hours=0,
+        lag_correlations={},
+        expected_lag_hours=0,
+        timezone_ok=True,
+        session_stats={
+            "closed": {
+                "basis": empty,
+                "histdata_spread": empty,
+                "capital_spread": empty,
+            }
+        },
+        warnings=(),
+    )
+    with pytest.raises(ValueError, match="no tradable-session samples"):
+        write_cost_model(
+            [result],
+            tmp_path / "costs.yaml",
+            {},
+            min_spread_samples=1,
+            min_basis_samples=1,
+        )
+
+
 def test_runner_reads_parquet_and_writes_both_outputs(tmp_path):
     hist_dir = tmp_path / "histdata"
     recorder_dir = tmp_path / "recorder"
     hist_dir.mkdir()
     recorder_dir.mkdir()
-    hist, capital, _ticks = _rows(datetime(2026, 1, 5, 13, tzinfo=UTC), count=10)
+    ticks_dir = tmp_path / "ticks"
+    ticks_dir.mkdir()
+    hist, capital, ticks = _rows(datetime(2026, 1, 5, 13, tzinfo=UTC), count=10)
     pq.write_table(pa.Table.from_pylist(hist), hist_dir / "hist.parquet")
     pq.write_table(pa.Table.from_pylist(capital), recorder_dir / "capital.parquet")
+    pq.write_table(pa.Table.from_pylist(ticks), ticks_dir / "ticks.parquet")
     report = tmp_path / "report.md"
     costs = tmp_path / "costs.yaml"
     assert (
@@ -111,6 +204,8 @@ def test_runner_reads_parquet_and_writes_both_outputs(tmp_path):
                 str(hist_dir),
                 "--recorder",
                 str(recorder_dir),
+                "--histdata-ticks",
+                str(ticks_dir),
                 "--instrument",
                 "NAS100",
                 "--report",
