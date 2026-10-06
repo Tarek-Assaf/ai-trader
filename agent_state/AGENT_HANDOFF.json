@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 153,
+  "turn": "codex",
+  "revision": 154,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-028 review cycle 1: round trip succeeded but the open-position account snapshot is identical to flat, so the equity/margin mapping is unverified (V-172). Waiting on owner Q-040 for one larger demo round trip. T-084 follow-up, T-044 (B-007), T-060 code half remain.",
+    "summary": "T-028 changes_requested (V-172); waiting on owner Q-040 for a larger demo round trip. Owner reported an HTTP 429 from Capital.com in Codex's run: new T-085 (diagnose, audit request rates, fix, no orders) goes first.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -140,7 +140,8 @@
         "T-020",
         "T-021",
         "T-025",
-        "T-028"
+        "T-028",
+        "T-085"
       ]
     },
     {
@@ -2306,6 +2307,36 @@
       ],
       "deliverables": [
         "tests/unit/test_lab_pipeline.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-085",
+      "title": "Capital.com HTTP 429 diagnosis and request-rate audit (no orders)",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-08"
+      ],
+      "depends_on": [
+        "T-024"
+      ],
+      "acceptance_criteria": [
+        "Share the 429 evidence in docs/evidence/t085_429_20261006.json, sanitized: timestamp (UTC), HTTP method, endpoint path only (no query strings, no headers, no body, no CST/X-SECURITY-TOKEN, no URL or token), status, Retry-After value if present, attempt number, and which script or code path made the call. Also say in the handoff completion_note how many 429s occurred and whether the retry in client.py recovered.",
+        "Audit every Capital.com call site (client.py, trading.py, stream.py, the Pod scripts used for T-028): count requests per second per code path and show each goes through RateLimiter.acquire; flag any path that creates a session more than once (limit about 1 POST /session per second per API key) or polls /accounts, /positions or /prices faster than 1 per second. Reuse one session and log in again only on 401.",
+        "Fix what the audit finds: single shared session, GET /ping keepalive about every 5 minutes, 429 handling that honours Retry-After and otherwise uses exponential backoff with jitter (1,2,4,8 s, max 4 tries), and a hard cap that never retries an order POST blindly (an order that got 429 is checked against /positions before any resend). Do not log headers or bodies.",
+        "Unit tests with a fake transport: 429 then success honours Retry-After; repeated 429 gives a typed error and no order duplicate; a burst of 50 calls never exceeds the limiter windows; session reuse (one POST /session for many calls).",
+        "NO orders and NO new demo trade in this task. Q-040 (larger demo round trip) is still waiting on the owner; do not start it until Q-040 is answered yes and T-085 is merged."
+      ],
+      "deliverables": [
+        "docs/evidence/t085_429_20261006.json",
+        "src/trader/integrations/capital_com/client.py",
+        "src/trader/integrations/capital_com/rate_limit.py",
+        "tests/unit/test_capital_rate_limit.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -7223,6 +7254,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-028 changes_requested (cycle 1, V-172): trade path sound but open-position /accounts snapshot equals flat and preflight showed unexplained balance 0/profitLoss -1000; mapping unverified. Q-040 asks owner for one larger demo round trip. Turn to human."
+    },
+    {
+      "revision": 154,
+      "ts": "2026-10-06T14:05:00Z",
+      "agent": "claude",
+      "action": "add_t085_rate_limit_audit",
+      "task_ids": [
+        "T-085"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner reported Codex got HTTP 429 from Capital.com. Added T-085: share sanitized 429 evidence, audit all call sites against the rate limits, fix session reuse/backoff, no orders. Q-040 stays open with the owner. Turn to codex."
     }
   ],
   "project_summary": "T-054 passed Claude review cycle 2 (V-170). T-028 Pod preflight and the authorized second demo round trip completed successfully on the expected demo image (V-171); redacted evidence and the attempt ledger are committed and originals remain under /workspace. T-028 is ready for Claude review. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
