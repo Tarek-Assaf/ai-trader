@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 132,
+  "turn": "codex",
+  "revision": 133,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2186,13 +2186,11 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-05"
       ],
-      "depends_on": [
-        "T-017"
-      ],
+      "depends_on": [],
       "acceptance_criteria": [
         "1. HistData spreads in a real run: the lake keeps only 1m bar files (ts_utc, open, high, low, close, volume), not ticks, so the runner cannot get bid/ask spreads from --histdata. Add a separate --histdata-ticks input (raw HistData tick archives or a tick Parquet the importer writes) and stop feeding the same lake files as both bars and ticks; if tick spreads are unavailable the report says so and the export refuses.",
         "2. Named sessions: with --market-hours the sessions collapse to open/break/closed. Label each minute asia 00:00-08:00, london 08:00-13:00, new_york 13:00-22:00 UTC (put the windows in config/sessions.yaml, loaded by the tool), combined with MarketHours so closed or break minutes are excluded from costs. Tests for the boundaries.",
@@ -2210,7 +2208,8 @@
         "src/trader/data/importers/histdata_ticks.py",
         "config/sessions.yaml",
         "tests/unit/test_calibration.py",
-        "V-151"
+        "V-151",
+        "V-152"
       ],
       "completion_note": "Addressed V-150: added --histdata-tick-archives to stream validated raw DAT_ASCII_<SYMBOL>_T_*.zip quotes using the shared HistData timestamp/quote validation, with an end-to-end archive runner fixture; kept --histdata-ticks for tick Parquet. Session config now resolves from the repository package path by default, supports --sessions, malformed files fail clearly, and MarketHours open minutes fall back to open when no named windows are supplied. Added explicit boundary and malformed-config tests. Python compileall and git diff --check pass; this desktop lacks pytest, Ruff and mypy. No Pod, broker or order calls.",
       "review_notes": [
@@ -3922,6 +3921,16 @@
       "result": "pass",
       "evidence": "src/trader/data/calibration.py, src/trader/data/importers/histdata_ticks.py, config/sessions.yaml, tests/unit/test_calibration.py, compileall, git diff --check",
       "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "T-083 calibration or HistData tick importer files change"
+    },
+    {
+      "id": "V-152",
+      "subject": "T-083 review cycle 2: raw tick archive producer, sessions option, open label, boundary tests",
+      "method": "Read the diff against the four V-150 items; ruff check and format clean locally; CI quality is authoritative for pytest and mypy.",
+      "result": "pass",
+      "evidence": "src/trader/data/calibration.py (--histdata-tick-archives, --sessions, package-relative default, open fallback), src/trader/data/importers/histdata_ticks.py (iter_histdata_tick_rows streaming with shared validation), tests/unit/test_calibration.py (zip end-to-end via main(), 07:59/08:00, 12:59/13:00, 21:59/22:00 boundaries, malformed loader)",
+      "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "T-083 calibration or HistData tick importer files change"
     }
@@ -6566,6 +6575,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude V-150: added --histdata-tick-archives to stream raw HistData tick archives with shared validation and an end-to-end zip fixture; added --sessions plus package-relative default config resolution; open MarketHours minutes label open without named windows; added boundary and malformed-config tests. Python compileall and git diff --check pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. Handing to Claude for review."
+    },
+    {
+      "revision": 133,
+      "ts": "2026-10-06T11:50:00Z",
+      "agent": "claude",
+      "action": "review_t083_pass",
+      "task_ids": [
+        "T-083"
+      ],
+      "files_changed": [
+        "src/trader/data/calibration.py",
+        "tests/unit/test_calibration.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-083 passed cycle 2 (V-152): all four items fixed. Ruff format applied by me. T-017 real numbers still wait on the recorder soak (B-007). Turn to codex for T-050/T-052/T-044 batch. T-083 depends_on cleared: the tooling it follows up (T-017) passed in V-148; T-017 itself stays blocked only on real recorder data."
     }
   ],
   "project_summary": "T-083 review-cycle 1 fixes implemented and ready for Claude review. T-017 remains blocked on B-007 for empirical recorder overlap; no Pod, broker or order calls."

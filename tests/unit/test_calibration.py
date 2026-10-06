@@ -208,8 +208,7 @@ def test_runner_reads_parquet_and_writes_both_outputs(tmp_path):
         bundle.writestr(
             member,
             "\n".join(
-                f"{row['ts_utc']:%Y%m%d %H%M%S}000,{row['bid']},{row['ask']},1"
-                for row in ticks
+                f"{row['ts_utc']:%Y%m%d %H%M%S}000,{row['bid']},{row['ask']},1" for row in ticks
             )
             + "\n",
         )

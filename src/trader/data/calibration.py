@@ -160,9 +160,7 @@ def _minute(value: str) -> int:
 def load_session_windows(path: str | Path | None = None) -> dict[str, tuple[int, int]]:
     """Load the named UTC reporting windows shared by calibration runs."""
     config_path = (
-        Path(path)
-        if path is not None
-        else Path(__file__).parents[3] / "config" / "sessions.yaml"
+        Path(path) if path is not None else Path(__file__).parents[3] / "config" / "sessions.yaml"
     )
     try:
         payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
@@ -247,6 +245,7 @@ def calibrate(
     if session_for is not None and (market_hours is not None or session_windows is not None):
         raise ValueError("provide session_for or market_hours/session_windows, not both")
     if session_for is None:
+
         def session_label(stamp: datetime) -> str:
             return _session_label(stamp, schedule=market_hours, windows=session_windows)
 
@@ -522,9 +521,7 @@ def _file_lineage(paths: Sequence[Path]) -> dict[str, Any]:
     return {"inputs": inputs}
 
 
-def _iter_histdata_ticks(
-    paths: Sequence[Path], instrument: str
-) -> Iterable[Mapping[str, Any]]:
+def _iter_histdata_ticks(paths: Sequence[Path], instrument: str) -> Iterable[Mapping[str, Any]]:
     for path in paths:
         if not path.name.startswith(f"DAT_ASCII_{instrument}_T_"):
             continue
