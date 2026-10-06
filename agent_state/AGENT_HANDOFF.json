@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 109,
+  "turn": "claude",
+  "revision": 110,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-031 chat router is implemented and handed to Claude for review at revision 108; T-030 review passed (V-125) and is done pending green CI. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-060 remains blocked on the fresh restore drill.",
+    "summary": "T-031 review cycle 1 fixes are complete and handed to Claude at revision 110; T-030 review passed and remains done pending green CI. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-060 remains blocked on the fresh restore drill.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1243,7 +1243,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-12",
         "R-01"
@@ -1258,10 +1258,10 @@
       "deliverables": [],
       "review_cycles": 1,
       "evidence": [
-        "src/trader/channels/router.py: typed non-control Intent/RoutedIntent schema, deterministic fast-path phrase matcher, refusal filters and LLM-unavailable fallback",
-        "tests/unit/test_chat_router.py: stop/kill/pause/resume/status/positions/pnl phrases bypass LLM, dangerous requests refuse before LLM, typed model result and outage fallback"
+        "src/trader/channels/router.py: required deterministic control handler, resume confirmation handoff, expanded stop/kill synonyms, fail-closed near-miss clarification, trusted model metadata and shared Message contract",
+        "tests/unit/test_chat_router.py: required handler, resume non-bypass, synonym/no-LLM, refusal, schema/import boundary, model metadata and outage tests"
       ],
-      "completion_note": "Implemented the T-031 chat router. Stop, stop-trading, close-everything, kill-it, pause, resume, status, positions and P&L phrases are matched deterministically and invoke only injected channel handlers, so the LLM is never called for control or status paths. The typed LLM schema permits query, chart_request, report_request, settings_change_request, trade_question, small_talk and unknown only; it has no control-action variant. Direct trade, Risk Guardian bypass, secret/credential and code-execution requests are refused before model use. Invalid/unavailable model output fails closed with a clarifying or limited-assistant reply. No broker, execution, SettingsService, Pod or order calls were added. Compileall, handoff validation, secret scan and git diff --check pass; focused pytest and make check are unavailable because this desktop runtime lacks pytest/make/PyYAML. Handing to Claude for review. CLAUDE REVIEW 1 (changes requested, cycle 1 of 2). Fix exactly these in src/trader/channels/router.py and tests/unit/test_chat_router.py: (1) FALSE SUCCESS: ChatRouter() with no control_handler replies '/stop accepted; execution control is handled by the deterministic path' without doing anything (_invoke with handler None). Require control_handler at construction (ValueError) and make _invoke never return an accepted message when no handler exists; same for read-only handlers (reply 'unavailable'). Test both. (2) RESUME BYPASS RISK: 'resume' currently goes to the same control_handler as stop/kill/pause. Addendum A rule 3 says resume needs the Confirm button, nonce and owner authorization. Route resume phrases ONLY to command_handlers['/resume'] (documented as: must only start the Telegram Confirm flow, never write RESUME), and when no such handler is wired reply 'Send /resume and press Confirm.' Do not pass resume through control_handler. Test that control_handler never receives '/resume'. (3) NEAR-MISS STOP PHRASES FALL TO THE LLM: 'halt', 'flatten', 'close all positions', 'stop everything', 'emergency stop', 'kill switch', 'stop it', 'stop trading right now' currently reach the LLM path, which cannot stop anything. Add the safe synonyms for stop/kill to the fast path (halt, flatten, close all (positions), stop everything, stop it, emergency stop, kill switch), and add a deterministic no-LLM catch-all: if the text contains stop, kill, halt, flatten, panic or emergency but did not match, reply 'Did you mean /stop or /kill? Send the command.' without executing anything. Parametrized tests, LLM mock never called. (4) LLM CONTROLS FLAGS: RoutedIntent.flags and confidence come from the model, so a model could emit flags=('fast_path',) or 'refused'. Build a new RoutedIntent from the model's intent, arguments, clarifying_question only and set flags/confidence in code (flags empty or 'llm', confidence clamped). Test that a model-supplied fast_path flag is discarded. (5) ADD TESTS required by Addendum A: Intent schema cannot represent pause/resume/stop/kill (Intent(intent='pause') raises ValidationError); import-boundary test that router.py (AST) imports nothing from trader.execution, brokers, risk or settings modules; LLM raising an error still lets 'stop' reach the control handler; empty LLM reply for a valid intent gets a non-empty fallback reply. (6) Use the shared Message from trader.agents.llm.types instead of a second Message dataclass (same shape; the real LLMClient takes that type). Reviewed and accepted: Intent schema without control actions, refusal patterns before the model, anchored fullmatch regexes, user text passed as JSON data, typed strict output, model failure degrades to a limited reply. I already fixed ruff import-order/format errors in the T-031 files (no logic change). Max 2 change cycles; one codex entry answering this review, then hand back."
+      "completion_note": "Addressed Claude V-127 review cycle-1 findings for T-031: ChatRouter now requires a control handler and never reports an accepted action when a handler is missing; resume phrases route only to the injected /resume Confirm-flow handler and otherwise instruct the owner to send /resume and press Confirm; halt, flatten, close-all, stop-everything, emergency-stop, kill-switch and other near-miss control words are deterministic and never sent to the LLM. Model-supplied flags are discarded, confidence is clamped, and code sets the trusted llm flag; valid model intents always receive a non-empty reply. Added Addendum A tests for no control variants, import boundaries, LLM failure preserving stop, and metadata sanitization. Switched to the shared trader.agents.llm.types.Message contract. Compileall, handoff validation, secret scan and git diff --check pass; focused pytest and make check unavailable because this desktop runtime lacks pytest/make/PyYAML. No Pod, broker or order calls. Handing to Claude for review."
     },
     {
       "id": "T-032",
@@ -3124,7 +3124,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3588,6 +3588,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "router.py or its tests change"
+    },
+    {
+      "id": "V-128",
+      "subject": "T-031 review cycle 1 safety fixes",
+      "method": "Read router.py/tests against Claude V-127 and Addendum A; compile changed modules, validate handoff and secret scan, and run git diff --check.",
+      "result": "pass",
+      "evidence": "Required control handler and non-accepted fallback; resume only through injected Confirm handler; expanded no-LLM stop/kill synonyms and near-miss clarification; model flags discarded and confidence trusted from code; Intent excludes control actions; import-boundary and outage tests added. compileall, validate_handoff.py, secret_scan.py and git diff --check pass; pytest unavailable.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/channels/router.py or tests/unit/test_chat_router.py changes"
     }
   ],
   "blockers": [
@@ -5169,7 +5179,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5853,6 +5863,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-031 review cycle 1: changes requested. Blocking: router replies accepted with no control handler wired; resume phrase can reach the stop/kill handler instead of the Confirm flow; near-miss stop phrases fall to the LLM; model-controlled flags/confidence; missing Addendum A tests. Exact fixes in T-031 completion_note. I also applied ruff import-order/format fixes only (CI lint was red on PR #52, which blocks the already-passed T-030). Handing to Codex."
+    },
+    {
+      "revision": 110,
+      "ts": "2026-10-06T06:03:05.054Z",
+      "agent": "codex",
+      "action": "address_t031_review_cycle_1",
+      "task_ids": [
+        "T-031"
+      ],
+      "files_changed": [
+        "src/trader/channels/router.py",
+        "tests/unit/test_chat_router.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Applied all T-031 review fixes from Claude V-127: required the deterministic control handler, routed resume only to the Confirm flow, added near-miss stop/kill synonyms and no-LLM clarification, sanitized model flags/confidence, used the shared Message contract, and added Addendum A tests. Compileall, handoff validation, secret scan and git diff --check pass; pytest and make check unavailable. No Pod, broker or order calls. Handing to Claude."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."

@@ -14,14 +14,7 @@ from dataclasses import dataclass
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
-
-
-@dataclass(frozen=True, slots=True)
-class Message:
-    """Small provider-neutral message contract used by the injected LLM client."""
-
-    role: str
-    content: str
+from trader.agents.llm.types import Message
 
 
 IntentName = Literal[
@@ -78,9 +71,21 @@ class ChatRouter:
     """Route owner text without giving the LLM a state-changing capability."""
 
     _FAST: tuple[tuple[str, re.Pattern[str]], ...] = (
-        ("/stop", re.compile(r"^(?:please\s+)?stop(?:\s+trading)?(?:\s+now)?[.!?]*$")),
-        ("/stop", re.compile(r"^(?:please\s+)?close\s+everything[.!?]*$")),
-        ("/kill", re.compile(r"^(?:please\s+)?kill(?:\s+it|\s+trading)?[.!?]*$")),
+        (
+            "/stop",
+            re.compile(
+                r"^(?:please\s+)?(?:stop(?:\s+trading)?(?:\s+now|\s+right\s+now)?|"
+                r"halt|flatten|close\s+(?:everything|all(?:\s+positions)?)|"
+                r"stop\s+(?:everything|it))[.!?]*$"
+            ),
+        ),
+        (
+            "/kill",
+            re.compile(
+                r"^(?:please\s+)?(?:kill(?:\s+it|\s+trading)?|kill\s+switch|"
+                r"emergency\s+stop)[.!?]*$"
+            ),
+        ),
         ("/pause", re.compile(r"^(?:please\s+)?pause(?:\s+trading)?[.!?]*$")),
         ("/resume", re.compile(r"^(?:please\s+)?resume(?:\s+trading)?[.!?]*$")),
         (
@@ -124,9 +129,11 @@ class ChatRouter:
         self,
         *,
         llm: IntentClient | None = None,
-        control_handler: ControlHandler | None = None,
+        control_handler: ControlHandler,
         command_handlers: Mapping[str, ControlHandler] | None = None,
     ) -> None:
+        if not callable(control_handler):
+            raise ValueError("a control handler is required")
         self._llm = llm
         self._control_handler = control_handler
         self._command_handlers = dict(command_handlers or {})
@@ -139,7 +146,9 @@ class ChatRouter:
         fast = self._match_fast(normalized)
         if fast is not None:
             command, kind = fast
-            if kind in {"/pause", "/resume", "/stop", "/kill"}:
+            if kind == "/resume":
+                reply = self._resume_reply()
+            elif kind in {"/pause", "/stop", "/kill"}:
                 reply = self._invoke(self._control_handler, kind)
             else:
                 reply = self._invoke(self._command_handlers.get(kind), kind)
@@ -152,6 +161,12 @@ class ChatRouter:
         for pattern, refusal in self._REFUSALS:
             if pattern.search(normalized):
                 return self._unknown(refusal, used_llm=False, flag="refused")
+        if re.search(r"\b(?:stop|kill|halt|flatten|panic|emergency)\b", normalized):
+            return self._unknown(
+                "Did you mean /stop or /kill? Send the command.",
+                used_llm=False,
+                flag="control_clarification",
+            )
         if self._llm is None:
             return self._unknown(
                 "The assistant is limited right now; /status and /stop still work.",
@@ -180,7 +195,16 @@ class ChatRouter:
                     else "Could you clarify what you need?"
                 )
                 return self._unknown(question, used_llm=True, flag="unknown")
-            return RouteResult(value, value.clarifying_question or "", True)
+            confidence = min(1.0, max(0.0, float(value.confidence)))
+            routed = RoutedIntent(
+                intent=value.intent,
+                arguments=dict(value.arguments),
+                confidence=confidence,
+                clarifying_question=value.clarifying_question,
+                flags=("llm",),
+            )
+            reply = value.clarifying_question or f"Request classified as {value.intent}."
+            return RouteResult(routed, reply, True)
         except Exception:
             return self._unknown(
                 "The assistant is limited right now; /status and /stop still work.",
@@ -198,11 +222,17 @@ class ChatRouter:
     @staticmethod
     def _invoke(handler: ControlHandler | None, command: str) -> str:
         if handler is None:
-            return f"{command} accepted; execution control is handled by the deterministic path."
+            return f"{command} is unavailable right now."
         try:
             return str(handler(command))
         except Exception:
             return "Execution control is unavailable; execution remains halted."
+
+    def _resume_reply(self) -> str:
+        handler = self._command_handlers.get("/resume")
+        if handler is None:
+            return "Send /resume and press Confirm."
+        return self._invoke(handler, "/resume")
 
     @staticmethod
     def _unknown(reply: str, *, used_llm: bool, flag: str | None = None) -> RouteResult:
