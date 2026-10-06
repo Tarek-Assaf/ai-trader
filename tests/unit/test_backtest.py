@@ -8,7 +8,6 @@ from trader.data.resample import Candle
 from trader.lab.backtest import CostModel, run_backtest, walk_forward_splits
 from trader.lab.spec import ComplexityLimits, parse_strategy_spec
 
-
 LIMITS = ComplexityLimits(max_conditions_per_strategy=5, max_tunable_parameters=4)
 
 

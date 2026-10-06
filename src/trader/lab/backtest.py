@@ -12,7 +12,7 @@ import math
 import random
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime
 
 from trader.data.resample import Candle, resample_ohlc
 from trader.lab.engine import evaluate_entries
@@ -43,7 +43,7 @@ class CostModel:
         for instrument, sessions in self.session_spread_points.items():
             if not isinstance(instrument, str) or not instrument.strip():
                 raise ValueError("cost model instruments must be non-empty")
-            for session, value in sessions.items():
+            for value in sessions.values():
                 if not math.isfinite(float(value)) or float(value) < 0:
                     raise ValueError("session costs must be finite and non-negative")
 
@@ -352,4 +352,3 @@ def run_backtest(
         cost_stress_pct=cost_stress_pct,
         walk_forward=windows,
     )
-

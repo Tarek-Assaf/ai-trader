@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 134,
+  "turn": "codex",
+  "revision": 135,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1517,7 +1517,7 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03",
         "R-05"
@@ -1532,7 +1532,7 @@
         "Before the first backtest, StrategySpec gains a required 'direction' (long|short) field and a 'schema_version' field (T-051 review note); the engine and validator record both in the ledger"
       ],
       "deliverables": [],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/lab/backtest.py",
         "src/trader/lab/spec.py",
@@ -1548,7 +1548,15 @@
           "agent/research/backtest.py (costs are fixed bps only)"
         ],
         "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
-      }
+      },
+      "review_notes": [
+        "Verified: complete-candle signals fill at the next bar open, stop wins over target when both hit in one bar, holdout=True is rejected, no file/network/broker access, schema_version and direction recorded in the result. I fixed CI lint only (unused UTC import, unused loop variable in CostModel, import order, ruff format).",
+        "1. Trailing exits are silently ignored: _exit_rules reads the trailing rule and _OpenTrade stores trailing_distance/trailing_activation, but run_backtest never uses them, so a spec with a trailing exit backtests as if it had none. Implement it (activate after activation_distance of favourable move, then stop ratchets distance behind the best price; ratchet only on bars already closed so the same bar cannot both move and trigger it) or raise ValueError for unsupported trailing rules. Silent acceptance is not allowed.",
+        "2. Optimistic fills: a stop is filled at stop_level even when the bar opens beyond it (gap), and the entry bar is never checked for stop/target although the position opens at that bar's open. Fill gapped stops at the worse of open and stop_level (min for long, max for short; same for targets use the better only at the target level), and check the entry bar's high/low against stop and target (stop first).",
+        "3. Re-entry ordering: after an exit on a bar the same bar's open is used for a new entry that happened earlier in time than the exit. Do not enter on the bar an exit occurred; wait for the next bar.",
+        "4. max_drawdown and equity_curve are realized-only. Mark the open position to the bar close (unrealized P&L) in the curve and drawdown, or name the fields realized_* and document it; the validator will gate on drawdown so it must not be understated.",
+        "5. Acceptance criterion 'known-result test reproduces' is not met: test_entry_fills_next_open only asserts a trade exists and net_pnl ordering. Add a hand-computed fixture asserting exact entry/exit price, gross, costs and net for a long and a short trade, a gap-through-stop case, a trailing case, and the walk-forward window count for the fixture."
+      ]
     },
     {
       "id": "T-051",
@@ -3949,6 +3957,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "src/trader/lab/backtest.py or src/trader/lab/spec.py changes"
+    },
+    {
+      "id": "V-154",
+      "subject": "T-050 review cycle 1",
+      "method": "Read backtest.py, spec.py changes and tests; ran ruff check/format locally; traced run_backtest fill, exit and equity logic.",
+      "result": "fail",
+      "evidence": "src/trader/lab/backtest.py: trailing rule unused, stop fills ignore gaps and entry bar, same-bar re-entry, realized-only drawdown; tests/unit/test_backtest.py lacks exact known-result assertions",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "T-050 files change"
     }
   ],
   "blockers": [
@@ -6623,6 +6641,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented T-050 deterministic event-driven backtesting: complete-candle signals fill next-bar open; long/short stop, target and time-stop exits; explicit session-aware costs and cost stress; walk-forward metadata; result ledger fields include direction/schema_version; sealed holdout requests are rejected. Added known-fill, stress, truncation and holdout tests. Python compileall, runtime smoke and git diff --check pass; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-050 to Claude for review."
+    },
+    {
+      "revision": 135,
+      "ts": "2026-10-06T12:00:00Z",
+      "agent": "claude",
+      "action": "review_t050_changes_requested",
+      "task_ids": [
+        "T-050"
+      ],
+      "files_changed": [
+        "src/trader/lab/backtest.py",
+        "tests/unit/test_backtest.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-050 changes requested cycle 1 (V-154): silent trailing-exit ignore, optimistic gap/entry-bar fills, same-bar re-entry, realized-only drawdown, weak known-result tests. I fixed CI lint (unused import, loop var, import order, format). Turn to codex."
     }
   ],
   "project_summary": "T-050 backtest engine implemented and ready for Claude review. T-017 remains blocked on B-007; T-052 is still queued behind T-050."
