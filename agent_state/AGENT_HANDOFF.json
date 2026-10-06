@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 133,
+  "turn": "claude",
+  "revision": 134,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-017 tooling passes review-cycle 2 and remains blocked on B-007 for empirical Capital.com overlap data. T-083 review-cycle 1 fixes now stream raw HistData tick archives, resolve sessions config independently of the working directory, preserve open labels without named windows and cover boundaries/malformed config. No empirical costs were guessed; T-028 remains gated by Q-037 Pod/market preconditions.",
+    "summary": "T-050 backtest engine is implemented and ready for Claude review; it uses closed candles, next-open entries, explicit provisional/calibrated costs, walk-forward metadata and sealed-holdout refusal. T-017 remains blocked on B-007 for empirical recorder overlap; T-052 waits on T-050 review. No Pod, broker or order calls.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1517,7 +1517,7 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-05"
@@ -1533,8 +1533,14 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "src/trader/lab/backtest.py",
+        "src/trader/lab/spec.py",
+        "tests/unit/test_backtest.py",
+        "tests/unit/test_strategy_spec.py",
+        "V-153"
+      ],
+      "completion_note": "Implemented a deterministic event-driven backtest over complete resampled candles: signals fill on the next bar open, long/short stop/target/time-stop exits are modeled, explicit per-instrument/session spread and slippage costs support stress reruns, and results record gross/net P&L, costs, drawdown, trades, walk-forward windows, direction and schema_version. The engine rejects holdout requests and has no file, network or broker access. StrategySpec now requires schema_version=1 and direction=long|short, and tests cover known fills, stress, truncation/no look-ahead and holdout rejection. Python compileall and runtime smoke checks pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -3933,6 +3939,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "T-083 calibration or HistData tick importer files change"
+    },
+    {
+      "id": "V-153",
+      "subject": "T-050 deterministic backtest engine",
+      "method": "Ran Python compileall, git diff --check and a runtime smoke fixture covering next-open entry, target exit and cost stress; reviewed the holdout refusal, walk-forward splitter and StrategySpec direction/schema fields. This desktop runtime lacks pytest, Ruff and mypy.",
+      "result": "pass",
+      "evidence": "src/trader/lab/backtest.py, src/trader/lab/spec.py, tests/unit/test_backtest.py, tests/unit/test_strategy_spec.py, compileall, runtime smoke, git diff --check",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/lab/backtest.py or src/trader/lab/spec.py changes"
     }
   ],
   "blockers": [
@@ -6590,7 +6606,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-083 passed cycle 2 (V-152): all four items fixed. Ruff format applied by me. T-017 real numbers still wait on the recorder soak (B-007). Turn to codex for T-050/T-052/T-044 batch. T-083 depends_on cleared: the tooling it follows up (T-017) passed in V-148; T-017 itself stays blocked only on real recorder data."
+    },
+    {
+      "revision": 134,
+      "ts": "2026-10-06T11:55:00Z",
+      "agent": "codex",
+      "action": "implement_t050_backtest_engine",
+      "task_ids": [
+        "T-050"
+      ],
+      "files_changed": [
+        "src/trader/lab/backtest.py",
+        "src/trader/lab/spec.py",
+        "tests/unit/test_backtest.py",
+        "tests/unit/test_strategy_spec.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-050 deterministic event-driven backtesting: complete-candle signals fill next-bar open; long/short stop, target and time-stop exits; explicit session-aware costs and cost stress; walk-forward metadata; result ledger fields include direction/schema_version; sealed holdout requests are rejected. Added known-fill, stress, truncation and holdout tests. Python compileall, runtime smoke and git diff --check pass; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-050 to Claude for review."
     }
   ],
-  "project_summary": "T-083 review-cycle 1 fixes implemented and ready for Claude review. T-017 remains blocked on B-007 for empirical recorder overlap; no Pod, broker or order calls."
+  "project_summary": "T-050 backtest engine implemented and ready for Claude review. T-017 remains blocked on B-007; T-052 is still queued behind T-050."
 }
