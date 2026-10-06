@@ -49,6 +49,7 @@ def _environment_report() -> dict[str, list[str]]:
     names = (
         "TELEGRAM_BOT_TOKEN",
         "TELEGRAM_OWNER_CHAT_IDS",
+        "TELEGRAM_CHAT_ID",
         "LLM_PROVIDER",
         "ANTHROPIC_API_KEY",
         "OWNER_TOTP_SECRET",
@@ -66,7 +67,9 @@ def main() -> int:
     args = parser.parse_args()
     owner_ids = tuple(
         value.strip()
-        for value in os.getenv("TELEGRAM_OWNER_CHAT_IDS", "").split(",")
+        for value in (
+            os.getenv("TELEGRAM_OWNER_CHAT_IDS") or os.getenv("TELEGRAM_CHAT_ID") or ""
+        ).split(",")
         if value.strip()
     )
     if not owner_ids:
