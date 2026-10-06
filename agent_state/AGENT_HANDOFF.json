@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 121,
+  "turn": "claude",
+  "revision": 122,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-034 SettingsService is implemented and handed to Claude for review at revision 120; C-004 spec review passed as V-138. T-030 through T-033 are done on PR #52 pending merge. T-028 remains gated on owner Pod terminal handoff and market-open preflight under Q-037.",
+    "summary": "T-034 review-cycle-2 fixes are complete and handed to Claude at revision 122 (V-141); T-030 through T-033 remain done on PR #52 pending merge. T-028 remains gated on owner Pod terminal handoff and market-open preflight under Q-037.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1755,7 +1755,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-26",
         "R-12"
@@ -1776,13 +1776,13 @@
         "tests/unit/test_settings_service.py",
         "tests/invariants/test_settings_import_boundary.py"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "src/trader/control/settings_service.py",
         "tests/unit/test_settings_service.py",
         "tests/invariants/test_settings_import_boundary.py"
       ],
-      "completion_note": "Implemented typed setting requests with an allow-list, baked ceilings/floors, tightening and loosening classification, fail-closed halt/TOTP gates, three-failure one-hour TOTP lockout with replay protection, expiring confirm/cancel flow, cooldown scheduling, YAML persistence, version-store writes, audit events and owner notifications. Focused tests cover bounds, floors, TOTP, lockout, replay, halt, cooldown, cancellation, persistence and import boundaries.",
+      "completion_note": "Addressed Claude V-140 safety blockers: mandatory next-trading-day default cooldown, halt checks at request/confirm/apply_due, confirm-time revalidation and duplicate-key prevention, fail-closed bounds, positive/integer validation, transactional normalized atomic persistence, risk/strategy file mapping, pending persistence hooks, startup reconcile refusal, refusal audit/notification, revert, locking and prefix import-boundary coverage. Full local checks pass; no Pod, broker or order calls.",
       "review_notes": [
         "BLOCKERS (safety):",
         "1. Loosening applies immediately by default: cooldown_seconds defaults to 0.0, so a confirmed loosening takes effect at once. The cooldown must be required (no default of 0), loosening must take effect at the next trading-day start per the spec (loosening_cooldown config, default next_trading_day_start), and effective_at must be computed at confirm time, not request time.",
@@ -3756,6 +3756,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/control, config/risk_ceilings.yaml or the settings tests change"
+    },
+    {
+      "id": "V-141",
+      "subject": "T-034 SettingsService review cycle 2 fixes",
+      "method": "Ran Ruff over src/tests, mypy over src/trader, focused SettingsService/config-boundary/import-boundary tests, handoff validation, secret scan and git diff --check after addressing V-140.",
+      "result": "pass",
+      "evidence": "12 focused tests passed. Defaults schedule loosening at next UTC trading-day start; halt is rechecked at confirmation and apply_due; values are revalidated and duplicate pending keys refused; all settable keys have bounds in config/risk_ceilings.yaml; invalid zero/negative/non-integral values are refused; persistence normalizes values and atomically updates only risk.yaml or strategy_lab.yaml; pending save/load hooks, startup stricter-value reconciliation, revert and RLock are present; refusals are audited/notified; import test catches trader.control prefix and SettingsService imports. Ruff, mypy, handoff validation, secret scan and diff check pass. No Pod, broker or order calls.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/control, config/risk_ceilings.yaml or SettingsService tests change"
     }
   ],
   "blockers": [
@@ -6201,7 +6211,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-034 changes_requested cycle 1 of 2 (V-140): ten items in the task review_notes, six are safety blockers (loosening is immediate by default, halt only checked at request, no re-validation at confirm, missing bounds fail open, zero/negative values accepted, non-transactional apply). No code edits from me. PR #52 (T-030 to T-033) still needs the owner's manual merge on GitHub. T-028 stays gated on the owner handing over the Pod terminal and the market being open."
+    },
+    {
+      "revision": 122,
+      "ts": "2026-10-06T07:59:50Z",
+      "agent": "codex",
+      "action": "address_t034_review_cycle_1",
+      "task_ids": [
+        "T-034"
+      ],
+      "files_changed": [
+        "src/trader/control/settings_service.py",
+        "tests/unit/test_settings_service.py",
+        "tests/invariants/test_settings_import_boundary.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude V-140 safety blockers: mandatory next-day cooldown, halt/revalidation gates, fail-closed bounds, typed positive/integer validation, transactional atomic split-file persistence, pending/startup reconciliation hooks, refusal audit/notification, revert, locking and strict import boundary. Ruff, mypy and 12 focused tests pass; handoff validation and secret scan pass. No Pod, broker or order calls. Handing T-034 to Claude."
     }
   ],
-  "project_summary": "T-034 implements deterministic, owner-confirmed risk and Strategy Lab setting changes with allow-listed keys, baked ceilings/floors, fail-closed halt/TOTP gates, replay-safe lockout, confirmation expiry, cooldown scheduling, YAML persistence, version-store writes, audit events and owner notification. Focused validation V-139 passes. No Pod, broker or order calls."
+  "project_summary": "T-034 review-cycle-2 fixes harden SettingsService with mandatory next-day loosening cooldown, repeated halt/revalidation gates, fail-closed bounds and typed values, transactional atomic split-file persistence, pending/version reconciliation, audit/notification refusal handling, revert and concurrency locking. Validation V-141 passes. No Pod, broker or order calls."
 }

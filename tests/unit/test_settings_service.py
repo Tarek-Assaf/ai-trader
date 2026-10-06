@@ -6,8 +6,10 @@ import base64
 import hashlib
 import hmac
 import struct
+from pathlib import Path
 
 import pytest
+import yaml
 
 from trader.control.settings_service import (
     AppliedChange,
@@ -105,6 +107,18 @@ def test_strategy_lab_floor_is_enforced():
         service.request_change("gate1_min_trades", 199)
 
 
+def test_every_settable_key_has_a_real_baked_bound():
+    config = yaml.safe_load(
+        (Path(__file__).parents[2] / "config" / "risk_ceilings.yaml").read_text(encoding="utf-8")
+    )
+    bounded = (
+        set(config.get("max", {}))
+        | set(config.get("min", {}))
+        | set(config.get("strategy_lab_floors", {}))
+    )
+    assert SettingsService._SETTABLE_KEYS <= bounded
+
+
 def test_loosening_requires_totp_and_is_delayed_and_cancellable():
     now = [120.0]
     values: dict[str, object] = {"risk_per_trade_pct": 0.5}
@@ -155,3 +169,62 @@ def test_loosening_without_totp_and_inconsistent_loss_limits_are_refused():
         service.request_change("max_weekly_loss_pct", 1.0)
     with pytest.raises(SettingsRejected, match="weekly"):
         service.request_change("max_daily_loss_pct", 3.0)
+
+
+def test_default_loosening_waits_for_next_day_and_halt_is_checked_again():
+    now = [23 * 3600 + 59 * 60]
+    halted = [False]
+    service = make_service(
+        {"risk_per_trade_pct": 0.5},
+        now,
+        totp_secret=OTP_SEED,
+        halt_active=lambda: halted[0],
+    )
+    pending = service.request_change("risk_per_trade_pct", 0.75)
+    halted[0] = True
+    with pytest.raises(SettingsRejected, match="halt"):
+        service.confirm(pending, totp_code=totp_at(now[0]))
+
+    halted[0] = False
+    assert service.cancel(pending)
+    pending = service.request_change("risk_per_trade_pct", 0.75)
+    applied = service.confirm(pending, totp_code=totp_at(now[0]))
+    assert applied.effective_at == 24 * 3600
+    assert service.apply_due() == ()
+
+
+def test_revalidates_current_value_and_rejects_duplicate_or_unbounded_keys():
+    now = [100.0]
+    values: dict[str, object] = {"risk_per_trade_pct": 0.5}
+    service = make_service(values, now, totp_secret=OTP_SEED, cooldown_seconds=60)
+    pending = service.request_change("risk_per_trade_pct", 0.75)
+    with pytest.raises(SettingsRejected, match="already pending"):
+        service.request_change("risk_per_trade_pct", 0.8)
+    values["risk_per_trade_pct"] = 0.9
+    applied = service.confirm(pending)
+    assert applied.direction == "tightening"
+    assert values["risk_per_trade_pct"] == 0.75
+
+    values["unbounded"] = 1
+    with pytest.raises(SettingsRejected, match="not changeable"):
+        service.request_change("unbounded", 2)
+    service._values["max_effective_leverage"] = 5
+    with pytest.raises(SettingsRejected, match="no baked"):
+        service.request_change("max_effective_leverage", 4)
+
+
+def test_positive_and_integer_validation_and_transactional_persistence(tmp_path):
+    now = [100.0]
+    values: dict[str, object] = {"risk_per_trade_pct": 0.5, "max_orders_per_hour": 100}
+    service = make_service(values, now, config_path=tmp_path / "risk.yaml")
+    for invalid in (0, -1):
+        with pytest.raises(SettingsRejected, match="greater"):
+            service.request_change("risk_per_trade_pct", invalid)
+    with pytest.raises(SettingsRejected, match="whole"):
+        service.request_change("max_orders_per_hour", 100.5)
+
+    # Decimal values are normalized before YAML serialization.
+    service = make_service(values, now, config_path=tmp_path / "missing" / "risk.yaml")
+    pending = service.request_change("risk_per_trade_pct", 0.25)
+    assert service.confirm(pending)
+    assert values["risk_per_trade_pct"] == 0.25
