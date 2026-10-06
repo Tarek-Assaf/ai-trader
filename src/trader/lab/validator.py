@@ -21,7 +21,7 @@ class HoldoutAccessError(PermissionError):
 class HoldoutReader:
     """Read each strategy hash once and record that read durably."""
 
-    def __init__(self, root: str | Path, *, ledger: Any, audit: Any = None) -> None:
+    def __init__(self, root: str | Path, *, ledger: Any = None, audit: Any = None) -> None:
         if ledger is None:
             raise HoldoutAccessError("holdout reader requires a durable experiment ledger")
         self._root = Path(root).resolve()

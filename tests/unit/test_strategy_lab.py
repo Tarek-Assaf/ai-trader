@@ -1,5 +1,6 @@
 """Pure Strategy Lab gate, ledger and allocation fixtures."""
 
+import random
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -17,6 +18,9 @@ from trader.lab.validator import (
     ValidationResult,
     validate_gate1,
 )
+from trader.data.resample import Candle
+from trader.lab.backtest import CostModel, run_backtest
+from trader.lab.spec import ComplexityLimits, parse_strategy_spec
 
 
 def _record(index: int = 0) -> ExperimentRecord:
@@ -115,6 +119,14 @@ def test_promotion_audit_and_live_gate():
         validation=validation,
     )
     assert decision.approved and decision.stage == "paper"
+    assert not gate.promote(
+        "s1", "backtest", {"trades": 0}, target_stage="paper",
+        validation=ValidationResult(True, (), 0.05, 1, "other", True),
+    ).approved
+    assert not gate.promote(
+        "s1", "backtest", {"trades": 0}, target_stage="paper",
+        validation=ValidationResult(False, ("failed",), 0.05, 1, "s1", True),
+    ).approved
     blocked = gate.promote("s1", "paper", {}, target_stage="micro_live")
     assert not blocked.approved and blocked.reasons == ("live_trading_disabled",)
 
@@ -167,6 +179,64 @@ def test_overfit_in_sample_result_fails_holdout_gate():
     )])
     result = validate_gate1(metrics, holdout_spec_hash="overfit", ledger=ledger, config=config)
     assert not result.passed and "holdout_profit_factor_below_gate" in result.reasons
+
+
+def test_seeded_random_noise_variants_never_promote():
+    limits = ComplexityLimits(max_conditions_per_strategy=5, max_tunable_parameters=4)
+    start = datetime(2026, 1, 1, tzinfo=UTC)
+    config = Gate1Config(300, 100, 5, 3, 1.3, 1.2, 0.7, 50, True, True, 2, 0.4, 20)
+    for seed in (7, 19, 31):
+        randomizer = random.Random(seed)
+        price = 100.0
+        candles = []
+        for index in range(40):
+            price += randomizer.uniform(-1.0, 1.0)
+            candles.append(Candle(
+                start + timedelta(minutes=index), price, price + 1, price - 1, price, 1,
+                ("NAS100", "bid")
+            ))
+        ledger = ExperimentLedger()
+        promotions = 0
+        for variant in range(2_000):
+            threshold = 95 + randomizer.random() * 10
+            spec = parse_strategy_spec({
+                "schema_version": 1, "instrument": "NAS100", "direction": "long",
+                "timeframe_minutes": 1,
+                "entry_conditions": [
+                    {"indicator": "close", "operator": "gt", "threshold": threshold}
+                ],
+                "exit_rules": [{"kind": "stop", "distance": 2}],
+                "tunable_parameters": [], "regime_filters": [], "session_filters": [],
+            }, complexity_limits=limits)
+            result = run_backtest(spec, candles, cost_model=CostModel())
+            record = ExperimentRecord(
+                f"noise-{seed}-{variant}",
+                {"variant": variant},
+                start,
+                start + timedelta(days=1),
+                {},
+            )
+            ledger.append(ExperimentRecord(
+                record.strategy_hash, record.parameters, record.data_start, record.data_end,
+                {"net_pnl": result.net_pnl}, holdout_accessed=True,
+            ))
+            metrics = {
+                "trades": len(result.trades), "out_of_sample_trades": len(result.trades),
+                "walk_forward_windows": 0, "validation_periods": 0,
+                "out_of_sample_profit_factor": 0, "holdout_profit_factor": 0,
+                "profitable_walk_forward_share": 0, "profitable_regimes": 0,
+                "backtest_drawdown_pct": result.max_drawdown,
+                "top5pct_trades_profit_share": 1, "neighbor_parameters_profitable": False,
+                "p_value": 1, "cost_stress_net_positive": False,
+            }
+            if validate_gate1(
+                metrics,
+                holdout_spec_hash=record.strategy_hash,
+                ledger=ledger,
+                config=config,
+            ).passed:
+                promotions += 1
+        assert promotions == 0
 
 
 def test_decay_retires_after_second_recent_demotion_and_allocator_diversifies():
