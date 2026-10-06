@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 103,
+  "revision": 121,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-024 is done. T-028 implementation, flat /accounts evidence, reconciliation evidence, the API-up review fix, and retry-safe account capture are complete and ready for Claude review. The prior authorized round trip left the account flat but its during-open account read failed with CapitalComError; the report records that status/error-code diagnostics were unavailable and explains the -0.1 tightened-stop delta. The next authorized Pod preflight/order is postponed until tomorrow. T-060 remains blocked on the fresh restore drill.",
+    "summary": "T-034 SettingsService is implemented and handed to Claude for review at revision 120; C-004 spec review passed as V-138. T-030 through T-033 are done on PR #52 pending merge. T-028 remains gated on owner Pod terminal handoff and market-open preflight under Q-037.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1213,7 +1213,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-01",
         "R-18"
@@ -1225,10 +1225,17 @@
         "non-owner chats ignored",
         "all commands tested"
       ],
-      "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "deliverables": [
+        "src/trader/channels/__init__.py",
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_telegram_channel.py"
+      ],
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/channels/telegram.py: injectable transport, owner allow-list, deterministic commands, nonce-gated and kill-safe resume, sanitized transport errors, required control writer and bounded retry queue",
+        "tests/unit/test_telegram_channel.py: owner/non-owner routing, all data commands, safe controls/audit, flatten failure, nonce cancel/expiry, kill/unreadable resume, authorization and token-log redaction"
+      ],
+      "completion_note": "Addressed all Claude review cycle-1 fixes for T-030: Telegram bot-token failures are sanitized and httpx/httpcore logging is raised to WARNING; resume fails closed when mode is unreadable or KILL is latched and requires an explicit owner authorization; construction requires a control writer; flatten failures keep execution halted and are audited; cancel consumes its nonce and issue prunes expired entries. Expanded offline tests cover non-owner callbacks, owner data-command rendering, control audits, rejected nonces, cancel, kill/unreadable modes, flatten errors and token absence in logs. Compileall, handoff validation, secret scan and git diff --check pass; focused pytest and make check are unavailable in this desktop runtime because pytest/make/PyYAML are missing. No Pod, broker or order calls were made. Handing to Claude for review. CLAUDE REVIEW 2: all seven cycle-1 fixes verified in code (sanitized transport errors and httpx/httpcore log levels, kill latch and unreadable mode fail closed, explicit owner authorization required, control writer required, flatten exceptions caught, cancel consumes nonce and issue prunes expired, tests added). Passed pending green CI on the merge PR. FOLLOW-UP for integration (T-034/app wiring, not this task): authorize_resume is an injected no-argument callable; nothing in the Telegram flow collects a TOTP code, so the app wiring must supply a callable backed by an owner-authenticated step (RedisControlSource.authorize with replay protection). current_mode must be wired to CompositeControlSource.read."
     },
     {
       "id": "T-031",
@@ -1236,7 +1243,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-12",
         "R-01"
@@ -1249,9 +1256,12 @@
         "dangerous requests refused"
       ],
       "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/channels/router.py: required deterministic control handler, resume confirmation handoff, expanded stop/kill synonyms, fail-closed near-miss clarification, trusted model metadata and shared Message contract",
+        "tests/unit/test_chat_router.py: required handler, resume non-bypass, synonym/no-LLM, refusal, schema/import boundary, model metadata and outage tests"
+      ],
+      "completion_note": "Addressed Claude V-127 review cycle-1 findings for T-031: ChatRouter now requires a control handler and never reports an accepted action when a handler is missing; resume phrases route only to the injected /resume Confirm-flow handler and otherwise instruct the owner to send /resume and press Confirm; halt, flatten, close-all, stop-everything, emergency-stop, kill-switch and other near-miss control words are deterministic and never sent to the LLM. Model-supplied flags are discarded, confidence is clamped, and code sets the trusted llm flag; valid model intents always receive a non-empty reply. Added Addendum A tests for no control variants, import boundaries, LLM failure preserving stop, and metadata sanitization. Switched to the shared trader.agents.llm.types.Message contract. Compileall, handoff validation, secret scan and git diff --check pass; focused pytest and make check unavailable because this desktop runtime lacks pytest/make/PyYAML. No Pod, broker or order calls. Handing to Claude for review. CLAUDE REVIEW 2: all six cycle-1 fixes verified (control handler required, resume only starts the Confirm flow, stop/kill synonyms plus no-LLM clarification, model flags/confidence discarded, shared Message type, Addendum A tests incl. import boundary and schema without control actions). Passed pending green CI on PR #52. MINOR FOLLOW-UPS (not blocking): the near-miss regex also catches 'stop loss' questions and answers 'Did you mean /stop or /kill?'; exclude 'stop loss/stop-loss' later. Wiring (T-034/app): control_handler must call the Telegram safe-control path, command_handlers['/resume'] must only start the Confirm flow."
     },
     {
       "id": "T-032",
@@ -1259,7 +1269,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-13"
       ],
@@ -1271,9 +1281,16 @@
         "chart request via chat returns an image"
       ],
       "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 2,
+      "evidence": [
+        "src/trader/viz/__init__.py: lazy headless matplotlib chart builders for candles/trades, equity, drawdown, session P&L, strategy comparison and spread, plus self-contained PNG/HTML writers",
+        "tests/unit/test_viz.py: fixture rendering and non-empty PNG/HTML checks, including empty-data chart",
+        "pyproject.toml and uv.lock: matplotlib==3.10.0 is pinned and locked with its transitive dependencies",
+        "src/trader/viz/__init__.py: Figure and FigureCanvasAgg are used directly without pyplot global state",
+        "src/trader/channels/telegram.py and tests/unit/test_telegram_channel.py: injected chart renderer sends PNGs through Telegram sendPhoto with safe failure handling"
+      ],
+      "completion_note": "Addressed Claude V-131 review cycle 1. Pinned matplotlib==3.10.0 in pyproject.toml and regenerated uv.lock, so fixture rendering is exercised in CI. Replaced pyplot.subplots with headless Figure and FigureCanvasAgg to avoid pyplot global state. Added the read-only /chart chat path with an injected PNG renderer, multipart Telegram sendPhoto transport, and safe failure fallback, with tests for successful delivery and renderer failure. Targeted visualization and Telegram tests pass (17 passed, 1 matplotlib deprecation warning) using the locked development environment; uv lock --check, AST parsing and git diff --check pass. No Pod, broker or order calls. Handing to Claude for review.",
+      "review_notes": []
     },
     {
       "id": "T-033",
@@ -1281,7 +1298,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-18"
       ],
@@ -1293,9 +1310,17 @@
         "email delivery configurable"
       ],
       "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 2,
+      "evidence": [
+        "src/trader/reports/core.py: deterministic daily/weekly/monthly snapshot renderer with P&L, trades, risk, strategy, stage, cost, LLM budget and issue sections",
+        "src/trader/reports/core.py: plain-text/HTML report document, owner Telegram summary/chart delivery and SMTP multipart email adapter",
+        "tests/unit/test_reports.py: fixture snapshot rendering, Telegram summary plus chart delivery, SMTP multipart delivery and disabled-email no-op",
+        "src/trader/reports/core.py: best/worst trades, per-instrument P&L, data/backup health and explicit LLM currency are rendered",
+        "src/trader/reports/core.py: failure-isolated Telegram delivery, from_env SMTP configuration and never-raising run_report scheduler entry",
+        "tests/unit/test_reports.py: all three periods, delivery failures, bad SMTP port and failing snapshot provider are covered"
+      ],
+      "completion_note": "Addressed Claude V-135 review cycle 1. Added best and worst trade, per-instrument P&L, data health, backup health and an explicit USD llm_currency so LLM spend is not mislabeled as account currency. Telegram delivery now catches each summary/photo failure, logs only a hashed chat id and continues. SmtpEmailSender.from_env reads SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD and REPORT_EMAIL_TO; malformed ports disable delivery without raising. Added run_report(period, snapshot_provider, telegram, email, owner_chat_ids), which catches snapshot and delivery failures so the scheduler never receives an exception. Tests cover daily/weekly/monthly rendering and all failure paths. Ruff, format, mypy and eight targeted tests pass. No Pod, broker or order calls. Handing to Claude for review.",
+      "review_notes": []
     },
     {
       "id": "T-040",
@@ -1701,7 +1726,7 @@
       "phase": 2,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-26",
         "R-21"
@@ -1717,11 +1742,12 @@
       "deliverables": [
         "docs/specs/settings_service.md"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
-        "docs/specs/settings_service.md"
+        "docs/specs/settings_service.md",
+        "config/risk_ceilings.yaml"
       ],
-      "completion_note": "SettingsService spec written: settable keys, ceilings, tightening vs loosening, TOTP, cooldown, halt rule, audit, tests."
+      "completion_note": "Codex reviewed the C-004 specification against the implemented service: settable keys and direction rules are explicit, hard ceilings/floors and the TOTP confirmation flow are defined, halt and cooldown behavior are testable, and audit/notification outcomes are specified."
     },
     {
       "id": "T-034",
@@ -1729,7 +1755,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "changes_requested",
       "requirements": [
         "R-26",
         "R-12"
@@ -1745,10 +1771,32 @@
         "loosening during a loss halt is rejected",
         "every change appears in audit_log and Telegram"
       ],
-      "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "deliverables": [
+        "src/trader/control/settings_service.py",
+        "tests/unit/test_settings_service.py",
+        "tests/invariants/test_settings_import_boundary.py"
+      ],
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/control/settings_service.py",
+        "tests/unit/test_settings_service.py",
+        "tests/invariants/test_settings_import_boundary.py"
+      ],
+      "completion_note": "Implemented typed setting requests with an allow-list, baked ceilings/floors, tightening and loosening classification, fail-closed halt/TOTP gates, three-failure one-hour TOTP lockout with replay protection, expiring confirm/cancel flow, cooldown scheduling, YAML persistence, version-store writes, audit events and owner notifications. Focused tests cover bounds, floors, TOTP, lockout, replay, halt, cooldown, cancellation, persistence and import boundaries.",
+      "review_notes": [
+        "BLOCKERS (safety):",
+        "1. Loosening applies immediately by default: cooldown_seconds defaults to 0.0, so a confirmed loosening takes effect at once. The cooldown must be required (no default of 0), loosening must take effect at the next trading-day start per the spec (loosening_cooldown config, default next_trading_day_start), and effective_at must be computed at confirm time, not request time.",
+        "2. The halt check runs only at request time. Re-check at confirm and again in apply_due (take a halt_active callable on the service, not a flag per call): a loosening requested before a halt must not apply during a halt. Refusals at those points are audited and notified.",
+        "3. Re-validate at confirm: recompute direction against the CURRENT value, and re-run bounds, consistency and halt checks, so two pending changes (for example daily and weekly loss) or a changed value cannot slip a stale tightening-labelled loosening past the TOTP gate. Refuse a second pending change on the same key.",
+        "4. Fail closed on missing bounds: _check_bounds treats a missing ceiling or floor as no limit. A settable key with no entry in risk_ceilings.yaml must be refused, and add a test that every key in _SETTABLE_KEYS has a bound in the real config/risk_ceilings.yaml.",
+        "5. Value validation: reject zero and negative values for every key, require whole numbers for the count keys (max_open_positions_*, max_concurrent_live_strategies, max_orders_per_hour, gate trade/window/week counts), and reject new_value types other than int or float or Decimal. A tightening to -1 or 0 currently passes.",
+        "6. Apply must be transactional (spec: any error leaves current settings unchanged). Today _apply mutates self._values first, then persists and appends to the version store; yaml.safe_dump raises RepresenterError on Decimal (I confirmed) and the in-memory value is already changed. Persist and store first (version store append, then atomic temp-file plus rename write), mutate memory last, and roll back on any exception with an alert. Normalize stored values to int or float.",
+        "7. Persistence layout: _persist writes the whole values dict to one file, so risk keys and strategy-lab gate keys end up mixed in one file and other file content is lost. Map each key to its file (risk.yaml or strategy_lab.yaml), load the full document, change only that key and write that file atomically under /workspace/config/.",
+        "8. Spec-required behavior still missing: (a) restart keeps a scheduled loosening pending: persist scheduled changes through the version store (save/load) and test a restart; (b) startup reconcile: if the config file and settings_versions disagree use the stricter value, alert, and refuse trading until the owner resolves it (a function that returns a refusal flag is enough; wiring comes later); (c) every outcome is audited and notified, including refusals in request_change (bounds, halt, no TOTP, unchanged, unknown key), which currently only raise; (d) /revert_change as revert(change_id) that goes through request_change like any other change.",
+        "9. Concurrency: Telegram handlers and the scheduler (apply_due) share the service. Add a threading.Lock around request, confirm, cancel and apply_due, and test that one change id cannot be confirmed twice.",
+        "10. Import boundary test only matches the exact module name. Use a prefix match on trader.control (and the name SettingsService) so 'from trader.control import SettingsService' and 'import trader.control' are caught; add a negative self-test with a temp file.",
+        "Non-blocking: notify on the lockout itself (a distinct alert), and the audit payload should include approved_by and method."
+      ]
     },
     {
       "id": "C-005",
@@ -3114,7 +3162,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3518,6 +3566,196 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "account capture or order path changes"
+    },
+    {
+      "id": "V-122",
+      "subject": "T-030 Telegram channel safety and routing",
+      "method": "Compile the new channel and focused tests; inspect the command, allow-list, nonce, alert and retry paths against docs/specs/phase3.md Addendum A.",
+      "result": "pass",
+      "evidence": "src/trader/channels/telegram.py; tests/unit/test_telegram_channel.py; compileall passed; git diff --check passed.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "Telegram command routing, control writer integration, nonce handling or outbound queue changes"
+    },
+    {
+      "id": "V-123",
+      "subject": "T-030 Telegram channel review (Claude)",
+      "method": "Read telegram.py, its tests and control.py against docs/specs/phase3.md T-030 and Addendum A; checked token handling, resume/kill semantics, nonce lifecycle.",
+      "result": "fail",
+      "evidence": "Token can reach logs via httpx URL in errors; Telegram resume can overwrite a stored kill (RedisControlSource.set(RESUME)); resume proceeds when authorize_resume is None; control_writer=None replies accepted; cancel does not consume nonce. See T-030 completion_note for the fix list. Codex V-122 self-validation is not accepted as the review.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "telegram.py or its tests change"
+    },
+    {
+      "id": "V-124",
+      "subject": "T-030 Telegram channel review cycle 1 fixes",
+      "method": "Read telegram.py and its unit tests against the six blocking findings in Claude V-123; compile the changed modules, run handoff/secret validation and git diff --check.",
+      "result": "pass",
+      "evidence": "Sanitized Telegram API exceptions and logger levels; current-mode and owner-auth resume gates; required writer; flatten exception handling; nonce cancellation/pruning; expanded tests. compileall, validate_handoff.py, secret_scan.py and git diff --check pass. pytest and make check unavailable because desktop runtime lacks pytest/make/PyYAML.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "telegram.py, tests/unit/test_telegram_channel.py or the T-030 review changes"
+    },
+    {
+      "id": "V-125",
+      "subject": "T-030 Telegram channel re-review (Claude)",
+      "method": "Diffed Codex's cycle-1 fixes against V-123 list; read telegram.py and tests; ruff check and format fixed on the changed files; mypy clean on telegram.py.",
+      "result": "pass",
+      "evidence": "src/trader/channels/telegram.py; tests/unit/test_telegram_channel.py (token-in-logs test, kill-not-resumable, cancel, flatten exception, non-owner callback, render routing). Merge only when CI is green.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "telegram.py, control writer wiring or nonce handling changes"
+    },
+    {
+      "id": "V-126",
+      "subject": "T-031 chat router implementation",
+      "method": "Read router.py and its tests against Phase 3 T-031 and Addendum A; verify deterministic control phrases bypass the LLM, Intent has no control actions, refusal fixtures are fail-closed, and compile/validation/secret checks pass.",
+      "result": "pass",
+      "evidence": "Fast-path tests cover stop, stop trading, close everything, kill it, pause, resume, status, positions and P&L with zero LLM calls. Dangerous trade, Risk Guardian, secret and code requests are refused before LLM. RoutedIntent excludes pause/resume/stop/kill. compileall, validate_handoff.py, secret_scan.py and git diff --check pass; pytest and make check unavailable in desktop runtime.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/channels/router.py or tests/unit/test_chat_router.py changes"
+    },
+    {
+      "id": "V-127",
+      "subject": "T-031 chat router review (Claude)",
+      "method": "Read router.py, its tests, telegram.py changes and the real LLMClient/Message types against docs/specs/phase3.md T-031 and Addendum A.",
+      "result": "fail",
+      "evidence": "Router can reply 'accepted' with no handler wired; resume phrase shares the stop/kill control handler; near-miss stop phrases reach the LLM; model controls RoutedIntent.flags/confidence; Addendum A tests missing. See T-031 completion_note.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "router.py or its tests change"
+    },
+    {
+      "id": "V-128",
+      "subject": "T-031 review cycle 1 safety fixes",
+      "method": "Read router.py/tests against Claude V-127 and Addendum A; compile changed modules, validate handoff and secret scan, and run git diff --check.",
+      "result": "pass",
+      "evidence": "Required control handler and non-accepted fallback; resume only through injected Confirm handler; expanded no-LLM stop/kill synonyms and near-miss clarification; model flags discarded and confidence trusted from code; Intent excludes control actions; import-boundary and outage tests added. compileall, validate_handoff.py, secret_scan.py and git diff --check pass; pytest unavailable.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/channels/router.py or tests/unit/test_chat_router.py changes"
+    },
+    {
+      "id": "V-129",
+      "subject": "T-031 chat router re-review (Claude)",
+      "method": "Diffed Codex's cycle-1 fixes against V-127; read router.py and tests; ruff fixed on changed files; mypy clean on channels.",
+      "result": "pass",
+      "evidence": "src/trader/channels/router.py; tests/unit/test_chat_router.py (LLM never called for stop synonyms, resume never reaches control handler, schema has no control actions, import boundary). Merge only when CI is green.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "router.py, its handlers or the Intent schema change"
+    },
+    {
+      "id": "V-130",
+      "subject": "T-032 visualization module",
+      "method": "Read viz module/tests against Phase 3 T-032; compile changed modules, validate handoff and secret scan, and run git diff --check.",
+      "result": "pass",
+      "evidence": "Six chart builders, empty-data handling, PNG and self-contained HTML writers, and fixture tests added. compileall, validate_handoff.py, secret_scan.py and git diff --check pass; matplotlib/pytest/make unavailable in desktop runtime, so rendering suite could not execute.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/viz or tests/unit/test_viz.py changes"
+    },
+    {
+      "id": "V-131",
+      "subject": "T-032 visualization module review cycle 1",
+      "method": "Read src/trader/viz and tests against T-032 criteria; ruff check/format and mypy on viz; inspected pyproject and uv.lock for matplotlib; read CI failure step (Lint and format).",
+      "result": "fail",
+      "evidence": "Lint/mypy issues fixed mechanically. matplotlib absent from dependencies and uv.lock so tests are skipped in CI; pyplot figures never closed; chat-to-image criterion not implemented.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/viz, tests/unit/test_viz.py or pyproject.toml change"
+    },
+    {
+      "id": "V-132",
+      "subject": "T-032 visualization review cycle 2 fixes",
+      "method": "Ran uv lock --check; parsed changed Python files; ran tests/unit/test_viz.py and tests/unit/test_telegram_channel.py with the locked dev environment; inspected chart transport and headless figure construction.",
+      "result": "pass",
+      "evidence": "matplotlib==3.10.0 is pinned and locked; 17 targeted tests passed; FigureCanvasAgg avoids pyplot global state; /chart sends PNG bytes through fake Telegram transport and transport failures fall back safely.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/viz, src/trader/channels/telegram.py, tests/unit/test_viz.py, tests/unit/test_telegram_channel.py or pyproject.toml changes"
+    },
+    {
+      "id": "V-133",
+      "subject": "T-032 visualization module review cycle 2",
+      "method": "Read the diff since V-131: pyproject pin and uv.lock, Figure/FigureCanvasAgg without pyplot, /chart handler and sendPhoto transport, tests; CI quality job on 294bcdc.",
+      "result": "pass",
+      "evidence": "matplotlib==3.10.0 pinned and locked so viz tests run in CI; no pyplot global state; /chart is read-only (injected renderer, owner allow-list, safe fallback, no control or broker import), sendPhoto errors are sanitized so the token cannot reach logs; CI quality green. Non-blocking: importorskip(matplotlib) in tests/unit/test_viz.py can now be a plain import; integration wiring must supply render_chart.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/viz, the /chart path in channels/telegram.py or the matplotlib pin change"
+    },
+    {
+      "id": "V-134",
+      "subject": "T-033 report rendering and delivery",
+      "method": "Ran Ruff check/format, mypy on reports and tests, and tests/unit/test_reports.py with deterministic PnlEngine fixtures; inspected SMTP no-op and multipart paths.",
+      "result": "pass",
+      "evidence": "4 targeted tests passed; report HTML escapes commentary; Telegram summary and chart bytes are delivered; configured SMTP produces plain/HTML multipart; missing SMTP is a no-op; no secrets are included in report content.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/reports or tests/unit/test_reports.py changes"
+    },
+    {
+      "id": "V-135",
+      "subject": "T-033 reports review cycle 1",
+      "method": "Read src/trader/reports and tests against the T-033 spec; checked CI quality on 1b0bbd8; compared content, delivery and failure handling with docs/specs/phase3.md and config/schedule.yaml.",
+      "result": "fail",
+      "evidence": "Rendering is deterministic and HTML-escaped; commentary cannot change numbers; missing SMTP is a no-op. Gaps: best/worst trade, per-instrument P&L, data/backup health missing; Telegram delivery can raise and abort the report; no env loader or scheduler job; only the daily period is tested.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/reports or tests/unit/test_reports.py change"
+    },
+    {
+      "id": "V-136",
+      "subject": "T-033 reports review cycle 2 fixes",
+      "method": "Ran Ruff check/format, mypy on reports and tests, and tests/unit/test_reports.py with deterministic PnlEngine fixtures; inspected delivery isolation, environment parsing and scheduler entry.",
+      "result": "pass",
+      "evidence": "8 targeted tests passed; best/worst and per-instrument P&L plus data/backup health render; all periods render; Telegram failures are counted and isolated; malformed SMTP port is a no-op; run_report catches provider failures; llm_currency is explicit.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/reports or tests/unit/test_reports.py changes"
+    },
+    {
+      "id": "V-137",
+      "subject": "T-033 reports review cycle 2",
+      "method": "Read the diff since V-135 (content sections, non-raising Telegram delivery, from_env, run_report, tests) against docs/specs/phase3.md T-033; CI quality on 3e32408.",
+      "result": "pass",
+      "evidence": "All V-135 items fixed: best/worst trade, per-instrument P&L, data/backup health, llm_currency; deliver_telegram isolates failures and returns a failure count with hashed chat ids in logs; SmtpEmailSender.from_env disables email on a bad port; run_report never raises; weekly and monthly render; CI quality green. Non-blocking: an empty SMTP_PORT disables email instead of defaulting to 587; no TLS when no SMTP credentials are set; from_env success path is untested; the integration must call run_report from the scheduler and supply the snapshot provider from the ledger.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/reports or tests/unit/test_reports.py change"
+    },
+    {
+      "id": "V-138",
+      "subject": "C-004 SettingsService specification review",
+      "method": "Read docs/specs/settings_service.md and config/risk_ceilings.yaml against the C-004 acceptance criteria and T-034 implementation contract.",
+      "result": "pass",
+      "evidence": "Settable keys and tightening/loosening direction rules are listed; owner-confirmed ceilings and proposed floors are present; confirm expiry, RFC 6238 TOTP, three-failure lockout, halt refusal, cooldown, persistence, audit, notification and required tests are specified.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "docs/specs/settings_service.md or config/risk_ceilings.yaml changes"
+    },
+    {
+      "id": "V-139",
+      "subject": "T-034 SettingsService implementation",
+      "method": "Ran Ruff check, mypy on the service, focused SettingsService and config-write-boundary tests, and the LLM import-boundary invariant.",
+      "result": "pass",
+      "evidence": "Ruff clean; mypy clean for settings_service.py; 8 focused tests passed covering typed requests, ceilings/floors, immediate tightening, delayed/cancellable loosening, TOTP absence, halt refusal, lockout, replay and audit/notification/persistence; no LLM-side package imports the service. No Pod, broker or order calls.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/control/settings_service.py, src/trader/control/__init__.py or related SettingsService tests change"
+    },
+    {
+      "id": "V-140",
+      "subject": "T-034 SettingsService review cycle 1",
+      "method": "Read src/trader/control/settings_service.py, totp.py, tests and the import-boundary test against docs/specs/settings_service.md and config/risk_ceilings.yaml; checked CI quality on d28205c; confirmed yaml.safe_dump fails on Decimal.",
+      "result": "fail",
+      "evidence": "Good: TOTP replay and lockout, ceilings and floors, no import by LLM areas today, tightening immediate, confirmation expiry. Fail: loosening applies immediately by default (cooldown 0), halt only checked at request, no re-validation at confirm, missing bounds fail open, zero/negative values accepted, non-transactional apply with a Decimal persistence crash, mixed-file persistence, restart persistence and startup reconcile missing, refusals not audited, no lock, import test bypassable.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/control, config/risk_ceilings.yaml or the settings tests change"
     }
   ],
   "blockers": [
@@ -5099,7 +5337,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5691,7 +5929,279 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner gave the go for the single authorized T-028 demo round trip, with two gates recorded in Q-037: Codex must wait until the owner hands Codex the RunPod terminal in chat, and must not order before the market is open (US session from 13:30 UTC; preflight must show open). Turn handed to Codex. When both gates are met: run --preflight, confirm account_observations.before_open is present (else stop, Pod needs redeploy), then the one round trip per docs/specs/t028_second_round_trip.md, commit the redacted evidence, set T-028 to review. Authorization lapses 2026-10-06T20:08:00Z. Note for Codex: Claude edited three of Codex's files during PR #48 CI repair (field-map type narrowing, legacy normalizer honours margin_used, preflight test client account_info)."
+    },
+    {
+      "revision": 104,
+      "ts": "2026-10-06T05:00:00Z",
+      "agent": "codex",
+      "action": "implement_t030_telegram_channel",
+      "task_ids": [
+        "T-030"
+      ],
+      "files_changed": [
+        "src/trader/channels/__init__.py",
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_telegram_channel.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented the offline-testable Telegram long-poll channel for T-030: owner allow-list with hashed non-owner logging, deterministic pause/stop/kill controls, nonce-gated resume with injected owner authorization, stable-key alert rate limiting, bounded retry queue and command rendering. Compileall and git diff --check pass; focused pytest is unavailable because pytest is not installed in this desktop runtime. No Pod, broker or order calls were made. Handing to Claude for review."
+    },
+    {
+      "revision": 105,
+      "ts": "2026-10-06T05:30:00Z",
+      "agent": "claude",
+      "action": "review_t030_changes_requested",
+      "task_ids": [
+        "T-030"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-030 review cycle 1: changes requested (V-123 fail). Blocking: bot token can reach logs through httpx URLs; Telegram resume can clear a kill; resume proceeds without owner authorization when none is injected; control_writer=None replies accepted without acting; cancel does not consume the nonce; flatten exceptions escape; missing tests. Exact fixes listed in T-030 completion_note. Handing back to Codex."
+    },
+    {
+      "revision": 106,
+      "ts": "2026-10-06T05:32:26.019Z",
+      "agent": "codex",
+      "action": "address_t030_review_cycle_1",
+      "task_ids": [
+        "T-030"
+      ],
+      "files_changed": [
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_telegram_channel.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Applied all six blocking T-030 review fixes from Claude V-123: sanitized token-bearing transport failures and raised httpx/httpcore logger levels; made resume fail closed for unreadable or latched KILL mode and require explicit owner authorization; required a control writer; caught flatten exceptions while keeping execution halted; consumed cancel nonces and pruned expired nonces; and added the requested routing, audit, safety and token-redaction tests. Compileall, handoff validation, secret scan and git diff --check pass; pytest and make check are unavailable in this desktop runtime. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 107,
+      "ts": "2026-10-06T05:55:00Z",
+      "agent": "claude",
+      "action": "review_t030_pass",
+      "task_ids": [
+        "T-030"
+      ],
+      "files_changed": [
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_telegram_channel.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-030 passes review cycle 2 (V-125). All V-123 fixes verified; I applied ruff lint/format fixes only to the two T-030 files (no logic change). T-030 done pending green CI on the merge PR. Integration follow-up recorded in the T-030 note: authorize_resume and current_mode must be wired to the owner-authenticated control path. Next for Codex: T-031 chat router per docs/specs/phase3.md and Addendum A (LLM path cannot reach control), and the T-028 round trip only after the owner hands over the Pod terminal and the market is open."
+    },
+    {
+      "revision": 108,
+      "ts": "2026-10-06T05:46:55.852Z",
+      "agent": "codex",
+      "action": "implement_t031_chat_router",
+      "task_ids": [
+        "T-031"
+      ],
+      "files_changed": [
+        "src/trader/channels/router.py",
+        "src/trader/channels/__init__.py",
+        "tests/unit/test_chat_router.py",
+        "src/trader/channels/telegram.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-031 fast-path and typed LLM router. Natural-language stop/kill/pause/resume/status/positions/pnl phrases bypass the LLM and call only injected deterministic handlers; dangerous trade, Risk Guardian, secret and code requests are refused before model use; the Intent schema has no control actions; model failures return a limited/clarifying response. Added offline tests. Compileall, handoff validation, secret scan and git diff --check pass; pytest and make check unavailable. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 109,
+      "ts": "2026-10-06T06:10:00Z",
+      "agent": "claude",
+      "action": "review_t031_changes_requested",
+      "task_ids": [
+        "T-031"
+      ],
+      "files_changed": [
+        "src/trader/channels/router.py",
+        "tests/unit/test_chat_router.py",
+        "src/trader/channels/__init__.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-031 review cycle 1: changes requested. Blocking: router replies accepted with no control handler wired; resume phrase can reach the stop/kill handler instead of the Confirm flow; near-miss stop phrases fall to the LLM; model-controlled flags/confidence; missing Addendum A tests. Exact fixes in T-031 completion_note. I also applied ruff import-order/format fixes only (CI lint was red on PR #52, which blocks the already-passed T-030). Handing to Codex."
+    },
+    {
+      "revision": 110,
+      "ts": "2026-10-06T06:03:05.054Z",
+      "agent": "codex",
+      "action": "address_t031_review_cycle_1",
+      "task_ids": [
+        "T-031"
+      ],
+      "files_changed": [
+        "src/trader/channels/router.py",
+        "tests/unit/test_chat_router.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Applied all T-031 review fixes from Claude V-127: required the deterministic control handler, routed resume only to the Confirm flow, added near-miss stop/kill synonyms and no-LLM clarification, sanitized model flags/confidence, used the shared Message contract, and added Addendum A tests. Compileall, handoff validation, secret scan and git diff --check pass; pytest and make check unavailable. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 111,
+      "ts": "2026-10-06T06:20:00Z",
+      "agent": "claude",
+      "action": "review_t031_pass",
+      "task_ids": [
+        "T-031"
+      ],
+      "files_changed": [
+        "src/trader/channels/router.py",
+        "tests/unit/test_chat_router.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-031 passes review cycle 2 (V-129). All V-127 fixes verified; I applied ruff import-order fixes only. T-030 and T-031 are done pending green CI on PR #52. Next for Codex: T-028 round trip ONLY after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z); meanwhile T-032 visualization per docs/specs/phase3.md."
+    },
+    {
+      "revision": 112,
+      "ts": "2026-10-06T06:16:56.850Z",
+      "agent": "codex",
+      "action": "implement_t032_visualization",
+      "task_ids": [
+        "T-032"
+      ],
+      "files_changed": [
+        "src/trader/viz/__init__.py",
+        "tests/unit/test_viz.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-032 lazy headless chart builders for candles/trades, equity, drawdown, session P&L, strategy comparison and spread, with empty-data handling and PNG/self-contained HTML output; added fixture tests. Compileall, handoff validation, secret scan and git diff --check pass; matplotlib/pytest/make unavailable in desktop runtime. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 113,
+      "ts": "2026-10-06T06:45:00Z",
+      "agent": "claude",
+      "action": "review_t032_changes_requested",
+      "task_ids": [
+        "T-032"
+      ],
+      "files_changed": [
+        "src/trader/viz/__init__.py",
+        "pyproject.toml",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-032 changes_requested cycle 1 of 2 (V-131): add pinned matplotlib plus uv.lock so CI really runs the tests, avoid pyplot global state or close figures, and implement the chat chart-request path. I fixed lint/format/mypy only. PR #52 itself (T-030, T-031) is green earlier and still awaits the owner's merge go; T-028 remains gated on the owner handing over the Pod terminal and the market being open."
+    },
+    {
+      "revision": 114,
+      "ts": "2026-10-06T06:41:44.180Z",
+      "agent": "codex",
+      "action": "address_t032_review_cycle_1",
+      "task_ids": [
+        "T-032"
+      ],
+      "files_changed": [
+        "pyproject.toml",
+        "uv.lock",
+        "src/trader/viz/__init__.py",
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_telegram_channel.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude V-131: pinned matplotlib and regenerated uv.lock, removed pyplot global state with FigureCanvasAgg, implemented the read-only Telegram /chart PNG path and multipart sendPhoto transport, and added delivery/failure tests. Targeted visualization and Telegram tests pass (17 passed); uv lock check, AST parsing and diff check pass. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 115,
+      "ts": "2026-10-06T07:10:00Z",
+      "agent": "claude",
+      "action": "review_t032_pass",
+      "task_ids": [
+        "T-032"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-032 passes review cycle 2 (V-133); CI quality green at 294bcdc. T-030, T-031 and T-032 are done on the PR #52 branch and land on main when PR #52 merges (awaits the owner's go). Next for Codex: T-033 reports per docs/specs/phase3.md; T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
+    },
+    {
+      "revision": 116,
+      "ts": "2026-10-06T07:02:13.207Z",
+      "agent": "codex",
+      "action": "implement_t033_reports",
+      "task_ids": [
+        "T-033"
+      ],
+      "files_changed": [
+        "src/trader/reports/__init__.py",
+        "src/trader/reports/core.py",
+        "tests/unit/test_reports.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented deterministic daily/weekly/monthly reports with P&L, risk, strategy, stage, LLM budget and issue metrics; added Telegram summary/chart delivery and SMTP multipart plain/HTML delivery with safe unconfigured no-op. Added fixture tests. Ruff, mypy and 4 targeted tests pass. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 117,
+      "ts": "2026-10-06T07:30:00Z",
+      "agent": "claude",
+      "action": "review_t033_changes_requested",
+      "task_ids": [
+        "T-033"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-033 changes_requested cycle 1 of 2 (V-135): add best/worst trade, per-instrument P&L and data/backup health; make Telegram delivery non-raising; add SmtpEmailSender.from_env and a never-raising run_report job; test all three periods; llm_currency field. No code edits from me (CI green). T-028 still gated on the owner handing over the Pod terminal and the market being open. PR #52 awaits the owner's merge go."
+    },
+    {
+      "revision": 118,
+      "ts": "2026-10-06T07:22:08.576Z",
+      "agent": "codex",
+      "action": "address_t033_review_cycle_1",
+      "task_ids": [
+        "T-033"
+      ],
+      "files_changed": [
+        "src/trader/reports/__init__.py",
+        "src/trader/reports/core.py",
+        "tests/unit/test_reports.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude V-135: added best/worst and per-instrument P&L, data/backup health and explicit LLM currency; isolated Telegram failures; added env SMTP parsing and a never-raising run_report job; expanded period and failure tests. Ruff, mypy and 8 targeted tests pass. No Pod, broker or order calls. Handing to Claude."
+    },
+    {
+      "revision": 119,
+      "ts": "2026-10-06T07:40:00Z",
+      "agent": "claude",
+      "action": "review_t033_pass",
+      "task_ids": [
+        "T-033"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-033 passes review cycle 2 (V-137); CI quality green at 3e32408. T-030 to T-033 are done on the PR #52 branch and land on main when PR #52 merges (awaits the owner's go). Next for Codex: T-034 SettingsService per docs/specs/settings_service.md (C-004 spec review first if still open); T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
+    },
+    {
+      "revision": 120,
+      "ts": "2026-10-06T07:38:01Z",
+      "agent": "codex",
+      "action": "implement_t034_settings_service",
+      "task_ids": [
+        "T-034",
+        "C-004"
+      ],
+      "files_changed": [
+        "src/trader/control/__init__.py",
+        "src/trader/control/settings_service.py",
+        "tests/unit/test_settings_service.py",
+        "tests/invariants/test_settings_import_boundary.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed C-004 and passed V-138. Implemented T-034 typed settings changes, ceilings/floors, confirm and cancel flow, TOTP loosening gate with replay protection and one-hour lockout, cooldown scheduling, persistence, audit and notification; Ruff, mypy and 8 focused tests pass. No Pod, broker or order calls. Handing T-034 to Claude for review."
+    },
+    {
+      "revision": 121,
+      "ts": "2026-10-06T08:05:00Z",
+      "agent": "claude",
+      "action": "review_t034_changes_requested",
+      "task_ids": [
+        "T-034"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-034 changes_requested cycle 1 of 2 (V-140): ten items in the task review_notes, six are safety blockers (loosening is immediate by default, halt only checked at request, no re-validation at confirm, missing bounds fail open, zero/negative values accepted, non-transactional apply). No code edits from me. PR #52 (T-030 to T-033) still needs the owner's manual merge on GitHub. T-028 stays gated on the owner handing over the Pod terminal and the market being open."
     }
   ],
-  "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
+  "project_summary": "T-034 implements deterministic, owner-confirmed risk and Strategy Lab setting changes with allow-listed keys, baked ceilings/floors, fail-closed halt/TOTP gates, replay-safe lockout, confirmation expiry, cooldown scheduling, YAML persistence, version-store writes, audit events and owner notification. Focused validation V-139 passes. No Pod, broker or order calls."
 }
