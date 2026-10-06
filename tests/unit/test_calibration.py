@@ -1,6 +1,8 @@
 """Fixtures for T-017 basis, spread and timezone calibration."""
 
+import zipfile
 from datetime import UTC, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pyarrow as pa
 import pyarrow.parquet as pq
@@ -16,6 +18,7 @@ from trader.data.calibration import (
     write_cost_model,
     write_report,
 )
+from trader.data.market_hours import MarketHours
 
 
 def _rows(start: datetime, count: int = 10):
@@ -127,6 +130,15 @@ def test_named_session_boundaries_from_config():
     assert (
         _session_label(start + timedelta(minutes=1320), schedule=None, windows=windows) == "closed"
     )
+    schedule = MarketHours(zone=ZoneInfo("UTC"), weekly={day: ((0, 1440),) for day in range(7)})
+    assert _session_label(start, schedule=schedule, windows=None) == "open"
+
+
+def test_session_loader_rejects_malformed_file(tmp_path):
+    path = tmp_path / "sessions.yaml"
+    path.write_text("sessions: [", encoding="utf-8")
+    with pytest.raises(ValueError, match="malformed"):
+        load_session_windows(path)
 
 
 def test_cost_model_ignores_closed_and_break_buckets(tmp_path):
@@ -185,12 +197,22 @@ def test_runner_reads_parquet_and_writes_both_outputs(tmp_path):
     recorder_dir = tmp_path / "recorder"
     hist_dir.mkdir()
     recorder_dir.mkdir()
-    ticks_dir = tmp_path / "ticks"
-    ticks_dir.mkdir()
     hist, capital, ticks = _rows(datetime(2026, 1, 5, 13, tzinfo=UTC), count=10)
     pq.write_table(pa.Table.from_pylist(hist), hist_dir / "hist.parquet")
     pq.write_table(pa.Table.from_pylist(capital), recorder_dir / "capital.parquet")
-    pq.write_table(pa.Table.from_pylist(ticks), ticks_dir / "ticks.parquet")
+    ticks_dir = tmp_path / "ticks"
+    ticks_dir.mkdir()
+    archive = ticks_dir / "DAT_ASCII_NAS100_T_202601.zip"
+    member = archive.stem + ".csv"
+    with zipfile.ZipFile(archive, "w") as bundle:
+        bundle.writestr(
+            member,
+            "\n".join(
+                f"{row['ts_utc']:%Y%m%d %H%M%S}000,{row['bid']},{row['ask']},1"
+                for row in ticks
+            )
+            + "\n",
+        )
     report = tmp_path / "report.md"
     costs = tmp_path / "costs.yaml"
     assert (
@@ -200,7 +222,7 @@ def test_runner_reads_parquet_and_writes_both_outputs(tmp_path):
                 str(hist_dir),
                 "--recorder",
                 str(recorder_dir),
-                "--histdata-ticks",
+                "--histdata-tick-archives",
                 str(ticks_dir),
                 "--instrument",
                 "NAS100",

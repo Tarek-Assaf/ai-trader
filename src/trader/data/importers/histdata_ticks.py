@@ -9,13 +9,59 @@ import json
 import re
 import tempfile
 import zipfile
+from collections.abc import Iterator
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from trader.data.importers.histdata import import_histdata, parse_histdata_timestamp
 
 _STAMP = re.compile(r"^\d{8} \d{9}$")
+
+
+def _tick_timestamp(stamp: str) -> datetime:
+    """Convert HistData's millisecond wall time into UTC."""
+    parsed = parse_histdata_timestamp(stamp[:8], stamp[9:15])
+    return parsed.replace(microsecond=int(stamp[15:18]) * 1000)
+
+
+def iter_histdata_tick_rows(archive_path: str | Path, symbol: str) -> Iterator[dict[str, object]]:
+    """Stream validated bid/ask rows from a raw HistData tick archive."""
+    source = Path(archive_path)
+    with zipfile.ZipFile(source) as archive:
+        expected = source.stem + ".csv"
+        if not expected.startswith(f"DAT_ASCII_{symbol}_T_"):
+            raise ValueError("tick archive does not match requested symbol")
+        info = archive.getinfo(expected)
+        if info.file_size > 1024 * 1024 * 1024:
+            raise ValueError("tick data exceeds the expanded size limit")
+        with archive.open(expected) as member:
+            for fields in csv.reader(io.TextIOWrapper(member, encoding="utf-8-sig")):
+                if len(fields) != 4 or not _STAMP.fullmatch(fields[0]):
+                    raise ValueError("invalid HistData quote format")
+                stamp = fields[0]
+                if not (
+                    "00" <= stamp[9:11] <= "23"
+                    and "00" <= stamp[11:13] <= "59"
+                    and "00" <= stamp[13:15] <= "59"
+                ):
+                    raise ValueError("invalid HistData quote time")
+                try:
+                    bid, ask, volume = (Decimal(value) for value in fields[1:])
+                except InvalidOperation:
+                    raise ValueError("invalid HistData quote number") from None
+                if not all(value.is_finite() for value in (bid, ask, volume)):
+                    raise ValueError("nonfinite HistData quote")
+                if bid <= 0 or ask < bid or volume < 0:
+                    raise ValueError("invalid HistData bid/ask quote")
+                yield {
+                    "ts_utc": _tick_timestamp(stamp),
+                    "bid": float(bid),
+                    "ask": float(ask),
+                    "volume": float(volume),
+                    "source": source.name,
+                }
 
 
 @dataclass
