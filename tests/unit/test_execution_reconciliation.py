@@ -203,3 +203,82 @@ def test_verified_capital_semantics_derive_cash_and_margin_and_reject_anomaly():
                 }
             }
         )
+
+
+def test_anomalous_snapshot_is_reread_once_before_accepting_recovery():
+    fields = CapitalAccountFieldMap(
+        "balance", "balance", "profitLoss", "derived", "available", verified=True
+    )
+    anomalous = {
+        "accounts": [
+            {
+                "accountId": "active",
+                "currency": "USD",
+                "balance": {
+                    "balance": "0",
+                    "profitLoss": "-999.80",
+                    "deposit": "999.80",
+                    "available": "0",
+                },
+            }
+        ]
+    }
+    recovered = {
+        "accounts": [
+            {
+                "accountId": "active",
+                "currency": "USD",
+                "balance": {
+                    "balance": "999.80",
+                    "profitLoss": "0.01",
+                    "deposit": "999.79",
+                    "available": "999.49",
+                },
+            }
+        ]
+    }
+    rereads: list[int] = []
+
+    def reread() -> dict[str, object]:
+        rereads.append(1)
+        return recovered
+
+    snapshot = normalize_capital_account_snapshot(
+        anomalous,
+        account_id="active",
+        fields=fields,
+        notional_exposure=Decimal("31.30"),
+        reread=reread,
+        reread_delay_seconds=0,
+    )
+    assert len(rereads) == 1
+    assert snapshot.balance == Decimal("999.80")
+    assert snapshot.margin_used == Decimal("0.31")
+
+
+def test_after_close_available_lag_is_tolerated():
+    fields = CapitalAccountFieldMap(
+        "balance", "balance", "profitLoss", "derived", "available", verified=True
+    )
+    after_close_lag = {
+        "accounts": [
+            {
+                "accountId": "active",
+                "currency": "USD",
+                "balance": {
+                    "balance": "999.80",
+                    "profitLoss": "0.01",
+                    "deposit": "999.79",
+                    "available": "999.49",
+                },
+            }
+        ]
+    }
+    snapshot = normalize_capital_account_snapshot(
+        after_close_lag,
+        account_id="active",
+        fields=fields,
+        notional_exposure=Decimal("31.30"),
+    )
+    assert snapshot.available == Decimal("999.49")
+    assert snapshot.margin_used == Decimal("0.31")
