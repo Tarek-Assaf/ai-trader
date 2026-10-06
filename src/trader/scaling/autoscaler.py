@@ -102,9 +102,13 @@ class Autoscaler:
         scalable = self._managed_workers(workers)
         if metrics.hourly_spend_usd >= policy.max_hourly_spend_usd:
             return [
-                ScalingAction(Action.TERMINATE, worker.pod_id, "hourly spend cap reached")
+                ScalingAction(
+                    Action.TERMINATE, worker.pod_id, "hourly spend cap reached"
+                )
                 for worker in scalable
-            ] or [ScalingAction(Action.NONE, reason="hourly cap reached; no managed workers")]
+            ] or [
+                ScalingAction(Action.NONE, reason="hourly cap reached; no managed workers")
+            ]
         pressured = (
             metrics.depth > policy.queue_depth_above
             and metrics.oldest_task_age_seconds > policy.oldest_task_age_seconds_above
@@ -118,10 +122,15 @@ class Autoscaler:
             )
             if elapsed >= policy.pressure_for_minutes:
                 return [ScalingAction(Action.CREATE, reason="queue pressure")]
-        if metrics.idle_minutes >= policy.idle_minutes and len(scalable) > policy.min_workers:
+        if (
+            metrics.idle_minutes >= policy.idle_minutes
+            and len(scalable) > policy.min_workers
+        ):
             victim = min(
                 scalable,
-                key=lambda worker: (worker.cpu_percent, worker.hourly_cost_usd, worker.pod_id),
+                key=lambda worker: (
+                    worker.cpu_percent, worker.hourly_cost_usd, worker.pod_id
+                ),
             )
             return [ScalingAction(Action.TERMINATE, victim.pod_id, "idle worker")]
         return [ScalingAction(Action.NONE, reason="within policy")]
@@ -131,7 +140,9 @@ class Autoscaler:
         for action in actions:
             if action.action is Action.CREATE:
                 created.append(
-                    self.api.create_worker(tags={"role": "worker", "managed_by": "ai-trader-autoscaler"})
+                    self.api.create_worker(
+                        tags={"role": "worker", "managed_by": "ai-trader-autoscaler"}
+                    )
                 )
             elif action.action is Action.TERMINATE and action.pod_id:
                 self.api.terminate_worker(action.pod_id)
@@ -143,7 +154,9 @@ class Autoscaler:
             return []
         managed = self._managed_workers(workers)
         extras = max(0, len(managed) - self.policy.max_workers)
-        victims = sorted(managed, key=lambda worker: (worker.cpu_percent, worker.pod_id))[:extras]
+        victims = sorted(
+            managed, key=lambda worker: (worker.cpu_percent, worker.pod_id)
+        )[:extras]
         for worker in victims:
             self.api.terminate_worker(worker.pod_id)
         return [worker.pod_id for worker in victims]
