@@ -9,7 +9,7 @@ the values to :mod:`trader.lab.validator`.
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from trader.lab.backtest import BacktestResult, BacktestTrade, WalkForwardWindow
@@ -55,9 +55,7 @@ def _walk_forward_metrics(
     profitable = 0
     for window in windows:
         window_trades = [
-            trade
-            for trade in trades
-            if window.test_start <= trade.exit_time_utc <= window.test_end
+            trade for trade in trades if window.test_start <= trade.exit_time_utc <= window.test_end
         ]
         if window_trades and sum(trade.net_pnl for trade in window_trades) > 0:
             profitable += 1

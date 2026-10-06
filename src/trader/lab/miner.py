@@ -8,10 +8,10 @@ broker. Every backtested variant is recorded before optional validation.
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Any, Literal, Mapping, Protocol
+from typing import Any, Literal, Protocol
 
 from trader.data.resample import Candle
 from trader.lab.backtest import BacktestResult, CostModel, run_backtest

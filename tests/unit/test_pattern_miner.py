@@ -1,6 +1,6 @@
 import random
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
-from typing import Mapping
 
 from trader.data.resample import Candle
 from trader.lab.backtest import CostModel, run_backtest
@@ -122,9 +122,7 @@ def test_derived_metrics_noise_variants_never_promote() -> None:
                 complexity_limits=limits,
             )
             result = run_backtest(spec, candles, cost_model=CostModel())
-            stress = run_backtest(
-                spec, candles, cost_model=CostModel(), cost_stress_pct=50.0
-            )
+            stress = run_backtest(spec, candles, cost_model=CostModel(), cost_stress_pct=50.0)
             spec_hash = f"noise-{seed}-{variant}"
             ledger.append(
                 ExperimentRecord(
@@ -170,9 +168,7 @@ def test_planted_upward_pattern_is_promoted_but_noise_is_not() -> None:
         ledger = ExperimentLedger()
         config = Gate1Config(1, 1, 1, 1, 1.2, 1.2, 0.5, 0, False, True, 0, 0.8, 50)
 
-        def validate(
-            metrics: Mapping[str, object], *, holdout_spec_hash: str
-        ) -> ValidationResult:
+        def validate(metrics: Mapping[str, object], *, holdout_spec_hash: str) -> ValidationResult:
             ledger.append(
                 ExperimentRecord(
                     holdout_spec_hash,
