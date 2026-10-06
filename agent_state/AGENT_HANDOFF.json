@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 164,
+  "revision": 166,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-086 passed (V-182): verified Capital.com account mapping (equity=balance, margin=balance-available) is in code and config with verified=true. Next: T-087 Telegram runtime wiring (Telegram tokens are already set on the Pod), then T-084, T-070, T-044/T-017 (B-007), T-060 code half.",
+    "summary": "T-087 passed (V-184). Telegram runtime is mock-by-default, long poll is guarded, control commands are LLM-independent. Next: names-only env check and smoke test on the Pod, then T-084, T-070, T-044/T-017 (B-007), T-060 code half.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2401,7 +2401,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-01",
         "R-12",
@@ -2431,8 +2431,18 @@
         "tests/unit/test_telegram_runtime.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/api/app.py",
+        "src/trader/channels/telegram.py",
+        "scripts/telegram_smoke.py",
+        "scripts/telegram_set_commands.py",
+        "tests/unit/test_telegram_runtime.py",
+        "src/trader/execution/reconciliation.py",
+        "tests/unit/test_execution_reconciliation.py",
+        "V-183",
+        "V-184"
+      ],
+      "completion_note": "Implemented Telegram runtime wiring with mock-by-default ChatRouter, guarded opt-in Anthropic budget path, daemon long-poll startup/shutdown, owner control commands, command menu and safe smoke scripts. Added production account normalization reread forwarding and wiring coverage. Focused runtime/reconciliation tests: 43 passed; Ruff, format, mypy, and compile checks pass. No Pod, broker, or order actions were performed."
     }
   ],
   "decisions": [
@@ -4481,6 +4491,27 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "the Capital.com account response semantics change or the first paper-demo trades show a reconcile mismatch"
+    },
+    {
+      "id": "V-183",
+      "subject": "T-087 Telegram runtime wiring and account reread forwarding",
+      "method": "Ran focused Telegram, chat-router, and reconciliation unit tests with PYTHONPATH=src; ran Ruff check/format, mypy, and compileall on changed runtime/scripts.",
+      "result": "pass",
+      "evidence": "src/trader/api/app.py; src/trader/channels/telegram.py; src/trader/execution/reconciliation.py; scripts/telegram_smoke.py; scripts/telegram_set_commands.py; tests/unit/test_telegram_runtime.py; tests/unit/test_execution_reconciliation.py",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "Telegram runtime/control or LLM wiring changes, or account normalization reread path changes"
+    },
+    {
+      "id": "V-184",
+      "subject": "T-087 review (Claude): Telegram runtime wiring, mock-default NL router",
+      "method": "Read app.py lifespan wiring, telegram.py router path, telegram_smoke.py and telegram_set_commands.py at 60d2bb9; py_compile on all four; CI quality (ruff, mypy, pytest) green on the tests step; checked fail-closed behaviour and secret handling.",
+      "result": "pass",
+      "evidence": "src/trader/api/app.py; src/trader/channels/telegram.py; scripts/telegram_smoke.py; scripts/telegram_set_commands.py; tests/unit/test_telegram_runtime.py",
+      "review_notes": "Pass. Mock LLM is the default; Anthropic only with LLM_PROVIDER=anthropic plus key and positive caps. Stop/pause/kill go through control_handler and never touch the LLM; a raising router gets a bounded reply. Resume Confirm button only when OWNER_TOTP_SECRET is unset (D-028). Chat ids are hashed in logs; smoke prints names only. Non-blocking follow-ups: (1) /status /positions /pnl /risk /report return placeholder text, wire real data; (2) _MemoryUsageLedger resets on restart, use the DB ledger before a real key is used; (3) add a near-miss test for 'stop loss'. Process: Codex's first T-087 push truncated the handoff at line 3046; its next push dropped ~160 validations and 157 log entries. Claude rebuilt the file from main plus Codex's V-183 and log 165 (nothing deleted).",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "the Telegram runtime, the router or the resume rule changes"
     }
   ],
   "blockers": [
@@ -7640,6 +7671,39 @@
         "tests/unit/test_execution_reconciliation.py"
       ],
       "summary": "T-086 passed (V-182). Fixed the evidence path (was a directory), added the fail-closed-after-reread test, restored entries Codex's stale handoff had dropped (D-028, T-087, V-180, log 162). Carried the re-read wiring to T-087. Turn to codex for T-087."
+    },
+    {
+      "revision": 165,
+      "ts": "2026-10-06T16:35:00Z",
+      "agent": "codex",
+      "action": "implement_t087_telegram_runtime_wiring",
+      "task_ids": [
+        "T-087"
+      ],
+      "files_changed": [
+        "src/trader/api/app.py",
+        "src/trader/channels/telegram.py",
+        "src/trader/execution/reconciliation.py",
+        "scripts/telegram_smoke.py",
+        "scripts/telegram_set_commands.py",
+        "tests/unit/test_telegram_runtime.py",
+        "tests/unit/test_execution_reconciliation.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-087 Telegram runtime wiring, mock-default LLM routing, safe command menu/smoke scripts, and production account reread forwarding. Focused checks pass; hand back to Claude for review."
+    },
+    {
+      "revision": 166,
+      "ts": "2026-10-06T17:20:00Z",
+      "agent": "claude",
+      "action": "review_t087_pass",
+      "task_ids": [
+        "T-087"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-087 passed (V-184). Restored validations and log entries that Codex's pushed handoff had dropped (kept its V-183 and log 165). Next for Codex: run the Telegram smoke test on the Pod (names-only env check first) and report the exact time to the owner; then T-084 and T-070."
     }
   ],
   "project_summary": "T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."

@@ -8,6 +8,7 @@ included in logs or outbound application messages.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import secrets
@@ -50,6 +51,12 @@ class ChartRenderer(Protocol):
     """Build a headless PNG for an owner chart request."""
 
     def __call__(self, command: str, argument: str) -> bytes: ...
+
+
+class MessageRouter(Protocol):
+    """Async natural-language router used for non-command owner messages."""
+
+    async def route(self, text: str) -> Any: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,7 +168,8 @@ class TelegramChannel:
         current_mode: Callable[[], ControlMode] | None = None,
         flatten: Flattener | None = None,
         render: Callable[[str, str], str] | None = None,
-        render_chart: ChartRenderer | None = None,
+        render_chart: Callable[[str, str], bytes] | None = None,
+        router: MessageRouter | None = None,
         authorize_resume: Callable[[], bool] | None = None,
         audit: AuditSink | None = None,
         nonce_store: NonceStore | None = None,
@@ -182,6 +190,7 @@ class TelegramChannel:
         self._flatten = flatten
         self._render = render or (lambda command, argument: f"{command}: {argument}".strip())
         self._render_chart = render_chart
+        self._router = router
         self._authorize_resume = authorize_resume
         self._audit = audit
         self._nonces = nonce_store or NonceStore()
@@ -239,8 +248,6 @@ class TelegramChannel:
             )
             return
         command, argument = self._parse_command(text)
-        if command is None:
-            return
         if command == "/resume":
             if not self._resume_mode_is_safe(chat_id):
                 return
@@ -255,6 +262,19 @@ class TelegramChannel:
             return
         if command == "/chart" and self._render_chart is not None:
             self._send_chart(chat_id, argument)
+            return
+        if command is None and self._router is not None:
+            try:
+                result = asyncio.run(self._router.route(text))
+                reply = getattr(result, "reply", "The assistant is limited right now.")
+            except Exception:
+                LOGGER.warning(
+                    "telegram chat routing failed", extra={"chat_hash": self._hash(chat_id)}
+                )
+                reply = "The assistant is limited right now; /status and /stop still work."
+            self._send(chat_id, str(reply))
+            return
+        if command is None:
             return
         self._send(chat_id, self._render(command, argument))
 
@@ -515,3 +535,11 @@ class TelegramBotTransport:
         if text:
             payload["text"] = text
         self._request("answerCallbackQuery", payload)
+
+    def set_commands(self, commands: Sequence[Mapping[str, str]]) -> None:
+        """Publish the bot menu without exposing the token or response body."""
+        cleaned = [
+            {"command": str(item["command"]), "description": str(item["description"])}
+            for item in commands
+        ]
+        self._request("setMyCommands", {"commands": cleaned})

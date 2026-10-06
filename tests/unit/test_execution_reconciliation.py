@@ -53,6 +53,56 @@ def test_account_mapping_requires_explicit_id_fields_and_valuation():
         )
 
 
+def test_normalize_capital_account_passes_reread_to_snapshot_normalizer():
+    fields = CapitalAccountFieldMap(
+        "balance", "balance", "profitLoss", "derived", "available", verified=True
+    )
+    anomalous = {
+        "accounts": [
+            {
+                "accountId": "active",
+                "currency": "USD",
+                "balance": {
+                    "balance": "0",
+                    "profitLoss": "-1000",
+                    "deposit": "1000",
+                    "available": "0",
+                },
+            }
+        ]
+    }
+    recovered = {
+        "accounts": [
+            {
+                "accountId": "active",
+                "currency": "USD",
+                "balance": {
+                    "balance": "1000",
+                    "profitLoss": "0",
+                    "deposit": "1000",
+                    "available": "1000",
+                },
+            }
+        ]
+    }
+    reread_calls: list[int] = []
+
+    def reread() -> dict[str, object]:
+        reread_calls.append(1)
+        return recovered
+
+    figures = normalize_capital_account(
+        anomalous,
+        account_id="active",
+        fields=fields,
+        notional_exposure=Decimal("0"),
+        reread=reread,
+        reread_delay_seconds=0,
+    )
+    assert len(reread_calls) == 1
+    assert figures.balance == Decimal("1000")
+
+
 def test_initial_stop_is_used_for_r_multiple_and_mismatch_raises():
     engine = create_engine("sqlite://")
     tables["trade_intents"].create(engine)

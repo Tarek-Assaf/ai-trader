@@ -109,6 +109,8 @@ def normalize_capital_account(
     fields: CapitalAccountFieldMap,
     margin_used: Decimal | None = None,
     notional_exposure: Decimal,
+    reread: Callable[[], Mapping[str, object]] | None = None,
+    reread_delay_seconds: float = 0.25,
 ) -> BrokerAccountFigures:
     """Normalize the active account using an explicit map and valuation inputs."""
     figures = normalize_capital_account_snapshot(
@@ -117,6 +119,8 @@ def normalize_capital_account(
         fields=fields,
         notional_exposure=notional_exposure,
         require_verified=False,
+        reread=reread,
+        reread_delay_seconds=reread_delay_seconds,
     ).to_broker_figures()
     if margin_used is not None:
         return replace(figures, margin_used=margin_used)
