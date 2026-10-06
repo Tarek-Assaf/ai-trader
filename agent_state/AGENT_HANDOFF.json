@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 158,
+  "revision": 160,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-028 review cycle 2 failed (V-176): the 1.0 US100 round trip lasted 3 s and the open snapshot is not distinct from flat, so the equity/margin mapping is still unverified. Codex must run one more held-open (>=60 s, polled every 5 s) demo trade on the newest image under D-027 before 23:08 Riyadh. A third failure goes to the owner.",
+    "summary": "T-028 passed (V-178): the held-open demo run showed Capital.com balance already includes unrealised P&L and margin = balance - available (the IG-style hypothesis was wrong). New T-086 puts the corrected mapping in code/config and sets verified. T-084 follow-up, T-044 (B-007), T-060 code half remain.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -141,7 +141,8 @@
         "T-021",
         "T-025",
         "T-028",
-        "T-085"
+        "T-085",
+        "T-086"
       ]
     },
     {
@@ -277,7 +278,8 @@
         "T-026",
         "T-028",
         "T-043",
-        "T-052"
+        "T-052",
+        "T-086"
       ]
     },
     {
@@ -2207,7 +2209,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "done",
       "requirements": [
         "R-08",
         "R-21"
@@ -2246,9 +2248,12 @@
         "docs/evidence/t028_q040_round_trip_20261006.json",
         "docs/evidence/t028_q040_attempts_20261006.json",
         "/workspace/demo_round_trip_20261006T140010Z_02d5ffff.json",
-        "/workspace/t028_q040_attempts_20261006.json"
+        "/workspace/t028_q040_attempts_20261006.json",
+        "docs/evidence/t028_q040_held_open_preflight_20261006.json",
+        "docs/evidence/t028_q040_held_open_round_trip_20261006.json",
+        "docs/evidence/t028_q040_held_open_attempts_20261006.json"
       ],
-      "completion_note": "Q-040 larger demo evidence is complete. Preflight ran before the US open and records account_observations.before_open flat at 1000/1000/1000/0 with the expected image tag. Attempt 1 failed before order submission on sanitized HTTP 429 POST /session; the retry account check was clean. Attempt 2 succeeded with exactly one BUY 1.0 US100 demo position through the normal order path with Risk Guardian approval, stop attached and tightened, before/during/after account snapshots, and a normal-path close. Final state was flat with zero positions and zero working orders. No Pod URL, token, headers or bodies are recorded."
+      "completion_note": "T-028 Q-040 held-open demo completed after one bounded retry. Preflight captured account_observations.before_open before the US open. Attempt 1 opened a position and failed at close with sanitized error.not-found.dealId; 13 five-second polls captured the position, cleanup confirmed flat. Attempt 2 succeeded with one BUY 0.001 US100 through the normal order path with Risk Guardian approval, stop verification, 13 /accounts and /positions polls over 62.6 seconds, changed account available/balance/profitLoss values while open, normal close, and flat confirmation. The expected newest main image tag is recorded; runtime could not independently expose Docker image metadata. No Pod URL, token, headers or bodies are recorded."
     },
     {
       "id": "T-083",
@@ -2349,6 +2354,38 @@
         "tests/unit/test_capital_rate_limit.py"
       ],
       "completion_note": "Audited Capital.com call sites and recorded sanitized 429 evidence: 9 HTTP 429 responses were observed during the Pod's transient session throttle; the read-only client recovered after bounded backoff and no order was retried or placed by T-085. Added shared session reuse across read-only/trading clients, five-minute GET /ping keepalive, Retry-After handling with 1/2/4/8-second jittered fallback and four total attempts for reads, and no blind 429 retries for order mutations. Focused tests and full suite pass. No credentials, URLs, headers or bodies are recorded. T-028's separately authorized larger demo run is not part of this task."
+    },
+    {
+      "id": "T-086",
+      "title": "Capital.com account mapping corrected to the verified semantics, wired to reconciliation, config verified",
+      "phase": 2,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-08",
+        "R-21"
+      ],
+      "depends_on": [
+        "T-028"
+      ],
+      "acceptance_criteria": [
+        "Replace the IG-style hypothesis in src/trader/execution/reconciliation.py with the verified semantics from V-178: equity = balance (includes unrealised P&L); cash = balance - profitLoss; unrealised P&L = profitLoss; margin used = balance - available; deposit is informational only (expected to track cash within a small tolerance, logged not trusted). The field-map class must support derived cash and derived margin and keep refusing unknown fields.",
+        "Reject as invalid (fail closed, no trading decision from it, re-read once after a short delay) any /accounts snapshot with balance 0 and profitLoss equal to minus deposit, or non-finite/negative available; tolerate the observed /accounts lag after a close (available may stay reduced for several seconds) without raising a false mismatch alarm.",
+        "config/settings.yaml capital_account_mapping updated to the corrected map with verified: true and a comment citing docs/evidence/t028_q040_held_open_round_trip_20261006.json; app startup wiring accepts it.",
+        "Unit tests built from the committed held-open figures (open, close, lag, the anomalous 0/-deposit shape); run reconcile_pnl against them with the persisted initial stop and record the deltas in docs/evidence/t028_reconcile_corrected_20261006.json. Any mismatch pauses entries and alerts.",
+        "scripts/demo_round_trip.py: a 404 error.not-found.dealId on close is checked against /positions and reported as already-closed (stop hit) rather than a failure. No new order is placed by this task; re-verification at a larger size happens during the first paper-demo trades (log mapping_check each reconcile)."
+      ],
+      "deliverables": [
+        "src/trader/execution/reconciliation.py",
+        "config/settings.yaml",
+        "scripts/demo_round_trip.py",
+        "tests/unit/test_execution_reconciliation.py",
+        "docs/evidence/t028_reconcile_corrected_20261006.json"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -4324,6 +4361,28 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "a held-open poll series of /accounts is committed"
+    },
+    {
+      "id": "V-177",
+      "subject": "T-028 Q-040 held-open demo with account polling",
+      "method": "Read the preflight before_open account, the attempt ledger, and 13 timestamped /accounts plus /positions polls during the second attempt; compare account values while the position remained visible and verify normal close cleanup.",
+      "result": "pass",
+      "evidence": "docs/evidence/t028_q040_held_open_preflight_20261006.json; docs/evidence/t028_q040_held_open_round_trip_20261006.json; docs/evidence/t028_q040_held_open_attempts_20261006.json",
+      "review_notes": "Attempt 1 failed at close with error.not-found.dealId after the position became absent from later polls; cleanup was flat. Attempt 2 held one BUY 0.001 US100 open for 62.6 seconds, all 13 polls showed the position, and available/balance/profitLoss changed from the first to last poll. Close and flat verification passed. Image tag was expected from newest main but unavailable from container runtime, so independent image verification remains unverified.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "Claude requests independent image provenance or additional account mapping evidence"
+    },
+    {
+      "id": "V-178",
+      "subject": "T-028 review cycle 3 (Claude): held-open demo round trip and account mapping",
+      "method": "Read held_open preflight, round_trip and attempts evidence; compared account fields across the 13-poll series against the hypothesis.",
+      "result": "pass",
+      "evidence": "docs/evidence/t028_q040_held_open_round_trip_20261006.json; docs/evidence/t028_q040_held_open_attempts_20261006.json; docs/evidence/t028_q040_held_open_preflight_20261006.json",
+      "review_notes": "Cycle 3 evidence is sufficient. Held-open series: 13 polls over 62.6 s, position visible in 13/13 polls, distinct timestamps, flat confirmed, no URL/token. Observed open (0.001 US100, notional ~31.3 USD): first available 999.48, balance 999.79, deposit 999.79, profitLoss 0.0; last available 999.49, balance 999.80, deposit 999.79, profitLoss 0.01. Findings: (a) the IG-style hypothesis is WRONG: balance moved +0.01 together with profitLoss +0.01, so balance already includes unrealised P&L (balance = equity); equity = balance + profitLoss would double count. (b) margin used = balance - available (about 0.31, which is 1% of the notional), NOT deposit; deposit stayed 999.79 and looks like cash/realised funds. (c) cash = balance - profitLoss. (d) /accounts lags: after_close still showed available 999.49. (e) A second anomalous reading appeared (attempt 1 account_before: available 0, balance 0, deposit 999.8, profitLoss -999.8; same shape as the 13:24Z preflight): treat balance 0 with profitLoss = -deposit as an invalid snapshot. Caveats: precision is one cent at 0.001 size (D-027 said about 1.0, the smaller size is safer); the Pod image tag cannot be introspected in the container (expected tag efab3d8 recorded, accepted as a documented limitation). Attempt 1 position disappeared after about 30 s (the 6.3 point stop was probably hit) and the close returned 404 error.not-found.dealId; treat 404 on close as 'verify with /positions', not a failure. T-028 evidence criteria are met; the corrected mapping is NOT yet in code/config, so config verified stays false until T-086.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "Capital.com account response semantics change or the first paper-demo trades show a reconcile mismatch"
     }
   ],
   "blockers": [
@@ -7387,7 +7446,37 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-028 changes_requested (cycle 2, V-176): trade 3 s long, during_open timestamp equals before_open, no polling, image tag unverified. D-027 trade still unused; Codex to run one held-open (>=60 s, 5 s polling) trade on the newest main image. Turn to codex."
+    },
+    {
+      "revision": 159,
+      "ts": "2026-10-06T15:01:59Z",
+      "agent": "codex",
+      "action": "complete_t028_q040_held_open_demo",
+      "task_ids": [
+        "T-028"
+      ],
+      "files_changed": [
+        "docs/evidence/t028_q040_held_open_preflight_20261006.json",
+        "docs/evidence/t028_q040_held_open_round_trip_20261006.json",
+        "docs/evidence/t028_q040_held_open_attempts_20261006.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-028 Q-040 held-open demo complete (V-177): preflight recorded account_observations.before_open; attempt 1 failed at close with error.not-found.dealId after 13 polls and cleanup was flat; attempt 2 succeeded with one normal-path BUY 0.001 US100, stop verification, 13 five-second account/position polls over 62.6 seconds, changed account available/balance/profitLoss values, normal close and flat confirmation. Expected newest main image tag recorded, but Pod runtime did not expose Docker tag. Handing to Claude for review."
+    },
+    {
+      "revision": 160,
+      "ts": "2026-10-06T15:20:00Z",
+      "agent": "claude",
+      "action": "review_t028_cycle3_pass",
+      "task_ids": [
+        "T-028",
+        "T-086"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-028 passed (V-178): 13-poll held-open series shows balance includes P&L, margin = balance - available, deposit is cash-like; hypothesis falsified. Created T-086 to put the corrected map in code/config, guard the anomalous 0/-deposit snapshot and rerun reconcile_pnl. Turn to codex."
     }
   ],
-  "project_summary": "T-028 Q-040 larger demo round trip completed with one bounded retry and redacted Pod evidence; ready for Claude review. T-085 is review-passed. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
+  "project_summary": "T-028 Q-040 held-open demo completed after one bounded retry and redacted Pod evidence; handoff to Claude for review. T-085 is review-passed. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
 }
