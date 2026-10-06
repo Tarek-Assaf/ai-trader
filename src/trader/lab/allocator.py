@@ -58,4 +58,21 @@ def allocate(
     )
 
 
-__all__ = ["StrategyAllocation", "allocate"]
+def allocate_from_config(
+    strategies: Sequence[Mapping[str, object]],
+    *,
+    risk_budget: Decimal | float,
+    config: Mapping[str, object],
+) -> tuple[StrategyAllocation, ...]:
+    portfolio = config.get("portfolio")
+    if not isinstance(portfolio, Mapping):
+        raise ValueError("portfolio config is missing")
+    return allocate(
+        strategies,
+        risk_budget=risk_budget,
+        max_concurrent=int(portfolio["max_concurrent_live_strategies"]),
+        min_diversity=float(portfolio["min_strategy_diversity"]),
+    )
+
+
+__all__ = ["StrategyAllocation", "allocate", "allocate_from_config"]

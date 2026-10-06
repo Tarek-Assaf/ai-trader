@@ -12,11 +12,23 @@ from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 from uuid import uuid4
 
 if TYPE_CHECKING:
     from sqlalchemy import Engine
+
+
+class ExperimentLedgerProtocol(Protocol):
+    """Structural protocol documented without importing typing.Protocol at runtime."""
+
+    def append(self, record: ExperimentRecord) -> ExperimentRecord: ...
+
+    def records(self) -> tuple[ExperimentRecord, ...]: ...
+
+    def count(self) -> int: ...
+
+    def count_for_strategy(self, strategy_hash: str) -> int: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,5 +114,50 @@ class SqlExperimentLedger:
             )
         return record
 
+    def records(self) -> tuple[ExperimentRecord, ...]:
+        import json
+        from sqlalchemy import select
 
-__all__ = ["ExperimentLedger", "ExperimentRecord", "SqlExperimentLedger"]
+        from trader.core.db import tables
+
+        table = tables["experiment_ledger"]
+        with self._engine.connect() as connection:
+            rows = connection.execute(select(table.c.payload)).mappings().all()
+        result: list[ExperimentRecord] = []
+        for row in rows:
+            value = row["payload"]
+            payload = json.loads(value) if isinstance(value, str) else value
+            result.append(
+                ExperimentRecord(
+                    strategy_hash=payload["strategy_hash"],
+                    parameters=payload["parameters"],
+                    data_start=datetime.fromisoformat(payload["data_start"]),
+                    data_end=datetime.fromisoformat(payload["data_end"]),
+                    metrics=payload["metrics"],
+                    proposer=payload.get("proposer", "unknown"),
+                    holdout_accessed=payload.get("holdout_accessed", False),
+                    experiment_id=payload["experiment_id"],
+                    created_at=datetime.fromisoformat(payload["created_at"]),
+                )
+            )
+        return tuple(result)
+
+    def count(self) -> int:
+        from sqlalchemy import func, select
+
+        from trader.core.db import tables
+
+        with self._engine.connect() as connection:
+            statement = select(func.count()).select_from(tables["experiment_ledger"])
+            return int(connection.execute(statement).scalar_one())
+
+    def count_for_strategy(self, strategy_hash: str) -> int:
+        return sum(item.strategy_hash == strategy_hash for item in self.records())
+
+
+__all__ = [
+    "ExperimentLedger",
+    "ExperimentLedgerProtocol",
+    "ExperimentRecord",
+    "SqlExperimentLedger",
+]

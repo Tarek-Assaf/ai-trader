@@ -2,6 +2,7 @@
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -9,7 +10,13 @@ from trader.lab.allocator import allocate
 from trader.lab.decay import DecayMonitor
 from trader.lab.ledger import ExperimentLedger, ExperimentRecord
 from trader.lab.promotion import PromotionGate
-from trader.lab.validator import HoldoutAccessError, HoldoutReader, validate_gate1
+from trader.lab.validator import (
+    Gate1Config,
+    HoldoutAccessError,
+    HoldoutReader,
+    ValidationResult,
+    validate_gate1,
+)
 
 
 def _record(index: int = 0) -> ExperimentRecord:
@@ -42,7 +49,9 @@ def test_multiple_testing_gate_rejects_inadequate_random_result():
         "multiple_testing_corrected": True,
         "p_value": 0.01,
     }
-    result = validate_gate1(metrics, trials=10_000)
+    result = validate_gate1(metrics, trials=10_000, config=Gate1Config(
+        300, 100, 5, 3, 1.3, 1.2, 0.7, 50, True, True, 2, 0.4, 20
+    ))
     assert not result.passed
     assert "adjusted_significance_failed" in result.reasons
 
@@ -52,18 +61,40 @@ def test_holdout_reader_rejects_path_escape(tmp_path):
     root.mkdir()
     (root / "data.json").write_text("{}", encoding="utf-8")
     reader = HoldoutReader(root)
-    assert reader.read(root / "data.json") == b"{}"
+    assert reader.read("hash", root / "data.json") == b"{}"
     with pytest.raises(HoldoutAccessError):
-        reader.read(tmp_path / "outside.json")
+        reader.read("other", tmp_path / "outside.json")
+
+
+def test_only_validator_defines_holdout_reader():
+    source_root = Path(__file__).parents[2] / "src" / "trader"
+    offenders = []
+    for path in source_root.rglob("*.py"):
+        if path.name == "validator.py":
+            continue
+        text = path.read_text(encoding="utf-8")
+        if "HoldoutReader" in text or "sealed_holdout" in text:
+            offenders.append(path)
+    assert offenders == []
 
 
 def test_promotion_audit_and_live_gate():
     events: list[str] = []
     gate = PromotionGate(
-        {"stage_capital": {"micro_live_size_pct_of_target": 20}, "gate1_backtest_to_paper": {}},
+        {
+            "stage_capital": {"micro_live_size_pct_of_target": 20},
+            "gate1_backtest_to_paper": {"min_trades": 0},
+        },
         alert=events.append,
     )
-    decision = gate.promote("s1", "backtest", {}, target_stage="paper")
+    validation = ValidationResult(True, (), 0.05, 1, metrics={"strategy_hash": "s1"})
+    decision = gate.promote(
+        "s1",
+        "backtest",
+        {"strategy_hash": "s1", "trades": 0},
+        target_stage="paper",
+        validation=validation,
+    )
     assert decision.approved and decision.stage == "paper"
     blocked = gate.promote("s1", "paper", {}, target_stage="micro_live")
     assert not blocked.approved and blocked.reasons == ("live_trading_disabled",)
@@ -71,11 +102,18 @@ def test_promotion_audit_and_live_gate():
 
 def test_decay_retires_after_second_recent_demotion_and_allocator_diversifies():
     now = datetime(2026, 1, 10, tzinfo=UTC)
-    monitor = DecayMonitor(max_drawdown_ratio=1.0)
+    monitor = DecayMonitor(
+        window_trades=30, max_drawdown_ratio=1.0, size_reduction=0.5, retire_days=90
+    )
     decision = monitor.evaluate(
         "s1", (-3, -1), backtest_drawdown=1, demotions=(now - timedelta(days=2),), now=now
     )
     assert decision.demote and decision.retire
+    old = monitor.evaluate(
+        "s1", (-3, -1), backtest_drawdown=1,
+        demotions=(now - timedelta(days=91),), now=now
+    )
+    assert old.demote and not old.retire
     result = allocate(
         [
             {"strategy_id": "a", "score": 2, "features": ["trend"]},

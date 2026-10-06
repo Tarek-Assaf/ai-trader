@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from trader.lab.validator import ValidationResult
+
 if TYPE_CHECKING:
     from trader.core.audit import AuditWriter
 
@@ -50,13 +52,14 @@ class PromotionGate:
         metrics: Mapping[str, object],
         *,
         target_stage: str | None = None,
+        validation: ValidationResult | None = None,
     ) -> PromotionDecision:
         if current_stage not in STAGES:
             raise ValueError("unknown strategy stage")
         target = target_stage or self._next_stage(current_stage)
         if target not in STAGES:
             raise ValueError("unknown strategy stage")
-        reasons = self._reasons(current_stage, target, metrics)
+        reasons = self._reasons(current_stage, target, metrics, validation)
         approved = not reasons
         cap = self._capital_cap(target)
         decision = PromotionDecision(
@@ -76,6 +79,8 @@ class PromotionGate:
 
     def _capital_cap(self, stage: str) -> Decimal:
         values = self._config.get("stage_capital", {})
+        if not isinstance(values, Mapping):
+            return Decimal("0")
         if stage == "micro_live":
             return _as_decimal(values.get("micro_live_size_pct_of_target"))
         if stage == "live":
@@ -83,7 +88,13 @@ class PromotionGate:
             return _as_decimal(max(ramp) if ramp else 0)
         return Decimal("0")
 
-    def _reasons(self, current: str, target: str, metrics: Mapping[str, object]) -> list[str]:
+    def _reasons(
+        self,
+        current: str,
+        target: str,
+        metrics: Mapping[str, object],
+        validation: ValidationResult | None,
+    ) -> list[str]:
         if STAGES.index(target) != STAGES.index(current) + 1:
             return ["stage_transition_must_be_adjacent"]
         if target in {"micro_live", "live"} and not self._live_enabled:
@@ -94,23 +105,69 @@ class PromotionGate:
             "live": "gate3_micro_to_live",
         }.get(target, "")
         gate = self._config.get(gate_name, {})
-        if not isinstance(gate, Mapping):
+        if not isinstance(gate, Mapping) or not gate:
             return ["gate_config_missing"]
+        allowed = {
+            "min_weeks", "min_trades", "min_out_of_sample_trades", "min_validation_periods",
+            "min_walk_forward_windows", "min_out_of_sample_profit_factor",
+            "min_holdout_profit_factor", "max_risk_rule_violations",
+            "max_drawdown_vs_backtest_ratio", "slippage_tolerance_vs_paper_pct",
+            "require_within_backtest_confidence_band", "require_costs_match_model",
+            "require_neighbor_parameters_profitable", "require_multiple_testing_correction",
+            "ramp_min_trades_per_step", "cost_stress_increase_pct",
+            "min_profitable_walk_forward_share", "max_top5pct_trades_profit_share",
+            "max_backtest_drawdown_pct", "min_profitable_regimes",
+        }
+        unknown = set(gate) - allowed
+        if unknown:
+            return ["unknown_gate_keys"]
         reasons: list[str] = []
+        if target == "paper" and (
+            validation is None
+            or not validation.passed
+            or validation.metrics.get("strategy_hash") != metrics.get("strategy_hash")
+        ):
+            reasons.append("validation_result_missing_or_mismatched")
         for key, expected in gate.items():
             if not key.startswith("min_"):
                 continue
             actual = metrics.get(key.removeprefix("min_"))
             if actual is None or _as_decimal(actual) < _as_decimal(expected):
                 reasons.append(f"{key}_failed")
-        if target == "micro_live" and int(metrics.get("risk_rule_violations", 1)) > int(
-            gate.get("max_risk_rule_violations", 0)
+        if (
+            target == "micro_live"
+            and int(metrics.get("risk_rule_violations", 1))
+            > int(gate.get("max_risk_rule_violations", 0))
         ):
             reasons.append("risk_rule_violations")
         if target == "live" and _as_decimal(
             metrics.get("max_drawdown_vs_backtest_ratio")
         ) > _as_decimal(gate.get("max_drawdown_vs_backtest_ratio", 1)):
             reasons.append("drawdown_ratio")
+        for key in ("require_within_backtest_confidence_band", "require_costs_match_model"):
+            if gate.get(key) is True and metrics.get(key.removeprefix("require_")) is not True:
+                reasons.append(f"{key}_failed")
+        for key in (
+            "require_neighbor_parameters_profitable",
+            "require_multiple_testing_correction",
+        ):
+            if gate.get(key) is True and metrics.get(key.removeprefix("require_")) is not True:
+                reasons.append(f"{key}_failed")
+        if (
+            "cost_stress_increase_pct" in gate
+            and metrics.get("cost_stress_net_positive") is not True
+        ):
+            reasons.append("cost_stress_failed")
+        if target == "live" and "ramp_min_trades_per_step" in gate:
+            if _as_decimal(metrics.get("trades_since_ramp", 0)) < _as_decimal(
+                gate["ramp_min_trades_per_step"]
+            ):
+                reasons.append("ramp_min_trades_per_step_failed")
+        if target == "live" and "slippage_tolerance_vs_paper_pct" in gate:
+            if _as_decimal(metrics.get("slippage_vs_paper_pct")) > _as_decimal(
+                gate["slippage_tolerance_vs_paper_pct"]
+            ):
+                reasons.append("slippage_tolerance_failed")
         return reasons
 
     def _record(self, decision: PromotionDecision) -> None:
