@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 103,
+  "turn": "claude",
+  "revision": 104,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-024 is done. T-028 implementation, flat /accounts evidence, reconciliation evidence, the API-up review fix, and retry-safe account capture are complete and ready for Claude review. The prior authorized round trip left the account flat but its during-open account read failed with CapitalComError; the report records that status/error-code diagnostics were unavailable and explains the -0.1 tightened-stop delta. The next authorized Pod preflight/order is postponed until tomorrow. T-060 remains blocked on the fresh restore drill.",
+    "summary": "T-024 is done. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-030 Telegram channel implementation is complete and handed to Claude for review; no Pod or broker calls were made. T-060 remains blocked on the fresh restore drill.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1213,7 +1213,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-01",
         "R-18"
@@ -1225,10 +1225,17 @@
         "non-owner chats ignored",
         "all commands tested"
       ],
-      "deliverables": [],
+      "deliverables": [
+        "src/trader/channels/__init__.py",
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_telegram_channel.py"
+      ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/channels/telegram.py: injectable transport, owner allow-list, deterministic commands, nonce-gated resume, alert rate limiting and bounded retry queue",
+        "tests/unit/test_telegram_channel.py: non-owner suppression, safe controls, single-use/expiry nonce, alert limiter and outage queue"
+      ],
+      "completion_note": "Implemented the Phase 3 Telegram channel as an offline-testable long-poll adapter. Non-owner updates are ignored with hashed chat ids only; pause/stop/kill are deterministic and immediate, resume requires a single-use 60-second confirmation nonce plus the injected owner authorization gate, alerts are rate-limited by stable key, and delivery failures remain in a bounded retry queue. No broker, LLM or Pod calls were added."
     },
     {
       "id": "T-031",
@@ -3114,7 +3121,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3518,6 +3525,16 @@
       "validated_by": "claude",
       "date": "2026-10-05",
       "reverify_if": "account capture or order path changes"
+    },
+    {
+      "id": "V-122",
+      "subject": "T-030 Telegram channel safety and routing",
+      "method": "Compile the new channel and focused tests; inspect the command, allow-list, nonce, alert and retry paths against docs/specs/phase3.md Addendum A.",
+      "result": "pass",
+      "evidence": "src/trader/channels/telegram.py; tests/unit/test_telegram_channel.py; compileall passed; git diff --check passed.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "Telegram command routing, control writer integration, nonce handling or outbound queue changes"
     }
   ],
   "blockers": [
@@ -5099,7 +5116,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5691,6 +5708,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner gave the go for the single authorized T-028 demo round trip, with two gates recorded in Q-037: Codex must wait until the owner hands Codex the RunPod terminal in chat, and must not order before the market is open (US session from 13:30 UTC; preflight must show open). Turn handed to Codex. When both gates are met: run --preflight, confirm account_observations.before_open is present (else stop, Pod needs redeploy), then the one round trip per docs/specs/t028_second_round_trip.md, commit the redacted evidence, set T-028 to review. Authorization lapses 2026-10-06T20:08:00Z. Note for Codex: Claude edited three of Codex's files during PR #48 CI repair (field-map type narrowing, legacy normalizer honours margin_used, preflight test client account_info)."
+    },
+    {
+      "revision": 104,
+      "ts": "2026-10-06T05:00:00Z",
+      "agent": "codex",
+      "action": "implement_t030_telegram_channel",
+      "task_ids": [
+        "T-030"
+      ],
+      "files_changed": [
+        "src/trader/channels/__init__.py",
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_telegram_channel.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented the offline-testable Telegram long-poll channel for T-030: owner allow-list with hashed non-owner logging, deterministic pause/stop/kill controls, nonce-gated resume with injected owner authorization, stable-key alert rate limiting, bounded retry queue and command rendering. Compileall and git diff --check pass; focused pytest is unavailable because pytest is not installed in this desktop runtime. No Pod, broker or order calls were made. Handing to Claude for review."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
