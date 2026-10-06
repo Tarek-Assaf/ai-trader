@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 137,
+  "turn": "claude",
+  "revision": 138,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-050 backtest engine review fixes are complete and handed to Claude: trailing stops ratchet on prior closed bars, gap and entry-bar exits use conservative fills, same-bar re-entry is blocked, and equity marks open positions to market. T-017 remains blocked on B-007 for empirical recorder overlap; T-052 waits on T-050 review. No Pod, broker or order calls.",
+    "summary": "T-052 Strategy Lab validator, append-only experiment ledger, promotion gate, decay monitor and diversity allocator are implemented and handed to Claude. T-044 remains blocked on T-017 empirical recorder overlap (B-007). No Pod, broker or order calls.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -1599,7 +1599,7 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-21"
@@ -1615,8 +1615,16 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "src/trader/lab/validator.py",
+        "src/trader/lab/ledger.py",
+        "src/trader/lab/promotion.py",
+        "src/trader/lab/decay.py",
+        "src/trader/lab/allocator.py",
+        "tests/unit/test_strategy_lab.py",
+        "V-157"
+      ],
+      "completion_note": "Implemented deterministic Gate 1 validation with Bonferroni multiple-testing correction and fail-closed metrics, the sole sealed-holdout reader with path containment, append-only in-memory and SQL experiment ledgers with Parquet export, adjacent promotion stages with LIVE_TRADING_ENABLED gating plus audit/alert hooks, rolling decay/demotion and second-demotion retirement, and risk-budget allocation enforcing concurrent and diversity limits. Added offline fixtures for ledger immutability, random-noise rejection, holdout path guard, promotion safety, decay retirement and allocation. Bundled Python compileall, runtime smoke and git diff --check pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. Handing T-052 to Claude for review.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -3988,6 +3996,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/lab/backtest.py changes"
+    },
+    {
+      "id": "V-157",
+      "subject": "T-052 Strategy Lab validator, ledger, promotion, decay and allocator",
+      "method": "Ran bundled Python compileall, deterministic runtime smoke fixtures for ledger immutability, Bonferroni random-noise rejection, sealed-holdout path containment, promotion safety, decay retirement and diversity allocation, plus git diff --check. Pytest, Ruff and mypy are unavailable in this desktop runtime.",
+      "result": "pass",
+      "evidence": "src/trader/lab/validator.py, ledger.py, promotion.py, decay.py, allocator.py, tests/unit/test_strategy_lab.py, compileall, runtime smoke, git diff --check",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "T-052 lab modules or tests change"
     }
   ],
   "blockers": [
@@ -6706,7 +6724,27 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-050 passed cycle 2 (V-156). Ruff format applied by me. Non-blocking: entry-bar high is not counted toward trailing best price (conservative); gap re-entry test is weak. Turn to codex for T-052/T-044 batch. T-050 depends_on T-017 removed: the engine takes cost models as input; T-017 stays blocked only on real recorder data (B-007)."
+    },
+    {
+      "revision": 138,
+      "ts": "2026-10-06T12:20:00Z",
+      "agent": "codex",
+      "action": "implement_t052_strategy_lab",
+      "task_ids": [
+        "T-052"
+      ],
+      "files_changed": [
+        "src/trader/lab/validator.py",
+        "src/trader/lab/ledger.py",
+        "src/trader/lab/promotion.py",
+        "src/trader/lab/decay.py",
+        "src/trader/lab/allocator.py",
+        "src/trader/lab/__init__.py",
+        "tests/unit/test_strategy_lab.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-052 validator, append-only experiment ledger with Parquet export, promotion stages and safety gates, decay monitor, diversity allocator and offline tests. V-157 passes with compileall, runtime smoke and git diff --check; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. T-044 remains blocked on B-007 recorder overlap. Handing T-052 to Claude for review."
     }
   ],
-  "project_summary": "T-050 backtest engine review fixes are complete and handed to Claude (V-155). T-017 remains blocked on B-007; T-052 is queued behind T-050 review."
+  "project_summary": "T-052 Strategy Lab components are implemented and handed to Claude (V-157). T-044 remains blocked on B-007; T-053/T-054 wait on T-052 review."
 }
