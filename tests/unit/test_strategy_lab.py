@@ -7,10 +7,13 @@ from pathlib import Path
 
 import pytest
 
+from trader.data.resample import Candle
 from trader.lab.allocator import allocate
+from trader.lab.backtest import CostModel, run_backtest
 from trader.lab.decay import DecayMonitor
 from trader.lab.ledger import ExperimentLedger, ExperimentRecord
 from trader.lab.promotion import PromotionGate
+from trader.lab.spec import ComplexityLimits, parse_strategy_spec
 from trader.lab.validator import (
     Gate1Config,
     HoldoutAccessError,
@@ -18,9 +21,6 @@ from trader.lab.validator import (
     ValidationResult,
     validate_gate1,
 )
-from trader.data.resample import Candle
-from trader.lab.backtest import CostModel, run_backtest
-from trader.lab.spec import ComplexityLimits, parse_strategy_spec
 
 
 def _record(index: int = 0) -> ExperimentRecord:
@@ -53,10 +53,18 @@ def test_multiple_testing_gate_rejects_inadequate_random_result():
         "p_value": 0.01,
         "cost_stress_net_positive": True,
     }
-    ledger = ExperimentLedger([ExperimentRecord(
-        "noise", {}, datetime(2026, 1, 1, tzinfo=UTC), datetime(2026, 1, 2, tzinfo=UTC), {},
-        holdout_accessed=True,
-    )])
+    ledger = ExperimentLedger(
+        [
+            ExperimentRecord(
+                "noise",
+                {},
+                datetime(2026, 1, 1, tzinfo=UTC),
+                datetime(2026, 1, 2, tzinfo=UTC),
+                {},
+                holdout_accessed=True,
+            )
+        ]
+    )
     config = Gate1Config(300, 100, 5, 3, 1.3, 1.2, 0.7, 50, True, True, 2, 0.4, 20)
     assert validate_gate1(
         metrics,
@@ -120,11 +128,17 @@ def test_promotion_audit_and_live_gate():
     )
     assert decision.approved and decision.stage == "paper"
     assert not gate.promote(
-        "s1", "backtest", {"trades": 0}, target_stage="paper",
+        "s1",
+        "backtest",
+        {"trades": 0},
+        target_stage="paper",
         validation=ValidationResult(True, (), 0.05, 1, "other", True),
     ).approved
     assert not gate.promote(
-        "s1", "backtest", {"trades": 0}, target_stage="paper",
+        "s1",
+        "backtest",
+        {"trades": 0},
+        target_stage="paper",
         validation=ValidationResult(False, ("failed",), 0.05, 1, "s1", True),
     ).approved
     blocked = gate.promote("s1", "paper", {}, target_stage="micro_live")
@@ -133,6 +147,7 @@ def test_promotion_audit_and_live_gate():
 
 def test_promotion_writes_real_audit_event_and_sql_ledger_round_trips():
     from sqlalchemy import create_engine, select
+
     from trader.core.audit import SqlAuditWriter
     from trader.core.db import metadata, tables
     from trader.lab.ledger import SqlExperimentLedger
@@ -140,9 +155,7 @@ def test_promotion_writes_real_audit_event_and_sql_ledger_round_trips():
     engine = create_engine("sqlite+pysqlite:///:memory:")
     metadata.create_all(engine)
     audit = SqlAuditWriter(engine)
-    gate = PromotionGate(
-        {"gate1_backtest_to_paper": {"min_trades": 0}}, audit=audit
-    )
+    gate = PromotionGate({"gate1_backtest_to_paper": {"min_trades": 0}}, audit=audit)
     validation = ValidationResult(True, (), 0.05, 1, "s1", True)
     assert gate.promote(
         "s1", "backtest", {"trades": 0}, target_stage="paper", validation=validation
@@ -173,10 +186,18 @@ def test_overfit_in_sample_result_fails_holdout_gate():
         "p_value": 0.001,
         "cost_stress_net_positive": True,
     }
-    ledger = ExperimentLedger([ExperimentRecord(
-        "overfit", {}, datetime(2026, 1, 1, tzinfo=UTC), datetime(2026, 1, 2, tzinfo=UTC), {},
-        holdout_accessed=True,
-    )])
+    ledger = ExperimentLedger(
+        [
+            ExperimentRecord(
+                "overfit",
+                {},
+                datetime(2026, 1, 1, tzinfo=UTC),
+                datetime(2026, 1, 2, tzinfo=UTC),
+                {},
+                holdout_accessed=True,
+            )
+        ]
+    )
     result = validate_gate1(metrics, holdout_spec_hash="overfit", ledger=ledger, config=config)
     assert not result.passed and "holdout_profit_factor_below_gate" in result.reasons
 
@@ -191,23 +212,37 @@ def test_seeded_random_noise_variants_never_promote():
         candles = []
         for index in range(40):
             price += randomizer.uniform(-1.0, 1.0)
-            candles.append(Candle(
-                start + timedelta(minutes=index), price, price + 1, price - 1, price, 1,
-                ("NAS100", "bid")
-            ))
+            candles.append(
+                Candle(
+                    start + timedelta(minutes=index),
+                    price,
+                    price + 1,
+                    price - 1,
+                    price,
+                    1,
+                    ("NAS100", "bid"),
+                )
+            )
         ledger = ExperimentLedger()
         promotions = 0
         for variant in range(2_000):
             threshold = 95 + randomizer.random() * 10
-            spec = parse_strategy_spec({
-                "schema_version": 1, "instrument": "NAS100", "direction": "long",
-                "timeframe_minutes": 1,
-                "entry_conditions": [
-                    {"indicator": "close", "operator": "gt", "threshold": threshold}
-                ],
-                "exit_rules": [{"kind": "stop", "distance": 2}],
-                "tunable_parameters": [], "regime_filters": [], "session_filters": [],
-            }, complexity_limits=limits)
+            spec = parse_strategy_spec(
+                {
+                    "schema_version": 1,
+                    "instrument": "NAS100",
+                    "direction": "long",
+                    "timeframe_minutes": 1,
+                    "entry_conditions": [
+                        {"indicator": "close", "operator": "gt", "threshold": threshold}
+                    ],
+                    "exit_rules": [{"kind": "stop", "distance": 2}],
+                    "tunable_parameters": [],
+                    "regime_filters": [],
+                    "session_filters": [],
+                },
+                complexity_limits=limits,
+            )
             result = run_backtest(spec, candles, cost_model=CostModel())
             record = ExperimentRecord(
                 f"noise-{seed}-{variant}",
@@ -216,18 +251,30 @@ def test_seeded_random_noise_variants_never_promote():
                 start + timedelta(days=1),
                 {},
             )
-            ledger.append(ExperimentRecord(
-                record.strategy_hash, record.parameters, record.data_start, record.data_end,
-                {"net_pnl": result.net_pnl}, holdout_accessed=True,
-            ))
+            ledger.append(
+                ExperimentRecord(
+                    record.strategy_hash,
+                    record.parameters,
+                    record.data_start,
+                    record.data_end,
+                    {"net_pnl": result.net_pnl},
+                    holdout_accessed=True,
+                )
+            )
             metrics = {
-                "trades": len(result.trades), "out_of_sample_trades": len(result.trades),
-                "walk_forward_windows": 0, "validation_periods": 0,
-                "out_of_sample_profit_factor": 0, "holdout_profit_factor": 0,
-                "profitable_walk_forward_share": 0, "profitable_regimes": 0,
+                "trades": len(result.trades),
+                "out_of_sample_trades": len(result.trades),
+                "walk_forward_windows": 0,
+                "validation_periods": 0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
+                "profitable_walk_forward_share": 0,
+                "profitable_regimes": 0,
                 "backtest_drawdown_pct": result.max_drawdown,
-                "top5pct_trades_profit_share": 1, "neighbor_parameters_profitable": False,
-                "p_value": 1, "cost_stress_net_positive": False,
+                "top5pct_trades_profit_share": 1,
+                "neighbor_parameters_profitable": False,
+                "p_value": 1,
+                "cost_stress_net_positive": False,
             }
             if validate_gate1(
                 metrics,
