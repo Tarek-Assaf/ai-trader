@@ -29,16 +29,22 @@ class CapitalComTradingClient(CapitalComClient):
         for auth_attempt in range(2):
             headers = self._auth_headers()
             response = self._send(
-                method, path, params=params, json=json, headers=headers, history=history
+                method,
+                path,
+                params=params,
+                json=json,
+                headers=headers,
+                history=history,
+                # Never blindly retry an order mutation after a 429. The broker
+                # may have accepted it; callers must reconcile positions first.
+                retry_429=method == "GET",
             )
             if response.status_code != 401:
                 try:
                     return response.json()
                 except ValueError:
                     raise CapitalComError(response.status_code, path) from None
-            with self._session_lock:
-                self._cst = None
-                self._security_token = None
+            self._invalidate_session()
             if auth_attempt == 1:
                 raise CapitalComError(401, path)
         raise AssertionError("unreachable")

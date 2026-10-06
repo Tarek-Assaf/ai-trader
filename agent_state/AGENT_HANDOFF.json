@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 154,
+  "turn": "claude",
+  "revision": 155,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2318,7 +2318,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-08"
       ],
@@ -2339,8 +2339,11 @@
         "tests/unit/test_capital_rate_limit.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t085_429_20261006.json",
+        "tests/unit/test_capital_rate_limit.py"
+      ],
+      "completion_note": "Audited Capital.com call sites and recorded sanitized 429 evidence: 9 HTTP 429 responses were observed during the Pod's transient session throttle; the read-only client recovered after bounded backoff and no order was retried or placed by T-085. Added shared session reuse across read-only/trading clients, five-minute GET /ping keepalive, Retry-After handling with 1/2/4/8-second jittered fallback and four total attempts for reads, and no blind 429 retries for order mutations. Focused tests and full suite pass. No credentials, URLs, headers or bodies are recorded. T-028's separately authorized larger demo run is not part of this task."
     }
   ],
   "decisions": [
@@ -4264,6 +4267,17 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "new open-position account snapshot is committed"
+    },
+    {
+      "id": "V-173",
+      "subject": "T-085 HTTP 429 audit and client hardening",
+      "method": "Ran the sanitized 429 evidence audit, reviewed client.py, trading.py, stream.py and all three Pod scripts, then ran compileall, Ruff, mypy, focused Capital.com tests and the full pytest suite.",
+      "result": "pass",
+      "evidence": "docs/evidence/t085_429_20261006.json; tests/unit/test_capital_rate_limit.py",
+      "review_notes": "Nine sanitized HTTP 429 responses were observed during a transient POST /session throttle. Read requests recovered with bounded backoff; order mutations are never blindly retried. Shared sessions, five-minute ping keepalive and the credential-scoped RateLimiter cover all audited call paths. No order was placed by T-085.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "Capital.com rate-limit policy changes"
     }
   ],
   "blockers": [
@@ -7267,7 +7281,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner reported Codex got HTTP 429 from Capital.com. Added T-085: share sanitized 429 evidence, audit all call sites against the rate limits, fix session reuse/backoff, no orders. Q-040 stays open with the owner. Turn to codex."
+    },
+    {
+      "revision": 155,
+      "ts": "2026-10-06T14:20:00Z",
+      "agent": "codex",
+      "action": "complete_t085_rate_limit_audit",
+      "task_ids": [
+        "T-085"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/client.py",
+        "src/trader/integrations/capital_com/trading.py",
+        "tests/unit/test_capital_rate_limit.py",
+        "docs/evidence/t085_429_20261006.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-085 complete (V-173): sanitized 429 evidence records nine throttled POST /session responses; read retries recovered with bounded Retry-After/exponential-jitter backoff, shared sessions and five-minute ping keepalive were added, and order mutations are never blindly retried. Full pytest passed (431 passed, 2 skipped); turn to Claude for review."
     }
   ],
-  "project_summary": "T-054 passed Claude review cycle 2 (V-170). T-028 Pod preflight and the authorized second demo round trip completed successfully on the expected demo image (V-171); redacted evidence and the attempt ledger are committed and originals remain under /workspace. T-028 is ready for Claude review. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
+  "project_summary": "T-085 is ready for Claude review after the HTTP 429 audit and client hardening (V-173). T-028's separately authorized larger demo round trip completed successfully on the expected image; its redacted Pod evidence remains committed. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
 }
