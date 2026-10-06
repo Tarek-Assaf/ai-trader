@@ -375,8 +375,7 @@ def _write_report(report: dict[str, object]) -> Path | None:
         stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
         path = WORKSPACE / f"demo_round_trip_{stamp}_{uuid.uuid4().hex[:8]}.json"
         report["report_path"] = str(path)
-        path.write_text(json.dumps(report, indent=2, sort_keys=True) + "
-", encoding="utf-8")
+        path.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print(json.dumps(report, indent=2, sort_keys=True))
         return path
     except OSError:

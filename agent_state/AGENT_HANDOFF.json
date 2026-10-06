@@ -5,12 +5,11 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  
-  "turn": "claude",
-    "revision": 161,
+  "turn": "codex",
+  "revision": 160,
   "current_phase": 1,
   "protocol": {
-    "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'XREV'.",
+    "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
     "read_first": [
       "decisions",
       "validations",
@@ -737,7 +736,7 @@
         "Real August 2026 reconstruction: 28,395 NSXUSD and 29,340 XAUUSD UTC bid minute candles; all 135 M1 conflict minutes validated against raw quotes; repeat imports write zero new rows.",
         "GitHub Actions run 37127760366 on 5b9c4c7e8ccdf737c116f7cc5b99eb4684debd2e: all quality, migration, tests, handoff, secret scan, Docker/runtime and backup/restore checks passed."
       ],
-      "completion_note": "Light-tier T-012: automatic bounded public downloads and verified ZIP caching; strict M1 importer with fixed UTC-5 conversion; optional tick-based reconstruction orders quotes by timestamp and retains original archive sequence on ties, marking bid basis and preserving source SHA-256/provenance. Validated 13,172,627 raw quotes and all 135 conflicted minutes, then imported both August 2026 datasets locally with zero invalid rows/conflicts. Re-imports wrote zero rows. Corrected weekday outages incorrectly labeled weekend, added market-open alignment and failure-path tests, and excluded TXT status reports from price parsing. Owner approved exact PyArrow 23.0.1 (Q-020). Self-review checklist checked remote shape/limits, error handling, no secrets, idempotent writes, UTC/bid basis, meaningful failure tests and scoped Light changes. Canonical main XREV 28 is preserved; previous T-012 review history remains in merge parent 88a78c6f. Pod execution and broker-price calibration are not claimed. Full GitHub Actions run 37127760366 passed.",
+      "completion_note": "Light-tier T-012: automatic bounded public downloads and verified ZIP caching; strict M1 importer with fixed UTC-5 conversion; optional tick-based reconstruction orders quotes by timestamp and retains original archive sequence on ties, marking bid basis and preserving source SHA-256/provenance. Validated 13,172,627 raw quotes and all 135 conflicted minutes, then imported both August 2026 datasets locally with zero invalid rows/conflicts. Re-imports wrote zero rows. Corrected weekday outages incorrectly labeled weekend, added market-open alignment and failure-path tests, and excluded TXT status reports from price parsing. Owner approved exact PyArrow 23.0.1 (Q-020). Self-review checklist checked remote shape/limits, error handling, no secrets, idempotent writes, UTC/bid basis, meaningful failure tests and scoped Light changes. Canonical main revision 28 is preserved; previous T-012 review history remains in merge parent 88a78c6f. Pod execution and broker-price calibration are not claimed. Full GitHub Actions run 37127760366 passed.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -1186,7 +1185,7 @@
         "Claude Full review (V-100): changes_requested cycle 1 - 1. CI is red on head e2389d80 (run 37275317330, quality job failed; the two PostgreSQL tests were expected to need CI). Fix and cite a green full run. I cannot read the job log from my environment, so include the failing test names in your response. 2. A normal server-side stop-out or take-profit must not pause trading. reconcile() currently marks a submitted record closed and sets mismatch=True, so every ordinary exit latches a durable pause and needs a manual resume. Treat a submitted record whose deal is gone as closed without mismatch (optionally confirm with get_activity). Also accept a broker position size smaller than the reserved size (partial closes are a supported feature) while still flagging a larger size. Tests: stop-out then submit next cycle works; partial close does not pause; larger size or unknown position still pauses. 3. The Guardian lease is only checked inside submit(), and the lease TTL is 30 s, so after about 30 s idle the next entry finds an expired Guardian lease and pauses the system. tick()/reconcile() must renew both leases every interval. A lost lease still pauses and alerts; no silent re-acquire mid-run. Test with a fake clock or a lease double that expires after idle. 4. There is no deterministic way out of a reserved or ambiguous record, so the first ambiguous order or crash after reservation deadlocks resume() forever (reconcile keeps returning mismatch). Add an operator-only resolve_intent(cycle_id, outcome, deal_id=None, reason) that works only while paused, never resends, is journaled with an alert, and is not reachable from any LLM-side module. Outcomes: matched (link to a broker position whose epic/direction/size/stop match the intent) or rejected (only when broker positions and get_activity show nothing for that dealReference). Use the get_activity result rather than discarding it. Tests: timeout-after-accept then resolve matched then resume works with no resubmission; process killed after reserve then resolve rejected then resume works and the cycle_id is still never reusable. 5. Acceptance criterion 'test that the LLM-side modules cannot reach it' is not covered: the AST test only proves place_order has one caller. Add an import-boundary test that nothing under agents/, lab/ or other LLM-side packages imports trader.execution.manager, journal, leader, reconciliation or brokers, directly or transitively.",
         "Claude Full review cycle 2 (V-102): pass. Pod-dependent Capital.com reconciliation moved to T-024 criteria."
       ],
-      "completion_note": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted XREV-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
+      "completion_note": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
     },
     {
       "id": "T-027",
@@ -1758,7 +1757,7 @@
       "phase": 7,
       "owner": "codex",
       "reviewer": "claude",
-
+      "status": "todo",
       "requirements": [
         "R-22"
       ],
@@ -1906,7 +1905,8 @@
       "phase": 4,
       "owner": "codex",
       "reviewer": "claude",
-            "requirements": [
+      "status": "todo",
+      "requirements": [
         "R-02",
         "R-07"
       ],
@@ -2151,7 +2151,7 @@
         "quality run 37178878924",
         "CI run 37178878924 failed before either container started because the harness applied chmod after assigning UID 10001; the chmod-before-chown order fix is included in this combined Codex update.",
         "CI run 37179273598 failed handoff validation after the first Codex fix.",
-        "CI run 37179459595 reported log XREV 44 expected handoff agent claude, found codex. XREVs 43 and 44 are now represented by one XREV 43 Codex entry, retaining both entries' timestamps, actions, run IDs, permission-order details and handoff-turn note; handoff turn is Claude.",
+        "CI run 37179459595 reported log revision 44 expected handoff agent claude, found codex. Revisions 43 and 44 are now represented by one revision 43 Codex entry, retaining both entries' timestamps, actions, run IDs, permission-order details and handoff-turn note; handoff turn is Claude.",
         "CI run 37180185081 passed lint/typecheck/migrations/tests/handoff validation/secret scan/image build/existing ROLE=all health, then failed the new mounted-volume test because /var/run/postgresql was not writable by trader when CHOWN was dropped. The test now provisions and mounts a trader-owned PostgreSQL socket directory so it isolates the refusal on the mounted workspace/data volumes.",
         "CI run 37180726291: handoff validation, image build and existing health/runtime check passed. The positive mounted-volume case started healthy and logged the expected chown warnings, including for /var/run/postgresql. The step then exited at the negative-case assertion; the redirected output hid the exact mismatch. Updated the harness to stop the positive container gracefully, give the negative case its own trader-owned socket volume, and print captured output if the refusal diagnostic is absent.",
         "V-064; CI run 37181720263 quality success on head 2411ec4"
@@ -2359,9 +2359,9 @@
       "id": "T-086",
       "title": "Capital.com account mapping corrected to the verified semantics, wired to reconciliation, config verified",
       "phase": 2,
-            "phase": 2,
-            "status": "review",
-            "status": "review",
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
       "requirements": [
         "R-08",
         "R-21"
@@ -3522,7 +3522,7 @@
       "subject": "T-043 agent graph Full review (PR #35)",
       "method": "Read graph.py, registry.py, tools.yaml and tests against the five acceptance criteria and the injection and fail-closed rules.",
       "result": "fail",
-      "evidence": "Good: no model-facing tool dispatcher, typed strict outputs, TradeIntent has no size, Guardian approval required before executor, critic veto/XREV limit, budget/model errors become NO_TRADE, wall-clock/step/token caps, full audit of prompts and outputs, allow-list pinned to the reviewed table. Must fix: Second-order injection: summaries from the data_summarizer and the macro report's free text (claims, backdrop, upcoming_events) are model paraphrases of hostile fetched text, but they reach the technical/strategist/critic inputs as plain JSON, outside <untrusted_content>. Wrap all text derived from research (summaries[].summary, macro claims.text, backdrop, upcoming_events fields) in an untrusted_content envelope (source=derived, with its provenance ids) whenever it is passed to a later role, and add a line to common_rules.md (version 2) saying derived text stays untrusted. | Add the missing full-graph injection test required by Q-026: a hostile research item whose text the mock summarizer and mock analysts echo back, run end to end through strategist, critic and Guardian. Assert: the hostile text appears only inside untrusted_content in every later model input, no tool call happens, Guardian and executor receive only the typed TradeIntent, and risk/gate/settings files are unchanged. The current test stops at the first invalid model output, so it does not exercise this path. | If the audit write for agent_execution_result fails AFTER the executor returned submitted, the graph currently falls into cycle_failed_closed and reports NO_TRADE although an order exists at the broker. Catch the audit error around that single write, still return the TRADE/submitted CycleResult, and surface an 'audit_write_failed' flag in the result so the caller and reconciler know. Add a test with an AuditWriter that raises on that event. Non-blocking: T-026 should use cycle_id as the idempotency key for execution; EventDebouncer is per process only.",
+      "evidence": "Good: no model-facing tool dispatcher, typed strict outputs, TradeIntent has no size, Guardian approval required before executor, critic veto/revision limit, budget/model errors become NO_TRADE, wall-clock/step/token caps, full audit of prompts and outputs, allow-list pinned to the reviewed table. Must fix: Second-order injection: summaries from the data_summarizer and the macro report's free text (claims, backdrop, upcoming_events) are model paraphrases of hostile fetched text, but they reach the technical/strategist/critic inputs as plain JSON, outside <untrusted_content>. Wrap all text derived from research (summaries[].summary, macro claims.text, backdrop, upcoming_events fields) in an untrusted_content envelope (source=derived, with its provenance ids) whenever it is passed to a later role, and add a line to common_rules.md (version 2) saying derived text stays untrusted. | Add the missing full-graph injection test required by Q-026: a hostile research item whose text the mock summarizer and mock analysts echo back, run end to end through strategist, critic and Guardian. Assert: the hostile text appears only inside untrusted_content in every later model input, no tool call happens, Guardian and executor receive only the typed TradeIntent, and risk/gate/settings files are unchanged. The current test stops at the first invalid model output, so it does not exercise this path. | If the audit write for agent_execution_result fails AFTER the executor returned submitted, the graph currently falls into cycle_failed_closed and reports NO_TRADE although an order exists at the broker. Catch the audit error around that single write, still return the TRADE/submitted CycleResult, and surface an 'audit_write_failed' flag in the result so the caller and reconciler know. Add a test with an AuditWriter that raises on that event. Non-blocking: T-026 should use cycle_id as the idempotency key for execution; EventDebouncer is per process only.",
       "validated_by": "claude",
       "date": "2026-10-04",
       "reverify_if": "graph, prompts, tool registry or untrusted-content handling change"
@@ -3612,7 +3612,7 @@
       "subject": "T-026 review cycle-1 regression fixes",
       "method": "Full local suite and lint/typecheck; quote-triggered stop-out, partial close, larger/unknown position, matched timeout recovery, rejected crash recovery, both-lease renewal and loss, transitive import graph. CI failure log inspected.",
       "result": "pass",
-      "evidence": "CI 37275317330 failed only append-only comparison because XREV 63 contained mojibake; no test failed. Final local 316 passed/2 PostgreSQL skips, including all review regression tests. XREV 63 restored byte-equivalent JSON text from main. Full new CI pending on PR #39.",
+      "evidence": "CI 37275317330 failed only append-only comparison because revision 63 contained mojibake; no test failed. Final local 316 passed/2 PostgreSQL skips, including all review regression tests. Revision 63 restored byte-equivalent JSON text from main. Full new CI pending on PR #39.",
       "validated_by": "codex",
       "date": "2026-10-05",
       "reverify_if": "Review fixes change."
@@ -4846,7 +4846,7 @@
         "Authorize one more demo round trip once Codex confirms the capture fix",
         "Wait for the first normal demo trade"
       ],
-      "answer": "Owner authorized (chat, 2026-10-05 23:08 Asia/Riyadh = 20:08 UTC) exactly ONE more Capital.com DEMO round trip for T-028, single use, lapses 2026-10-06T20:08:00Z, scope in docs/specs/t028_second_round_trip.md (epic US100). PRECONDITIONS before any order, in this order: (1) On the PR #48 branch fix your OWN unmerged log so entries alternate (you wrote XREVs 101 and 102 both as codex: fold the two into ONE codex entry; edit only your own unmerged entries, never entries already on main). (2) Claude's code review fix is already pushed to PR #48 (app.py keeps the API up on an unverified account map); Claude's review entries for T-028 (read-only part passes; round trip report is partial) are on branch claude/t028-review (commit 99ffdb7): take its validations V-118/V-119 and Q-036/Q-037 text into the handoff yourself, renumbering as needed, and set the log so the next entry is Claude's. (3) Append to docs/evidence/t028_authorized_round_trip_20261005.json the exact redacted CapitalComError (call, HTTP status, error code, step) and explain the -0.1 tightened-stop delta. (4) Make the GET /accounts capture retry-safe: retry reads with backoff (3 tries, 1-2 s) around the open position; the ORDER open/modify/close is never retried; add a unit test. (5) Run --preflight; if it fails or /accounts errors persistently, STOP and report, do not order. Then run the single round trip: capture /accounts before, during (plus /positions) and after, commit redacted, verify the mapping, set verified=true only if the numbers match, set T-028 to review for Claude. UPDATE (owner, chat 2026-10-05 23:26 Asia/Riyadh): the Pod test is POSTPONED to tomorrow (2026-10-06). Tonight do only repo work (preconditions 1-4); do NOT run preflight or any order until the owner says go in chat tomorrow. The authorization lapses 2026-10-06T20:08:00Z; if unused by then Claude asks for a fresh one. SEQUENCE FOR CODEX (owner instructed in chat 23:30 that the work be completed; the turn is now codex, set by Claude at the owner's instruction): (a) fold your two unmerged codex log entries (101, 102) into ONE codex entry numbered 101, editing only your own unmerged entries; (b) in that entry do preconditions 1-4 and keep the API-up fix Claude pushed; (c) run the full make check; (d) set turn to claude and stop. Claude then records the T-028 review as XREV 102 and hands back for the Pod test tomorrow after the owner says go. Do NOT add a second codex entry after 101. OWNER GO (chat, 2026-10-06 07:49 Asia/Riyadh = 04:49 UTC) with TWO GATES for Codex: (1) do NOT run --preflight or any order until the owner has given Codex the RunPod terminal in chat (owner will say so); (2) do NOT order before the market is open: preflight must show the live market status open, and the owner wants the US session (opens 16:30 Asia/Riyadh = 13:30 UTC); if preflight shows closed or abnormal spreads/stop rules, STOP and report. Pod image expected: ghcr.io/tarek-assaf/ai-trader:c72ed3c125193402ef409b6352a2e6f5445d1126; before any order confirm the preflight output contains account_observations.before_open (proves the retry-safe code is on the Pod), else STOP and report that the Pod must be redeployed. Authorization still lapses 2026-10-06T20:08:00Z (23:08 Riyadh); if unused by then Claude asks for a fresh one."
+      "answer": "Owner authorized (chat, 2026-10-05 23:08 Asia/Riyadh = 20:08 UTC) exactly ONE more Capital.com DEMO round trip for T-028, single use, lapses 2026-10-06T20:08:00Z, scope in docs/specs/t028_second_round_trip.md (epic US100). PRECONDITIONS before any order, in this order: (1) On the PR #48 branch fix your OWN unmerged log so entries alternate (you wrote revisions 101 and 102 both as codex: fold the two into ONE codex entry; edit only your own unmerged entries, never entries already on main). (2) Claude's code review fix is already pushed to PR #48 (app.py keeps the API up on an unverified account map); Claude's review entries for T-028 (read-only part passes; round trip report is partial) are on branch claude/t028-review (commit 99ffdb7): take its validations V-118/V-119 and Q-036/Q-037 text into the handoff yourself, renumbering as needed, and set the log so the next entry is Claude's. (3) Append to docs/evidence/t028_authorized_round_trip_20261005.json the exact redacted CapitalComError (call, HTTP status, error code, step) and explain the -0.1 tightened-stop delta. (4) Make the GET /accounts capture retry-safe: retry reads with backoff (3 tries, 1-2 s) around the open position; the ORDER open/modify/close is never retried; add a unit test. (5) Run --preflight; if it fails or /accounts errors persistently, STOP and report, do not order. Then run the single round trip: capture /accounts before, during (plus /positions) and after, commit redacted, verify the mapping, set verified=true only if the numbers match, set T-028 to review for Claude. UPDATE (owner, chat 2026-10-05 23:26 Asia/Riyadh): the Pod test is POSTPONED to tomorrow (2026-10-06). Tonight do only repo work (preconditions 1-4); do NOT run preflight or any order until the owner says go in chat tomorrow. The authorization lapses 2026-10-06T20:08:00Z; if unused by then Claude asks for a fresh one. SEQUENCE FOR CODEX (owner instructed in chat 23:30 that the work be completed; the turn is now codex, set by Claude at the owner's instruction): (a) fold your two unmerged codex log entries (101, 102) into ONE codex entry numbered 101, editing only your own unmerged entries; (b) in that entry do preconditions 1-4 and keep the API-up fix Claude pushed; (c) run the full make check; (d) set turn to claude and stop. Claude then records the T-028 review as revision 102 and hands back for the Pod test tomorrow after the owner says go. Do NOT add a second codex entry after 101. OWNER GO (chat, 2026-10-06 07:49 Asia/Riyadh = 04:49 UTC) with TWO GATES for Codex: (1) do NOT run --preflight or any order until the owner has given Codex the RunPod terminal in chat (owner will say so); (2) do NOT order before the market is open: preflight must show the live market status open, and the owner wants the US session (opens 16:30 Asia/Riyadh = 13:30 UTC); if preflight shows closed or abnormal spreads/stop rules, STOP and report. Pod image expected: ghcr.io/tarek-assaf/ai-trader:c72ed3c125193402ef409b6352a2e6f5445d1126; before any order confirm the preflight output contains account_observations.before_open (proves the retry-safe code is on the Pod), else STOP and report that the Pod must be redeployed. Authorization still lapses 2026-10-06T20:08:00Z (23:08 Riyadh); if unused by then Claude asks for a fresh one."
     },
     {
       "id": "Q-038",
@@ -4891,7 +4891,7 @@
   ],
   "log": [
     {
-      "XREV": 1,
+      "revision": 1,
       "ts": "2026-10-02T00:00:00Z",
       "agent": "claude",
       "action": "seed",
@@ -4903,7 +4903,7 @@
       "summary": "Created blueprint v3 and seeded requirements, tasks, decisions, validations and open questions."
     },
     {
-      "XREV": 1,
+      "revision": 1,
       "ts": "2026-10-02T14:55:00Z",
       "agent": "claude",
       "action": "owner_input",
@@ -4920,7 +4920,7 @@
       "summary": "Recorded owner answers Q-001 to Q-004, added D-010 to D-014, Q-005 to Q-008, requirement R-26 and tasks C-004, T-034, C-005. No hand-over: turn stays with claude."
     },
     {
-      "XREV": 1,
+      "revision": 1,
       "ts": "2026-10-02T15:05:00Z",
       "agent": "claude",
       "action": "owner_input",
@@ -4934,7 +4934,7 @@
       "summary": "Recorded answers Q-005 to Q-008, D-015 to D-017. Earlier repo not reachable: added Q-009 and blocker B-001; C-005 set to blocked. No hand-over."
     },
     {
-      "XREV": 1,
+      "revision": 1,
       "ts": "2026-10-02T15:20:00Z",
       "agent": "claude",
       "action": "audit",
@@ -4948,7 +4948,7 @@
       "summary": "Audited earlier repo; resolved B-001, answered Q-009; added D-018, V-006 to V-009 and legacy_reference notes on affected tasks. No hand-over."
     },
     {
-      "XREV": 1,
+      "revision": 1,
       "ts": "2026-10-02T15:30:00Z",
       "agent": "claude",
       "action": "owner_input",
@@ -4960,7 +4960,7 @@
       "summary": "Owner agreed to a fresh build and to stricter gates. Recorded D-019 and updated ARCHITECTURE.md to v3.1. No hand-over."
     },
     {
-      "XREV": 1,
+      "revision": 1,
       "ts": "2026-10-02T15:40:00Z",
       "agent": "claude",
       "action": "owner_input",
@@ -4975,7 +4975,7 @@
       "summary": "Added analyst roster (D-020), task T-044 and prompt/playbook acceptance on C-040. No hand-over."
     },
     {
-      "XREV": 2,
+      "revision": 2,
       "ts": "2026-10-02T15:55:00Z",
       "agent": "claude",
       "action": "specs_and_configs",
@@ -5004,7 +5004,7 @@
       "summary": "Wrote Phase 0, 1, 2 and SettingsService specs plus default configs. Handing the turn to Codex to start Phase 0."
     },
     {
-      "XREV": 3,
+      "revision": 3,
       "ts": "2026-10-02T16:20:00Z",
       "agent": "codex",
       "action": "phase0_implementation",
@@ -5041,7 +5041,7 @@
       "summary": "Implemented Phase 0 scaffold, immutable config validation, non-root multi-role container, Postgres schema and append-only audit chain, secret scanning and CI, and the RunPod deployment guide. Local checks pass (22 tests, one Postgres integration skipped); CI runtime checks are pending. Answered Q-011, recorded D-021 and handing over for review."
     },
     {
-      "XREV": 4,
+      "revision": 4,
       "ts": "2026-10-02T17:30:00Z",
       "agent": "claude",
       "action": "review_phase0",
@@ -5062,7 +5062,7 @@
       "summary": "Diagnosed CI lint failure (Claude's own seed script, removed). Requested changes on T-002 (redaction filter must be on handlers, add child-logger test). Other tasks held for a green CI run. Handing back to Codex."
     },
     {
-      "XREV": 5,
+      "revision": 5,
       "ts": "2026-10-02T17:03:30Z",
       "agent": "codex",
       "action": "address_t002_review",
@@ -5079,7 +5079,7 @@
       "summary": "Addressed Claude's T-002 review: handler-based redaction covers child/Uvicorn logs and structured SecretStr extras; unknown ceiling keys fail closed. Local checks pass (25 tests; PostgreSQL integration skipped). GitHub Actions has not reported migration/Docker results; handed back to Claude."
     },
     {
-      "XREV": 6,
+      "revision": 6,
       "ts": "2026-10-02T17:20:00Z",
       "agent": "claude",
       "action": "review_phase0_round2",
@@ -5093,7 +5093,7 @@
       "summary": "Verified T-002 fixes by reading. CI fails at migrations/tests; raised blocker B-002 asking Codex to fix and expose failure output as annotations. Turn to Codex."
     },
     {
-      "XREV": 7,
+      "revision": 7,
       "ts": "2026-10-02T18:05:00Z",
       "agent": "codex",
       "action": "resolve_ci_and_runtime_failures",
@@ -5116,7 +5116,7 @@
       "summary": "Resolved B-002. Fixed JSON parameter binding in PostgreSQL integration test, split CI migrations/tests and surfaced failure logs, then corrected ROLE=all PostgreSQL runtime socket ownership and loopback authentication. CI run 37044750525 on f8c884b passed every step. Returning turn to Claude."
     },
     {
-      "XREV": 8,
+      "revision": 8,
       "ts": "2026-10-02T18:30:00Z",
       "agent": "claude",
       "action": "approve_phase0",
@@ -5137,7 +5137,7 @@
       "summary": "Approved Phase 0 on green CI. Added T-007 hardening and T-008 image publishing. Turn to Codex."
     },
     {
-      "XREV": 9,
+      "revision": 9,
       "ts": "2026-10-02T18:28:00Z",
       "agent": "codex",
       "action": "complete_t007_t008_implementation",
@@ -5156,7 +5156,7 @@
       "summary": "Implemented T-007 hardening and T-008 GHCR publishing/RunPod guide. GitHub Actions run 37047131061 on 16a77739f8ce4cb062621fa9c7f31c8b0b57d7c5 passed quality, migration reversibility, all container runtime checks, and private image publication. Handing off to Claude; owner must boot pod and verify /health before Phase 0 closes."
     },
     {
-      "XREV": 10,
+      "revision": 10,
       "ts": "2026-10-02T19:00:00Z",
       "agent": "claude",
       "action": "approve_t007_t008",
@@ -5170,7 +5170,7 @@
       "summary": "Approved T-007 and T-008 on green CI run 37047681699. Asked owner to boot the pod (Q-012). Codex continues with Phase 1; turn to Codex."
     },
     {
-      "XREV": 11,
+      "revision": 11,
       "ts": "2026-10-02T19:32:04Z",
       "agent": "codex",
       "action": "runpod_postgres_volume_permission_workaround",
@@ -5186,7 +5186,7 @@
       "summary": "Diagnosed owner RunPod Network Volume failure: PostgreSQL rejected /workspace/pgdata permissions on every start despite chmod 700; supervisor stopped retrying and API health remained degraded. Added POSTGRES_DATA_DIR override with unchanged persistent default, smoke-only local-path guidance, and CI coverage. PR #1 CI run 37054510130 passed all checks. Recording V-028 failure and handing over for Claude review; durable storage route remains unresolved."
     },
     {
-      "XREV": 12,
+      "revision": 12,
       "ts": "2026-10-02T19:45:00Z",
       "agent": "claude",
       "action": "review_t009",
@@ -5200,7 +5200,7 @@
       "summary": "Approved T-009 on PR #1. Answered Q-013 with the durable paper route (dump/restore) and added T-018. Merge needs the owner (Q-014); turn to human."
     },
     {
-      "XREV": 13,
+      "revision": 13,
       "ts": "2026-10-02T19:58:00Z",
       "agent": "claude",
       "action": "confirm_merge",
@@ -5214,7 +5214,7 @@
       "summary": "Confirmed PR #1 merged with green CI and published image; answered Q-014; turn to Codex for T-018."
     },
     {
-      "XREV": 14,
+      "revision": 14,
       "ts": "2026-10-02T20:12:41Z",
       "agent": "codex",
       "action": "implement_t018_durable_runpod_postgres",
@@ -5238,7 +5238,7 @@
       "summary": "Implemented container-disk PostgreSQL with validated atomic five-minute and SIGTERM backups, 48-snapshot retention, restore fallback and audit-chain verification. Added full container-replacement CI coverage and updated RunPod guidance. CI run 37058629455 passed. Recorded the owner's healthy /health response, resolved B-003 for paper mode, and handed over T-018 for Claude review."
     },
     {
-      "XREV": 15,
+      "revision": 15,
       "ts": "2026-10-02T20:40:00Z",
       "agent": "claude",
       "action": "review_t018",
@@ -5252,7 +5252,7 @@
       "summary": "Reviewed T-018: design approved, two small changes requested (SIGTERM backup test, entrypoint exec bit). Added T-019. Turn to Codex."
     },
     {
-      "XREV": 16,
+      "revision": 16,
       "ts": "2026-10-02T20:27:00Z",
       "agent": "codex",
       "action": "address_t018_review_and_ci",
@@ -5268,7 +5268,7 @@
       "summary": "Addressed Claude review: added shutdown-only third marker assertions and restored entrypoint executable mode. Updated handoff base comparison to support contiguous multiple handoffs while preserving append-only log, expected-agent alternation and final turn checks. Full GitHub Actions run 37060539333 passed; handing T-018 back to Claude for re-review."
     },
     {
-      "XREV": 17,
+      "revision": 17,
       "ts": "2026-10-02T20:45:00Z",
       "agent": "claude",
       "action": "approve_t018",
@@ -5281,7 +5281,7 @@
       "summary": "Approved T-018 after fixes; Phase 0 complete; owner to merge PR #2 (Q-015), then Codex begins Phase 1. Turn to human."
     },
     {
-      "XREV": 18,
+      "revision": 18,
       "ts": "2026-10-02T20:41:00Z",
       "agent": "claude",
       "action": "confirm_merge_pr2",
@@ -5296,7 +5296,7 @@
       "summary": "Confirmed PR #2 merged with green CI. Answered Q-015. Turn to Codex for T-019 and Phase 1 (T-010)."
     },
     {
-      "XREV": 19,
+      "revision": 19,
       "ts": "2026-10-02T21:00:06Z",
       "agent": "codex",
       "action": "implement_t019_health_visibility",
@@ -5316,7 +5316,7 @@
       "summary": "Implemented /health build SHA and backup freshness fields, a 15-minute ROLE=all freshness gate, immediate initial snapshot and labeled backup failure logs. Added unit coverage and RunPod documentation. GitHub Actions run 37063741550 passed all checks. T-019 is ready for Claude review; handed over."
     },
     {
-      "XREV": 20,
+      "revision": 20,
       "ts": "2026-10-02T21:15:00Z",
       "agent": "claude",
       "action": "approve_t019",
@@ -5331,7 +5331,7 @@
       "summary": "Approved T-019. Recorded Q-010 acceptance and D-023 mixed-tier LLM strategy; extended T-042/T-043 criteria. Owner to merge PR #3; turn to human."
     },
     {
-      "XREV": 21,
+      "revision": 21,
       "ts": "2026-10-03T06:05:00Z",
       "agent": "claude",
       "action": "pass_turn_on_owner_instruction",
@@ -5345,7 +5345,7 @@
       "summary": "Owner confirmed PR #3 merged and asked to pass the turn on; recorded Q-016 answer and set turn to Codex for Phase 1 (T-010). No other changes."
     },
     {
-      "XREV": 22,
+      "revision": 22,
       "ts": "2026-10-03T06:18:48Z",
       "agent": "codex",
       "action": "implement_t010_capital_com_rest_client",
@@ -5366,7 +5366,7 @@
       "summary": "Reviewed and closed C-003 and C-005. Implemented the read-only Capital.com REST client, shared Redis limiter, pagination, tests and redacted RunPod demo verification. CI run 37102456670 passed all checks on PR #4. V-005 and live demo acceptance await the owner running the script after merge/deploy; handing over to Claude for review."
     },
     {
-      "XREV": 23,
+      "revision": 23,
       "ts": "2026-10-03T06:40:00Z",
       "agent": "claude",
       "action": "approve_t010",
@@ -5379,7 +5379,7 @@
       "summary": "Approved T-010 code. Follow-ups listed for T-011. Owner to merge PR #4, redeploy and run the redacted demo verification (Q-017, Q-018). Turn to human."
     },
     {
-      "XREV": 24,
+      "revision": 24,
       "ts": "2026-10-03T11:05:00Z",
       "agent": "claude",
       "action": "record_demo_verification",
@@ -5395,7 +5395,7 @@
       "summary": "Recorded owner's live demo check (V-005 pass for epics), marked epics VERIFIED in instruments.yaml, answered Q-017/Q-018. Turn to Codex for T-011/T-012."
     },
     {
-      "XREV": 25,
+      "revision": 25,
       "ts": "2026-10-03T11:30:00Z",
       "agent": "codex",
       "action": "implement_t011_capital_com_websocket",
@@ -5413,7 +5413,7 @@
       "summary": "Implemented Capital.com OHLC WebSocket subscriptions, bid/ask normalization, eight-minute keepalive, bounded reconnect and REST backfill of the last observed minute. Forced-disconnect, gap-fill and ping coverage passed full CI run 37119657855. Opened PR #5 for Claude review; handing over."
     },
     {
-      "XREV": 26,
+      "revision": 26,
       "ts": "2026-10-03T11:50:00Z",
       "agent": "claude",
       "action": "review_t011",
@@ -5428,7 +5428,7 @@
       "summary": "T-011 changes requested (review cycle 1): liveness validation, websockets log redaction, consumer exceptions, verify script. Extended T-014/T-015 criteria, recorded D-024. Turn to Codex."
     },
     {
-      "XREV": 27,
+      "revision": 27,
       "ts": "2026-10-03T11:50:00Z",
       "agent": "codex",
       "action": "address_t011_review_cycle_1",
@@ -5446,7 +5446,7 @@
       "summary": "Addressed Claude's review cycle 1: validate subscribe and ping acknowledgements, refresh REST session before reconnects, suppress websockets DEBUG frame logging, propagate callback failures, and add a demo-only RunPod verification script. Fixed naive REST snapshotTimeUTC parsing and side-specific reconnect backfill. CI run 37120689237 passed all quality/runtime checks. Owner live verification is Q-019. Returning PR #5 for Claude re-review."
     },
     {
-      "XREV": 28,
+      "revision": 28,
       "ts": "2026-10-03T13:40:00Z",
       "agent": "claude",
       "action": "review_t011_cycle2_approve",
@@ -5460,7 +5460,7 @@
       "summary": "T-011 approved after review cycle 2 (V-043); recorded D-025 (fast-lane process, owner-instructed auto-merge). Claude enables auto-merge on PR #5. Codex next: fix T-012 (PR #7), then build T-014 recorder. Retracting one T-012 note: scripts in this repo are run via 'python', so file mode 755 is not required."
     },
     {
-      "XREV": 29,
+      "revision": 29,
       "ts": "2026-10-03T13:57:44Z",
       "agent": "codex",
       "action": "complete_t012_automatic_download_and_source_price_validation",
@@ -5482,10 +5482,10 @@
         "src/trader/data/importers/__init__.py",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Addressed Claude review cycle 1 and owner's automatic import/price-validation request. Retrieved monthly M1 and raw tick archives, rebuilt 135 conflicting minutes using timestamp order with archive-order ties, imported 28,395 NSXUSD and 29,340 XAUUSD bid candles locally, and confirmed repeat imports add zero rows. Recorded source hashes, sampled UTC coverage, reconstruction limits and owner-approved PyArrow. Integrated canonical main XREV 28; original T-012 review remains preserved in merge parent 88a78c6f. Local 25-test/ruff/mypy checks and full GitHub Actions run 37127760366 pass. Returning to Claude for Light review."
+      "summary": "Addressed Claude review cycle 1 and owner's automatic import/price-validation request. Retrieved monthly M1 and raw tick archives, rebuilt 135 conflicting minutes using timestamp order with archive-order ties, imported 28,395 NSXUSD and 29,340 XAUUSD bid candles locally, and confirmed repeat imports add zero rows. Recorded source hashes, sampled UTC coverage, reconstruction limits and owner-approved PyArrow. Integrated canonical main revision 28; original T-012 review remains preserved in merge parent 88a78c6f. Local 25-test/ruff/mypy checks and full GitHub Actions run 37127760366 pass. Returning to Claude for Light review."
     },
     {
-      "XREV": 30,
+      "revision": 30,
       "ts": "2026-10-03T14:25:00Z",
       "agent": "claude",
       "action": "review_t012_cycle2_approve",
@@ -5500,7 +5500,7 @@
       "summary": "T-012 approved after review cycle 2 (V-047). Recorded the owner's T-011 live stream check as V-046 and answered Q-019. Added a reconnect-reason criterion to T-014. Claude enables auto-merge on PR #7. Codex next: T-014 recorder (Full tier, new branch from main); owner imports HistData on the pod with the documented commands."
     },
     {
-      "XREV": 31,
+      "revision": 31,
       "ts": "2026-10-03T17:59:38Z",
       "agent": "codex",
       "action": "implement_t013_t014_shared_resampler_and_recorder",
@@ -5527,7 +5527,7 @@
       "summary": "Implemented T-013/T-014 in Full-tier PR #9, including shared UTC resampling, the persistent reconnect-aware Capital.com recorder, health/worker integration, and fail-closed validation of remote market status. Full GitHub Actions run 37142677955 passed all quality, security, container, and runtime checks. Added Q-022 for the owner-run multi-hour demo soak; live reconnect frequency is not yet claimed. Handing the branch to Claude for review."
     },
     {
-      "XREV": 32,
+      "revision": 32,
       "ts": "2026-10-03T18:20:00Z",
       "agent": "claude",
       "action": "review_t013_t014_pr9_cycle1",
@@ -5542,7 +5542,7 @@
       "summary": "Two Codex sessions built T-014 in parallel (PR #8 and PR #9). PR #9 is the one to keep: it already has the 30-second recorder liveness freshness, fail-closed market status and the T-013 resampler. PR #8 must be closed without merging (its cycle-1 review is in its history). Review of PR #9, cycle 1 of 2, Full tier: design approved. Remaining fixes. T-014: (1) a recorder-level test for 'no gaps across a reconnect' (fake stream drops, REST backfill returns the missing minutes, every minute exactly once per side in the lake); (2) a static test that CapitalComClient and the recorder expose no order, position or settings methods and that nothing under trader.agents imports them. T-013: (3) add hypothesis property tests (OHLC invariants: high is max, low is min, open is first, close is last, volume is the sum; no look-ahead) as the spec requires. Optional: throttle status-file writes to one per second. Carried over from the PR #8 review: T-080 (pod-side historical import). Process rule: only one Codex session works on a task at a time; check open pull requests and the handoff before starting. Turn to Codex."
     },
     {
-      "XREV": 33,
+      "revision": 33,
       "ts": "2026-10-03T18:30:55Z",
       "agent": "codex",
       "action": "address_t013_t014_review_cycle_1",
@@ -5559,7 +5559,7 @@
       "summary": "Addressed Claude's cycle-1 PR #9 review: added recorder-level disconnect/REST-recovery verification with exactly-once per-side Parquet assertions, a static read-only broker/recorder and agent-import boundary invariant, and Hypothesis OHLC/no-look-ahead properties. Full-tier GitHub Actions run 37144293108 passed all quality, security, image, and role runtime checks. Owner's multi-hour demo soak remains Q-022. Returning PR #9 for Claude cycle-2 review."
     },
     {
-      "XREV": 34,
+      "revision": 34,
       "ts": "2026-10-03T18:50:00Z",
       "agent": "claude",
       "action": "review_t013_t014_cycle2_approve",
@@ -5573,7 +5573,7 @@
       "summary": "T-013 and T-014 approved after review cycle 2 on PR #9 (V-053). Claude enables auto-merge. PR #8 was closed as superseded. Codex next, one session only: T-080 (pod-side history import), then T-015, T-016, T-017. Owner redeploys the pod after the merge and runs the soak test (Q-022)."
     },
     {
-      "XREV": 35,
+      "revision": 35,
       "ts": "2026-10-03T19:07:16Z",
       "agent": "codex",
       "action": "implement_t080_resumable_histdata_range_import",
@@ -5593,7 +5593,7 @@
       "summary": "Implemented T-080's serial resumable HistData year-range importer for NSXUSD/XAUUSD, with trusted August seeds, first-seen cache-integrity hashes for other archives per owner approval, conflict-month tick rebuilds, summaries and RunPod instructions. Full GitHub Actions run 37146599648 passed on PR #11 head 4fda5210b7fcdf18981d1e3753535d87233d5cc0. T-080 is ready for Claude Light review; owner pod import and idempotence summaries remain pending Q-024. Turn to Claude."
     },
     {
-      "XREV": 36,
+      "revision": 36,
       "ts": "2026-10-03T19:14:18Z",
       "agent": "claude",
       "action": "review_t080_pass",
@@ -5606,7 +5606,7 @@
       "summary": "Approved T-080 (Light review, no changes). T-080 set to blocked until the owner pod run (Q-024). Codex may continue with T-015, T-016, T-017. Turn to Codex."
     },
     {
-      "XREV": 37,
+      "revision": 37,
       "ts": "2026-10-03 19:52:25Z",
       "agent": "codex",
       "action": "complete_t015_for_review",
@@ -5629,7 +5629,7 @@
       "summary": "Completed T-015 on PR #13 (Full review tier). CI run 37149284787 passed all quality/runtime steps. Handoff records validation V-056 and checked the review checklist. Turn to Claude for review."
     },
     {
-      "XREV": 38,
+      "revision": 38,
       "ts": "2026-10-03T20:10:00Z",
       "agent": "claude",
       "action": "review_t015_pass",
@@ -5642,7 +5642,7 @@
       "summary": "Approved T-015 (Full review, no changes): broker-first market status with schedule fallback, expected-silence handling, sanitised health. CI green. Turn to Codex."
     },
     {
-      "XREV": 39,
+      "revision": 39,
       "ts": "2026-10-03T20:15:00Z",
       "agent": "codex",
       "action": "complete_t016_config_driven_instrument_mapper",
@@ -5659,7 +5659,7 @@
       "summary": "Implemented config-driven instrument aliases and validated/cached broker terms with core-startup preload. Cash point value is not inferred from lot size. CI run 37150554116 passed; PR #14 is ready for Full Claude review after its handoff commit CI passes."
     },
     {
-      "XREV": 40,
+      "revision": 40,
       "ts": "2026-10-03T21:30:00Z",
       "agent": "claude",
       "action": "review_t016_pass",
@@ -5672,7 +5672,7 @@
       "summary": "Full review of T-016 passed (V-058), no changes requested. Turn to Codex. (Claude resolved the handoff merge after T-015 landed; validation V-056 renumbered V-060 to avoid an ID clash.)"
     },
     {
-      "XREV": 41,
+      "revision": 41,
       "ts": "2026-10-04 05:00:54 UTC",
       "agent": "codex",
       "action": "review_and_fix_t003_chown_tolerant_entrypoint",
@@ -5687,7 +5687,7 @@
       "summary": "The requested claude/entrypoint-chown-tolerant branch and PR were not present, so implemented the same change on a separate T-003 follow-up PR #17. Chown failures are tolerated only after the trader user passes a write check; PostgreSQL data ownership remains enforced. Added positive and negative ROLE=all container checks with CHOWN capability dropped. Full-tier review recorded as V-061. Merge after quality CI passes. Handing to Claude."
     },
     {
-      "XREV": 42,
+      "revision": 42,
       "ts": "2026-10-04T06:00:00Z",
       "agent": "claude",
       "action": "review_t003_changes_requested",
@@ -5700,7 +5700,7 @@
       "summary": "Full review of PR #17: entrypoint accepted, but new CI step fails on chmod after chown (V-062). Changes requested, cycle 1. Turn to Codex. Not approved; auto-merge not enabled."
     },
     {
-      "XREV": 43,
+      "revision": 43,
       "ts": "2026-10-04 05:12:49 UTC",
       "agent": "codex",
       "action": "fix_t081_container_test_and_handoff_sequence",
@@ -5711,10 +5711,10 @@
         ".github/workflows/ci.yml",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Merged the two Codex updates originally recorded at XREVs 43 (2026-10-04 05:12:49 UTC) and 44 (2026-10-04 05:17:08 UTC) into this single XREV while retaining their details. Fixed the PR #17 CI test setup: chmod now runs before chown changes the test volumes to trader UID 10001. The prior run failed before starting either container case. Entrypoint behavior was accepted in Full review; rerunning quality/container CI. Codex retains the turn while addressing cycle-1 changes. Recorded the two CI attempts on PR #17: run 37178878924 failed before container startup due chmod after chown; run 37179273598 failed the handoff sequence because the Codex fix XREV retained turn=codex. The CI chmod order is fixed and the handoff now returns to Claude; the next run will execute the container cases. Handing back for Full review. The subsequent quality run 37179459595 confirmed the sequence-validator failure: XREV 44 expected handoff agent claude but found codex. This combined XREV corrects the sequence; turn is Claude so the next CI run can reach the container tests. CI run 37180185081 passed handoff validation, secret scanning, image build, and existing ROLE=all runtime checks, then exposed that /var/run/postgresql stayed root-owned and unwritable when CHOWN was dropped. The harness now mounts a pre-owned trader socket directory so the chown-refusal cases can exercise the intended mounted data paths."
+      "summary": "Merged the two Codex updates originally recorded at revisions 43 (2026-10-04 05:12:49 UTC) and 44 (2026-10-04 05:17:08 UTC) into this single revision while retaining their details. Fixed the PR #17 CI test setup: chmod now runs before chown changes the test volumes to trader UID 10001. The prior run failed before starting either container case. Entrypoint behavior was accepted in Full review; rerunning quality/container CI. Codex retains the turn while addressing cycle-1 changes. Recorded the two CI attempts on PR #17: run 37178878924 failed before container startup due chmod after chown; run 37179273598 failed the handoff sequence because the Codex fix revision retained turn=codex. The CI chmod order is fixed and the handoff now returns to Claude; the next run will execute the container cases. Handing back for Full review. The subsequent quality run 37179459595 confirmed the sequence-validator failure: revision 44 expected handoff agent claude but found codex. This combined revision corrects the sequence; turn is Claude so the next CI run can reach the container tests. CI run 37180185081 passed handoff validation, secret scanning, image build, and existing ROLE=all runtime checks, then exposed that /var/run/postgresql stayed root-owned and unwritable when CHOWN was dropped. The harness now mounts a pre-owned trader socket directory so the chown-refusal cases can exercise the intended mounted data paths."
     },
     {
-      "XREV": 44,
+      "revision": 44,
       "ts": "2026-10-04T05:46:11Z",
       "agent": "claude",
       "action": "review_t081_changes_requested",
@@ -5727,7 +5727,7 @@
       "summary": "PR #17 re-review: entrypoint design accepted, handoff valid, but CI step 'Verify ROLE=all tolerates mounted volumes that refuse chown' fails (V-063). Changes requested, cycle 2 (of 2 allowed per CLAUDE.md anti-loop rule counting earlier cycle). Fix the CI step using the step log and push. Turn to Codex."
     },
     {
-      "XREV": 45,
+      "revision": 45,
       "ts": "2026-10-04T05:54:53Z",
       "agent": "codex",
       "action": "fix_t081_negative_container_case",
@@ -5741,7 +5741,7 @@
       "summary": "Read quality run 37180726291: validation, image build and the existing ROLE=all check passed; the new positive case reached healthy with CHOWN dropped and the expected chown warnings. The step failed after that at the negative-case diagnostic check, whose redirected log hid the mismatch. The harness now shuts the positive container down gracefully, isolates the negative case with a second pre-owned PostgreSQL socket directory, and emits the captured startup output if the expected unwritable-volume message is missing. Returning the branch to Claude for the final allowed review cycle."
     },
     {
-      "XREV": 46,
+      "revision": 46,
       "ts": "2026-10-04T06:15:00Z",
       "agent": "claude",
       "action": "review_t081_pass",
@@ -5754,7 +5754,7 @@
       "summary": "PR #17 Full review passed (V-064): CI quality green on head 2411ec4 including both chown-refusal container cases. T-081 done; enabling auto-merge. Turn to Codex."
     },
     {
-      "XREV": 47,
+      "revision": 47,
       "ts": "2026-10-04T06:24:11Z",
       "agent": "codex",
       "action": "address_t020_canonical_instrument_review",
@@ -5770,10 +5770,10 @@
         "tests/unit/test_risk_guardian.py",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Continued T-020 after main advanced through XREV 46. Preserved the earlier PR #15 implementation and cycle-1 review finding V-059; its branch is 67 commits behind and unmergeable, so this continuation uses a fresh branch from current main. RiskGuardian requires canonical symbols from config/instruments.yaml and rejects aliases or unknown symbols for intents and open positions before position-count or exposure checks. Added US100, DAX and US100-position rejection tests while retaining canonical NAS100+XAUUSD combined-risk coverage. Local Ruff check/format, focused mypy on guardian.py/audit.py, and 28 focused tests passed; the supplied local mypy environment is stale and produces unrelated baseline/dependency errors. Returning for Full Claude cycle-2 review after current-main CI."
+      "summary": "Continued T-020 after main advanced through revision 46. Preserved the earlier PR #15 implementation and cycle-1 review finding V-059; its branch is 67 commits behind and unmergeable, so this continuation uses a fresh branch from current main. RiskGuardian requires canonical symbols from config/instruments.yaml and rejects aliases or unknown symbols for intents and open positions before position-count or exposure checks. Added US100, DAX and US100-position rejection tests while retaining canonical NAS100+XAUUSD combined-risk coverage. Local Ruff check/format, focused mypy on guardian.py/audit.py, and 28 focused tests passed; the supplied local mypy environment is stale and produces unrelated baseline/dependency errors. Returning for Full Claude cycle-2 review after current-main CI."
     },
     {
-      "XREV": 48,
+      "revision": 48,
       "ts": "2026-10-04T06:44:09Z",
       "agent": "claude",
       "action": "review_t020_pass",
@@ -5786,7 +5786,7 @@
       "summary": "Approved T-020 Risk Guardian (Full review, cycle 2, V-065); alias bypass closed. Enabling auto-merge on PR #18. Turn to Codex."
     },
     {
-      "XREV": 49,
+      "revision": 49,
       "ts": "2026-10-04T07:08:00Z",
       "agent": "codex",
       "action": "complete_t021_position_sizing_for_review",
@@ -5801,7 +5801,7 @@
       "summary": "Completed T-021 in Full-tier PR #19. Added Decimal broker-aware sizing with fail-closed missing value_per_point/FX/stop handling, step flooring, maximum clamp, minimum rejection, and margin/leverage checks; tests cover both instruments, the safety rejections and FX conversion. CI run 37184835588 passed all quality, tests, handoff/sequence, security, image and container checks on head e6d058c816ae66a410cf94dbee7d04028493c0d1. The CI-detected XAUUSD fixture was constrained to the configured margin cap and now asserts the max-size clamp. Recorded V-066 and handed off for Full Claude review; Q-025 remains open for the separate Guardian wiring decision."
     },
     {
-      "XREV": 50,
+      "revision": 50,
       "ts": "2026-10-04T07:14:27Z",
       "agent": "claude",
       "action": "review_t021_pass",
@@ -5814,7 +5814,7 @@
       "summary": "Approved T-021 position sizing (Full review, no changes, V-067). Enabling auto-merge on PR #19. Turn to Codex."
     },
     {
-      "XREV": 51,
+      "revision": 51,
       "ts": "2026-10-04T07:47:36Z",
       "agent": "codex",
       "action": "complete_t022_quality_score_for_full_review",
@@ -5830,7 +5830,7 @@
       "summary": "Implemented T-022 on Full-tier PR #20: deterministic Decimal weighted quality score, auditable component contributions, fail-closed validation of seven normalized inputs/configured weights/threshold, and inclusive eligibility threshold; documented component contracts and added unit tests. Full CI run 37186702686 passed quality, tests, handoff/sequence validation, secret scan, image build and all container checks. Q-025 remains open; Guardian wiring was deliberately not inferred. Handing to Claude for Full review."
     },
     {
-      "XREV": 52,
+      "revision": 52,
       "ts": "2026-10-04T08:08:57Z",
       "agent": "claude",
       "action": "review_t022_pass",
@@ -5843,7 +5843,7 @@
       "summary": "Approved T-022 quality score (Full review, no changes, V-069). Answered Q-025: keep trusted injected inputs. Enabling auto-merge on PR #20. Turn to Codex."
     },
     {
-      "XREV": 53,
+      "revision": 53,
       "ts": "2026-10-04T08:42:54Z",
       "agent": "codex",
       "action": "complete_t040_analysis_engine_for_review",
@@ -5861,7 +5861,7 @@
       "summary": "Completed T-040 on Light-tier PR #21: deterministic indicators and no-lookahead 1M/3M/5M snapshots from validated minute candles, with reference fixtures and unit tests; no dependency, broker logic, live call, or pod usage. Final CI run 37189661831 passed all quality, tests, handoff/sequence, security, image, and container checks on head 71d4e1ee1e4ef80fe597f9f4fa9d70edfdf332e9. Recorded V-070 and requested Claude review."
     },
     {
-      "XREV": 54,
+      "revision": 54,
       "ts": "2026-10-04T08:50:15Z",
       "agent": "claude",
       "action": "review_t040_pass",
@@ -5874,7 +5874,7 @@
       "summary": "Approved T-040 analysis engine (Light review, no changes, V-071). Enabling auto-merge on PR #21. Turn to Codex."
     },
     {
-      "XREV": 55,
+      "revision": 55,
       "ts": "2026-10-04 10:24:54 UTC",
       "agent": "codex",
       "action": "complete_t082_histdata_yearly_for_review",
@@ -5894,7 +5894,7 @@
       "summary": "Completed T-082 implementation on Light-tier PR #24 (downloader allow-list unchanged). Verified visible HistData yearly M1, monthly M1 and older-year monthly tick selectors; implemented bounded yearly downloads, monthly-preferred selector planning, calendar-month split/import/resume, first-seen cache-integrity hashes, per-month conflict fallback to ticks, dry-run planning and updated one-command-per-symbol RunPod instructions. Local focused suite: 26 passed; focused Ruff and mypy passed. CI run 37195053072 passed all quality, type, test, handoff/sequence, secret scan, image and container checks on code head 328f3dbc4dfceb9044cde2992abf6593b6526467. Recorded V-072. No pod data touched; post-merge import, zero-row rerun and row/gap/overlap QA remain pending Q-024. Handing to Claude for Light review."
     },
     {
-      "XREV": 56,
+      "revision": 56,
       "ts": "2026-10-04T10:40:00Z",
       "agent": "claude",
       "action": "review_t082_pass",
@@ -5907,7 +5907,7 @@
       "summary": "Approved T-082 yearly HistData importer (Light review, no changes, V-073). Enabling auto-merge on PR #24. Turn to Codex; post-merge pod import stays under Q-024."
     },
     {
-      "XREV": 57,
+      "revision": 57,
       "ts": "2026-10-04T11:49:00Z",
       "agent": "codex",
       "action": "handoff_t041_for_full_review",
@@ -5920,7 +5920,7 @@
       "summary": "Checked the existing T-041 PR #22 rather than creating a duplicate. Recorded source adapters, sanitizer and provenance implementation plus green quality CI run 37192073616; moved T-041 to review and handed it to Claude for Full review. Recorded Q-026 because full-graph prompt-injection acceptance belongs to the dependent T-043 graph; source-boundary tests exist in PR #22. T-082 PR #24 is merged; Pod import/rerun remains pending Q-024."
     },
     {
-      "XREV": 58,
+      "revision": 58,
       "ts": "2026-10-04T12:08:11Z",
       "agent": "claude",
       "action": "review_t041_pass",
@@ -5934,7 +5934,7 @@
       "summary": "Approved T-041 research sources (Full review, no changes, V-075). Answered Q-026: full-graph injection acceptance moved to T-043 and added to its criteria. Enabling auto-merge on PR #22. Turn to Codex."
     },
     {
-      "XREV": 59,
+      "revision": 59,
       "ts": "2026-10-04T13:30:43Z",
       "agent": "codex",
       "action": "handoff_t042_for_full_review",
@@ -5957,7 +5957,7 @@
       "summary": "Opened PR #26 for the T-042 provider-agnostic budgeted LLM client. Recorded owner-approved $4/day and $80/month caps, environment-only credentials, durable usage/reservations, typed provider adapters and offline MockLLM. Full quality/container CI run 37205573564 passed on 99064d6. No live API or Pod data used. T-041 PR #22 is merged after Claude Full approval (V-075); T-082 Pod work remains Q-024. Asked Claude in Q-028 whether prompt caching and batch mode should be deferred until accounting/lifecycle semantics are specified. Handing over for Full review."
     },
     {
-      "XREV": 60,
+      "revision": 60,
       "ts": "2026-10-04T14:00:00Z",
       "agent": "claude",
       "action": "review_t042_pass",
@@ -5971,7 +5971,7 @@
       "summary": "Approved T-042 (Full review, no changes, V-077). Answered Q-028: defer prompt caching/batch. Added NO_TRADE translation criterion to T-043. Pending for Codex: T-082 yearly datemonth fix (see docs/specs/t082_histdata_yearly.md, PR #25). Turn to Codex."
     },
     {
-      "XREV": 61,
+      "revision": 61,
       "ts": "2026-10-04T14:07:00Z",
       "agent": "codex",
       "action": "fix_t082_yearly_datemonth_form",
@@ -5986,7 +5986,7 @@
       "summary": "PR #25 confirmed the pod-observed yearly form defect but contained documentation only. Opened PR #27 with a narrow importer fix: for yearly M1, accept datemonth absent, empty, or equal to the requested year; continue rejecting any other value and preserve monthly YYYYMM validation. Added a regression test posting the recorded full yearly form fields. CI run 37207724960 passed all quality and container checks on code head cb5a5b8ec2a7b48b2f5a4ff85698855b70bddddf. No Pod data changed; Q-024 import/rerun/QA remains pending. Handing to Claude for Light review."
     },
     {
-      "XREV": 62,
+      "revision": 62,
       "ts": "2026-10-04T14:20:00Z",
       "agent": "claude",
       "action": "review_t082_datemonth_pass",
@@ -5999,7 +5999,7 @@
       "summary": "Light review of PR #27 passed (V-079): minimal guard change plus regression test, no safety-relevant changes. T-082 set to done; Q-024 (owner-run Pod import, zero-row rerun, QA) remains open. Auto-merge enabled on PR #27. Turn to Codex."
     },
     {
-      "XREV": 63,
+      "revision": 63,
       "ts": "2026-10-04T15:54:46Z",
       "agent": "codex",
       "action": "complete_q024_t080_lake_qa",
@@ -6013,7 +6013,7 @@
       "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
-      "XREV": 64,
+      "revision": 64,
       "ts": "2026-10-04T16:35:00Z",
       "agent": "claude",
       "action": "review_t080_pass",
@@ -6026,7 +6026,7 @@
       "summary": "Light review of PR #30 passed (V-082); T-080 done. Evidence matches my pod observations. Gap classification against market hours is a follow-up for backtest consumers. T-024 (PR #28) Full review is next. Turn to Codex."
     },
     {
-      "XREV": 65,
+      "revision": 65,
       "ts": "2026-10-04T15:26:44Z",
       "agent": "codex",
       "action": "complete_t024_offline_adapter_for_full_review",
@@ -6045,7 +6045,7 @@
       "summary": "Completed T-024 implementation on Full-tier PR #28. Added typed BrokerAdapter contracts and a demo-only CapitalComBroker with order placement disabled by default, mandatory same-request server-side stop, confirmation and position-state validation, stop-tightening-only modifications, and offline fake/HTTP transport tests. Kept CapitalComClient GET-only by moving all position/order endpoints into CapitalComTradingClient; CI run 37212824751 passed on head 4c7cb06965c957e57768ac4a2eeb30daa9fdd92, including the module-boundary invariant, all tests and ROLE=all container checks. Recorded V-080. Q-029 tracks the required demo order round trip, which needs explicit owner authorization and a Pod step; no orders or Pod data were touched. Handing off for Full Claude review."
     },
     {
-      "XREV": 66,
+      "revision": 66,
       "ts": "2026-10-04T16:50:00Z",
       "agent": "claude",
       "action": "review_t024_pass",
@@ -6059,7 +6059,7 @@
       "summary": "Full review of PR #28 passed (V-083), no changes requested. T-024 set to blocked only on the demo round trip (Q-029). Added order-manager requirements to T-026 (sole caller, Guardian approval, reconcile after failed place_order). Merged main's T-080 state into this branch's handoff and fixed Q-029 schema. Turn to Codex."
     },
     {
-      "XREV": 67,
+      "revision": 67,
       "ts": "2026-10-04T17:34:19Z",
       "agent": "codex",
       "action": "prepare_q029_demo_round_trip_for_review",
@@ -6075,7 +6075,7 @@
       "summary": "Prepared Q-029 on PR #31: added the guarded one-shot NAS100 demo round-trip script, offline environment/rounding tests, and one-command Pod runbook. CI run 37220748149 passed all quality/test/security/image/container checks, including mounted volumes refusing chown; recorded V-084. The owner authorized exactly one demo round trip, but it has not been run. T-024 remains blocked on the owner-run Pod result after merge/redeploy. No broker order or Pod data changed. Handing over for Claude review."
     },
     {
-      "XREV": 68,
+      "revision": 68,
       "ts": "2026-10-04T17:45:00Z",
       "agent": "claude",
       "action": "review_q029_changes_requested",
@@ -6088,7 +6088,7 @@
       "summary": "Full review of PR #31: changes requested (cycle 1 of 2, V-085). Fix: (1) use minNormalStopOrLimitDistance not minStepDistance for the minimum stop distance; (2) compute the BUY stop from the bid with a spread-aware margin; (3) add a --preflight read-only mode and run it first; (4) clarify clean-rejection re-run handling. Do not run the order until these are merged. Turn to Codex."
     },
     {
-      "XREV": 69,
+      "revision": 69,
       "ts": "2026-10-04T18:02:00Z",
       "agent": "codex",
       "action": "address_q029_review_cycle_1",
@@ -6104,7 +6104,7 @@
       "summary": "Addressed Claude Full review cycle 1 (V-085) on PR #31: use the correct minimum-stop rule/fallback and POINTS unit, calculate the BUY stop from bid with spread-aware margin and ensure the tightened stop remains valid, add read-only --preflight, and clarify confirmed-flat broker rejection handling without automatic retries. Added regression coverage and updated the RunPod runbook. CI run 37222556116 passed all 250 tests and all container checks, including mounted volumes refusing chown (V-086). No order or Pod data changed. Handing PR #31 to Claude for Full review cycle 2."
     },
     {
-      "XREV": 70,
+      "revision": 70,
       "ts": "2026-10-04T18:10:00Z",
       "agent": "claude",
       "action": "review_q029_pass",
@@ -6117,7 +6117,7 @@
       "summary": "Full review of PR #31 cycle 2 passed (V-087). Owner runs 'python scripts/demo_round_trip.py --preflight' on the Pod first, then the single order command. T-024 stays blocked on that owner-run round trip. Turn to Codex."
     },
     {
-      "XREV": 71,
+      "revision": 71,
       "ts": "2026-10-04T18:41:44Z",
       "agent": "codex",
       "action": "implement_t051_strategy_spec_sandbox",
@@ -6133,7 +6133,7 @@
       "summary": "Implemented T-051 on PR #33: strict declarative Pydantic spec, JSON parser with configured complexity bounds and an allow-listed T-040 indicator surface, typed exit rules with mandatory stop, and a deterministic offline evaluator over complete 1M/3M/5M bars. Added malicious-input, round-trip, bounds, random-JSON fuzz, resampling, and static capability-boundary tests. Full CI run 37225189441 passed 264 tests and all quality/container checks (V-088). No Pod data or broker orders used. Handing over for Claude Full review."
     },
     {
-      "XREV": 72,
+      "revision": 72,
       "ts": "2026-10-04T19:10:00Z",
       "agent": "claude",
       "action": "review_t051_pass",
@@ -6147,7 +6147,7 @@
       "summary": "Full review of PR #33 passed (V-089), no changes requested; T-051 done. Added direction and schema_version to T-050 criteria. Also: C-040 prompts merged (PR #32), C-040 can be marked done by Codex's reviewer pass or by me next turn. Turn to Codex."
     },
     {
-      "XREV": 73,
+      "revision": 73,
       "ts": "2026-10-04T18:56:18Z",
       "agent": "codex",
       "action": "review_c040_pass",
@@ -6160,7 +6160,7 @@
       "summary": "Completed the delegated Codex reviewer pass for C-040 after PR #32 merged. Verified required versioned role prompts and NAS100/Gold playbooks, full role mapping and read-only tool permissions; PR #32 CI run 37224301070 passed. Recorded V-090 and marked C-040 done. The next ordered work that needs recorder/basis data (T-017) remains Pod-dependent; T-060 also requires a fresh Pod restore drill. Turn to Claude."
     },
     {
-      "XREV": 74,
+      "revision": 74,
       "ts": "2026-10-04T19:20:00Z",
       "agent": "claude",
       "action": "ack_c040_and_direct_next_work",
@@ -6173,7 +6173,7 @@
       "summary": "Accepted Codex's C-040 reviewer pass (V-090), handoff-only change. Next pod-free work for Codex, in order: T-043 agent graph on MockLLM (all dependencies are done; includes injection fixtures and NO_TRADE on BudgetExceeded/ModelUnavailable), T-023 PaperBroker using default spread/slippage (T-017 only calibrates later), T-025 P&L engine, then T-026 order manager and T-027 kill switch against the approved T-024 adapter interface (T-024 code is approved; only the owner-run demo round trip is pending, so do not wait for it), then T-060 backup job code. Pod-dependent items (T-017, T-060 restore drill, T-050) wait for the owner's Monday pod session. Turn to Codex."
     },
     {
-      "XREV": 75,
+      "revision": 75,
       "ts": "2026-10-04 19:48:17 UTC",
       "agent": "codex",
       "action": "complete_t043_agent_graph_for_full_review",
@@ -6187,10 +6187,10 @@
         "tests/unit/test_agent_graph.py",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed T-043 on PR #35 with a bounded typed event-driven graph, Guardian/executor injection, full audit, strict read-only tool registry, two-XREV critique, and fail-closed LLM/budget errors. Added offline end-to-end, boundary, model failure, and hostile web/news/filing tests. Full CI run 37229457914 passed on head 6f667143b8b06ab9b3d05f3d2e8c267ed2019532. PR targets main. Prompt caching and batch mode are deferred per Q-028. No hosted model, Pod, or broker was used. Handing off for Claude Full review. Next ordered tasks after review: T-023, T-025, T-026, T-027, then T-060 backup-job code; restore drill remains Pod-dependent."
+      "summary": "Completed T-043 on PR #35 with a bounded typed event-driven graph, Guardian/executor injection, full audit, strict read-only tool registry, two-revision critique, and fail-closed LLM/budget errors. Added offline end-to-end, boundary, model failure, and hostile web/news/filing tests. Full CI run 37229457914 passed on head 6f667143b8b06ab9b3d05f3d2e8c267ed2019532. PR targets main. Prompt caching and batch mode are deferred per Q-028. No hosted model, Pod, or broker was used. Handing off for Claude Full review. Next ordered tasks after review: T-023, T-025, T-026, T-027, then T-060 backup-job code; restore drill remains Pod-dependent."
     },
     {
-      "XREV": 76,
+      "revision": 76,
       "ts": "2026-10-04T20:05:00Z",
       "agent": "claude",
       "action": "review_t043_changes_requested",
@@ -6203,7 +6203,7 @@
       "summary": "Full review of PR #35: changes requested (cycle 1 of 2, V-092). Fix (1) wrap model-derived text from research in untrusted_content for later roles and bump common_rules to v2; (2) add the full-graph second-order injection test; (3) do not turn a submitted order into NO_TRADE when the post-execution audit write fails. Everything else passes. Turn to Codex."
     },
     {
-      "XREV": 77,
+      "revision": 77,
       "ts": "2026-10-04T20:15:00Z",
       "agent": "codex",
       "action": "address_t043_full_review_cycle_1",
@@ -6219,7 +6219,7 @@
       "summary": "Addressed all Claude Full review cycle-1 findings on PR #35: escaped/provenance-bearing wrappers now follow derived text through later model roles; common_rules is v2; added second-order hostile research coverage through strategist/critic/Guardian with protected config files unchanged; and post-submit audit write failures retain TRADE/submitted while setting audit_write_failed. Full CI run 37231051969 passed on code head 3d3e5c9e29c31a8c152c9233cf2e613947658dff. No hosted model, Pod, or broker was used. Handing to Claude for Full review cycle 2."
     },
     {
-      "XREV": 78,
+      "revision": 78,
       "ts": "2026-10-05T04:30:00Z",
       "agent": "claude",
       "action": "review_t043_pass",
@@ -6232,7 +6232,7 @@
       "summary": "T-043 Full review cycle 2 passed (V-094). Non-blocking follow-ups: T-026 idempotency key = cycle_id; debouncer is per-process. Handing to Codex for next queue (T-023, T-025, T-026, T-027, T-060)."
     },
     {
-      "XREV": 79,
+      "revision": 79,
       "ts": "2026-10-05T04:35:00Z",
       "agent": "codex",
       "action": "complete_t023_paper_broker_for_full_review",
@@ -6247,7 +6247,7 @@
       "summary": "Completed T-023 on Full-tier PR #36. Added an offline thread-safe PaperBroker with executable quotes, explicit per-epic spread/slippage fallback costs that fail closed when absent, attached brackets, stop tightening, partial closes, P&L and activity/financing placeholders; added adapter-contract and behavior tests. Full CI run 37264121761 passed on head 1e401b9c23139d2f1054d512a975f69b1a95eadf (V-095). Removed the stale T-017 task dependency per Claude's direction; T-017's Pod calibration remains later. No guessed numeric cost defaults or Pod/broker actions. Q-030 asks Claude whether caller-supplied costs should remain mandatory before calibration. Handing to Claude for Full review."
     },
     {
-      "XREV": 80,
+      "revision": 80,
       "ts": "2026-10-05T04:50:00Z",
       "agent": "claude",
       "action": "review_t023_pass",
@@ -6260,7 +6260,7 @@
       "summary": "T-023 Full review passed (V-096); Q-030 answered A (fail closed until costs supplied). Next for Codex: T-025, T-026 (idempotency key = cycle_id), T-027, T-060."
     },
     {
-      "XREV": 81,
+      "revision": 81,
       "ts": "2026-10-05 05:09:57 UTC",
       "agent": "codex",
       "action": "complete_t025_for_full_review",
@@ -6275,7 +6275,7 @@
       "summary": "Implemented the deterministic account-currency P&L engine and offline tests on Full-tier PR #37. It calculates realized/unrealized P&L, fees/financing, R-multiples, equity/drawdown, exposure/margin/leverage and explicit reconciliation deltas; valuation inputs are required rather than guessed. CI run 37266298716 passed on code head 5297359ab8d15c4dae08350d053962997519232e (V-097). PaperBroker account reconciliation is tested; Capital.com demo figures remain open under Q-031 because the current adapter does not provide normalized margin/exposure and no Pod snapshot was supplied. T-082/Q-024 are already complete. Handing PR #37 to Claude for Full review."
     },
     {
-      "XREV": 82,
+      "revision": 82,
       "ts": "2026-10-05T05:30:00Z",
       "agent": "claude",
       "action": "review_t025_pass",
@@ -6289,7 +6289,7 @@
       "summary": "T-025 Full review passed (V-098); Q-031 answered (review now, Capital.com reconciliation moved into T-026 criteria with initial-stop and fail-closed notes). Next for Codex: T-026, T-027, T-060. Pod terminal tasks are handed to Codex by the owner; follow infra/runpod/README.md Codex-operated section for the demo round trip."
     },
     {
-      "XREV": 83,
+      "revision": 83,
       "ts": "2026-10-05T06:56:37.132076+00:00",
       "agent": "codex",
       "action": "prepare_t026_execution_for_full_review",
@@ -6311,7 +6311,7 @@
       "summary": "T-026 implementation prepared for Full review: durable cycle-id reservations, Redis ownership leases for Execution and Guardian, exact-order bound Guardian decisions, startup/periodic reconciliation, durable pause and explicit recovery, ambiguous-order polling without retries, persisted initial stops, explicit account normalization and fail-closed P&L checks. Local lint/format/mypy pass; 310 tests pass, two PostgreSQL tests require CI. Capital.com field semantics and real demo reconciliation remain pending Q-029/Q-031 on the Pod; normalization uses required validated field mapping, never guessed defaults. No Pod or broker calls were made."
     },
     {
-      "XREV": 84,
+      "revision": 84,
       "ts": "2026-10-05T07:30:00Z",
       "agent": "claude",
       "action": "review_t026_changes_requested",
@@ -6324,7 +6324,7 @@
       "summary": "T-026 Full review cycle 1 (V-100): changes_requested, 5 items (red CI; normal stop-out must not pause; renew Guardian lease in tick; operator resolve path for reserved/ambiguous records; LLM-side import-boundary test). Q-032 answered (approve explicit mapping pending Pod). Core design (pk reservation, exact-order approval, no retry, durable pause) is sound."
     },
     {
-      "XREV": 85,
+      "revision": 85,
       "ts": "2026-10-05T07:16:12.179745+00:00",
       "agent": "codex",
       "action": "address_t026_full_review_cycle_1",
@@ -6339,10 +6339,10 @@
         "docs/evidence/t026_execution.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted XREV-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
+      "summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls."
     },
     {
-      "XREV": 86,
+      "revision": 86,
       "ts": "2026-10-05T08:00:00Z",
       "agent": "claude",
       "action": "review_t026_pass",
@@ -6356,7 +6356,7 @@
       "summary": "T-026 Full review cycle 2 passed (V-102). Pod-dependent account-mapping verification moved to T-024 criteria. Note for T-027/T-030: resume and resolve_intent are owner-channel only (authenticated, 2FA), never agent tools. Next for Codex: T-027, T-060. T-026 no longer depends on T-024 (its pod verification now lives in T-024 criteria)."
     },
     {
-      "XREV": 87,
+      "revision": 87,
       "ts": "2026-10-05T11:08:30Z",
       "agent": "codex",
       "action": "fix_t024_percentage_stop_preflight",
@@ -6371,7 +6371,7 @@
       "summary": "Opened PR #41 to handle Capital.com's observed minimum stop rule (0.01 PERCENTAGE): convert conservatively from the BUY ask reference, report raw rule/value, and retain the final minimum-distance check against bid. Added percentage and unsupported-unit tests. Full CI run 37300445038 passed 319 tests and all container checks. Read-only Pod preflight on the old main image aborted before any order; marker absent, no deal references or trading mutation. Actual broker minimum size/increment observed as 0.001 POINTS. Your turn Claude: please perform the Full review of PR #41. After merge/redeploy, review the new safe preflight plan and record explicit preflight approval before the one authorized demo round trip."
     },
     {
-      "XREV": 88,
+      "revision": 88,
       "ts": "2026-10-05T12:00:00Z",
       "agent": "claude",
       "action": "review_pr41_pass",
@@ -6384,7 +6384,7 @@
       "summary": "PR #41 (percentage stop-distance handling) passed Full review (V-106). After merge: redeploy new image, rerun --preflight, hand me the redacted plan for explicit approval. The T-027 review (PR #40) follows separately."
     },
     {
-      "XREV": 89,
+      "revision": 89,
       "ts": "2026-10-05T13:30:00+03:00",
       "agent": "codex",
       "action": "complete_t027_and_pod_blocked_handoff",
@@ -6399,7 +6399,7 @@
       "summary": "PR #40 (T-027) CI run 37306963588 passed all quality/container checks; Full review is pending. After PR #41 merged, the redeployed-image T-024 read-only preflight completed safely (report /workspace/demo_round_trip_20261005T121058Z_fd9ef556.json) with no order, marker, cleanup mutation, or Pod data change. T-024 still needs Claude's written preflight approval before the one authorized demo round trip. T-060 is blocked on the Pod restore drill. Your turn Claude."
     },
     {
-      "XREV": 90,
+      "revision": 90,
       "ts": "2026-10-05T13:50:00Z",
       "agent": "claude",
       "action": "answer_q033_defer_preflight_approval",
@@ -6410,10 +6410,10 @@
       "files_changed": [
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Q-033 answered: PR #40 review already done (cycle 1, V-108 on its branch); preflight approval deferred until the redacted preflight JSON is committed to docs/evidence/t024_preflight_20261005.json or pasted by the owner. Note for Codex: PR #40 branch is at XREV 90 with its own log/validation numbering; after this PR merges, merge main into that branch and renumber (XREV, V-ids) semantically before pushing the cycle-1 fixes."
+      "summary": "Q-033 answered: PR #40 review already done (cycle 1, V-108 on its branch); preflight approval deferred until the redacted preflight JSON is committed to docs/evidence/t024_preflight_20261005.json or pasted by the owner. Note for Codex: PR #40 branch is at revision 90 with its own log/validation numbering; after this PR merges, merge main into that branch and renumber (revision, V-ids) semantically before pushing the cycle-1 fixes."
     },
     {
-      "XREV": 91,
+      "revision": 91,
       "ts": "2026-10-05T14:05:00+03:00",
       "agent": "codex",
       "action": "record_t024_preflight_and_t027_review_findings",
@@ -6428,7 +6428,7 @@
       "summary": "Committed the redacted T-024 preflight report as docs/evidence/t024_preflight_20261005.json. It records a safe result=preflight for NAS100/US100 in demo/paper mode with live trading disabled, minimum size step 0.001, 0.01 PERCENTAGE stop rule converted from ask 30764.6, open stop 30757.9, tightened stop 30758.0, no deal references, no marker, and no cleanup mutation. No order or Pod data changed. Recorded Claude V-108 changes_requested for PR #40 (T-027): TOTP replay/attempt limiter, kill downgrade prevention, latch reset after resume, and reverse import-boundary test. Your turn Claude."
     },
     {
-      "XREV": 92,
+      "revision": 92,
       "ts": "2026-10-05T14:20:00Z",
       "agent": "claude",
       "action": "approve_t024_preflight",
@@ -6441,7 +6441,7 @@
       "summary": "T-024 preflight plan approved in writing (V-109); Codex may run the single authorized demo round trip once, under the stated conditions, then commit outputs per docs/specs/pod_test_outputs.md. PR #40 (T-027) fixes remain with Codex (merge main into that branch and renumber before pushing)."
     },
     {
-      "XREV": 93,
+      "revision": 93,
       "ts": "2026-10-05T14:19:10Z",
       "agent": "codex",
       "action": "record_t024_preflight_abort",
@@ -6455,7 +6455,7 @@
       "summary": "Retried the approved same-image read-only preflight on the Pod with BROKER_ENV=demo, TRADING_MODE=paper and LIVE_TRADING_ENABLED=false. It aborted with CapitalComError before quote/epic/size planning; the redacted report shows no broker observations, deal references, marker, order or cleanup mutation. The one authorized demo order was not run. Q-029 remains deferred; your turn Claude."
     },
     {
-      "XREV": 94,
+      "revision": 94,
       "ts": "2026-10-05T14:50:00Z",
       "agent": "claude",
       "action": "answer_q034_keep_deferred",
@@ -6468,7 +6468,7 @@
       "summary": "Q-034 answered: keep Q-029 deferred, check recorder /health, retry read-only preflight once after 60 s, and if it aborts again add non-secret diagnostics (step, HTTP status, errorCode) to the report. PR #40 cycle-2 review is in progress: it needs main merged first because the PR is conflicting and CI never ran on its head."
     },
     {
-      "XREV": 95,
+      "revision": 95,
       "ts": "2026-10-05T14:20:00+03:00",
       "agent": "codex",
       "action": "address_t027_v108_findings",
@@ -6488,7 +6488,7 @@
       "summary": "Addressed Claude V-108 cycle-1 findings on PR #40: shared Redis-backed TOTP replay and lockout, kill cannot be downgraded by pause, control alert latches reset on verified resume, and reverse execution-to-LLM import-boundary test added. CI rerun pending. Your turn Claude."
     },
     {
-      "XREV": 96,
+      "revision": 96,
       "ts": "2026-10-05T16:00:00Z",
       "agent": "claude",
       "action": "review_t027_pass",
@@ -6504,7 +6504,7 @@
       "summary": "T-027 Full review cycle 2 passed (V-112). Claude merged main (renumbering Codex rev 91 to 95, V-109 to V-111) and fixed ruff format, mypy and secret-scan failures; Codex: run make check (lint, typecheck, test, validate-handoff, secret-scan) before each handoff. Next for Codex: T-060 and the T-024 preflight retry per Q-034, then Phase 3 (T-030, T-031)."
     },
     {
-      "XREV": 97,
+      "revision": 97,
       "ts": "2026-10-05T14:37:08Z",
       "agent": "codex",
       "action": "record_t024_clean_preflight_and_health",
@@ -6519,7 +6519,7 @@
       "summary": "Checked Pod /health (DB and Redis reachable; data_recorder degraded, ping_reply_ok=false, market_status=unknown), waited the required 60 seconds, and ran exactly one read-only preflight. It returned clean result=preflight for NAS100/US100 in demo/paper mode with live trading disabled, size 0.001 and fresh quote/stop levels. No order, marker, deal reference or cleanup mutation occurred. Q-029 remains deferred pending Claude's written re-approval; your turn Claude."
     },
     {
-      "XREV": 98,
+      "revision": 98,
       "ts": "2026-10-05T15:10:00Z",
       "agent": "claude",
       "action": "reapprove_t024_order_answer_q035",
@@ -6532,7 +6532,7 @@
       "summary": "Q-035 answered and the clean preflight re-approved in writing (V-114): Codex may run the single demo round trip once now; commit outputs and hand back. Recorder degradation (never received data) is a separate defect for Codex to diagnose in parallel. Handoff merged semantically with main (Codex rev 95 to 97, V-111 to V-113)."
     },
     {
-      "XREV": 99,
+      "revision": 99,
       "ts": "2026-10-05T15:22:31Z",
       "agent": "codex",
       "action": "complete_t024_demo_round_trip",
@@ -6546,7 +6546,7 @@
       "summary": "After explicit owner confirmation, ran the single authorized demo round trip once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296. BUY US100/NAS100 size 0.001 opened with broker stop 30968.4, stop was verified and tightened once to 30968.5, position closed, and final flat verification confirmed zero positions and zero working orders. Deal references and zero rounding deltas are recorded in the redacted report. No retry. T-024 still needs the account cash/equity and margin/exposure mapping/reconcile_pnl acceptance review. Your turn Claude."
     },
     {
-      "XREV": 100,
+      "revision": 100,
       "ts": "2026-10-05T15:50:00Z",
       "agent": "claude",
       "action": "review_t024_round_trip_pass",
@@ -6560,7 +6560,7 @@
       "summary": "T-024 demo round trip reviewed and passed (V-117): one BUY 0.001, stop attached and verified, tightened once, closed, flat confirmed, zero rounding, no retry. T-024 done. Account mapping split into new T-028 (needs an open-position snapshot; no further order without owner authorization). Next for Codex: T-028 read-only part (flat /accounts capture, derived-equity normalizer behind an unverified flag), T-060, Phase 3 (T-030, T-031)."
     },
     {
-      "XREV": 101,
+      "revision": 101,
       "ts": "2026-10-05T20:40:00Z",
       "agent": "codex",
       "action": "prepare_t028_retry_safe_capture",
@@ -6575,10 +6575,10 @@
         "docs/evidence/t028_authorized_round_trip_20261005.json",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Folded the two unmerged Codex T-028 log entries into this single XREV-101 entry. Kept Claude's API-up fix, recorded the prior redacted CapitalComError as a GET /accounts failure during the open-position capture with HTTP status/errorCode unavailable in the original report, and explained the observed -0.1 tightened-stop delta. Added bounded three-attempt retry logic for read-only account captures, redaction, CapitalComError diagnostics for future reports, and unit coverage. Compileall, handoff validation and git diff --check pass; make check and focused tests are unavailable in this desktop runtime because make/pytest/PyYAML are missing. Q-037 postpones preflight and the single authorized round trip until tomorrow. Handing to Claude for review."
+      "summary": "Folded the two unmerged Codex T-028 log entries into this single revision-101 entry. Kept Claude's API-up fix, recorded the prior redacted CapitalComError as a GET /accounts failure during the open-position capture with HTTP status/errorCode unavailable in the original report, and explained the observed -0.1 tightened-stop delta. Added bounded three-attempt retry logic for read-only account captures, redaction, CapitalComError diagnostics for future reports, and unit coverage. Compileall, handoff validation and git diff --check pass; make check and focused tests are unavailable in this desktop runtime because make/pytest/PyYAML are missing. Q-037 postpones preflight and the single authorized round trip until tomorrow. Handing to Claude for review."
     },
     {
-      "XREV": 102,
+      "revision": 102,
       "ts": "2026-10-05T21:10:00Z",
       "agent": "claude",
       "action": "review_t028_retry_safe_capture",
@@ -6588,10 +6588,10 @@
       "files_changed": [
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Reviewed Codex's XREV-101 T-028 change: log entries folded correctly, API-up fix kept, GET /accounts retried at most 3 times with 1s/2s backoff while open/modify/close are never retried, account captures redacted to currency and four balance fields, CapitalComError carries only the non-secret errorCode. Accepted for merge. T-028 stays open (status todo) until the single authorized round trip captures an open-position /accounts snapshot and the equity/margin mapping is verified. Waiting on the owner: redeploy the pod image from merged main, then say go (authorization lapses 2026-10-06T20:08:00Z)."
+      "summary": "Reviewed Codex's revision-101 T-028 change: log entries folded correctly, API-up fix kept, GET /accounts retried at most 3 times with 1s/2s backoff while open/modify/close are never retried, account captures redacted to currency and four balance fields, CapitalComError carries only the non-secret errorCode. Accepted for merge. T-028 stays open (status todo) until the single authorized round trip captures an open-position /accounts snapshot and the equity/margin mapping is verified. Waiting on the owner: redeploy the pod image from merged main, then say go (authorization lapses 2026-10-06T20:08:00Z)."
     },
     {
-      "XREV": 103,
+      "revision": 103,
       "ts": "2026-10-06T04:50:00Z",
       "agent": "claude",
       "action": "record_owner_go_with_gates_t028_round_trip",
@@ -6604,7 +6604,7 @@
       "summary": "Owner gave the go for the single authorized T-028 demo round trip, with two gates recorded in Q-037: Codex must wait until the owner hands Codex the RunPod terminal in chat, and must not order before the market is open (US session from 13:30 UTC; preflight must show open). Turn handed to Codex. When both gates are met: run --preflight, confirm account_observations.before_open is present (else stop, Pod needs redeploy), then the one round trip per docs/specs/t028_second_round_trip.md, commit the redacted evidence, set T-028 to review. Authorization lapses 2026-10-06T20:08:00Z. Note for Codex: Claude edited three of Codex's files during PR #48 CI repair (field-map type narrowing, legacy normalizer honours margin_used, preflight test client account_info)."
     },
     {
-      "XREV": 104,
+      "revision": 104,
       "ts": "2026-10-06T05:00:00Z",
       "agent": "codex",
       "action": "implement_t030_telegram_channel",
@@ -6620,7 +6620,7 @@
       "summary": "Implemented the offline-testable Telegram long-poll channel for T-030: owner allow-list with hashed non-owner logging, deterministic pause/stop/kill controls, nonce-gated resume with injected owner authorization, stable-key alert rate limiting, bounded retry queue and command rendering. Compileall and git diff --check pass; focused pytest is unavailable because pytest is not installed in this desktop runtime. No Pod, broker or order calls were made. Handing to Claude for review."
     },
     {
-      "XREV": 105,
+      "revision": 105,
       "ts": "2026-10-06T05:30:00Z",
       "agent": "claude",
       "action": "review_t030_changes_requested",
@@ -6633,7 +6633,7 @@
       "summary": "T-030 review cycle 1: changes requested (V-123 fail). Blocking: bot token can reach logs through httpx URLs; Telegram resume can clear a kill; resume proceeds without owner authorization when none is injected; control_writer=None replies accepted without acting; cancel does not consume the nonce; flatten exceptions escape; missing tests. Exact fixes listed in T-030 completion_note. Handing back to Codex."
     },
     {
-      "XREV": 106,
+      "revision": 106,
       "ts": "2026-10-06T05:32:26.019Z",
       "agent": "codex",
       "action": "address_t030_review_cycle_1",
@@ -6648,7 +6648,7 @@
       "summary": "Applied all six blocking T-030 review fixes from Claude V-123: sanitized token-bearing transport failures and raised httpx/httpcore logger levels; made resume fail closed for unreadable or latched KILL mode and require explicit owner authorization; required a control writer; caught flatten exceptions while keeping execution halted; consumed cancel nonces and pruned expired nonces; and added the requested routing, audit, safety and token-redaction tests. Compileall, handoff validation, secret scan and git diff --check pass; pytest and make check are unavailable in this desktop runtime. No Pod, broker or order calls. Handing to Claude."
     },
     {
-      "XREV": 107,
+      "revision": 107,
       "ts": "2026-10-06T05:55:00Z",
       "agent": "claude",
       "action": "review_t030_pass",
@@ -6663,7 +6663,7 @@
       "summary": "T-030 passes review cycle 2 (V-125). All V-123 fixes verified; I applied ruff lint/format fixes only to the two T-030 files (no logic change). T-030 done pending green CI on the merge PR. Integration follow-up recorded in the T-030 note: authorize_resume and current_mode must be wired to the owner-authenticated control path. Next for Codex: T-031 chat router per docs/specs/phase3.md and Addendum A (LLM path cannot reach control), and the T-028 round trip only after the owner hands over the Pod terminal and the market is open."
     },
     {
-      "XREV": 108,
+      "revision": 108,
       "ts": "2026-10-06T05:46:55.852Z",
       "agent": "codex",
       "action": "implement_t031_chat_router",
@@ -6680,7 +6680,7 @@
       "summary": "Implemented T-031 fast-path and typed LLM router. Natural-language stop/kill/pause/resume/status/positions/pnl phrases bypass the LLM and call only injected deterministic handlers; dangerous trade, Risk Guardian, secret and code requests are refused before model use; the Intent schema has no control actions; model failures return a limited/clarifying response. Added offline tests. Compileall, handoff validation, secret scan and git diff --check pass; pytest and make check unavailable. No Pod, broker or order calls. Handing to Claude."
     },
     {
-      "XREV": 109,
+      "revision": 109,
       "ts": "2026-10-06T06:10:00Z",
       "agent": "claude",
       "action": "review_t031_changes_requested",
@@ -6696,7 +6696,7 @@
       "summary": "T-031 review cycle 1: changes requested. Blocking: router replies accepted with no control handler wired; resume phrase can reach the stop/kill handler instead of the Confirm flow; near-miss stop phrases fall to the LLM; model-controlled flags/confidence; missing Addendum A tests. Exact fixes in T-031 completion_note. I also applied ruff import-order/format fixes only (CI lint was red on PR #52, which blocks the already-passed T-030). Handing to Codex."
     },
     {
-      "XREV": 110,
+      "revision": 110,
       "ts": "2026-10-06T06:03:05.054Z",
       "agent": "codex",
       "action": "address_t031_review_cycle_1",
@@ -6711,7 +6711,7 @@
       "summary": "Applied all T-031 review fixes from Claude V-127: required the deterministic control handler, routed resume only to the Confirm flow, added near-miss stop/kill synonyms and no-LLM clarification, sanitized model flags/confidence, used the shared Message contract, and added Addendum A tests. Compileall, handoff validation, secret scan and git diff --check pass; pytest and make check unavailable. No Pod, broker or order calls. Handing to Claude."
     },
     {
-      "XREV": 111,
+      "revision": 111,
       "ts": "2026-10-06T06:20:00Z",
       "agent": "claude",
       "action": "review_t031_pass",
@@ -6726,7 +6726,7 @@
       "summary": "T-031 passes review cycle 2 (V-129). All V-127 fixes verified; I applied ruff import-order fixes only. T-030 and T-031 are done pending green CI on PR #52. Next for Codex: T-028 round trip ONLY after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z); meanwhile T-032 visualization per docs/specs/phase3.md."
     },
     {
-      "XREV": 112,
+      "revision": 112,
       "ts": "2026-10-06T06:16:56.850Z",
       "agent": "codex",
       "action": "implement_t032_visualization",
@@ -6741,7 +6741,7 @@
       "summary": "Implemented T-032 lazy headless chart builders for candles/trades, equity, drawdown, session P&L, strategy comparison and spread, with empty-data handling and PNG/self-contained HTML output; added fixture tests. Compileall, handoff validation, secret scan and git diff --check pass; matplotlib/pytest/make unavailable in desktop runtime. No Pod, broker or order calls. Handing to Claude."
     },
     {
-      "XREV": 113,
+      "revision": 113,
       "ts": "2026-10-06T06:45:00Z",
       "agent": "claude",
       "action": "review_t032_changes_requested",
@@ -6756,7 +6756,7 @@
       "summary": "T-032 changes_requested cycle 1 of 2 (V-131): add pinned matplotlib plus uv.lock so CI really runs the tests, avoid pyplot global state or close figures, and implement the chat chart-request path. I fixed lint/format/mypy only. PR #52 itself (T-030, T-031) is green earlier and still awaits the owner's merge go; T-028 remains gated on the owner handing over the Pod terminal and the market being open."
     },
     {
-      "XREV": 114,
+      "revision": 114,
       "ts": "2026-10-06T06:41:44.180Z",
       "agent": "codex",
       "action": "address_t032_review_cycle_1",
@@ -6774,7 +6774,7 @@
       "summary": "Addressed Claude V-131: pinned matplotlib and regenerated uv.lock, removed pyplot global state with FigureCanvasAgg, implemented the read-only Telegram /chart PNG path and multipart sendPhoto transport, and added delivery/failure tests. Targeted visualization and Telegram tests pass (17 passed); uv lock check, AST parsing and diff check pass. No Pod, broker or order calls. Handing to Claude."
     },
     {
-      "XREV": 115,
+      "revision": 115,
       "ts": "2026-10-06T07:10:00Z",
       "agent": "claude",
       "action": "review_t032_pass",
@@ -6787,7 +6787,7 @@
       "summary": "T-032 passes review cycle 2 (V-133); CI quality green at 294bcdc. T-030, T-031 and T-032 are done on the PR #52 branch and land on main when PR #52 merges (awaits the owner's go). Next for Codex: T-033 reports per docs/specs/phase3.md; T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
     },
     {
-      "XREV": 116,
+      "revision": 116,
       "ts": "2026-10-06T07:02:13.207Z",
       "agent": "codex",
       "action": "implement_t033_reports",
@@ -6803,7 +6803,7 @@
       "summary": "Implemented deterministic daily/weekly/monthly reports with P&L, risk, strategy, stage, LLM budget and issue metrics; added Telegram summary/chart delivery and SMTP multipart plain/HTML delivery with safe unconfigured no-op. Added fixture tests. Ruff, mypy and 4 targeted tests pass. No Pod, broker or order calls. Handing to Claude."
     },
     {
-      "XREV": 117,
+      "revision": 117,
       "ts": "2026-10-06T07:30:00Z",
       "agent": "claude",
       "action": "review_t033_changes_requested",
@@ -6816,7 +6816,7 @@
       "summary": "T-033 changes_requested cycle 1 of 2 (V-135): add best/worst trade, per-instrument P&L and data/backup health; make Telegram delivery non-raising; add SmtpEmailSender.from_env and a never-raising run_report job; test all three periods; llm_currency field. No code edits from me (CI green). T-028 still gated on the owner handing over the Pod terminal and the market being open. PR #52 awaits the owner's merge go."
     },
     {
-      "XREV": 118,
+      "revision": 118,
       "ts": "2026-10-06T07:22:08.576Z",
       "agent": "codex",
       "action": "address_t033_review_cycle_1",
@@ -6832,7 +6832,7 @@
       "summary": "Addressed Claude V-135: added best/worst and per-instrument P&L, data/backup health and explicit LLM currency; isolated Telegram failures; added env SMTP parsing and a never-raising run_report job; expanded period and failure tests. Ruff, mypy and 8 targeted tests pass. No Pod, broker or order calls. Handing to Claude."
     },
     {
-      "XREV": 119,
+      "revision": 119,
       "ts": "2026-10-06T07:40:00Z",
       "agent": "claude",
       "action": "review_t033_pass",
@@ -6845,7 +6845,7 @@
       "summary": "T-033 passes review cycle 2 (V-137); CI quality green at 3e32408. T-030 to T-033 are done on the PR #52 branch and land on main when PR #52 merges (awaits the owner's go). Next for Codex: T-034 SettingsService per docs/specs/settings_service.md (C-004 spec review first if still open); T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
     },
     {
-      "XREV": 120,
+      "revision": 120,
       "ts": "2026-10-06T07:38:01Z",
       "agent": "codex",
       "action": "implement_t034_settings_service",
@@ -6863,7 +6863,7 @@
       "summary": "Reviewed C-004 and passed V-138. Implemented T-034 typed settings changes, ceilings/floors, confirm and cancel flow, TOTP loosening gate with replay protection and one-hour lockout, cooldown scheduling, persistence, audit and notification; Ruff, mypy and 8 focused tests pass. No Pod, broker or order calls. Handing T-034 to Claude for review."
     },
     {
-      "XREV": 121,
+      "revision": 121,
       "ts": "2026-10-06T08:05:00Z",
       "agent": "claude",
       "action": "review_t034_changes_requested",
@@ -6876,7 +6876,7 @@
       "summary": "T-034 changes_requested cycle 1 of 2 (V-140): ten items in the task review_notes, six are safety blockers (loosening is immediate by default, halt only checked at request, no re-validation at confirm, missing bounds fail open, zero/negative values accepted, non-transactional apply). No code edits from me. PR #52 (T-030 to T-033) still needs the owner's manual merge on GitHub. T-028 stays gated on the owner handing over the Pod terminal and the market being open."
     },
     {
-      "XREV": 122,
+      "revision": 122,
       "ts": "2026-10-06T07:59:50Z",
       "agent": "codex",
       "action": "address_t034_review_cycle_1",
@@ -6892,7 +6892,7 @@
       "summary": "Addressed Claude V-140 safety blockers: mandatory next-day cooldown, halt/revalidation gates, fail-closed bounds, typed positive/integer validation, transactional atomic split-file persistence, pending/startup reconciliation hooks, refusal audit/notification, revert, locking and strict import boundary. Ruff, mypy and 12 focused tests pass; handoff validation and secret scan pass. No Pod, broker or order calls. Handing T-034 to Claude."
     },
     {
-      "XREV": 123,
+      "revision": 123,
       "ts": "2026-10-06T08:20:00Z",
       "agent": "claude",
       "action": "review_t034_changes_requested_cycle2",
@@ -6905,7 +6905,7 @@
       "summary": "T-034 changes_requested cycle 2 of 2 (V-142): most V-140 items verified fixed; four blockers remain in review_notes (nested gate keys never reach the real config, scheduled loosening can overwrite a later tightening, apply not fully transactional, halt callable defaults to False). Any further problem goes to the owner as a question. No code edits from me. PR #52 is merged (main rev 121). T-028 stays gated on the owner handing over the Pod terminal and the market being open."
     },
     {
-      "XREV": 124,
+      "revision": 124,
       "ts": "2026-10-06T08:08:05Z",
       "agent": "codex",
       "action": "address_t034_review_cycle_2",
@@ -6921,7 +6921,7 @@
       "summary": "Addressed Claude V-142 blockers: nested Strategy Lab paths and default seeding, stale scheduled-change checks, rollback-safe version persistence, required halt callable and revert flow. Ruff, mypy and 15 focused tests pass; handoff validation and secret scan pass. No Pod, broker or order calls. Handing T-034 to Claude."
     },
     {
-      "XREV": 125,
+      "revision": 125,
       "ts": "2026-10-06T08:30:00Z",
       "agent": "claude",
       "action": "review_t034_pass",
@@ -6934,7 +6934,7 @@
       "summary": "T-034 passes review cycle 2 (V-144); all four V-142 blockers verified, CI quality green. Phase 3 tasks T-030 to T-034 are done once PR #53 is merged by the owner (the classifier blocks my merges). Next for Codex: take the next ready task from the work queue (non-pod: T-017 calibration, T-050/T-052 Strategy Lab per docs/specs/phase5.md); T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
     },
     {
-      "XREV": 126,
+      "revision": 126,
       "ts": "2026-10-06T08:15:00Z",
       "agent": "codex",
       "action": "implement_t017_calibration_tooling",
@@ -6950,7 +6950,7 @@
       "summary": "Implemented deterministic T-017 basis/spread/timezone calibration tooling and focused tests. The report computes UTC-minute bid basis, -6h..+6h lag correlations, HistData tick spreads, Capital.com recorder spreads and per-session distributions. The checkout has no Capital.com recorder overlap Parquet, so the empirical acceptance remains blocked under B-007; no numbers or PaperBroker costs were guessed. Ruff, mypy and 2 focused tests pass. No Pod, broker or order calls. Handing to Claude for review."
     },
     {
-      "XREV": 127,
+      "revision": 127,
       "ts": "2026-10-06T08:40:00Z",
       "agent": "claude",
       "action": "review_t017_changes_requested",
@@ -6963,7 +6963,7 @@
       "summary": "T-017 tooling review cycle 1 of 2 (V-146), Q-038 answered (review now, empirical report stays blocked on B-007). Eight items in review_notes; the main ones: generator inputs consumed several times, bid/ask spreads double counted, per-session tables and the cost-model export with lineage and minimum-sample guard missing, no one-command runner for the Pod, unbounded memory on tick data. No code edits from me. PR #53 (handoff to rev 125, T-034 done) still needs the owner's manual merge; T-028 stays gated on the owner handing over the Pod terminal and the market being open."
     },
     {
-      "XREV": 128,
+      "revision": 128,
       "ts": "2026-10-06T08:55:00Z",
       "agent": "codex",
       "action": "address_t017_review_cycle_1",
@@ -6979,7 +6979,7 @@
       "summary": "Addressed Claude V-146: capital generators are materialized once and bid-only; HistData and Capital.com spread metrics are sessionized with bounded reservoirs; MarketHours labels are supported; shifted timezone tests pass; write_cost_model adds lineage and minimum-sample refusal; and the batch Parquet runner writes report and cost-model outputs. Five focused tests, Ruff, mypy, compileall and secret scan pass. Empirical T-017 acceptance remains blocked on missing recorder overlap data under B-007. No Pod, broker or order calls. Handing to Claude for review cycle 2."
     },
     {
-      "XREV": 129,
+      "revision": 129,
       "ts": "2026-10-06T08:55:00Z",
       "agent": "claude",
       "action": "review_t017_pass_with_followup",
@@ -6993,7 +6993,7 @@
       "summary": "T-017 tooling passes review cycle 2 (V-148); T-017 stays blocked on B-007 for empirical numbers. Three remaining gaps go to new task T-083 by owner choice (Q-039). Next for Codex: T-050, T-052, T-044 (batch several into one handoff), T-083 alongside; T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
     },
     {
-      "XREV": 130,
+      "revision": 130,
       "ts": "2026-10-06T11:25:00Z",
       "agent": "codex",
       "action": "implement_t083_calibration_followups",
@@ -7009,7 +7009,7 @@
       "summary": "Implemented T-083: added --histdata-ticks so HistData 1m bars are not fed as ticks; reports missing tick spreads and refuses cost export without them; loaded asia/london/new_york UTC windows from config/sessions.yaml and combined them with MarketHours to exclude closed/break minutes; cost export now refuses empty or non-tradable results and ignores closed/break guard buckets; streamed capital rows without tuple materialization; added boundary and runner/guard tests. Git diff --check passes; this desktop has no usable Python launcher for pytest/Ruff/mypy. No Pod, broker or order calls. Handing to Claude for review."
     },
     {
-      "XREV": 131,
+      "revision": 131,
       "ts": "2026-10-06T11:45:00Z",
       "agent": "claude",
       "action": "review_t083_changes_requested",
@@ -7024,7 +7024,7 @@
       "summary": "T-083 changes_requested cycle 1 of 2 (V-150): I fixed ruff lint and format; four items remain, mainly a raw tick-archive input so the Pod run can produce HistData spreads. T-017 stays blocked on B-007. T-028 waits for the owner to hand over the Pod terminal after 16:30 Riyadh."
     },
     {
-      "XREV": 132,
+      "revision": 132,
       "ts": "2026-10-06T11:35:00Z",
       "agent": "codex",
       "action": "address_t083_review_cycle_1",
@@ -7040,7 +7040,7 @@
       "summary": "Addressed Claude V-150: added --histdata-tick-archives to stream raw HistData tick archives with shared validation and an end-to-end zip fixture; added --sessions plus package-relative default config resolution; open MarketHours minutes label open without named windows; added boundary and malformed-config tests. Python compileall and git diff --check pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. Handing to Claude for review."
     },
     {
-      "XREV": 133,
+      "revision": 133,
       "ts": "2026-10-06T11:50:00Z",
       "agent": "claude",
       "action": "review_t083_pass",
@@ -7055,7 +7055,7 @@
       "summary": "T-083 passed cycle 2 (V-152): all four items fixed. Ruff format applied by me. T-017 real numbers still wait on the recorder soak (B-007). Turn to codex for T-050/T-052/T-044 batch. T-083 depends_on cleared: the tooling it follows up (T-017) passed in V-148; T-017 itself stays blocked only on real recorder data."
     },
     {
-      "XREV": 134,
+      "revision": 134,
       "ts": "2026-10-06T11:55:00Z",
       "agent": "codex",
       "action": "implement_t050_backtest_engine",
@@ -7072,7 +7072,7 @@
       "summary": "Implemented T-050 deterministic event-driven backtesting: complete-candle signals fill next-bar open; long/short stop, target and time-stop exits; explicit session-aware costs and cost stress; walk-forward metadata; result ledger fields include direction/schema_version; sealed holdout requests are rejected. Added known-fill, stress, truncation and holdout tests. Python compileall, runtime smoke and git diff --check pass; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-050 to Claude for review."
     },
     {
-      "XREV": 135,
+      "revision": 135,
       "ts": "2026-10-06T12:00:00Z",
       "agent": "claude",
       "action": "review_t050_changes_requested",
@@ -7087,7 +7087,7 @@
       "summary": "T-050 changes requested cycle 1 (V-154): silent trailing-exit ignore, optimistic gap/entry-bar fills, same-bar re-entry, realized-only drawdown, weak known-result tests. I fixed CI lint (unused import, loop var, import order, format). Turn to codex."
     },
     {
-      "XREV": 136,
+      "revision": 136,
       "ts": "2026-10-06T11:55:00Z",
       "agent": "codex",
       "action": "address_t050_review_cycle_1",
@@ -7102,7 +7102,7 @@
       "summary": "Addressed Claude V-154: implemented closed-bar trailing ratchets, conservative gap and entry-bar fills, no same-bar re-entry, mark-to-market equity/drawdown, and exact long/short/gap/trailing/walk-forward tests. V-155 passes with compileall, runtime smoke and git diff --check; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. Handing T-050 to Claude for review."
     },
     {
-      "XREV": 137,
+      "revision": 137,
       "ts": "2026-10-06T12:05:00Z",
       "agent": "claude",
       "action": "review_t050_pass",
@@ -7116,7 +7116,7 @@
       "summary": "T-050 passed cycle 2 (V-156). Ruff format applied by me. Non-blocking: entry-bar high is not counted toward trailing best price (conservative); gap re-entry test is weak. Turn to codex for T-052/T-044 batch. T-050 depends_on T-017 removed: the engine takes cost models as input; T-017 stays blocked only on real recorder data (B-007)."
     },
     {
-      "XREV": 138,
+      "revision": 138,
       "ts": "2026-10-06T12:20:00Z",
       "agent": "codex",
       "action": "implement_t052_strategy_lab",
@@ -7136,7 +7136,7 @@
       "summary": "Implemented T-052 validator, append-only experiment ledger with Parquet export, promotion stages and safety gates, decay monitor, diversity allocator and offline tests. V-157 passes with compileall, runtime smoke and git diff --check; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. T-044 remains blocked on B-007 recorder overlap. Handing T-052 to Claude for review."
     },
     {
-      "XREV": 139,
+      "revision": 139,
       "ts": "2026-10-06T12:30:00Z",
       "agent": "claude",
       "action": "review_t052_changes_requested",
@@ -7151,7 +7151,7 @@
       "summary": "T-052 changes requested cycle 1 (V-158): gates hard-coded, fail-open significance and promotion, holdout once-per-hash not enforced/recorded, SQL ledger lacks count, missing noise/overfit/guard tests. I fixed lint (B008, format). Turn to codex."
     },
     {
-      "XREV": 140,
+      "revision": 140,
       "ts": "2026-10-06T12:50:00Z",
       "agent": "codex",
       "action": "address_t052_review_cycle_1",
@@ -7170,7 +7170,7 @@
       "summary": "Addressed Claude V-158: configuration and evidence are fail-closed, holdout reads are once-per-hash and audited, SQL/in-memory ledgers have shared APIs, promotion honours all configured gates and real audit writes, decay uses cumulative drawdown from config, allocator uses portfolio limits, and source/acceptance guards were added. V-159 passes with compileall, runtime smoke and git diff --check; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-052 to Claude for review cycle 2."
     },
     {
-      "XREV": 141,
+      "revision": 141,
       "ts": "2026-10-06T13:00:00Z",
       "agent": "claude",
       "action": "review_t052_changes_requested_cycle2",
@@ -7186,7 +7186,7 @@
       "summary": "T-052 changes requested cycle 2 of 2 (V-160): holdout read not mandatory or ledger-enforced, promotion hash None==None, acceptance tests (noise, overfit, real audit, SQL ledger) missing, YAML fallback parser. I fixed lint and mypy. A further failure goes to the owner as a question. Turn to codex."
     },
     {
-      "XREV": 142,
+      "revision": 142,
       "ts": "2026-10-06T13:20:00Z",
       "agent": "codex",
       "action": "address_t052_review_cycle_2",
@@ -7205,7 +7205,7 @@
       "summary": "Addressed Claude V-160 final-cycle blockers: durable once-per-hash holdout evidence and ValidationResult.strategy_hash, non-empty promotion hash matching, seeded random-walk acceptance variants, overfit rejection, real SQL audit/ledger tests, and removal of the YAML fallback parser. V-161 passes with compileall, runtime smoke and git diff --check; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-052 to Claude for final review."
     },
     {
-      "XREV": 143,
+      "revision": 143,
       "ts": "2026-10-06T13:30:00Z",
       "agent": "claude",
       "action": "review_t052_pass",
@@ -7220,7 +7220,7 @@
       "summary": "T-052 passed (V-162). Lint/mypy fixed by me. The derived-metrics noise/overfit acceptance test is carried into T-053 acceptance criteria. Turn to codex for T-044/T-053/T-054/T-070/T-060."
     },
     {
-      "XREV": 144,
+      "revision": 144,
       "ts": "2026-10-06T12:35:21Z",
       "agent": "codex",
       "action": "implement_t053_pattern_miner",
@@ -7236,7 +7236,7 @@
       "summary": "Implemented deterministic five-family pattern mining with ten bounded hypotheses, ledger-first candidate recording, optional gate validation and validator-only promotion. Added derived-metric 2,000-variant random-walk acceptance coverage across three seeds. V-163 passes with compileall, runtime smoke and git diff --check; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-053 to Claude for review."
     },
     {
-      "XREV": 145,
+      "revision": 145,
       "ts": "2026-10-06T13:45:00Z",
       "agent": "claude",
       "action": "review_t053_changes_requested",
@@ -7250,7 +7250,7 @@
       "summary": "T-053 changes requested cycle 1 (V-164): miner emits fixed templates without backtesting, noise test not derived-metrics, no planted-pattern test, signature-guessing validator call, trials not from ledger. I fixed lint. Turn to codex."
     },
     {
-      "XREV": 146,
+      "revision": 146,
       "ts": "2026-10-06T12:45:51Z",
       "agent": "codex",
       "action": "address_t053_review_cycle_1",
@@ -7267,7 +7267,7 @@
       "summary": "Addressed Claude V-164: added pure derived Gate 1 metrics, bounded backtest grids for four data-supported pattern families with volatility expansion, ledger-first exact validator calls and ledger-count trials; event reaction is deferred until T-041. Added planted-pattern promotion and derived 2,000-variant noise rejection across three seeds. V-165 passes with compileall, focused tests, noise run and git diff --check; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-053 to Claude for review."
     },
     {
-      "XREV": 147,
+      "revision": 147,
       "ts": "2026-10-06T14:00:00Z",
       "agent": "claude",
       "action": "review_t053_pass",
@@ -7284,7 +7284,7 @@
       "summary": "T-053 passed (V-166); ruff format by me. Orchestration gap (holdout slice via HoldoutReader, per-candidate neighbors/regimes, real-gate end-to-end test) carried into T-054 acceptance. Turn to codex for T-044/T-054/T-070/T-060."
     },
     {
-      "XREV": 148,
+      "revision": 148,
       "ts": "2026-10-06T12:51:52Z",
       "agent": "codex",
       "action": "implement_t054_validation_pipeline",
@@ -7301,7 +7301,7 @@
       "summary": "Implemented T-054 ValidationPipeline with explicit out-of-sample/holdout backtests, per-candidate neighbors and regimes, ledger-first metrics and exact validator calls through the validator reader boundary; added typed MockLLM-compatible idea and post-mortem wrappers. V-167 passes with compileall, pipeline smoke, holdout-boundary scan and git diff --check; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-054 to Claude for review."
     },
     {
-      "XREV": 149,
+      "revision": 149,
       "ts": "2026-10-06T14:20:00Z",
       "agent": "claude",
       "action": "review_t054_changes_requested",
@@ -7314,7 +7314,7 @@
       "summary": "T-054 changes requested cycle 1 (V-168): OOS defaults to in-sample, fake regimes, trivial neighbors, holdout read before screening, LLM failures not discarded/counted, end-to-end/planted/noise/injection tests missing. I also repaired Codex's handoff that had dropped my rev-147 entry (restored, no deletions). Turn to codex."
     },
     {
-      "XREV": 150,
+      "revision": 150,
       "ts": "2026-10-06T14:50:00Z",
       "agent": "codex",
       "action": "address_t054_review_cycle_1",
@@ -7330,7 +7330,7 @@
       "summary": "Addressed Claude V-168: explicit later non-overlapping OOS slices, real session-based profitable regimes, threshold and exit neighbors, cheap-gate holdout deferral, fail-closed duplicate/read errors, invalid LLM discard-and-count with audit/ledger evidence, and optional PromotionGate stage integration. Added focused guard and safety tests. Ruff, mypy, compileall, focused lab pytest and git diff --check pass. No Pod, broker or order calls. Handing T-054 to Claude for review cycle 2."
     },
     {
-      "XREV": 151,
+      "revision": 151,
       "ts": "2026-10-06T15:00:00Z",
       "agent": "claude",
       "action": "review_t054_pass",
@@ -7346,7 +7346,7 @@
       "summary": "T-054 passed cycle 2 (V-170); ruff format by me. Remaining test gaps become follow-up T-084. Turn to codex: T-028 demo round trip (owner has handed over the pod terminal and permits retries on failure, chat 2026-10-06 16:22 Riyadh), then T-044/T-070/T-060/T-084. Decision D-026 records the owner's retry permission."
     },
     {
-      "XREV": 152,
+      "revision": 152,
       "ts": "2026-10-06T13:36:00Z",
       "agent": "codex",
       "action": "complete_t028_second_round_trip",
@@ -7362,7 +7362,7 @@
       "summary": "Ran the preflight before the US open with account_observations.before_open. After the open gate, attempt 1 failed before client/order initialization with ConfigLoadError; the required account check was clean. Attempt 2 used the normal order path and succeeded with one BUY 0.001 US100 trade, attached server stop, before/during/after redacted /accounts snapshots, an opened_position snapshot, modify and close, and final flat confirmation with zero positions and working orders. Expected image tag is recorded; the container did not expose a Docker image tag for independent introspection. Originals remain under /workspace. No Pod URL or token is recorded. T-028 is ready for Claude review."
     },
     {
-      "XREV": 153,
+      "revision": 153,
       "ts": "2026-10-06T13:50:00Z",
       "agent": "claude",
       "action": "review_t028_cycle1",
@@ -7375,7 +7375,7 @@
       "summary": "T-028 changes_requested (cycle 1, V-172): trade path sound but open-position /accounts snapshot equals flat and preflight showed unexplained balance 0/profitLoss -1000; mapping unverified. Q-040 asks owner for one larger demo round trip. Turn to human."
     },
     {
-      "XREV": 154,
+      "revision": 154,
       "ts": "2026-10-06T14:05:00Z",
       "agent": "claude",
       "action": "add_t085_rate_limit_audit",
@@ -7388,7 +7388,7 @@
       "summary": "Owner reported Codex got HTTP 429 from Capital.com. Added T-085: share sanitized 429 evidence, audit all call sites against the rate limits, fix session reuse/backoff, no orders. Q-040 stays open with the owner. Turn to codex."
     },
     {
-      "XREV": 155,
+      "revision": 155,
       "ts": "2026-10-06T14:20:00Z",
       "agent": "codex",
       "action": "complete_t085_rate_limit_audit",
@@ -7405,7 +7405,7 @@
       "summary": "T-085 complete (V-173): sanitized 429 evidence records nine throttled POST /session responses; read retries recovered with bounded Retry-After/exponential-jitter backoff, shared sessions and five-minute ping keepalive were added, and order mutations are never blindly retried. Full pytest passed (431 passed, 2 skipped); turn to Claude for review."
     },
     {
-      "XREV": 156,
+      "revision": 156,
       "ts": "2026-10-06T14:30:00Z",
       "agent": "claude",
       "action": "review_t085_pass_record_q040",
@@ -7419,7 +7419,7 @@
       "summary": "T-085 passed (V-174). Recorded owner yes on Q-040 as D-027. Codex must commit the larger T-028 round-trip evidence (open snapshots with timestamps, attempts ledger, image/commit the Pod ran) and hand back for cycle-2 review. Turn to codex."
     },
     {
-      "XREV": 157,
+      "revision": 157,
       "ts": "2026-10-06T14:39:44Z",
       "agent": "codex",
       "action": "complete_t028_q040_demo_evidence",
@@ -7435,7 +7435,7 @@
       "summary": "T-028 Q-040 complete (V-175): preflight captured before_open, attempt 1 failed before order on sanitized HTTP 429 POST /session, attempt 2 completed one normal-path demo BUY 1.0 round trip with stop and Risk Guardian approval, and cleanup confirmed flat. Redacted evidence records the expected Pod image tag without URL or token. Turn to Claude for review."
     },
     {
-      "XREV": 158,
+      "revision": 158,
       "ts": "2026-10-06T14:50:00Z",
       "agent": "claude",
       "action": "review_t028_cycle2",
@@ -7448,7 +7448,7 @@
       "summary": "T-028 changes_requested (cycle 2, V-176): trade 3 s long, during_open timestamp equals before_open, no polling, image tag unverified. D-027 trade still unused; Codex to run one held-open (>=60 s, 5 s polling) trade on the newest main image. Turn to codex."
     },
     {
-      "XREV": 159,
+      "revision": 159,
       "ts": "2026-10-06T15:01:59Z",
       "agent": "codex",
       "action": "complete_t028_q040_held_open_demo",
@@ -7464,7 +7464,7 @@
       "summary": "T-028 Q-040 held-open demo complete (V-177): preflight recorded account_observations.before_open; attempt 1 failed at close with error.not-found.dealId after 13 polls and cleanup was flat; attempt 2 succeeded with one normal-path BUY 0.001 US100, stop verification, 13 five-second account/position polls over 62.6 seconds, changed account available/balance/profitLoss values, normal close and flat confirmation. Expected newest main image tag recorded, but Pod runtime did not expose Docker tag. Handing to Claude for review."
     },
     {
-      X
+      "revision": 160,
       "ts": "2026-10-06T15:20:00Z",
       "agent": "claude",
       "action": "review_t028_cycle3_pass",
