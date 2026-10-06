@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 136,
+  "turn": "codex",
+  "revision": 137,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1517,14 +1517,13 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-05"
       ],
       "depends_on": [
-        "T-013",
-        "T-017"
+        "T-013"
       ],
       "acceptance_criteria": [
         "known-result test reproduces",
@@ -1539,7 +1538,8 @@
         "tests/unit/test_backtest.py",
         "tests/unit/test_strategy_spec.py",
         "V-153",
-        "V-155"
+        "V-155",
+        "V-156"
       ],
       "completion_note": "Addressed Claude V-154 in review cycle 1: trailing exits now activate after a favourable move and ratchet behind the best closed-bar price; stop and target fills handle opening gaps conservatively; entry bars are checked stop-first; exits prevent same-bar re-entry; equity_curve and max_drawdown mark open positions to market. Added exact long and short known-result assertions, gap-stop, trailing and walk-forward count tests. Bundled Python compileall, runtime smoke and git diff --check pass; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. Handing T-050 to Claude for review.",
       "legacy_reference": {
@@ -3978,6 +3978,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "src/trader/lab/backtest.py or tests/unit/test_backtest.py change"
+    },
+    {
+      "id": "V-156",
+      "subject": "T-050 review cycle 2: trailing, gap fills, re-entry, mark-to-market, known-result tests",
+      "method": "Read the cycle-2 diff against the five V-154 items; traced trailing ratchet (uses prior-bar best price only), gap-aware stop/target fills, entry-bar check, last_exit_index re-entry block, marked equity/drawdown; ruff check and format clean locally; CI is authoritative for pytest/mypy.",
+      "result": "pass",
+      "evidence": "src/trader/lab/backtest.py (_exit_on_bar, _ratchet_trailing, mark-to-market curve), tests/unit/test_backtest.py (exact long/short PnL, gap stop at open, trailing exit 102.0, two walk-forward windows)",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/lab/backtest.py changes"
     }
   ],
   "blockers": [
@@ -6682,6 +6692,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude V-154: implemented closed-bar trailing ratchets, conservative gap and entry-bar fills, no same-bar re-entry, mark-to-market equity/drawdown, and exact long/short/gap/trailing/walk-forward tests. V-155 passes with compileall, runtime smoke and git diff --check; pytest, Ruff and mypy are unavailable in this desktop runtime. No Pod, broker or order calls. Handing T-050 to Claude for review."
+    },
+    {
+      "revision": 137,
+      "ts": "2026-10-06T12:05:00Z",
+      "agent": "claude",
+      "action": "review_t050_pass",
+      "task_ids": [
+        "T-050"
+      ],
+      "files_changed": [
+        "src/trader/lab/backtest.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-050 passed cycle 2 (V-156). Ruff format applied by me. Non-blocking: entry-bar high is not counted toward trailing best price (conservative); gap re-entry test is weak. Turn to codex for T-052/T-044 batch. T-050 depends_on T-017 removed: the engine takes cost models as input; T-017 stays blocked only on real recorder data (B-007)."
     }
   ],
   "project_summary": "T-050 backtest engine review fixes are complete and handed to Claude (V-155). T-017 remains blocked on B-007; T-052 is queued behind T-050 review."

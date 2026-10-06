@@ -113,8 +113,7 @@ def test_gap_stop_fills_at_worse_open_and_blocks_same_bar_reentry():
     assert result.trades[0].exit_reason == "stop"
     assert result.trades[0].exit_price == 95.0
     assert all(
-        trade.entry_time_utc != result.trades[0].exit_time_utc
-        for trade in result.trades[1:]
+        trade.entry_time_utc != result.trades[0].exit_time_utc for trade in result.trades[1:]
     )
 
 
@@ -127,12 +126,14 @@ def test_trailing_stop_activates_on_closed_bar_and_ratchets():
     )
     result = run_backtest(
         spec,
-        _ohlc([
-            (100, 100.5, 99.5, 100),
-            (100, 102.0, 99.5, 101),
-            (102, 103.0, 101.5, 102),
-            (102, 102.5, 101.0, 101.5),
-        ]),
+        _ohlc(
+            [
+                (100, 100.5, 99.5, 100),
+                (100, 102.0, 99.5, 101),
+                (102, 103.0, 101.5, 102),
+                (102, 102.5, 101.0, 101.5),
+            ]
+        ),
         cost_model=CostModel(),
     )
     assert result.trades[0].exit_reason == "trailing"

@@ -215,8 +215,10 @@ def _exit_on_bar(
     )
     stop_level = static_stop
     if position.trailing_stop is not None:
-        stop_level = max(stop_level, position.trailing_stop) if spec.direction == "long" else min(
-            stop_level, position.trailing_stop
+        stop_level = (
+            max(stop_level, position.trailing_stop)
+            if spec.direction == "long"
+            else min(stop_level, position.trailing_stop)
         )
     target_level = (
         position.entry_price + position.target_distance
@@ -275,8 +277,10 @@ def _ratchet_trailing(position: _OpenTrade, direction: str) -> _OpenTrade:
     )
     if position.trailing_stop is None:
         return replace(position, trailing_stop=candidate)
-    ratchet = max(position.trailing_stop, candidate) if direction == "long" else min(
-        position.trailing_stop, candidate
+    ratchet = (
+        max(position.trailing_stop, candidate)
+        if direction == "long"
+        else min(position.trailing_stop, candidate)
     )
     return replace(position, trailing_stop=ratchet)
 
