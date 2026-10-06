@@ -14,8 +14,8 @@ from dataclasses import dataclass
 from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
-from trader.agents.llm.types import Message
 
+from trader.agents.llm.types import Message
 
 IntentName = Literal[
     "query",
