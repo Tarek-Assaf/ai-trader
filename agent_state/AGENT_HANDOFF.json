@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 129,
+  "turn": "claude",
+  "revision": 130,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-017 tooling review-cycle-1 fixes pass V-147 and the task is blocked pending Capital.com recorder overlap data (B-007). The runner, per-session report and guarded lineage cost export are ready for the Pod; no empirical costs were guessed. T-028 remains gated by Q-037 Pod/market preconditions.",
+    "summary": "T-017 tooling passes review-cycle 2 and remains blocked on B-007 for empirical Capital.com overlap data. T-083 follow-ups are implemented: separate HistData tick input, config-backed named sessions combined with MarketHours, and fail-closed tradable-session cost export. No empirical costs were guessed; T-028 remains gated by Q-037 Pod/market preconditions.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -2186,7 +2186,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-05"
       ],
@@ -2205,8 +2205,13 @@
         "tests/unit/test_calibration.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/data/calibration.py",
+        "config/sessions.yaml",
+        "tests/unit/test_calibration.py",
+        "V-149"
+      ],
+      "completion_note": "Added a separate --histdata-ticks input so the 1m HistData bar lake is never treated as tick data; missing ticks are reported and cost export refuses without spread samples. Loaded named UTC sessions from config/sessions.yaml and combined them with MarketHours so closed/break minutes are excluded from cost guards. Cost-model export now refuses empty results or no tradable-session samples and ignores closed/break buckets. Streamed capital rows without tuple materialization. Added boundary, closed/break guard and Parquet runner tests. No empirical costs or broker settings were changed; no Pod, broker or order calls."
     }
   ],
   "decisions": [
@@ -3881,6 +3886,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "src/trader/data/calibration.py or tests/unit/test_calibration.py change"
+    },
+    {
+      "id": "V-149",
+      "subject": "T-083 calibration follow-ups",
+      "method": "Reviewed the separate tick input and runner path, config-backed UTC session boundaries, MarketHours closed/break handling and fail-closed cost-model guards; ran git diff --check. The desktop runtime has no usable Python launcher, so pytest, Ruff and mypy could not run here.",
+      "result": "pass",
+      "evidence": "src/trader/data/calibration.py, config/sessions.yaml, tests/unit/test_calibration.py, git diff --check",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "T-083 calibration files change"
     }
   ],
   "blockers": [
@@ -6476,7 +6491,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-017 tooling passes review cycle 2 (V-148); T-017 stays blocked on B-007 for empirical numbers. Three remaining gaps go to new task T-083 by owner choice (Q-039). Next for Codex: T-050, T-052, T-044 (batch several into one handoff), T-083 alongside; T-028 only after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z)."
+    },
+    {
+      "revision": 130,
+      "ts": "2026-10-06T11:25:00Z",
+      "agent": "codex",
+      "action": "implement_t083_calibration_followups",
+      "task_ids": [
+        "T-083"
+      ],
+      "files_changed": [
+        "src/trader/data/calibration.py",
+        "config/sessions.yaml",
+        "tests/unit/test_calibration.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-083: added --histdata-ticks so HistData 1m bars are not fed as ticks; reports missing tick spreads and refuses cost export without them; loaded asia/london/new_york UTC windows from config/sessions.yaml and combined them with MarketHours to exclude closed/break minutes; cost export now refuses empty or non-tradable results and ignores closed/break guard buckets; streamed capital rows without tuple materialization; added boundary and runner/guard tests. Git diff --check passes; this desktop has no usable Python launcher for pytest/Ruff/mypy. No Pod, broker or order calls. Handing to Claude for review."
     }
   ],
-  "project_summary": "T-034 now preserves strict nested config schemas, seeds defaults, prevents stale scheduled overwrites, rolls back failed persistence, requires an explicit halt callable, and routes reverts through the normal confirmed flow. Validation V-143 passes. No Pod, broker or order calls."
+  "project_summary": "T-083 calibration follow-ups implemented and ready for Claude review. T-017 remains blocked on B-007 for empirical recorder overlap; no Pod, broker or order calls."
 }
