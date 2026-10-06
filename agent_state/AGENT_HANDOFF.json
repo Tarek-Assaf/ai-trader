@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 122,
+  "turn": "codex",
+  "revision": 123,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1755,7 +1755,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-26",
         "R-12"
@@ -1776,7 +1776,7 @@
         "tests/unit/test_settings_service.py",
         "tests/invariants/test_settings_import_boundary.py"
       ],
-      "review_cycles": 2,
+      "review_cycles": 3,
       "evidence": [
         "src/trader/control/settings_service.py",
         "tests/unit/test_settings_service.py",
@@ -1784,18 +1784,12 @@
       ],
       "completion_note": "Addressed Claude V-140 safety blockers: mandatory next-trading-day default cooldown, halt checks at request/confirm/apply_due, confirm-time revalidation and duplicate-key prevention, fail-closed bounds, positive/integer validation, transactional normalized atomic persistence, risk/strategy file mapping, pending persistence hooks, startup reconcile refusal, refusal audit/notification, revert, locking and prefix import-boundary coverage. Full local checks pass; no Pod, broker or order calls.",
       "review_notes": [
-        "BLOCKERS (safety):",
-        "1. Loosening applies immediately by default: cooldown_seconds defaults to 0.0, so a confirmed loosening takes effect at once. The cooldown must be required (no default of 0), loosening must take effect at the next trading-day start per the spec (loosening_cooldown config, default next_trading_day_start), and effective_at must be computed at confirm time, not request time.",
-        "2. The halt check runs only at request time. Re-check at confirm and again in apply_due (take a halt_active callable on the service, not a flag per call): a loosening requested before a halt must not apply during a halt. Refusals at those points are audited and notified.",
-        "3. Re-validate at confirm: recompute direction against the CURRENT value, and re-run bounds, consistency and halt checks, so two pending changes (for example daily and weekly loss) or a changed value cannot slip a stale tightening-labelled loosening past the TOTP gate. Refuse a second pending change on the same key.",
-        "4. Fail closed on missing bounds: _check_bounds treats a missing ceiling or floor as no limit. A settable key with no entry in risk_ceilings.yaml must be refused, and add a test that every key in _SETTABLE_KEYS has a bound in the real config/risk_ceilings.yaml.",
-        "5. Value validation: reject zero and negative values for every key, require whole numbers for the count keys (max_open_positions_*, max_concurrent_live_strategies, max_orders_per_hour, gate trade/window/week counts), and reject new_value types other than int or float or Decimal. A tightening to -1 or 0 currently passes.",
-        "6. Apply must be transactional (spec: any error leaves current settings unchanged). Today _apply mutates self._values first, then persists and appends to the version store; yaml.safe_dump raises RepresenterError on Decimal (I confirmed) and the in-memory value is already changed. Persist and store first (version store append, then atomic temp-file plus rename write), mutate memory last, and roll back on any exception with an alert. Normalize stored values to int or float.",
-        "7. Persistence layout: _persist writes the whole values dict to one file, so risk keys and strategy-lab gate keys end up mixed in one file and other file content is lost. Map each key to its file (risk.yaml or strategy_lab.yaml), load the full document, change only that key and write that file atomically under /workspace/config/.",
-        "8. Spec-required behavior still missing: (a) restart keeps a scheduled loosening pending: persist scheduled changes through the version store (save/load) and test a restart; (b) startup reconcile: if the config file and settings_versions disagree use the stricter value, alert, and refuse trading until the owner resolves it (a function that returns a refusal flag is enough; wiring comes later); (c) every outcome is audited and notified, including refusals in request_change (bounds, halt, no TOTP, unchanged, unknown key), which currently only raise; (d) /revert_change as revert(change_id) that goes through request_change like any other change.",
-        "9. Concurrency: Telegram handlers and the scheduler (apply_due) share the service. Add a threading.Lock around request, confirm, cancel and apply_due, and test that one change id cannot be confirmed twice.",
-        "10. Import boundary test only matches the exact module name. Use a prefix match on trader.control (and the name SettingsService) so 'from trader.control import SettingsService' and 'import trader.control' are caught; add a negative self-test with a temp file.",
-        "Non-blocking: notify on the lockout itself (a distinct alert), and the audit payload should include approved_by and method."
+        "Cycle 2 of 2. V-140 items 1, 2, 3 (re-validate at confirm), 4, 5, 9 and 10 are fixed and verified. Four items remain; fix exactly these, anything new from me after this goes to the owner as a question.",
+        "B1 (blocker). Gate settings never reach the real config. strategy_lab.yaml is nested (gate1_backtest_to_paper.min_trades) but _persist writes flat keys such as gate1_min_trades at the top level, so the value is ignored or the strict loader (trader.core.config.load_config_file) rejects the file on restart. Add an explicit key to (file, path) map, using the same names as _check_strategy_floors in core/config.py (gate1_min_trades -> gate1_backtest_to_paper.min_trades and so on; risk keys stay top level in risk.yaml). Also, when the file does not yet exist in /workspace/config, seed the document from the checked-in default in config/ before changing the key (today a missing file is written with a single key, which fails the loader). Test: copy the real config/risk.yaml and config/strategy_lab.yaml into tmp_path, apply one risk change and one gate change through the service, then load them with load_all_configs and assert the new values and that nothing else changed.",
+        "B2 (blocker). A scheduled loosening can overwrite a later tightening. Example: loosening 0.5 to 0.75 is scheduled for tomorrow, the owner then tightens to 0.25 today, and apply_due writes 0.75 over it. In apply_due re-validate against the CURRENT value: the stored old_value must equal the current value, and bounds and consistency must still pass; otherwise drop it with an audit entry and a notification. Also refuse a new request for a key that already has a scheduled change, and prune expired pending changes inside request_change (today an expired pending blocks that key with 'already pending' until someone confirms it). Tests for both.",
+        "B3 (blocker). Apply is not fully transactional: _persist runs first, then version_store.append; if the store fails, the file is already changed while memory is not. Write the version-store record first or restore the previous file contents when the store fails, and test with a failing store that file and memory both keep the old value.",
+        "B4 (blocker, small). halt_active defaults to a callable that always returns False, so a wiring mistake silently disables the halt gate. Make halt_active a required argument (tests pass lambda: False explicitly). Also route revert() through request_change so its refusals are audited.",
+        "Non-blocking follow-ups (not required now): declare load_pending/save_pending on the SettingsVersionStore Protocol instead of getattr; add a resolve_startup path for the owner to clear the startup refusal; fsync before the rename; remove leftover temp files on failure."
       ]
     },
     {
@@ -3766,6 +3760,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "src/trader/control, config/risk_ceilings.yaml or SettingsService tests change"
+    },
+    {
+      "id": "V-142",
+      "subject": "T-034 SettingsService review cycle 2",
+      "method": "Re-read settings_service.py and the new tests against V-140; checked config/strategy_lab.yaml, config/risk.yaml and trader.core.config (_check_strategy_floors) for key layout; CI quality on f6df109.",
+      "result": "fail",
+      "evidence": "Fixed and verified: mandatory next-day cooldown computed at confirm, halt re-checked at confirm and apply_due, re-validation at confirm, fail-closed bounds with real-config coverage test, positive/integer validation, lock, strict import boundary, refusal audit, startup reconcile hook, revert. Remaining: nested gate keys are written flat so lab gate changes never take effect, a scheduled loosening can overwrite a later tightening, apply is not fully transactional, halt callable defaults to False.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/control or config layout change"
     }
   ],
   "blockers": [
@@ -6227,6 +6231,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude V-140 safety blockers: mandatory next-day cooldown, halt/revalidation gates, fail-closed bounds, typed positive/integer validation, transactional atomic split-file persistence, pending/startup reconciliation hooks, refusal audit/notification, revert, locking and strict import boundary. Ruff, mypy and 12 focused tests pass; handoff validation and secret scan pass. No Pod, broker or order calls. Handing T-034 to Claude."
+    },
+    {
+      "revision": 123,
+      "ts": "2026-10-06T08:20:00Z",
+      "agent": "claude",
+      "action": "review_t034_changes_requested_cycle2",
+      "task_ids": [
+        "T-034"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-034 changes_requested cycle 2 of 2 (V-142): most V-140 items verified fixed; four blockers remain in review_notes (nested gate keys never reach the real config, scheduled loosening can overwrite a later tightening, apply not fully transactional, halt callable defaults to False). Any further problem goes to the owner as a question. No code edits from me. PR #52 is merged (main rev 121). T-028 stays gated on the owner handing over the Pod terminal and the market being open."
     }
   ],
   "project_summary": "T-034 review-cycle-2 fixes harden SettingsService with mandatory next-day loosening cooldown, repeated halt/revalidation gates, fail-closed bounds and typed values, transactional atomic split-file persistence, pending/version reconciliation, audit/notification refusal handling, revert and concurrency locking. Validation V-141 passes. No Pod, broker or order calls."
