@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import hashlib
 import logging
+import random
 import threading
 import time
 from collections.abc import Callable, Iterator, Mapping
 from datetime import UTC, datetime, timedelta
+from email.utils import parsedate_to_datetime
 from enum import StrEnum
 from typing import Any
 from urllib.parse import quote
@@ -25,6 +28,10 @@ _BASE_URLS = {
 _RESOLUTIONS = frozenset(
     {"MINUTE", "MINUTE_5", "MINUTE_15", "MINUTE_30", "HOUR", "HOUR_4", "DAY", "WEEK"}
 )
+_MAX_429_ATTEMPTS = 4
+_KEEPALIVE_SECONDS = 300.0
+_SHARED_SESSION_LOCK = threading.RLock()
+_SHARED_SESSIONS: dict[tuple[str, str, int], dict[str, object]] = {}
 
 
 class CapitalComError(RuntimeError):
@@ -36,10 +43,14 @@ class CapitalComError(RuntimeError):
         path: str,
         *,
         error_code: str | None = None,
+        attempt: int | None = None,
+        retry_after: str | None = None,
     ) -> None:
         self.status_code = status_code
         self.path = path
         self.error_code = error_code
+        self.attempt = attempt
+        self.retry_after = retry_after
         status = f"HTTP {status_code}" if status_code is not None else "transport error"
         super().__init__(f"Capital.com {status} for {path}")
 
@@ -71,6 +82,7 @@ class CapitalComClient:
         limiter: RateLimiter | None = None,
         http_client: httpx.Client | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        jitter: Callable[[float], float] | None = None,
     ) -> None:
         api_key = self._secret(settings.capital_api_key, "CAPITAL_API_KEY")
         identifier = self._secret(settings.capital_identifier, "CAPITAL_IDENTIFIER")
@@ -79,6 +91,9 @@ class CapitalComClient:
         self._identifier = identifier
         self._password = password
         self._base_url = _BASE_URLS[settings.broker_env]
+        credential_digest = hashlib.sha256(f"{api_key}\0{identifier}".encode()).hexdigest()
+        transport_scope = id(http_client) if http_client is not None else 0
+        self._session_cache_key = (self._base_url, credential_digest, transport_scope)
         self._limiter = limiter
         if self._limiter is None:
             redis_url = (
@@ -93,9 +108,37 @@ class CapitalComClient:
         )
         self._owns_http = http_client is None
         self._sleep = sleep
+        self._jitter = jitter or (lambda base: random.uniform(0.0, base * 0.25))
         self._session_lock = threading.RLock()
         self._cst: str | None = None
         self._security_token: str | None = None
+
+    def _invalidate_session(self) -> None:
+        with self._session_lock:
+            old_tokens = (self._cst, self._security_token)
+            self._cst = None
+            self._security_token = None
+            with _SHARED_SESSION_LOCK:
+                shared = _SHARED_SESSIONS.get(self._session_cache_key)
+                if shared is not None and (shared.get("cst"), shared.get("token")) == old_tokens:
+                    _SHARED_SESSIONS.pop(self._session_cache_key, None)
+
+    def _mark_ping(self) -> None:
+        with _SHARED_SESSION_LOCK:
+            shared = _SHARED_SESSIONS.get(self._session_cache_key)
+            if shared is not None:
+                shared["last_ping"] = time.monotonic()
+
+    def _keepalive_due(self) -> bool:
+        with _SHARED_SESSION_LOCK:
+            shared = _SHARED_SESSIONS.get(self._session_cache_key)
+            if shared is None:
+                return False
+            last_ping = shared.get("last_ping")
+            return (
+                not isinstance(last_ping, float)
+                or time.monotonic() - last_ping >= _KEEPALIVE_SECONDS
+            )
 
     @staticmethod
     def _secret(value: SecretStr | None, name: str) -> str:
@@ -129,9 +172,10 @@ class CapitalComClient:
         headers: Mapping[str, str] | None = None,
         session_request: bool = False,
         history: bool = False,
+        retry_429: bool = True,
     ) -> httpx.Response:
         assert self._limiter is not None
-        for attempt in range(3):
+        for attempt in range(1, _MAX_429_ATTEMPTS + 1):
             self._limiter.acquire(session=session_request, history=history)
             try:
                 response = self._http.request(
@@ -142,7 +186,7 @@ class CapitalComClient:
                 raise CapitalComError(None, path) from None
             if response.status_code == 401 and not session_request:
                 return response
-            if response.status_code != 429 or attempt == 2:
+            if response.status_code != 429 or not retry_429 or attempt == _MAX_429_ATTEMPTS:
                 if response.status_code >= 400:
                     _LOG.warning(
                         "Capital.com request failed: %s returned HTTP %s",
@@ -153,15 +197,27 @@ class CapitalComClient:
                         response.status_code,
                         path,
                         error_code=self._response_error_code(response),
+                        attempt=attempt,
+                        retry_after=response.headers.get("Retry-After"),
                     )
                 return response
-            retry_after = response.headers.get("Retry-After", "")
-            try:
-                delay = max(0.1, min(float(retry_after), 30.0))
-            except ValueError:
-                delay = min(0.5 * (2**attempt), 5.0)
+            delay = self._retry_delay(response, attempt)
             self._sleep(delay)
         raise AssertionError("unreachable")
+
+    def _retry_delay(self, response: httpx.Response, attempt: int) -> float:
+        retry_after = response.headers.get("Retry-After", "").strip()
+        if retry_after:
+            try:
+                return max(0.0, float(retry_after))
+            except ValueError:
+                try:
+                    retry_at = float(parsedate_to_datetime(retry_after).timestamp())
+                    return max(0.0, retry_at - time.time())
+                except (TypeError, ValueError, OverflowError):
+                    pass
+        base = float(2 ** (attempt - 1))
+        return max(0.0, base + self._jitter(base))
 
     @staticmethod
     def _response_error_code(response: httpx.Response) -> str | None:
@@ -179,18 +235,30 @@ class CapitalComClient:
         with self._session_lock:
             if self._cst and self._security_token:
                 return
-            response = self._send(
-                "POST",
-                "session",
-                json={"identifier": self._identifier, "password": self._password},
-                headers={"X-CAP-API-KEY": self._api_key},
-                session_request=True,
-            )
-            cst = response.headers.get("CST")
-            security_token = response.headers.get("X-SECURITY-TOKEN")
-            if not cst or not security_token:
-                raise CapitalComError(response.status_code, "session")
-            self._cst, self._security_token = cst, security_token
+            with _SHARED_SESSION_LOCK:
+                shared = _SHARED_SESSIONS.get(self._session_cache_key)
+                if shared is not None:
+                    shared_cst, shared_token = shared.get("cst"), shared.get("token")
+                    if isinstance(shared_cst, str) and isinstance(shared_token, str):
+                        self._cst, self._security_token = shared_cst, shared_token
+                        return
+                response = self._send(
+                    "POST",
+                    "session",
+                    json={"identifier": self._identifier, "password": self._password},
+                    headers={"X-CAP-API-KEY": self._api_key},
+                    session_request=True,
+                )
+                response_cst = response.headers.get("CST")
+                response_token = response.headers.get("X-SECURITY-TOKEN")
+                if not response_cst or not response_token:
+                    raise CapitalComError(response.status_code, "session")
+                self._cst, self._security_token = response_cst, response_token
+                _SHARED_SESSIONS[self._session_cache_key] = {
+                    "cst": response_cst,
+                    "token": response_token,
+                    "last_ping": time.monotonic(),
+                }
 
     def _auth_headers(self) -> dict[str, str]:
         self._open_session()
@@ -209,15 +277,19 @@ class CapitalComClient:
             raise ValueError("read-only CapitalComClient supports GET requests only")
         for auth_attempt in range(2):
             headers = self._auth_headers()
+            if path != "ping" and self._keepalive_due():
+                keepalive = self._send("GET", "ping", headers=headers)
+                if keepalive.status_code == 401:
+                    self._invalidate_session()
+                    continue
+                self._mark_ping()
             response = self._send(method, path, params=params, headers=headers, history=history)
             if response.status_code != 401:
                 try:
                     return response.json()
                 except ValueError:
                     raise CapitalComError(response.status_code, path) from None
-            with self._session_lock:
-                self._cst = None
-                self._security_token = None
+            self._invalidate_session()
             if auth_attempt == 1:
                 raise CapitalComError(
                     401,
@@ -231,6 +303,7 @@ class CapitalComClient:
         payload = self._request("GET", "ping")
         if not isinstance(payload, Mapping):
             raise CapitalComError(200, "ping")
+        self._mark_ping()
         return payload
 
     def search_markets(self, search_term: str) -> list[Mapping[str, Any]]:

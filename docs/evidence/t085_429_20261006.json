@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "task": "T-085",
+  "captured_at": "2026-10-06T14:00:07Z",
+  "environment": "demo",
+  "total_429s_observed": 9,
+  "retry_recovered": true,
+  "representative_events": [
+    {
+      "timestamp_utc": "2026-10-06T13:55:55Z",
+      "method": "POST",
+      "endpoint_path": "/session",
+      "status": 429,
+      "retry_after": null,
+      "attempt": 1,
+      "code_path": "scripts/demo_round_trip.py -> CapitalComTradingClient -> CapitalComClient._send"
+    },
+    {
+      "timestamp_utc": "2026-10-06T13:55:55Z",
+      "method": "POST",
+      "endpoint_path": "/session",
+      "status": 429,
+      "retry_after": null,
+      "attempt": 2,
+      "code_path": "scripts/demo_round_trip.py -> CapitalComTradingClient -> CapitalComClient._send"
+    },
+    {
+      "timestamp_utc": "2026-10-06T13:55:55Z",
+      "method": "POST",
+      "endpoint_path": "/session",
+      "status": 429,
+      "retry_after": null,
+      "attempt": 3,
+      "code_path": "scripts/demo_round_trip.py -> CapitalComTradingClient -> CapitalComClient._send"
+    }
+  ],
+  "rate_audit": {
+    "client_send": {
+      "limiter": "RateLimiter.acquire before every request",
+      "global_window": "10 requests/second per credential digest",
+      "session_window": "1 POST /session/second per credential digest",
+      "history_window": "5 history requests/second per credential digest",
+      "retry_policy": "GET/session reads retry up to 4 total attempts; Retry-After is honored, otherwise 1/2/4 second exponential delays with jitter"
+    },
+    "trading_client": {
+      "session_reuse": "inherits the shared session cache",
+      "mutation_429": "POST/PUT/DELETE are never blindly retried; reconcile positions before any caller retry"
+    },
+    "stream": {
+      "session_reuse": "one REST client is injected and reused for stream lifecycle",
+      "keepalive": "GET /ping is issued at most once per five minutes when a client is active"
+    },
+    "pod_scripts": {
+      "scripts": [
+        "scripts/demo_round_trip.py",
+        "scripts/verify_capital_demo.py",
+        "scripts/verify_capital_stream.py"
+      ],
+      "session_creation": "one client per process; no direct session endpoint calls; all requests pass through CapitalComClient",
+      "order_safety": "T-085 ran no orders"
+    }
+  },
+  "secrets_recorded": false
+}
