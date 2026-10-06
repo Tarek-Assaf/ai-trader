@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from decimal import Decimal
+from typing import Any
 
 
 @dataclass(frozen=True, slots=True)
@@ -20,7 +21,7 @@ def _distance(left: frozenset[str], right: frozenset[str]) -> float:
 
 
 def allocate(
-    strategies: Sequence[Mapping[str, object]],
+    strategies: Sequence[Mapping[str, Any]],
     *,
     risk_budget: Decimal | float,
     max_concurrent: int = 3,
@@ -30,7 +31,7 @@ def allocate(
     if max_concurrent < 1 or not 0 <= min_diversity <= 1:
         raise ValueError("allocator limits are invalid")
     ranked = sorted(strategies, key=lambda row: float(row.get("score", 0)), reverse=True)
-    chosen: list[Mapping[str, object]] = []
+    chosen: list[Mapping[str, Any]] = []
     for candidate in ranked:
         features = frozenset(str(item) for item in candidate.get("features", ()))
         if all(
@@ -59,7 +60,7 @@ def allocate(
 
 
 def allocate_from_config(
-    strategies: Sequence[Mapping[str, object]],
+    strategies: Sequence[Mapping[str, Any]],
     *,
     risk_budget: Decimal | float,
     config: Mapping[str, object],

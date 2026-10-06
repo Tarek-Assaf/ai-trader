@@ -116,6 +116,7 @@ class SqlExperimentLedger:
 
     def records(self) -> tuple[ExperimentRecord, ...]:
         import json
+
         from sqlalchemy import select
 
         from trader.core.db import tables

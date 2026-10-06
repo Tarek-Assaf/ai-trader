@@ -86,7 +86,7 @@ class Gate1Config:
     alpha: float = 0.05
 
     @classmethod
-    def from_config(cls, path: str | Path | None = None) -> "Gate1Config":
+    def from_config(cls, path: str | Path | None = None) -> Gate1Config:
         target = (
             Path(path)
             if path
@@ -102,12 +102,19 @@ class Gate1Config:
         except (KeyError, TypeError, OSError) as exc:
             raise ValueError("strategy_lab.yaml gate1_backtest_to_paper is invalid") from exc
         expected = {
-            "min_trades", "min_out_of_sample_trades", "min_walk_forward_windows",
-            "min_validation_periods", "min_out_of_sample_profit_factor",
-            "min_holdout_profit_factor", "min_profitable_walk_forward_share",
-            "cost_stress_increase_pct", "require_neighbor_parameters_profitable",
-            "require_multiple_testing_correction", "min_profitable_regimes",
-            "max_top5pct_trades_profit_share", "max_backtest_drawdown_pct",
+            "min_trades",
+            "min_out_of_sample_trades",
+            "min_walk_forward_windows",
+            "min_validation_periods",
+            "min_out_of_sample_profit_factor",
+            "min_holdout_profit_factor",
+            "min_profitable_walk_forward_share",
+            "cost_stress_increase_pct",
+            "require_neighbor_parameters_profitable",
+            "require_multiple_testing_correction",
+            "min_profitable_regimes",
+            "max_top5pct_trades_profit_share",
+            "max_backtest_drawdown_pct",
         }
         if set(gate) != expected:
             raise ValueError(
@@ -131,7 +138,9 @@ def _minimal_yaml_gate(path: Path) -> dict[str, Any]:
             values[key] = (
                 raw.lower() == "true"
                 if raw.lower() in {"true", "false"}
-                else float(raw) if "." in raw else int(raw)
+                else float(raw)
+                if "." in raw
+                else int(raw)
             )
     return values
 
@@ -146,7 +155,7 @@ class ValidationResult:
     metrics: Mapping[str, Any] = field(default_factory=dict)
 
 
-def _number(value: object) -> float:
+def _number(value: Any) -> float:
     try:
         number = float(value)
     except (TypeError, ValueError) as exc:
@@ -261,6 +270,13 @@ class StrategyValidator:
 validate = validate_gate1
 
 __all__ = [
-    "Gate1Config", "HoldoutAccessError", "HoldoutReader", "StrategyValidator",
-    "ValidationResult", "bonferroni_alpha", "strategy_hash", "validate", "validate_gate1",
+    "Gate1Config",
+    "HoldoutAccessError",
+    "HoldoutReader",
+    "StrategyValidator",
+    "ValidationResult",
+    "bonferroni_alpha",
+    "strategy_hash",
+    "validate",
+    "validate_gate1",
 ]

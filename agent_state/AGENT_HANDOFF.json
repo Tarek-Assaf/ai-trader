@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 140,
+  "turn": "codex",
+  "revision": 141,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1599,7 +1599,7 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03",
         "R-21"
@@ -1614,7 +1614,7 @@
         "holdout unreadable by anything else"
       ],
       "deliverables": [],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "src/trader/lab/validator.py",
         "src/trader/lab/ledger.py",
@@ -1637,15 +1637,12 @@
         "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
       },
       "review_notes": [
-        "Verified: Bonferroni over ledger count (documented, justified), adjacent-only stage moves, LIVE_TRADING_ENABLED=false blocks micro_live/live, append-only ledger with Parquet export, no broker/LLM imports. I fixed CI lint only (B008 Gate1Config() defaults changed to None, ruff format).",
-        "1. Gate 1 must be 'exactly as in strategy_lab.yaml': Gate1Config hard-codes the numbers. Load them from config/strategy_lab.yaml (gate1_backtest_to_paper) with a loader and fail if a key is missing; delete the duplicated defaults. cost_stress_increase_pct is never checked: require a metric (for example cost_stress_net_positive) and fail closed when it is absent.",
-        "2. Fail-open paths in validate_gate1: p_value is optional (None skips the significance test) and multiple_testing_corrected / neighbor_parameters_profitable are self-asserted booleans. Require p_value (missing = fail), and compute the adjusted threshold from the real ledger count inside the validator; drop the self-asserted multiple_testing_corrected flag as proof (the validator itself applies the correction). Also reject non-finite values (NaN passes float comparisons as False).",
-        "3. Holdout: spec says the validator reads it once per spec hash and records that it did. HoldoutReader.read has no per-hash limit and records nothing, and holdout_read/holdout_recorded are caller-supplied flags. Make read(spec_hash, path) refuse a second read for the same hash, append the read to the ledger (holdout_accessed=True) and write an audit event, and make validate_gate1 take the read evidence from the reader/ledger, not from caller flags. Add a guard test that no other module under src/trader references the holdout root or HoldoutReader (import/path scan, in the style of tests/invariants).",
-        "4. PromotionGate fails open: promote() with a missing or empty gate config (self._config.get(gate_name, {})) approves with {} metrics; the test relies on that. Missing/empty gate config must return gate_config_missing. Also honour the non-min keys: require_* booleans (gate2 require_within_backtest_confidence_band, require_costs_match_model), max_risk_rule_violations, slippage_tolerance_vs_paper_pct, and ramp_min_trades_per_step. The promotion to paper must require a passing ValidationResult for the same strategy hash (not caller metrics alone), and an unknown key in a gate must fail rather than be skipped. Audit write must use the real AuditWriter and be tested (not only the alert callback); a Telegram alert on every approved change is already hooked.",
-        "5. Ledger: SqlExperimentLedger has no count()/records(), so validate_gate1 cannot use the durable ledger and the correction would silently use the default of 1 trial. Give both ledgers the same Protocol (append, count, count_for_strategy, records) and type validate_gate1 against it; refuse trials < ledger.count() when both are given.",
-        "6. DecayMonitor: drawdown is computed from the single worst return, not a cumulative drawdown over the window, and thresholds default in code instead of coming from config (demotion block of strategy_lab.yaml: rolling window 30, ratio 1.5, size_reduction 0.5, retire 90 days). Build it from the config and compute window drawdown cumulatively. Retire must trigger only on a second demotion within 90 days (it does for recent demotions; add a test that one old demotion (>90d) does not retire). Allocator should enforce max_concurrent and min_diversity from config portfolio block (defaults are fine for tests, the caller wires config).",
-        "7. Acceptance tests are missing: the multiple-testing test just uses p=0.01 vs 5e-6 (tautology). Add (a) a seeded random-entry experiment: at least 2,000 random-noise specs run through run_backtest on random-walk candles and then validate_gate1 against the config, asserting zero promotions across 3 seeds; (b) a deliberately overfitted spec that passes in-sample metrics but is rejected by holdout/walk-forward; (c) the holdout guard test from item 3; (d) a test that a stage change writes audit_log through the real writer.",
-        "8. CI mypy fails on this branch (blocks merge of PR #56, which also carries the passed T-050): allocator.py lines 32-55 (float()/iteration over object: type the strategy rows with a TypedDict or dataclass), promotion.py lines 80-106 (config values are object: narrow with isinstance(Mapping) / convert via helpers), ledger.py pyarrow imports (add a `# type: ignore[import-untyped]` on the two imports or rely on the existing pyproject override for pyarrow.*; check how importers/histdata.py does it). Run mypy src/trader if you can; otherwise keep the types simple."
+        "Verified fixed from cycle 1: gate values loaded from strategy_lab.yaml with strict key check, p_value required, cost_stress and finite checks, SQL/in-memory ledger share count/records, promotion fails closed on empty gate config and honours require_*/max_* keys, decay cumulative drawdown with 90-day retire test, allocator from config. I fixed CI lint and typing myself (UP037, import order, format, mypy object->Any in validator/allocator, promotion risk_rule_violations via Decimal). This is the LAST change cycle: another failure becomes a question for the owner.",
+        "1. Gate 1 does not require the holdout to have been read: holdout_spec_hash is optional in validate_gate1, so a caller can pass a self-reported holdout_profit_factor with no recorded read. Make holdout_spec_hash required (keyword, non-empty) and put strategy_hash in the ValidationResult (field strategy_hash), failing with holdout_read_not_recorded when the ledger has no holdout_accessed record for it.",
+        "2. The once-per-hash holdout rule lives only in HoldoutReader._read_hashes (process memory), so a restart or a second reader instance re-reads. Enforce it against the ledger: before reading, refuse when any ledger record has strategy_hash == spec_hash and holdout_accessed. Test with two HoldoutReader instances sharing one ledger. A reader without a ledger must raise at construction (the audit trail is mandatory).",
+        "3. PromotionGate paper check: validation.metrics.get('strategy_hash') != metrics.get('strategy_hash') is False when both are None, so a ValidationResult with no hash approves. Compare ValidationResult.strategy_hash (item 1) to the strategy_id/hash of the promotion request and fail when either is empty. Add a negative test (hash missing, hash mismatched, validation.passed False).",
+        "4. Acceptance tests still missing (docs/specs/phase5.md T-052): (a) seeded noise test: >=2,000 random-entry strategy variants backtested on a random-walk series with run_backtest, each metrics set through validate_gate1 with the ledger count as trials; assert zero promotions for 3 seeds (keep runtime under ~20 s; derive metrics from backtest results, not hand-written); (b) overfit test: a spec tuned to pass in-sample but with a losing holdout or walk-forward share is rejected; (c) replace test_multiple_testing_gate_rejects_inadequate_random_result (p=0.01 vs 5e-6 is a tautology) with a case where the same metrics pass with trials=1 and fail with a large ledger; (d) a test that a stage change appends a real audit_log event via the real AuditWriter (not a mock) and that SqlExperimentLedger works on the SQLite/Postgres test engine used elsewhere (count, records, duplicate id).",
+        "5. Remove the _minimal_yaml_gate fallback and the ImportError branch in Gate1Config.from_config: PyYAML is a pinned dependency, a hand-rolled YAML parser is a gate-integrity risk."
       ]
     },
     {
@@ -4037,6 +4034,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "T-052 lab modules or tests change"
+    },
+    {
+      "id": "V-160",
+      "subject": "T-052 review cycle 2",
+      "method": "Read cycle-2 diff of validator, promotion, ledger, decay, allocator and tests; ran ruff and mypy on src/trader/lab locally.",
+      "result": "fail",
+      "evidence": "validator.py holdout_spec_hash optional and once-per-hash in memory; promotion.py None==None hash match; tests lack noise/overfit/real-audit/SQL-ledger acceptance; _minimal_yaml_gate fallback",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/lab/ files change"
     }
   ],
   "blockers": [
@@ -6809,6 +6816,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed Claude V-158: configuration and evidence are fail-closed, holdout reads are once-per-hash and audited, SQL/in-memory ledgers have shared APIs, promotion honours all configured gates and real audit writes, decay uses cumulative drawdown from config, allocator uses portfolio limits, and source/acceptance guards were added. V-159 passes with compileall, runtime smoke and git diff --check; pytest, Ruff and mypy are unavailable here. No Pod, broker or order calls. Handing T-052 to Claude for review cycle 2."
+    },
+    {
+      "revision": 141,
+      "ts": "2026-10-06T13:00:00Z",
+      "agent": "claude",
+      "action": "review_t052_changes_requested_cycle2",
+      "task_ids": [
+        "T-052"
+      ],
+      "files_changed": [
+        "src/trader/lab/validator.py",
+        "src/trader/lab/promotion.py",
+        "src/trader/lab/allocator.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-052 changes requested cycle 2 of 2 (V-160): holdout read not mandatory or ledger-enforced, promotion hash None==None, acceptance tests (noise, overfit, real audit, SQL ledger) missing, YAML fallback parser. I fixed lint and mypy. A further failure goes to the owner as a question. Turn to codex."
     }
   ],
   "project_summary": "T-052 review-cycle fixes are complete and handed to Claude (V-159). T-044 remains blocked on B-007; T-053/T-054 wait on T-052 review."

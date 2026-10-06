@@ -108,15 +108,26 @@ class PromotionGate:
         if not isinstance(gate, Mapping) or not gate:
             return ["gate_config_missing"]
         allowed = {
-            "min_weeks", "min_trades", "min_out_of_sample_trades", "min_validation_periods",
-            "min_walk_forward_windows", "min_out_of_sample_profit_factor",
-            "min_holdout_profit_factor", "max_risk_rule_violations",
-            "max_drawdown_vs_backtest_ratio", "slippage_tolerance_vs_paper_pct",
-            "require_within_backtest_confidence_band", "require_costs_match_model",
-            "require_neighbor_parameters_profitable", "require_multiple_testing_correction",
-            "ramp_min_trades_per_step", "cost_stress_increase_pct",
-            "min_profitable_walk_forward_share", "max_top5pct_trades_profit_share",
-            "max_backtest_drawdown_pct", "min_profitable_regimes",
+            "min_weeks",
+            "min_trades",
+            "min_out_of_sample_trades",
+            "min_validation_periods",
+            "min_walk_forward_windows",
+            "min_out_of_sample_profit_factor",
+            "min_holdout_profit_factor",
+            "max_risk_rule_violations",
+            "max_drawdown_vs_backtest_ratio",
+            "slippage_tolerance_vs_paper_pct",
+            "require_within_backtest_confidence_band",
+            "require_costs_match_model",
+            "require_neighbor_parameters_profitable",
+            "require_multiple_testing_correction",
+            "ramp_min_trades_per_step",
+            "cost_stress_increase_pct",
+            "min_profitable_walk_forward_share",
+            "max_top5pct_trades_profit_share",
+            "max_backtest_drawdown_pct",
+            "min_profitable_regimes",
         }
         unknown = set(gate) - allowed
         if unknown:
@@ -134,11 +145,9 @@ class PromotionGate:
             actual = metrics.get(key.removeprefix("min_"))
             if actual is None or _as_decimal(actual) < _as_decimal(expected):
                 reasons.append(f"{key}_failed")
-        if (
-            target == "micro_live"
-            and int(metrics.get("risk_rule_violations", 1))
-            > int(gate.get("max_risk_rule_violations", 0))
-        ):
+        if target == "micro_live" and _as_decimal(
+            metrics.get("risk_rule_violations"), "1"
+        ) > _as_decimal(gate.get("max_risk_rule_violations"), "0"):
             reasons.append("risk_rule_violations")
         if target == "live" and _as_decimal(
             metrics.get("max_drawdown_vs_backtest_ratio")

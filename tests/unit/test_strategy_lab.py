@@ -49,9 +49,11 @@ def test_multiple_testing_gate_rejects_inadequate_random_result():
         "multiple_testing_corrected": True,
         "p_value": 0.01,
     }
-    result = validate_gate1(metrics, trials=10_000, config=Gate1Config(
-        300, 100, 5, 3, 1.3, 1.2, 0.7, 50, True, True, 2, 0.4, 20
-    ))
+    result = validate_gate1(
+        metrics,
+        trials=10_000,
+        config=Gate1Config(300, 100, 5, 3, 1.3, 1.2, 0.7, 50, True, True, 2, 0.4, 20),
+    )
     assert not result.passed
     assert "adjusted_significance_failed" in result.reasons
 
@@ -110,8 +112,7 @@ def test_decay_retires_after_second_recent_demotion_and_allocator_diversifies():
     )
     assert decision.demote and decision.retire
     old = monitor.evaluate(
-        "s1", (-3, -1), backtest_drawdown=1,
-        demotions=(now - timedelta(days=91),), now=now
+        "s1", (-3, -1), backtest_drawdown=1, demotions=(now - timedelta(days=91),), now=now
     )
     assert old.demote and not old.retire
     result = allocate(

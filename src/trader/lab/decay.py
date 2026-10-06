@@ -33,13 +33,15 @@ class DecayMonitor:
         self.retire_days = retire_days
 
     @classmethod
-    def from_config(cls, config: Mapping[str, object]) -> "DecayMonitor":
+    def from_config(cls, config: Mapping[str, object]) -> DecayMonitor:
         values = config.get("demotion")
         if not isinstance(values, Mapping):
             raise ValueError("demotion config is missing")
         required = {
-            "rolling_expectancy_window_trades", "live_drawdown_vs_backtest_max_ratio",
-            "size_reduction_on_demotion", "retire_on_second_demotion_within_days",
+            "rolling_expectancy_window_trades",
+            "live_drawdown_vs_backtest_max_ratio",
+            "size_reduction_on_demotion",
+            "retire_on_second_demotion_within_days",
         }
         if set(values) != required:
             raise ValueError("demotion config has missing or unknown keys")
