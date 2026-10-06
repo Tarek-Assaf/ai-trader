@@ -13,11 +13,11 @@ import logging
 import secrets
 import time
 from collections import deque
-from collections.abc import Callable, Iterable, Mapping, Protocol, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from threading import Lock
-from typing import Any
+from typing import Any, Protocol
 
 from trader.execution.control import ControlMode, ControlWriter
 
