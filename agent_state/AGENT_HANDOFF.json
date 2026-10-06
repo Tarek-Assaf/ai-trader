@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 152,
+  "turn": "human",
+  "revision": 153,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-054 passed Claude review cycle 2 (V-170). T-028 Pod preflight and the authorized second demo round trip completed successfully on the expected demo image (V-171); redacted evidence and the attempt ledger are committed and originals remain under /workspace. T-028 is ready for Claude review. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access.",
+    "summary": "T-028 review cycle 1: round trip succeeded but the open-position account snapshot is identical to flat, so the equity/margin mapping is unverified (V-172). Waiting on owner Q-040 for one larger demo round trip. T-084 follow-up, T-044 (B-007), T-060 code half remain.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2206,7 +2206,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-08",
         "R-21"
@@ -2230,7 +2230,7 @@
         "docs/evidence/t028_reconcile_20261005.json",
         "tests/unit/test_execution_reconciliation.py"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "docs/evidence/t028_accounts_mapping_20261005.json",
         "docs/evidence/t028_reconcile_20261005.json",
@@ -4222,6 +4222,17 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "owner authorizes another T-028 Pod run"
+    },
+    {
+      "id": "V-172",
+      "subject": "T-028 review cycle 1 (Claude)",
+      "method": "Read preflight, round-trip and attempts evidence; compared account snapshots before/during/after the open position.",
+      "result": "fail",
+      "evidence": "docs/evidence/t028_round_trip_20261006.json account_observations; docs/evidence/t028_preflight_20261006.json",
+      "review_notes": "Round trip itself is sound (normal order path, server stop, modify, close, flat confirmed, demo only, no URL/token). But the equity/margin mapping is NOT verified: the during_open /accounts snapshot (available 1000, balance 1000, deposit 1000, profitLoss 0) is identical to flat, so it cannot distinguish cash from equity or show margin; at 0.001 US100 (~31 USD notional) the effect is tiny or the snapshot was taken before the broker refreshed. Also unexplained: preflight before_open showed available 0, balance 0, deposit 1000, profitLoss -1000 (hours before the trade) versus 1000/1000/1000/0 later. Fix: (1) add an investigation of the preflight anomaly (re-read /accounts several times while flat, record timestamps); (2) with fresh owner authorization (Q-040), one round trip with a larger demo size (e.g. 1.0 US100) held open >=60 s, polling /accounts every 5 s and /positions until the position appears, recording every snapshot with timestamps; (3) only then set the verified mapping in config and run reconcile_pnl against the open-position figures. Do not set verified=true until the open snapshot shows a margin or P&L change. No order without owner yes on Q-040 before 2026-10-06T20:08:00Z.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "new open-position account snapshot is committed"
     }
   ],
   "blockers": [
@@ -4713,6 +4724,19 @@
       ],
       "recommendation": "Follow-up task T-083",
       "answer": "Owner chose: Follow-up task (Recommended), 2026-10-06."
+    },
+    {
+      "id": "Q-040",
+      "from": "claude",
+      "to": "human",
+      "status": "open",
+      "text": "T-028 needs one more demo trade: the account snapshot taken while the position was open looked identical to flat (0.001 size is too small to show margin). May Codex place ONE demo round trip with a larger size (about 1.0 US100, demo only, closed within a few minutes) before 23:08 Riyadh today, and retry if it fails?",
+      "options": [
+        "Yes, one demo round trip with retries on failure (recommended)",
+        "No, wait for the first normal paper-demo trade instead"
+      ],
+      "recommendation": "Yes, one demo round trip with retries on failure",
+      "answer": ""
     }
   ],
   "log": [
@@ -7186,6 +7210,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Ran the preflight before the US open with account_observations.before_open. After the open gate, attempt 1 failed before client/order initialization with ConfigLoadError; the required account check was clean. Attempt 2 used the normal order path and succeeded with one BUY 0.001 US100 trade, attached server stop, before/during/after redacted /accounts snapshots, an opened_position snapshot, modify and close, and final flat confirmation with zero positions and working orders. Expected image tag is recorded; the container did not expose a Docker image tag for independent introspection. Originals remain under /workspace. No Pod URL or token is recorded. T-028 is ready for Claude review."
+    },
+    {
+      "revision": 153,
+      "ts": "2026-10-06T13:50:00Z",
+      "agent": "claude",
+      "action": "review_t028_cycle1",
+      "task_ids": [
+        "T-028"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-028 changes_requested (cycle 1, V-172): trade path sound but open-position /accounts snapshot equals flat and preflight showed unexplained balance 0/profitLoss -1000; mapping unverified. Q-040 asks owner for one larger demo round trip. Turn to human."
     }
   ],
   "project_summary": "T-054 passed Claude review cycle 2 (V-170). T-028 Pod preflight and the authorized second demo round trip completed successfully on the expected demo image (V-171); redacted evidence and the attempt ledger are committed and originals remain under /workspace. T-028 is ready for Claude review. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
