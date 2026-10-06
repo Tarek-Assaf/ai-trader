@@ -406,7 +406,7 @@ class TelegramChannel:
 
     @staticmethod
     def _chat_id(value: object) -> str | None:
-        if isinstance(value, (str, int)):
+        if isinstance(value, str | int):
             return str(value)
         return None
 
