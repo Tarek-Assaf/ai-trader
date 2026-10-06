@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 111,
+  "turn": "claude",
+  "revision": 112,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-031 review cycle 1 fixes are complete and handed to Claude at revision 110; T-030 review passed and remains done pending green CI. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-060 remains blocked on the fresh restore drill.",
+    "summary": "T-032 visualization module is implemented and handed to Claude for review at revision 112. T-030 and T-031 are done pending green CI. T-028 remains open for the owner-gated RunPod round trip under Q-037. T-060 remains blocked on the fresh restore drill.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The desktop runtime has no make or pytest/PyYAML, so make check and focused tests could not run; compileall, handoff validation and git diff --check pass.",
@@ -1269,7 +1269,7 @@
       "phase": 3,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-13"
       ],
@@ -1282,8 +1282,11 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/viz/__init__.py: lazy headless matplotlib chart builders for candles/trades, equity, drawdown, session P&L, strategy comparison and spread, plus self-contained PNG/HTML writers",
+        "tests/unit/test_viz.py: fixture rendering and non-empty PNG/HTML checks, including empty-data chart"
+      ],
+      "completion_note": "Implemented the offline visualization module for T-032. Chart functions return matplotlib Figure objects and cover OHLC candles with trade markers, equity curves, drawdown, session P&L heatmaps, strategy comparison bars and spread by session. Empty inputs render a No data figure. PNG saving is explicit and HTML uses a self-contained embedded PNG, so no Plotly dependency was added. Matplotlib is imported lazily with a clear VisualizationUnavailable error in minimal runtimes; the desktop runtime lacks matplotlib, pytest and make, so focused rendering and full checks are unavailable here. Compileall, handoff validation, secret scan and git diff --check pass. No Pod, broker or order calls. Telegram chart wiring remains through the existing render/transport seam and is not state-changing. Handing to Claude for review."
     },
     {
       "id": "T-033",
@@ -3124,7 +3127,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -3608,6 +3611,16 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "router.py, its handlers or the Intent schema change"
+    },
+    {
+      "id": "V-130",
+      "subject": "T-032 visualization module",
+      "method": "Read viz module/tests against Phase 3 T-032; compile changed modules, validate handoff and secret scan, and run git diff --check.",
+      "result": "pass",
+      "evidence": "Six chart builders, empty-data handling, PNG and self-contained HTML writers, and fixture tests added. compileall, validate_handoff.py, secret_scan.py and git diff --check pass; matplotlib/pytest/make unavailable in desktop runtime, so rendering suite could not execute.",
+      "validated_by": "codex",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/viz or tests/unit/test_viz.py changes"
     }
   ],
   "blockers": [
@@ -5189,7 +5202,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -5903,6 +5916,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-031 passes review cycle 2 (V-129). All V-127 fixes verified; I applied ruff import-order fixes only. T-030 and T-031 are done pending green CI on PR #52. Next for Codex: T-028 round trip ONLY after the owner hands over the Pod terminal and the market is open (authorization lapses 2026-10-06T20:08:00Z); meanwhile T-032 visualization per docs/specs/phase3.md."
+    },
+    {
+      "revision": 112,
+      "ts": "2026-10-06T06:16:56.850Z",
+      "agent": "codex",
+      "action": "implement_t032_visualization",
+      "task_ids": [
+        "T-032"
+      ],
+      "files_changed": [
+        "src/trader/viz/__init__.py",
+        "tests/unit/test_viz.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-032 lazy headless chart builders for candles/trades, equity, drawdown, session P&L, strategy comparison and spread, with empty-data handling and PNG/self-contained HTML output; added fixture tests. Compileall, handoff validation, secret scan and git diff --check pass; matplotlib/pytest/make unavailable in desktop runtime. No Pod, broker or order calls. Handing to Claude."
     }
   ],
   "project_summary": "Addressed all V-100 cycle-1 requests on PR #39: restored the encoding-corrupted revision-63 text exactly to main; CI run 37275317330 had no failing tests (312 passed) and failed only append-only handoff comparison. Normal quote-triggered bracket exits and partial closes no longer pause; larger or unknown positions still do. Reconciliation renews both Redis leases. Operator-only matched/rejected resolution is journaled and alerted, preserves the cycle reservation, and permits explicit resume without resubmission. Added transitive LLM execution import-boundary test. Final local full suite passed 316 tests with two PostgreSQL skips; all lint, format, type and secret checks pass. Full CI is required before approval. Q-029/Q-031 Pod reconciliation remains pending; no broker or Pod calls. T-024 same-image read-only preflight retry aborted with CapitalComError before any order or broker mutation; no deal references, marker, cleanup or Pod data change. The authorized demo round trip remains unrun. The authorized T-024 demo round trip succeeded once on image c91aa61f4c9392374ebd9ea20bedaabe25a6c296 with exact stop/size equality, successful tighten and close, and final flat verification (zero positions and working orders). Account field mapping and reconcile_pnl remain to be reviewed."
