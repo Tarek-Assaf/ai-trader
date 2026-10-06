@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 126,
+  "turn": "codex",
+  "revision": 127,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -903,7 +903,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "changes_requested",
       "requirements": [
         "R-05"
       ],
@@ -919,7 +919,7 @@
         "tests/unit/test_calibration.py",
         "docs/reports/basis_and_spread.md"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/data/calibration.py",
         "tests/unit/test_calibration.py",
@@ -935,7 +935,19 @@
           "scripts/validate_tick_data.py (HistData tick files carry bid and ask)"
         ],
         "rule": "reference only; rewrite to our interfaces; see docs/legacy_audit.md"
-      }
+      },
+      "review_notes": [
+        "Tooling review only (answer to Q-038: option 1). The empirical report stays blocked on B-007 (recorder overlap). After these fixes set T-017 back to 'blocked' with the evidence; the numbers are produced on the Pod by the runner below.",
+        "1. Iterables are consumed more than once. calibrate() loops over capital_bars three times (basis map, capital_spreads, session spreads). A generator, which is what a Parquet reader gives, is empty after the first pass, so a real run would silently report zero Capital.com spreads. Materialize each input once (or compute all statistics in a single pass) and add a test that passes generators.",
+        "2. Recorder rows are written for both sides and both carry spread_close, so capital spreads are counted twice. Use the bid rows only (or dedupe by timestamp). Test it.",
+        "3. Spec asks for spread statistics (median, p90, p99) per instrument and per session for HistData ticks as well as Capital.com. HistData ticks are never assigned to a session and the written report shows only one summary row with p90 only. Add per-session tables (n, median, p90, p99) for basis, HistData spread and Capital.com spread, per instrument, in docs/reports/basis_and_spread.md.",
+        "4. Sessions are hard-coded UTC hour ranges in _default_session. Read session windows from the same configuration MarketHours uses (src/trader/data/market_hours.py); keep a hard-coded fallback only for tests. If the config has no named sessions, ask in a question rather than inventing them.",
+        "5. The timezone check is not proven: the only test uses one 10-minute window at lag 0. Add a test where HistData is the same series shifted by one hour and the tool reports best lag 1 (and timezone_ok false for expected 0), and one with shifted by zero that reports 0.",
+        "6. Spec: 'export to config-style parameters used by the PaperBroker and the backtester ... saved with lineage'. Add write_cost_model(results, path, lineage) that writes per-instrument per-session median/p90/p99 spreads and basis, with lineage (input file names and sha256, row counts, date ranges, generated_at, git commit if available). It must refuse to write (and say why) when a session has fewer samples than a stated minimum (put the minimums in the function signature with defaults, for example 1000 spread samples and 500 basis minutes) so provisional defaults remain until real data exists. Do not change any PaperBroker cost.",
+        "7. Add a runner so the Pod step is one command: python -m trader.data.calibration --histdata <dir> --recorder <dir> --instrument NAS100 --report <md path> --cost-model <yaml path>. It reads Parquet with pyarrow in chunks and prints the output paths. Outputs go to the path given (the Pod will use /workspace). Test the argument parsing and a tiny Parquet fixture end to end.",
+        "8. Memory: spread lists hold every tick in Python lists, which will not fit a year of NAS100 ticks. Use bounded memory (numpy arrays per chunk, or a fixed-width histogram for percentiles) and test with a generator of many rows.",
+        "Non-blocking: replace the 'for _ in [0]' walrus trick in hist_spreads with a plain loop."
+      ]
     },
     {
       "id": "T-020",
@@ -3809,6 +3821,16 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "src/trader/data/calibration.py, tests/unit/test_calibration.py or the T-017 report changes"
+    },
+    {
+      "id": "V-146",
+      "subject": "T-017 calibration tooling review cycle 1",
+      "method": "Read src/trader/data/calibration.py, tests and report against docs/specs/phase1.md T-017; checked the recorder schema in src/trader/data/recorder.py and the market hours module; CI quality status on e7369d1.",
+      "result": "fail",
+      "evidence": "Good: no guessed numbers, explicit warnings when data is missing, finite-value checks, schema names match the recorder. Fail: generator inputs are consumed more than once, spreads double counted across bid and ask rows, no per-session HistData spread or per-session report, hard-coded sessions, timezone detection untested with a real shift, no cost-model export with lineage or minimum-sample guard, no runner, unbounded memory on tick data.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "src/trader/data/calibration.py or tests/unit/test_calibration.py change"
     }
   ],
   "blockers": [
@@ -4283,9 +4305,9 @@
         "Review tooling now and keep T-017 blocked pending recorder data (recommended)",
         "Defer review until the recorder window exists"
       ],
-      "status": "open",
+      "status": "answered",
       "recommendation": "Review tooling now; run the report after Q-022 recorder soak produces overlapping Capital.com data.",
-      "answer": ""
+      "answer": "Claude: review the tooling now and keep T-017 blocked on B-007 for the empirical numbers (option 1). Tooling review cycle 1 is recorded in V-146; the Pod run produces the report after the recorder soak (Q-022)."
     }
   ],
   "log": [
@@ -6347,6 +6369,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented deterministic T-017 basis/spread/timezone calibration tooling and focused tests. The report computes UTC-minute bid basis, -6h..+6h lag correlations, HistData tick spreads, Capital.com recorder spreads and per-session distributions. The checkout has no Capital.com recorder overlap Parquet, so the empirical acceptance remains blocked under B-007; no numbers or PaperBroker costs were guessed. Ruff, mypy and 2 focused tests pass. No Pod, broker or order calls. Handing to Claude for review."
+    },
+    {
+      "revision": 127,
+      "ts": "2026-10-06T08:40:00Z",
+      "agent": "claude",
+      "action": "review_t017_changes_requested",
+      "task_ids": [
+        "T-017"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-017 tooling review cycle 1 of 2 (V-146), Q-038 answered (review now, empirical report stays blocked on B-007). Eight items in review_notes; the main ones: generator inputs consumed several times, bid/ask spreads double counted, per-session tables and the cost-model export with lineage and minimum-sample guard missing, no one-command runner for the Pod, unbounded memory on tick data. No code edits from me. PR #53 (handoff to rev 125, T-034 done) still needs the owner's manual merge; T-028 stays gated on the owner handing over the Pod terminal and the market being open."
     }
   ],
   "project_summary": "T-034 now preserves strict nested config schemas, seeds defaults, prevents stale scheduled overwrites, rolls back failed persistence, requires an explicit halt callable, and routes reverts through the normal confirmed flow. Validation V-143 passes. No Pod, broker or order calls."
