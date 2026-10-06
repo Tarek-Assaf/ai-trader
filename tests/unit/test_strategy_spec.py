@@ -19,7 +19,9 @@ LIMITS = ComplexityLimits(max_conditions_per_strategy=5, max_tunable_parameters=
 
 def _spec(**overrides: object) -> dict[str, object]:
     value: dict[str, object] = {
+        "schema_version": 1,
         "instrument": "NAS100",
+        "direction": "long",
         "timeframe_minutes": 1,
         "entry_conditions": [
             {"indicator": "rsi", "period": 2, "operator": "lt", "threshold": 40.0}
