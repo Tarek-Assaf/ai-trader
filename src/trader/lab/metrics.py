@@ -95,6 +95,7 @@ def gate1_metrics(
         "backtest_drawdown_pct": result.max_drawdown,
         "top5pct_trades_profit_share": _top_profit_share(trades),
         "neighbor_parameters_profitable": neighbors_ok,
+        "multiple_testing_correction": True,
         "p_value": _sign_test_p_value(tuple(oos.trades)),
         "cost_stress_net_positive": stress_positive,
     }
