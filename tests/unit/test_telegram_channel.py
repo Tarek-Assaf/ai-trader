@@ -17,6 +17,7 @@ from trader.execution.control import ControlMode
 class FakeTransport:
     def __init__(self) -> None:
         self.messages: list[tuple[str, str, object]] = []
+        self.photos: list[tuple[str, bytes, str]] = []
         self.callbacks: list[tuple[str, str]] = []
         self.updates: list[dict[str, object]] = []
         self.fail = False
@@ -30,7 +31,7 @@ class FakeTransport:
         self.messages.append((chat_id, text, reply_markup))
 
     def send_photo(self, chat_id: str, photo: bytes, *, caption: str = "") -> None:
-        raise NotImplementedError
+        self.photos.append((chat_id, photo, caption))
 
     def answer_callback(self, callback_id: str, text: str = "") -> None:
         self.callbacks.append((callback_id, text))
@@ -140,6 +141,33 @@ def test_data_commands_route_through_render() -> None:
         ("/chart", "US100 1m"),
     ]
     assert len(transport.messages) == len(calls)
+
+
+def test_chart_command_renders_and_sends_png() -> None:
+    transport = FakeTransport()
+    calls: list[tuple[str, str]] = []
+
+    def render_chart(command: str, argument: str) -> bytes:
+        calls.append((command, argument))
+        return b"fake-png"
+
+    channel, _ = make_channel(transport, render_chart=render_chart)
+    channel.handle_message("owner", "/chart US100 1m")
+    assert calls == [("/chart", "US100 1m")]
+    assert transport.photos == [("owner", b"fake-png", "Chart: US100 1m")]
+    assert transport.messages == []
+
+
+def test_chart_renderer_failure_is_safe() -> None:
+    transport = FakeTransport()
+
+    def render_chart(command: str, argument: str) -> bytes:
+        raise RuntimeError("plot failed")
+
+    channel, _ = make_channel(transport, render_chart=render_chart)
+    channel.handle_message("owner", "/chart US100")
+    assert transport.photos == []
+    assert transport.messages[-1][1] == "Chart is unavailable right now."
 
 
 def test_resume_requires_readable_mode_and_explicit_authorization() -> None:

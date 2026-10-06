@@ -31,22 +31,25 @@ def _records(data: Any) -> list[Mapping[str, Any]]:
     return [row for row in data if isinstance(row, Mapping)]
 
 
-def _plot() -> Any:
+def _plot() -> tuple[Any, Any]:
     try:
         import matplotlib
 
         matplotlib.use("Agg", force=True)
-        import matplotlib.pyplot as pyplot
+        from matplotlib.backends.backend_agg import FigureCanvasAgg
+        from matplotlib.figure import Figure
     except Exception:
         raise VisualizationUnavailable(
             "matplotlib is required for offline chart rendering"
         ) from None
-    return pyplot
+    return Figure, FigureCanvasAgg
 
 
 def _figure(title: str) -> tuple[Any, Any]:
-    pyplot = _plot()
-    figure, axis = pyplot.subplots(figsize=(10, 5), constrained_layout=True)
+    Figure, FigureCanvasAgg = _plot()
+    figure = Figure(figsize=(10, 5), constrained_layout=True)
+    FigureCanvasAgg(figure)
+    axis = figure.subplots()
     axis.set_title(title)
     return figure, axis
 

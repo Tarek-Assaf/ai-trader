@@ -46,6 +46,12 @@ class Flattener(Protocol):
     def __call__(self) -> bool: ...
 
 
+class ChartRenderer(Protocol):
+    """Build a headless PNG for an owner chart request."""
+
+    def __call__(self, command: str, argument: str) -> bytes: ...
+
+
 @dataclass(frozen=True, slots=True)
 class Alert:
     """An outbound alert with a stable key for de-duplication."""
@@ -155,6 +161,7 @@ class TelegramChannel:
         current_mode: Callable[[], ControlMode] | None = None,
         flatten: Flattener | None = None,
         render: Callable[[str, str], str] | None = None,
+        render_chart: ChartRenderer | None = None,
         authorize_resume: Callable[[], bool] | None = None,
         audit: AuditSink | None = None,
         nonce_store: NonceStore | None = None,
@@ -174,6 +181,7 @@ class TelegramChannel:
         self._current_mode = current_mode
         self._flatten = flatten
         self._render = render or (lambda command, argument: f"{command}: {argument}".strip())
+        self._render_chart = render_chart
         self._authorize_resume = authorize_resume
         self._audit = audit
         self._nonces = nonce_store or NonceStore()
@@ -245,7 +253,26 @@ class TelegramChannel:
         if command == "/help":
             self._send(chat_id, "Supported commands: " + ", ".join(sorted(self.COMMANDS)))
             return
+        if command == "/chart" and self._render_chart is not None:
+            self._send_chart(chat_id, argument)
+            return
         self._send(chat_id, self._render(command, argument))
+
+    def _send_chart(self, chat_id: str, argument: str) -> None:
+        try:
+            renderer = self._render_chart
+            if renderer is None:
+                self._send(chat_id, self._render("/chart", argument))
+                return
+            image = renderer("/chart", argument)
+            if not isinstance(image, bytes) or not image:
+                raise ValueError("chart renderer returned no PNG")
+            self._transport.send_photo(chat_id, image, caption=f"Chart: {argument}".strip())
+        except Exception:
+            LOGGER.warning(
+                "telegram chart delivery failed", extra={"chat_hash": self._hash(chat_id)}
+            )
+            self._send(chat_id, "Chart is unavailable right now.")
 
     def send_alert(self, alert: Alert, *, chat_id: str | None = None) -> bool:
         """Queue a rate-limited alert; returns false when suppressed."""
@@ -462,8 +489,26 @@ class TelegramBotTransport:
         self._request("sendMessage", payload)
 
     def send_photo(self, chat_id: str, photo: bytes, *, caption: str = "") -> None:
-        # Chart delivery is injected through a transport adapter in this first slice.
-        raise NotImplementedError("photo upload requires a multipart transport adapter")
+        import httpx
+
+        for logger_name in ("httpx", "httpcore"):
+            logging.getLogger(logger_name).setLevel(logging.WARNING)
+        data: dict[str, str] = {"chat_id": chat_id}
+        if caption:
+            data["caption"] = caption
+        try:
+            response = httpx.post(
+                f"{self._base}/bot{self._token}/sendPhoto",
+                data=data,
+                files={"photo": ("chart.png", photo, "image/png")},
+                timeout=40.0,
+            )
+            response.raise_for_status()
+            body = response.json()
+        except Exception:
+            raise RuntimeError("Telegram API request failed") from None
+        if not body.get("ok"):
+            raise RuntimeError("Telegram API request failed")
 
     def answer_callback(self, callback_id: str, text: str = "") -> None:
         payload = {"callback_query_id": callback_id}
