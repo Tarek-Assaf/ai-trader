@@ -119,7 +119,9 @@ def isolated_capital_session_cache() -> Iterator[None]:
             capital_client._SHARED_SESSIONS.update(snapshot)
 
 
-def test_two_clients_reuse_one_session_with_shared_http_client(isolated_capital_session_cache: None) -> None:
+def test_two_clients_reuse_one_session_with_shared_http_client(
+    isolated_capital_session_cache: None,
+) -> None:
     sessions = 0
 
     def handler(request: httpx.Request) -> httpx.Response:
