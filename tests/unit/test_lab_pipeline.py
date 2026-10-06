@@ -41,9 +41,7 @@ def test_pipeline_reads_holdout_once_and_calls_validator_after_metrics(
     holdout_path.write_bytes(b"holdout")
     calls: list[dict[str, object]] = []
 
-    def reject(
-        metrics: Mapping[str, object], *, holdout_spec_hash: str
-    ) -> ValidationResult:
+    def reject(metrics: Mapping[str, object], *, holdout_spec_hash: str) -> ValidationResult:
         calls.append(dict(metrics))
         return ValidationResult(
             False,
@@ -179,9 +177,7 @@ def test_pipeline_real_config_promotes_planted_pattern_and_emits_alert(tmp_path:
         instrument="NAS100",
         direction="long",
         timeframe_minutes=1,
-        entry_conditions=(
-            IndicatorCondition(indicator="close", operator="gt", threshold=0.0),
-        ),
+        entry_conditions=(IndicatorCondition(indicator="close", operator="gt", threshold=0.0),),
         exit_rules=(
             StopExit(kind="stop", distance=1.0),
             TargetExit(kind="target", distance=0.2),

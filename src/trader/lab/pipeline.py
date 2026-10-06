@@ -54,9 +54,7 @@ class PipelineDecision:
 
     @property
     def promoted(self) -> bool:
-        return self.validation.passed and (
-            self.promotion is None or self.promotion.approved
-        )
+        return self.validation.passed and (self.promotion is None or self.promotion.approved)
 
 
 class IdeaGenerator:
@@ -76,9 +74,7 @@ class IdeaGenerator:
         self.audit = audit
         self.rejected_outputs = 0
 
-    async def generate(
-        self, *, instrument: str, summary: Mapping[str, Any]
-    ) -> StrategySpec | None:
+    async def generate(self, *, instrument: str, summary: Mapping[str, Any]) -> StrategySpec | None:
         prompt = (
             "Return one JSON StrategySpec for the supplied instrument. "
             "Use only declared indicators and exits, include a stop, and never return code, "
@@ -136,9 +132,7 @@ class IdeaGenerator:
             self.audit.append(AuditEvent("llm_output_rejected", {"role": role}))
 
 
-def _perturb(
-    spec: StrategySpec, threshold_factor: float, exit_factor: float
-) -> StrategySpec:
+def _perturb(spec: StrategySpec, threshold_factor: float, exit_factor: float) -> StrategySpec:
     conditions: list[IndicatorCondition] = []
     for condition in spec.entry_conditions:
         threshold = condition.threshold
@@ -219,9 +213,7 @@ class ValidationPipeline:
         in_sample_times = {candle.ts_utc for candle in candles}
         if in_sample_times.intersection(candle.ts_utc for candle in evaluation):
             raise ValueError("out_of_sample overlaps the in-sample candles")
-        if min(candle.ts_utc for candle in evaluation) <= max(
-            candle.ts_utc for candle in candles
-        ):
+        if min(candle.ts_utc for candle in evaluation) <= max(candle.ts_utc for candle in candles):
             raise ValueError("out_of_sample must be a later time range")
         configured = self.config or Gate1Config.from_config()
         decisions: list[PipelineDecision] = []
@@ -385,9 +377,7 @@ class ValidationPipeline:
         )
 
     @staticmethod
-    def _cheap_reasons(
-        metrics: Mapping[str, Any], config: Gate1Config, trials: int
-    ) -> list[str]:
+    def _cheap_reasons(metrics: Mapping[str, Any], config: Gate1Config, trials: int) -> list[str]:
         required = {
             "trades": (config.min_trades, "too_few_trades"),
             "out_of_sample_trades": (
@@ -414,13 +404,16 @@ class ValidationPipeline:
             for name, (minimum, reason) in required.items()
             if metrics.get(name) is None or float(metrics[name]) < minimum
         ]
-        if metrics.get("backtest_drawdown_pct") is None or float(
-            metrics["backtest_drawdown_pct"]
-        ) > config.max_backtest_drawdown_pct:
+        if (
+            metrics.get("backtest_drawdown_pct") is None
+            or float(metrics["backtest_drawdown_pct"]) > config.max_backtest_drawdown_pct
+        ):
             reasons.append("backtest_drawdown_above_gate")
-        if metrics.get("top5pct_trades_profit_share") is None or float(
-            metrics["top5pct_trades_profit_share"]
-        ) > config.max_top5pct_trades_profit_share:
+        if (
+            metrics.get("top5pct_trades_profit_share") is None
+            or float(metrics["top5pct_trades_profit_share"])
+            > config.max_top5pct_trades_profit_share
+        ):
             reasons.append("profit_concentration_above_gate")
         if config.require_neighbor_parameters_profitable and (
             metrics.get("neighbor_parameters_profitable") is not True
