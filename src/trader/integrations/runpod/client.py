@@ -56,7 +56,7 @@ class RunPodClient:
     def _tags(value: Any) -> frozenset[str]:
         if isinstance(value, Mapping):
             return frozenset(f"{key}={item}" for key, item in value.items())
-        if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        if isinstance(value, Sequence) and not isinstance(value, str | bytes):
             return frozenset(str(item) for item in value)
         return frozenset()
 
