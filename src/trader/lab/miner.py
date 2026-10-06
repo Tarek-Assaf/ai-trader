@@ -21,6 +21,7 @@ from trader.lab.metrics import gate1_metrics
 from trader.lab.spec import ComplexityLimits, IndicatorCondition, StopExit, StrategySpec, TargetExit
 from trader.lab.validator import ValidationResult, strategy_hash
 
+SessionName = Literal["asia", "london", "new_york", "closed"]
 PatternName = Literal[
     "opening_range",
     "session_effect",
@@ -161,7 +162,7 @@ def _condition(
     )
 
 
-def _sessions(pattern: PatternName) -> tuple[str, ...]:
+def _sessions(pattern: PatternName) -> tuple[SessionName, ...]:
     if pattern == "opening_range":
         return ("london", "new_york")
     if pattern == "session_effect":
