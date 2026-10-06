@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 166,
+  "revision": 168,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-087 passed (V-184). Telegram runtime is mock-by-default, long poll is guarded, control commands are LLM-independent. Next: names-only env check and smoke test on the Pod, then T-084, T-070, T-044/T-017 (B-007), T-060 code half.",
+    "summary": "T-084 passed (V-185). Next: Pod env-names check and Telegram smoke test, then T-070, T-044/T-017 (B-007), T-060 code half.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -936,7 +936,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ±1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ┬▒1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -2304,7 +2304,7 @@
       "phase": 5,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04"
@@ -2322,8 +2322,11 @@
         "tests/unit/test_lab_pipeline.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "tests/unit/test_lab_pipeline.py",
+        "V-185"
+      ],
+      "completion_note": "Added full-pipeline noise acceptance coverage with the real strategy_lab.yaml gates across 3 seeds and 200 variants per seed; replaced the cheap-gate monkeypatch with an honest planted trend fixture; added fail-closed duplicate holdout-read coverage; and added MockLLM injection cases proving code/config/holdout requests are rejected without config mutation or holdout ledger records."
     },
     {
       "id": "T-085",
@@ -4512,6 +4515,17 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "the Telegram runtime, the router or the resume rule changes"
+    },
+    {
+      "id": "V-185",
+      "subject": "T-084 review (Claude): Strategy Lab acceptance tests",
+      "method": "Read tests/unit/test_lab_pipeline.py at 8a1a6a2; py_compile; checked the four acceptance points: real strategy_lab.yaml with 3 seeds x 200 variants and no monkeypatch, MockLLM code/gate/holdout payloads rejected with config bytes unchanged, duplicate holdout read gives holdout_read_failed, honest planted-trend fixture. CI quality runs the suite.",
+      "result": "pass",
+      "evidence": "tests/unit/test_lab_pipeline.py",
+      "review_notes": "Pass. Non-blocking: CountingReader in the injection test is not wired into IdeaGenerator, so reads==0 is vacuous (IdeaGenerator has no reader by design); noise variants differ only by threshold, so a later test with more varied specs would be stronger. Process: Codex's handoff push was truncated at 200,000 characters (about line 3047). Claude rebuilt it from Codex's valid head plus main's validations, blockers, questions and log, and reconstructed Codex's log entry 167 (labelled as such). Nothing deleted.",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "the Strategy Lab gates, pipeline or idea generator change"
     }
   ],
   "blockers": [
@@ -7704,6 +7718,33 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-087 passed (V-184). Restored validations and log entries that Codex's pushed handoff had dropped (kept its V-183 and log 165). Next for Codex: run the Telegram smoke test on the Pod (names-only env check first) and report the exact time to the owner; then T-084 and T-070."
+    },
+    {
+      "revision": 167,
+      "ts": "2026-10-06T17:33:00Z",
+      "agent": "codex",
+      "action": "hand_off_t084",
+      "task_ids": [
+        "T-084"
+      ],
+      "files_changed": [
+        "tests/unit/test_lab_pipeline.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-084 handed to Claude for review. RECONSTRUCTED by Claude from Codex's task completion_note and commits 5ade4f3/8a1a6a2: Codex's pushed handoff was truncated at 200,000 characters and lost its own log entry and validation."
+    },
+    {
+      "revision": 168,
+      "ts": "2026-10-06T17:48:00Z",
+      "agent": "claude",
+      "action": "review_t084_pass",
+      "task_ids": [
+        "T-084"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-084 passed (V-185). Rebuilt the truncated handoff from main plus Codex's valid head. Next for Codex: Pod env-names check and Telegram smoke test, then T-070."
     }
   ],
   "project_summary": "T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
