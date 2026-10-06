@@ -45,18 +45,19 @@ def allocate(
             chosen.append(candidate)
         if len(chosen) >= max_concurrent:
             break
-    total = sum(max(0.0, float(item.get("score", 0))) for item in chosen)
+    scores = [Decimal(str(max(0.0, float(item.get("score", 0))))) for item in chosen]
+    total = sum(scores, Decimal(0))
     budget = Decimal(str(risk_budget))
     if total <= 0:
         return ()
-    return tuple(
-        StrategyAllocation(
-            str(item["strategy_id"]),
-            Decimal(str(max(0.0, float(item.get("score", 0))) / total)),
-            budget * Decimal(str(max(0.0, float(item.get("score", 0))) / total)),
-        )
-        for item in chosen
-    )
+    allocations: list[StrategyAllocation] = []
+    remaining = budget
+    for index, (item, score) in enumerate(zip(chosen, scores, strict=True)):
+        last = index == len(chosen) - 1
+        share = remaining if last else (budget * score / total).quantize(Decimal("1e-12"))
+        remaining -= share
+        allocations.append(StrategyAllocation(str(item["strategy_id"]), score / total, share))
+    return tuple(allocations)
 
 
 def allocate_from_config(
