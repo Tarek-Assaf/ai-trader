@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import SecretStr
+from pydantic import AliasChoices, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -34,7 +34,11 @@ class EnvironmentSettings(BaseSettings):
     runpod_api_key: SecretStr | None = None
     runpod_network_volume_id: str | None = None
     telegram_bot_token: SecretStr | None = None
-    telegram_owner_chat_ids: str | None = None
+    # TELEGRAM_CHAT_ID is accepted as an alias: the Pod was provisioned with that name.
+    telegram_owner_chat_ids: str | None = Field(
+        default=None,
+        validation_alias=AliasChoices("telegram_owner_chat_ids", "telegram_chat_id"),
+    )
     owner_totp_secret: SecretStr | None = None
     control_api_token: SecretStr | None = None
     smtp_host: str | None = None
