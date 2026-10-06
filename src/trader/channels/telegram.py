@@ -78,8 +78,12 @@ class NonceStore:
         if not action.strip():
             raise ValueError("nonce action must not be empty")
         nonce = secrets.token_urlsafe(18)
+        now = self._clock()
         with self._lock:
-            self._values[nonce] = PendingNonce(nonce, action, self._clock() + self._ttl)
+            self._values = {
+                key: value for key, value in self._values.items() if value.expires_at >= now
+            }
+            self._values[nonce] = PendingNonce(nonce, action, now + self._ttl)
         return nonce
 
     def consume(self, nonce: str, action: str) -> bool:
@@ -87,6 +91,13 @@ class NonceStore:
         with self._lock:
             item = self._values.pop(nonce, None)
         return item is not None and item.action == action and item.expires_at >= now
+
+    def consume_any(self, nonce: str) -> bool:
+        """Consume a nonce without requiring an action, for cancellation."""
+        now = self._clock()
+        with self._lock:
+            item = self._values.pop(nonce, None)
+        return item is not None and item.expires_at >= now
 
 
 class AlertLimiter:
@@ -141,6 +152,7 @@ class TelegramChannel:
         owner_chat_ids: Iterable[str],
         *,
         control_writer: ControlWriter | None = None,
+        current_mode: Callable[[], ControlMode] | None = None,
         flatten: Flattener | None = None,
         render: Callable[[str, str], str] | None = None,
         authorize_resume: Callable[[], bool] | None = None,
@@ -154,9 +166,12 @@ class TelegramChannel:
             raise ValueError("at least one owner Telegram chat id is required")
         if max_queue <= 0:
             raise ValueError("outbound queue size must be positive")
+        if control_writer is None:
+            raise ValueError("a control writer is required")
         self._transport = transport
         self._owner_ids = ids
         self._control_writer = control_writer
+        self._current_mode = current_mode
         self._flatten = flatten
         self._render = render or (lambda command, argument: f"{command}: {argument}".strip())
         self._authorize_resume = authorize_resume
@@ -219,6 +234,8 @@ class TelegramChannel:
         if command is None:
             return
         if command == "/resume":
+            if not self._resume_mode_is_safe(chat_id):
+                return
             nonce = self._nonces.issue("resume")
             self._send(chat_id, "Confirm resume?", reply_markup=self._buttons(nonce, "resume"))
             return
@@ -266,7 +283,11 @@ class TelegramChannel:
                 self._send(chat_id, "Execution control is unavailable; execution remains halted.")
                 return
         if command in {"/stop", "/kill"} and self._flatten is not None:
-            if not self._flatten():
+            try:
+                flattened = self._flatten()
+            except Exception:
+                flattened = False
+            if not flattened:
                 self._send(chat_id, "Flattening is incomplete; execution remains halted.")
                 self._audit_event(command, chat_id, previous, mode.value, None)
                 return
@@ -289,16 +310,16 @@ class TelegramChannel:
             return
         action, _, nonce = data.partition(":")
         if action == "cancel":
+            self._nonces.consume_any(nonce)
             self._transport.answer_callback(callback_id, "Cancelled")
             return
         if action != "confirm_resume" or not self._nonces.consume(nonce, "resume"):
             self._transport.answer_callback(callback_id, "Expired or invalid confirmation")
             self._audit_event("resume_rejected", chat_id, "unknown", "unknown", nonce)
             return
-        if self._control_writer is None:
-            self._transport.answer_callback(callback_id, "Execution control unavailable")
+        if not self._resume_mode_is_safe(chat_id, callback_id=callback_id):
             return
-        if self._authorize_resume is not None and not self._authorize_resume():
+        if self._authorize_resume is None or not self._authorize_resume():
             self._transport.answer_callback(callback_id, "Owner authorization failed")
             self._audit_event("resume_rejected", chat_id, "pause", "unknown", nonce)
             return
@@ -310,6 +331,30 @@ class TelegramChannel:
         self._audit_event("resume", chat_id, "pause", ControlMode.RESUME.value, nonce)
         self._transport.answer_callback(callback_id, "Resume requested")
         self._send(chat_id, "Resume requested; reconciliation must succeed before entries resume.")
+
+    def _resume_mode_is_safe(self, chat_id: str, *, callback_id: str | None = None) -> bool:
+        """Reject resume when mode cannot be read or kill is latched."""
+        if self._current_mode is None:
+            message = "Resume unavailable; execution mode cannot be read."
+        else:
+            try:
+                mode = self._current_mode()
+            except Exception:
+                mode = None
+            if mode is ControlMode.KILL:
+                message = "Resume unavailable; execution kill is latched."
+            elif mode is None:
+                message = "Resume unavailable; execution mode cannot be read."
+            else:
+                message = ""
+        if message:
+            if callback_id is None:
+                self._send(chat_id, message)
+            else:
+                self._transport.answer_callback(callback_id, message)
+            self._audit_event("resume_rejected", chat_id, "unknown", "unknown", None)
+            return False
+        return True
 
     def _send(
         self, chat_id: str, text: str, *, reply_markup: Mapping[str, Any] | None = None
@@ -382,13 +427,18 @@ class TelegramBotTransport:
     def _request(self, method: str, payload: Mapping[str, Any]) -> Any:
         import httpx
 
-        response = httpx.post(
-            f"{self._base}/bot{self._token}/{method}",
-            json=dict(payload),
-            timeout=40.0,
-        )
-        response.raise_for_status()
-        body = response.json()
+        for logger_name in ("httpx", "httpcore"):
+            logging.getLogger(logger_name).setLevel(logging.WARNING)
+        try:
+            response = httpx.post(
+                f"{self._base}/bot{self._token}/{method}",
+                json=dict(payload),
+                timeout=40.0,
+            )
+            response.raise_for_status()
+            body = response.json()
+        except Exception:
+            raise RuntimeError("Telegram API request failed") from None
         if not body.get("ok"):
             raise RuntimeError("Telegram API request failed")
         return body.get("result")

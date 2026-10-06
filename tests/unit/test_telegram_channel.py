@@ -1,117 +1,233 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import logging
+from dataclasses import dataclass
 
 import pytest
 
-from trader.channels.telegram import Alert, AlertLimiter, NonceStore, TelegramChannel
+from trader.channels.telegram import (
+    Alert,
+    AlertLimiter,
+    NonceStore,
+    TelegramBotTransport,
+    TelegramChannel,
+)
 from trader.execution.control import ControlMode
 
 
 class FakeTransport:
     def __init__(self) -> None:
-        self.messages: list[tuple[str, str, Mapping[str, object] | None]] = []
+        self.messages: list[tuple[str, str, object]] = []
         self.callbacks: list[tuple[str, str]] = []
-        self.updates: list[Mapping[str, object]] = []
+        self.updates: list[dict[str, object]] = []
         self.fail = False
 
-    def get_updates(self, offset: int | None, timeout: int) -> Sequence[Mapping[str, object]]:
+    def get_updates(self, offset: int | None, timeout: int):
         return self.updates
 
     def send_message(self, chat_id: str, text: str, *, reply_markup=None) -> None:
         if self.fail:
-            raise RuntimeError("offline")
+            raise RuntimeError("delivery failed")
         self.messages.append((chat_id, text, reply_markup))
 
     def send_photo(self, chat_id: str, photo: bytes, *, caption: str = "") -> None:
-        raise AssertionError("not used")
+        raise NotImplementedError
 
     def answer_callback(self, callback_id: str, text: str = "") -> None:
         self.callbacks.append((callback_id, text))
 
 
 class FakeWriter:
-    def __init__(self) -> None:
-        self.modes: list[ControlMode] = []
+    def __init__(self, mode: ControlMode = ControlMode.RUN) -> None:
+        self.mode = mode
+        self.set_modes: list[ControlMode] = []
 
     def set(self, mode: ControlMode) -> None:
-        self.modes.append(mode)
+        self.mode = mode
+        self.set_modes.append(mode)
 
 
-def test_non_owner_is_ignored_without_reply() -> None:
+class FakeAudit:
+    def __init__(self) -> None:
+        self.events = []
+
+    def append(self, event) -> None:
+        self.events.append(event)
+
+
+def make_channel(transport: FakeTransport, **kwargs) -> tuple[TelegramChannel, FakeWriter]:
+    writer = kwargs.pop("control_writer", FakeWriter())
+    channel = TelegramChannel(transport, ["owner"], control_writer=writer, **kwargs)
+    return channel, writer
+
+
+def callback_update(nonce: str, action: str = "confirm_resume") -> dict[str, object]:
+    return {
+        "callback_query": {
+            "id": "callback-1",
+            "data": f"{action}:{nonce}",
+            "message": {"chat": {"id": "owner"}},
+        }
+    }
+
+
+def test_constructor_requires_control_writer() -> None:
+    with pytest.raises(ValueError, match="control writer"):
+        TelegramChannel(FakeTransport(), ["owner"])
+
+
+def test_non_owner_message_and_callback_are_ignored() -> None:
     transport = FakeTransport()
-    channel = TelegramChannel(transport, ["owner"], control_writer=FakeWriter())
-
-    channel.handle_message("other", "/status")
-
+    channel, _ = make_channel(transport)
+    channel.handle_message("intruder", "/pause")
+    channel.handle_update(
+        {
+            "callback_query": {
+                "id": "callback-1",
+                "data": "confirm_resume:any",
+                "message": {"chat": {"id": "intruder"}},
+            }
+        }
+    )
     assert transport.messages == []
+    assert transport.callbacks == []
 
 
 @pytest.mark.parametrize(
-    "command,mode",
+    ("command", "mode"),
     [("/pause", ControlMode.PAUSE), ("/stop", ControlMode.PAUSE), ("/kill", ControlMode.KILL)],
 )
-def test_safe_control_commands_are_deterministic(command: str, mode: ControlMode) -> None:
+def test_safe_control_commands_write_and_audit(command: str, mode: ControlMode) -> None:
     transport = FakeTransport()
-    writer = FakeWriter()
-    channel = TelegramChannel(transport, ["owner"], control_writer=writer, flatten=lambda: True)
-
+    audit = FakeAudit()
+    channel, writer = make_channel(transport, audit=audit)
     channel.handle_message("owner", command)
+    assert writer.set_modes == [mode]
+    assert transport.messages[-1][1].endswith(f"{mode.value}.")
+    assert audit.events[-1].event_type == f"telegram_{command}"
 
-    assert writer.modes == [mode]
-    assert transport.messages
 
-
-def test_resume_requires_single_use_nonce_and_owner_gate() -> None:
+def test_flatten_exception_keeps_execution_halted() -> None:
     transport = FakeTransport()
-    writer = FakeWriter()
-    calls: list[bool] = []
-    channel = TelegramChannel(
-        transport,
-        ["owner"],
-        control_writer=writer,
-        authorize_resume=lambda: calls.append(True) or True,
-    )
+    audit = FakeAudit()
 
+    def flatten() -> bool:
+        raise RuntimeError("broker unavailable")
+
+    channel, writer = make_channel(transport, flatten=flatten, audit=audit)
+    channel.handle_message("owner", "/stop")
+    assert writer.mode is ControlMode.PAUSE
+    assert "incomplete" in transport.messages[-1][1]
+    assert audit.events[-1].event_type == "telegram_/stop"
+
+
+def test_data_commands_route_through_render() -> None:
+    transport = FakeTransport()
+    calls: list[tuple[str, str]] = []
+
+    def render(command: str, argument: str) -> str:
+        calls.append((command, argument))
+        return "rendered"
+
+    channel, _ = make_channel(transport, render=render)
+    for command in ("/status", "/positions", "/pnl", "/risk", "/report daily", "/chart US100 1m"):
+        channel.handle_message("owner", command)
+    assert calls == [
+        ("/status", ""),
+        ("/positions", ""),
+        ("/pnl", ""),
+        ("/risk", ""),
+        ("/report", "daily"),
+        ("/chart", "US100 1m"),
+    ]
+    assert len(transport.messages) == len(calls)
+
+
+def test_resume_requires_readable_mode_and_explicit_authorization() -> None:
+    transport = FakeTransport()
+    channel, writer = make_channel(transport)
+    channel.handle_message("owner", "/resume")
+    assert "cannot be read" in transport.messages[-1][1]
+    assert writer.set_modes == []
+
+    transport = FakeTransport()
+    channel, writer = make_channel(
+        transport, current_mode=lambda: ControlMode.PAUSE
+    )
     channel.handle_message("owner", "/resume")
     markup = transport.messages[-1][2]
-    assert markup is not None
-    nonce_data = markup["inline_keyboard"][0][0]["callback_data"]  # type: ignore[index]
-    channel.handle_update(
-        {"callback_query": {"id": "cb-1", "data": nonce_data, "message": {"chat": {"id": "owner"}}}}
-    )
-    channel.handle_update(
-        {"callback_query": {"id": "cb-2", "data": nonce_data, "message": {"chat": {"id": "owner"}}}}
-    )
-
-    assert calls == [True]
-    assert writer.modes == [ControlMode.RESUME]
-    assert transport.callbacks[-1][1] == "Expired or invalid confirmation"
+    nonce = markup["inline_keyboard"][0][0]["callback_data"].split(":", 1)[1]
+    channel.handle_update(callback_update(nonce))
+    assert transport.callbacks[-1][1] == "Owner authorization failed"
+    assert writer.set_modes == []
 
 
-def test_alerts_are_rate_limited_by_stable_key() -> None:
+def test_kill_is_not_resumable_and_unreadable_mode_fails_closed() -> None:
+    for current_mode in (lambda: ControlMode.KILL, lambda: (_ for _ in ()).throw(RuntimeError())):
+        transport = FakeTransport()
+        channel, writer = make_channel(
+            transport, current_mode=current_mode, authorize_resume=lambda: True
+        )
+        channel.handle_message("owner", "/resume")
+        assert "Resume unavailable" in transport.messages[-1][1]
+        assert writer.set_modes == []
+
+
+def test_cancel_consumes_nonce() -> None:
     transport = FakeTransport()
-    channel = TelegramChannel(transport, ["owner"], alert_limiter=AlertLimiter(interval_seconds=60))
+    channel, writer = make_channel(
+        transport, current_mode=lambda: ControlMode.PAUSE, authorize_resume=lambda: True
+    )
+    channel.handle_message("owner", "/resume")
+    markup = transport.messages[-1][2]
+    nonce = markup["inline_keyboard"][0][1]["callback_data"].split(":", 1)[1]
+    channel.handle_update(callback_update(nonce, "cancel"))
+    channel.handle_update(callback_update(nonce))
+    assert transport.callbacks[0][1] == "Cancelled"
+    assert "Expired" in transport.callbacks[-1][1]
+    assert writer.set_modes == []
 
-    assert channel.send_alert(Alert("stale-feed", "stale"))
-    assert not channel.send_alert(Alert("stale-feed", "stale"))
-    assert [message[1] for message in transport.messages] == ["stale"]
+
+def test_nonce_expiry_and_issue_pruning() -> None:
+    now = [0.0]
+    store = NonceStore(ttl_seconds=1, clock=lambda: now[0])
+    first = store.issue("resume")
+    now[0] = 2.0
+    second = store.issue("resume")
+    assert not store.consume(first, "resume")
+    assert store.consume(second, "resume")
 
 
-def test_delivery_failure_is_queued_for_retry() -> None:
+def test_alert_limiter_and_delivery_retry() -> None:
+    now = [0.0]
+    limiter = AlertLimiter(interval_seconds=10, clock=lambda: now[0])
+    assert limiter.allow("x")
+    assert not limiter.allow("x")
+    now[0] = 11
+    assert limiter.allow("x")
+
     transport = FakeTransport()
-    channel = TelegramChannel(transport, ["owner"])
+    channel, _ = make_channel(transport)
     transport.fail = True
-    channel.handle_message("owner", "/help")
+    assert channel.send_alert(Alert("down", "broker down"))
+    assert transport.messages == []
     transport.fail = False
     channel.flush()
+    assert transport.messages[-1][1] == "broker down"
 
-    assert transport.messages
 
+def test_transport_sanitizes_token_errors_and_logs(monkeypatch, caplog) -> None:
+    token = "123:secret-token"
 
-def test_nonce_store_rejects_expired_nonce() -> None:
-    now = [10.0]
-    store = NonceStore(ttl_seconds=1, clock=lambda: now[0])
-    nonce = store.issue("resume")
-    now[0] = 12.0
-    assert not store.consume(nonce, "resume")
+    def fail(*args, **kwargs):
+        raise RuntimeError(f"request URL leaked {token}")
+
+    import httpx
+
+    monkeypatch.setattr(httpx, "post", fail)
+    transport = TelegramBotTransport(token)
+    with caplog.at_level(logging.INFO):
+        with pytest.raises(RuntimeError, match="Telegram API request failed") as exc_info:
+            transport.get_updates(None, 1)
+    assert token not in str(exc_info.value)
+    assert token not in caplog.text
