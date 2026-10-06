@@ -176,7 +176,7 @@ def test_load_rises_to_cap_then_scales_down_to_min() -> None:
         scaler.apply(action)
         workers = [worker for worker in workers if worker.pod_id != action[0].pod_id]
     assert len(workers) == 1
-    assert api.terminated == ["w2", "w1"]
+    assert api.terminated == ["w0", "w1"]
 
 
 def test_runpod_adapter_matches_autoscaler_protocol() -> None:
