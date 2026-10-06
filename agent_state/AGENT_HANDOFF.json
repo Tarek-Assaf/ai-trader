@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 155,
+  "turn": "codex",
+  "revision": 156,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-028 changes_requested (V-172); waiting on owner Q-040 for a larger demo round trip. Owner reported an HTTP 429 from Capital.com in Codex's run: new T-085 (diagnose, audit request rates, fix, no orders) goes first.",
+    "summary": "T-085 passed (V-174): Capital.com 429s were throttled POST /session; shared session, keepalive and bounded backoff added, orders never retried blindly. Owner approved Q-040 (D-027); Codex reports the larger 1.0 US100 demo round trip succeeded and is saving evidence for T-028 review (changes_requested cycle 1).",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2318,7 +2318,7 @@
       "phase": 2,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-08"
       ],
@@ -2553,6 +2553,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-06T13:22:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-027",
+      "statement": "Owner chat permission 2026-10-06 17:05 Riyadh (Q-040): Codex may place ONE larger demo round trip for T-028 (about 1.0 US100, demo only, normal OrderManager and Risk Guardian path, held open at least 60 s with /accounts polled every 5 s and recorded with timestamps, then closed and flat confirmed), with retries after a failed attempt (max 3 attempts, close any open demo position before each retry, no code or risk changes between attempts without review). Intended to start after T-085 was merged; authorization lapses 2026-10-06T20:08:00Z. Recorded in docs/authorizations/q040_owner_yes_20261006.md. The owner did not relay it to Codex directly; Codex acted from the repo note.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-06T14:05:00Z",
       "do_not_reopen": false
     }
   ],
@@ -4278,6 +4286,17 @@
       "validated_by": "codex",
       "date": "2026-10-06",
       "reverify_if": "Capital.com rate-limit policy changes"
+    },
+    {
+      "id": "V-174",
+      "subject": "T-085 Capital.com 429 diagnosis and rate audit (Claude review)",
+      "method": "Read client.py/trading.py diff and the sanitized evidence. Shared session cache keyed by hashed credentials, reuse and invalidation on 401, 5-minute GET /ping keepalive, Retry-After (seconds or HTTP date) honoured with 1/2/4 s jittered fallback and 4 attempts for reads and POST /session, order mutations (non-GET) never retried on 429, no headers/bodies/tokens/URL in evidence, no orders placed by T-085. CI quality checks the 431-test run.",
+      "result": "pass",
+      "evidence": "docs/evidence/t085_429_20261006.json; tests/unit/test_capital_rate_limit.py; src/trader/integrations/capital_com/client.py",
+      "validated_by": "claude",
+      "date": "2026-10-06",
+      "reverify_if": "retry or session code in the Capital.com client changes",
+      "review_notes": "Non-blocking: the trading client's own _request does not send the keepalive ping (the read-only path does); a caller that retries an order after a 429 must reconcile with /positions first. Process note: the larger T-028 demo trade ran before this task was merged; its evidence must state which image/commit the Pod ran."
     }
   ],
   "blockers": [
@@ -4774,14 +4793,14 @@
       "id": "Q-040",
       "from": "claude",
       "to": "human",
-      "status": "open",
+      "status": "answered",
       "text": "T-028 needs one more demo trade: the account snapshot taken while the position was open looked identical to flat (0.001 size is too small to show margin). May Codex place ONE demo round trip with a larger size (about 1.0 US100, demo only, closed within a few minutes) before 23:08 Riyadh today, and retry if it fails?",
       "options": [
         "Yes, one demo round trip with retries on failure (recommended)",
         "No, wait for the first normal paper-demo trade instead"
       ],
       "recommendation": "Yes, one demo round trip with retries on failure",
-      "answer": ""
+      "answer": "Owner chose: Yes, one demo round trip with retries on failure (Recommended), chat 2026-10-06 17:05 Riyadh. Owner also authorized Claude to merge."
     }
   ],
   "log": [
@@ -7298,6 +7317,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-085 complete (V-173): sanitized 429 evidence records nine throttled POST /session responses; read retries recovered with bounded Retry-After/exponential-jitter backoff, shared sessions and five-minute ping keepalive were added, and order mutations are never blindly retried. Full pytest passed (431 passed, 2 skipped); turn to Claude for review."
+    },
+    {
+      "revision": 156,
+      "ts": "2026-10-06T14:30:00Z",
+      "agent": "claude",
+      "action": "review_t085_pass_record_q040",
+      "task_ids": [
+        "T-085",
+        "T-028"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-085 passed (V-174). Recorded owner yes on Q-040 as D-027. Codex must commit the larger T-028 round-trip evidence (open snapshots with timestamps, attempts ledger, image/commit the Pod ran) and hand back for cycle-2 review. Turn to codex."
     }
   ],
   "project_summary": "T-085 is ready for Claude review after the HTTP 429 audit and client hardening (V-173). T-028's separately authorized larger demo round trip completed successfully on the expected image; its redacted Pod evidence remains committed. T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
