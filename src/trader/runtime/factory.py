@@ -12,6 +12,7 @@ from trader.core.settings import EnvironmentSettings
 from trader.execution.control import ControlSource
 from trader.execution.leader import RedisLeaderLease
 from trader.runtime.composition import RuntimeComponents, RuntimeResult
+from trader.scaling.runtime import build_core_autoscaler
 
 
 class RuntimeDependencyUnavailable(RuntimeError):
@@ -93,6 +94,7 @@ class RuntimeFactories:
     decision_loop: RuntimeFactoryFn
     lease_key: str = "ai-trader:core:lease"
     lease_ttl_ms: int = 30_000
+    autoscaler: RuntimeFactoryFn | None = None
 
     def __post_init__(self) -> None:
         if not self.lease_key.strip() or self.lease_ttl_ms <= 0:
@@ -156,6 +158,11 @@ def build_runtime_components(
         guardian,
         reconciler,
     )
+    autoscaler = (
+        factories.autoscaler(settings, configs)
+        if factories.autoscaler is not None
+        else build_core_autoscaler(settings, configs, redis_client)
+    )
     components = RuntimeComponents(
         leader=leader,
         decision_loop=decision_loop,
@@ -165,6 +172,7 @@ def build_runtime_components(
         reconciler=reconciler,
         report_scheduler=report_scheduler,
         settings_service=settings_service,
+        autoscaler=autoscaler,
         metadata={"broker_env": settings.broker_env, "trading_mode": settings.trading_mode},
     )
     missing = components.missing_required()
@@ -297,6 +305,7 @@ def build_default_factories(
             supplied.get("audit_writer"),
         )
 
+    autoscaler_factory = service("autoscaler") if "autoscaler" in supplied else None
     return RuntimeFactories(
         redis_client=redis_client,
         broker=broker,
@@ -306,6 +315,7 @@ def build_default_factories(
         report_scheduler=service("report_scheduler"),
         settings_service=service("settings_service"),
         decision_loop=decision_loop,
+        autoscaler=autoscaler_factory,
     )
 
 

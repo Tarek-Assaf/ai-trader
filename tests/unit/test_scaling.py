@@ -13,6 +13,7 @@ from trader.scaling.autoscaler import (
     Autoscaler,
     AutoscalerPolicy,
     QueueMetrics,
+    ScalingAction,
     Worker,
 )
 from trader.scaling.queue import Priority, QueueTask, RedisTaskQueue
@@ -59,13 +60,14 @@ class FakeRedis:
         return []
 
 
-def managed(pod_id: str, *, cpu: float = 10.0) -> Worker:
+def managed(pod_id: str, *, cpu: float = 10.0, cost: float | None = 0.2) -> Worker:
     return Worker(
         pod_id,
         role="worker",
         status="running",
         tags=frozenset({MANAGED_TAG}),
         cpu_percent=cpu,
+        hourly_cost_usd=cost,
     )
 
 
@@ -213,6 +215,59 @@ def test_runpod_adapter_matches_autoscaler_protocol() -> None:
     workers = client.list_workers()
     assert workers[0].is_scalable()
     assert workers[0].cpu_percent == 4
+    assert workers[0].hourly_cost_usd == 0.2
+
+
+def test_runpod_adapter_accepts_data_envelope_and_marks_unknown_cost() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/v2/pods"
+        return httpx.Response(
+            200,
+            json={"data": [{"id": "pod-2", "role": "worker", "tags": [MANAGED_TAG]}]},
+        )
+
+    client = RunPodClient(
+        api_key="test-key",
+        image="example/image:latest",
+        http=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    workers = client.list_workers()
+    assert workers[0].hourly_cost_usd is None
+
+
+def test_autoscaler_sums_managed_worker_cost_and_blocks_unknown_spend() -> None:
+    class Api:
+        def __init__(self) -> None:
+            self.created = 0
+            self.terminated: list[str] = []
+
+        def create_worker(self, *, tags: dict[str, str]) -> str:
+            self.created += 1
+            return "new"
+
+        def terminate_worker(self, pod_id: str) -> None:
+            self.terminated.append(pod_id)
+
+        def list_workers(self) -> list[Worker]:
+            return []
+
+    api = Api()
+    scaler = Autoscaler(
+        api,
+        AutoscalerPolicy(enabled=True, max_workers=3, max_hourly_spend_usd=1.0),
+    )
+    workers = [managed("w1", cost=0.6), managed("w2", cost=0.5), Worker("core", role="core")]
+    pressure = scaler.evaluate(
+        QueueMetrics(depth=30, oldest_task_age_seconds=180, hourly_spend_usd=1.1), workers, now=180
+    )
+    assert [action.action for action in pressure] == [Action.TERMINATE, Action.TERMINATE]
+    scaler.apply(pressure)
+    assert api.created == 0
+    assert api.terminated == ["w1", "w2"]
+    blocked = scaler.evaluate(
+        QueueMetrics(depth=30, oldest_task_age_seconds=180, hourly_spend_usd=None), workers, now=180
+    )
+    assert blocked == [ScalingAction(Action.NONE, reason="hourly spend unknown; scaling blocked")]
 
 
 def test_worker_timeout_does_not_wait_for_handler() -> None:

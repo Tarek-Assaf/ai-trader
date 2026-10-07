@@ -22,7 +22,7 @@ class QueueMetrics:
     depth: int = 0
     oldest_task_age_seconds: float = 0.0
     idle_minutes: float = 0.0
-    hourly_spend_usd: float = 0.0
+    hourly_spend_usd: float | None = 0.0
     pressure_since: float | None = None
 
 
@@ -31,7 +31,7 @@ class Worker:
     pod_id: str
     role: str = "unknown"
     status: str = "unknown"
-    hourly_cost_usd: float = 0.0
+    hourly_cost_usd: float | None = None
     tags: frozenset[str] = field(default_factory=frozenset)
     cpu_percent: float = 0.0
 
@@ -101,6 +101,8 @@ class Autoscaler:
         if not policy.enabled:
             return [ScalingAction(Action.NONE, reason="scaling disabled")]
         scalable = self._managed_workers(workers)
+        if metrics.hourly_spend_usd is None:
+            return [ScalingAction(Action.NONE, reason="hourly spend unknown; scaling blocked")]
         if metrics.hourly_spend_usd >= policy.max_hourly_spend_usd:
             return [
                 ScalingAction(Action.TERMINATE, worker.pod_id, "hourly spend cap reached")
@@ -122,7 +124,11 @@ class Autoscaler:
         if metrics.idle_minutes >= policy.idle_minutes and len(scalable) > policy.min_workers:
             victim = min(
                 scalable,
-                key=lambda worker: (worker.cpu_percent, worker.hourly_cost_usd, worker.pod_id),
+                key=lambda worker: (
+                    worker.cpu_percent,
+                    worker.hourly_cost_usd if worker.hourly_cost_usd is not None else float("inf"),
+                    worker.pod_id,
+                ),
             )
             return [ScalingAction(Action.TERMINATE, victim.pod_id, "idle worker")]
         return [ScalingAction(Action.NONE, reason="within policy")]

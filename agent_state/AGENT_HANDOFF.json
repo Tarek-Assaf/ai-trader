@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 206,
+  "revision": 210,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-093 review fixes complete: real Gate 2 config thresholds and requirements are tested, and SoakMonitor runtime persistence/feed wiring is fail-closed.",
+    "summary": "T-094 review fixes are complete: worker spend caps now fail closed on unknown cost and sum tagged worker costs; handoff is ready for Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2697,7 +2697,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-22",
         "R-23"
@@ -2717,9 +2717,19 @@
         "src/trader/scaling",
         "tests/unit/test_runtime_scaling.py"
       ],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/scaling/runtime.py",
+        ".env.example",
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/integrations/runpod/client.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/composition.py",
+        "tests/unit/test_runtime_scaling.py",
+        "tests/unit/test_scaling.py",
+        "docs/evidence/t094_runpod_list.md"
+      ],
+      "completion_note": "Addressed Claude cycle-1 review: RunPod worker costs now parse from costPerHr/hourly_cost_usd with invalid or missing values treated as unknown; CoreAutoscaler sums tagged worker spend and passes unknown spend fail-closed so no new workers spawn. Cap and unknown-cost behavior are covered by tests, while scaling.enabled remains false by default. No Pod/API calls, credentials, broker calls or orders."
     },
     {
       "id": "T-095",
@@ -5427,6 +5437,28 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "promotion gate or soak wiring changes"
+    },
+    {
+      "id": "V-224",
+      "subject": "T-094 review fixes: spend cap and unknown cost",
+      "method": "Reviewed cost parsing for both RunPod list envelopes, tagged-worker spend aggregation, cap termination, unknown-cost fail-closed behavior, bundled compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/scaling/autoscaler.py; src/trader/scaling/runtime.py; src/trader/integrations/runpod/client.py; tests/unit/test_scaling.py; tests/unit/test_runtime_scaling.py; bundled Python compileall; git diff --check",
+      "review_notes": "Scaling remains disabled by default. Live RunPod verification is still owner-gated under B-009; no Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "worker cost parsing, spend aggregation or scaling policy changes"
+    },
+    {
+      "id": "V-225",
+      "subject": "T-094 independent review (Claude)",
+      "method": "Read full diff: scaling off by default, core-only build, cost parsed from costPerHr in both list envelopes, spend summed over tagged workers, cap terminates and blocks spawns, unknown cost fails closed; tests cover each; CI quality required before merge.",
+      "result": "pass",
+      "evidence": "src/trader/scaling/runtime.py; src/trader/scaling/autoscaler.py; src/trader/integrations/runpod/client.py; tests/unit/test_runtime_scaling.py; tests/unit/test_scaling.py; live RunPod names-only list check remains an owner step before enabling scaling",
+      "review_notes": "Scaling remains disabled by default. Live RunPod verification is still owner-gated under B-009; no Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "worker cost parsing, spend aggregation or scaling policy changes"
     }
   ],
   "blockers": [
@@ -9297,7 +9329,73 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-093 passes. New T-099 feeds soak incident rules from runtime safety components. Codex: branch from origin/main and take T-094 then T-099."
+    },
+    {
+      "revision": 207,
+      "ts": "2026-10-07T15:00:00Z",
+      "agent": "codex",
+      "action": "complete_t094_scaling_wiring",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "src/trader/scaling/runtime.py",
+        "src/trader/scaling/__init__.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/__init__.py",
+        "tests/unit/test_runtime_scaling.py",
+        "docs/evidence/t094_runpod_list.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Wired the optional autoscaler into the core runtime with scaling.enabled false by default, added core-only policy and queue metrics, validated RunPod list envelopes offline, and recorded the owner-gated live check. Handing T-094 to Claude for review."
+    },
+    {
+      "revision": 208,
+      "ts": "2026-10-07T17:30:00Z",
+      "agent": "claude",
+      "action": "review_t094_changes_requested",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-094 cycle 1: wiring, core-only gating, default-off and tests are good, but the hourly spend cap is ineffective (spend defaults to 0 and worker cost is never populated). Codex: on this branch (already merged with main rev 208), populate worker cost from RunPod costPerHr, sum tagged workers as spend, fail closed on unknown cost, add tests. Then back to review."
+    },
+    {
+      "revision": 209,
+      "ts": "2026-10-07T18:00:00Z",
+      "agent": "codex",
+      "action": "address_t094_spend_cap_review",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/scaling/runtime.py",
+        "src/trader/integrations/runpod/client.py",
+        "tests/unit/test_scaling.py",
+        "tests/unit/test_runtime_scaling.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed T-094 review: parse worker costs, sum tagged worker spend, terminate at cap and block new workers when cost is unknown. Handing T-094 back to Claude."
+    },
+    {
+      "revision": 210,
+      "ts": "2026-10-07T18:20:00Z",
+      "agent": "claude",
+      "action": "review_t094_pass",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/scaling/runtime.py",
+        "tests/unit/test_runtime_scaling.py"
+      ],
+      "summary": "T-094 passes cycle 2: spend cap now uses real tagged-worker costs and fails closed on unknown cost. Codex: branch from origin/main after merge and take T-099."
     }
   ],
-  "project_summary": "T-093 review fixes complete: real Gate 2 config thresholds and requirements are tested, and SoakMonitor runtime persistence/feed wiring is fail-closed."
+  "project_summary": "T-094 review fixes are complete: worker spend caps now fail closed on unknown cost and sum tagged worker costs; handoff is ready for Claude."
 }
