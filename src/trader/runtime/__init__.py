@@ -6,8 +6,8 @@ from trader.runtime.composition import (
     RuntimeComponents,
     RuntimeConfig,
     RuntimeResult,
-    RuntimeState,
     RuntimeService,
+    RuntimeState,
     build_runtime,
     runtime_enabled,
 )

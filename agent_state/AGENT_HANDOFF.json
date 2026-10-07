@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 177,
+  "turn": "codex",
+  "revision": 178,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2498,7 +2498,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-08",
         "R-10",
@@ -2525,7 +2525,7 @@
         "tests/unit/test_runtime.py",
         "tests/invariants/test_runtime_safety.py"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/runtime/__init__.py",
         "src/trader/runtime/composition.py",
@@ -2534,7 +2534,15 @@
         "tests/invariants/test_runtime_safety.py",
         "V-194"
       ],
-      "completion_note": "Added a demo-only runtime composition boundary with Redis lease gating, pause/kill controls, bounded dependency backoff, fail-safe NO_TRADE results, and FastAPI lifespan eligibility/shutdown wiring. Runtime orchestration never calls a broker directly; the injected decision loop remains the OrderManager integration point. Deterministic unit and invariant tests cover startup gating, control modes, dependency failure, and broker-boundary safety."
+      "completion_note": "Added a demo-only runtime composition boundary with Redis lease gating, pause/kill controls, bounded dependency backoff, fail-safe NO_TRADE results, and FastAPI lifespan eligibility/shutdown wiring. Runtime orchestration never calls a broker directly; the injected decision loop remains the OrderManager integration point. Deterministic unit and invariant tests cover startup gating, control modes, dependency failure, and broker-boundary safety.",
+      "review_notes": [
+        "1. Recovery: after a failure the state becomes DEGRADED, run_forever's `while self.running` loop then exits and nothing retries, so the runtime stays dead. Spec item 5 requires automatic retry with backoff: on DEGRADED, re-check the lease and dependencies each backoff interval and return to RUNNING when healthy. Add a test (fail, then recover, then a cycle runs).",
+        "2. Real wiring: lifespan only logs 'eligible' and leaves app.state.runtime = None, so nothing runs. Build RuntimeService in the lifespan when eligible and the core dependencies (Redis, DB, demo broker) are available, with leader lock (execution/leader.py), Guardian, OrderManager with the demo broker, reconciler and the decision loop adapter whose executor is OrderManager. If a dependency is missing, stay stopped and alert (no partial loop). Add a lifespan test for both paths.",
+        "3. Cycle source: implement CycleSource from config/schedule.yaml (bar close 1M/3M/5M, session open, news event) so every cycle carries one cycle_id used for the audit rows (spec item 3).",
+        "4. Acceptance tests from docs/specs/phase8.md T-090: (a) replay of a recorded day with the mock LLM and paper broker gives identical cycles, intents and audit rows twice; (b) chaos tests: Redis down, stale/dropped feed, and broker 5xx each end in no new entries plus one alert and no exception loop; (c) a second core instance cannot trade (lease held elsewhere); (d) pause, stop and kill still work with Redis, the LLM and the database unavailable.",
+        "5. The DB-backed LLM usage ledger (spec item 4) may be split into its own follow-up task if it is large; say so in the log and add the task. Do not enable a real provider until it exists.",
+        "Fixed by Claude: import order in src/trader/runtime/__init__.py (ruff I001). Keep lint clean: run ruff check and ruff format --check on changed files."
+      ]
     },
     {
       "id": "T-091",
@@ -4846,6 +4854,17 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "runtime composition, FastAPI lifespan wiring, or execution boundary changes"
+    },
+    {
+      "id": "V-195",
+      "subject": "T-090 review cycle 1 (Claude): runtime composition",
+      "method": "Read src/trader/runtime/composition.py, the lifespan diff, and the unit and invariant tests against docs/specs/phase8.md T-090; ruff check and format; handoff validated against main.",
+      "result": "fail",
+      "evidence": "src/trader/runtime/composition.py; src/trader/api/app.py; tests/unit/test_runtime.py",
+      "review_notes": "The safety shape is good (demo-only gate, lease check before each cycle, pause/kill checked, no broker import or place_order in the runtime, a test enforcing that). Not yet acceptable: no retry after DEGRADED, the lifespan never builds or starts the runtime, no schedule cycle source, and none of the acceptance tests (replay determinism, chaos, second instance, controls with dependencies down). See T-090 review_notes.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "src/trader/runtime or the lifespan wiring changes"
     }
   ],
   "blockers": [
@@ -8230,6 +8249,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Completed owner-approved T-090 runtime composition for the demo core pod. Added lease/control gating, deterministic cycle orchestration, bounded fail-safe backoff, explicit execution-boundary composition, and FastAPI eligibility/shutdown wiring. Bundled Python compileall and git diff --check pass; focused pytest and make quality checks are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders. Handing T-090 to Claude for review."
+    },
+    {
+      "revision": 178,
+      "ts": "2026-10-07T06:30:00Z",
+      "agent": "claude",
+      "action": "review_t090_changes_requested",
+      "task_ids": [
+        "T-090"
+      ],
+      "files_changed": [
+        "src/trader/runtime/__init__.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-090 cycle 1: changes_requested. Safety shape is right (demo-only gate, lease and control checks, no broker calls) but the runtime never recovers from DEGRADED, is not built in the lifespan, has no schedule cycle source and lacks the acceptance tests (replay determinism, chaos, second instance, controls with dependencies down). Five items listed in T-090 review_notes; ledger may be split into a follow-up task. V-195 recorded as fail."
     }
   ],
   "project_summary": "T-070 passed review (V-191); the flaky Capital.com session-cache fixture follow-up is ready for Claude review. T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-087 runtime wiring passed review (V-184); the Pod names-only check passed but its smoke script is missing from the running image (V-186/B-008). T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
