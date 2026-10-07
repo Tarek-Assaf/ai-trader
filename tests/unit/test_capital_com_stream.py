@@ -309,6 +309,47 @@ def test_no_data_timeout_is_suppressed_when_market_is_closed() -> None:
     assert client.reconnect_count == 0
 
 
+def test_watchdog_starts_at_market_open_not_at_last_tick() -> None:
+    rest = FakeRest()
+    reconnects: list[tuple[int, str]] = []
+    stop = threading.Event()
+    current = [datetime(2026, 10, 2, 21, 0, tzinfo=UTC)]
+    expected = [False]
+
+    class WeekendSocket(FakeSocket):
+        calls = 0
+
+        def recv(self, *, timeout: float) -> str:
+            self.calls += 1
+            if self.calls == 2:
+                current[0] += timedelta(days=2)
+                expected[0] = True
+            else:
+                current[0] += timedelta(seconds=2)
+            if self.calls >= 4:
+                stop.set()
+            raise TimeoutError
+
+    socket = WeekendSocket([subscribe_reply(), ping_reply()])
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        lambda _update: None,
+        on_reconnect=lambda count, reason: reconnects.append((count, reason)),
+        connection_factory=lambda *_args, **_kwargs: socket,
+        data_timeout_seconds=5,
+        data_expected=lambda: expected[0],
+        reconnect_min_seconds=0.01,
+        reconnect_max_seconds=0.02,
+        clock=lambda: current[0],
+        sleep=lambda _delay: None,
+    )
+
+    client.run_forever(stop)
+
+    assert reconnects == []
+
+
 @pytest.mark.parametrize(
     "failed_reply",
     [subscribe_reply(status="ERROR"), subscribe_reply(subscription_status="ERROR")],

@@ -350,6 +350,7 @@ class CapitalComStreamClient:
                     self._last_data_at = self._clock().astimezone(UTC)
                     backoff = self._reconnect_min
                     last_ping = self._clock()
+                    was_expected = self._is_data_expected()
                     while not stop_event.is_set():
                         try:
                             raw = socket.recv(timeout=1)
@@ -358,10 +359,15 @@ class CapitalComStreamClient:
                         if raw is not None:
                             self._handle(raw)
                         now = self._clock()
+                        expected = self._is_data_expected()
+                        if expected and not was_expected:
+                            # Start the watchdog at market open, not at the last pre-close tick.
+                            self._last_data_at = now.astimezone(UTC)
+                        was_expected = expected
                         if (
                             not stop_event.is_set()
                             and self._last_data_at is not None
-                            and self._is_data_expected()
+                            and expected
                             and now.astimezone(UTC) - self._last_data_at >= self._data_timeout
                         ):
                             raise StreamProtocolError("Capital.com OHLC no-data timeout")
@@ -378,9 +384,7 @@ class CapitalComStreamClient:
                 _LOG.warning("Capital.com WebSocket disconnected (%s)", type(exc).__name__)
                 if self._on_reconnect is not None:
                     reason = (
-                        "no_data_timeout"
-                        if "no-data timeout" in str(exc)
-                        else type(exc).__name__
+                        "no_data_timeout" if "no-data timeout" in str(exc) else type(exc).__name__
                     )
                     self._on_reconnect(self._reconnect_count, reason)
             except Exception as exc:
