@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 197,
+  "turn": "codex",
+  "revision": 198,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2559,7 +2559,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-01",
         "R-08",
@@ -2583,7 +2583,7 @@
         "tests/unit/test_reports.py",
         "tests/unit/test_telegram_runtime.py"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "src/trader/reports/commands.py",
         "src/trader/reports/core.py",
@@ -2596,7 +2596,8 @@
         "tests/unit/test_reports.py",
         "tests/unit/test_telegram_runtime.py"
       ],
-      "completion_note": "Implemented fixture-backed read-only command data for status, positions, P&L, risk, reports and charts, wired the service into the Telegram channel, and added a scheduler runner with Telegram-first SMTP fallback. LLM usage aggregates expose token cost without prompts or identifiers. Bundled compileall, focused report command/report checks and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders."
+      "completion_note": "Implemented fixture-backed read-only command data for status, positions, P&L, risk, reports and charts, wired the service into the Telegram channel, and added a scheduler runner with Telegram-first SMTP fallback. LLM usage aggregates expose token cost without prompts or identifiers. Bundled compileall, focused report command/report checks and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders.",
+      "review_notes": "Command layer (CommandDataService, ledger summary, SMTP single warning) is sound and merged to main to stop drift, but production is not wired. Fix exactly: (1) services/app.py: build report_snapshot_provider (ReportSnapshot from broker account, journal trades, data health from the recorder, backup health), risk_provider (risk.yaml limits plus current control mode), llm_usage_summary from SqlUsageLedger.summary, Telegram transport and owner chat ids from settings, SMTP sender from env; none of these may default to invented values - missing means the command/report says unavailable. (2) A scheduler loop inside the runtime process (not the LLM) that calls report_scheduler.run('daily'|'weekly'|'monthly') at the times in config/schedule.yaml, once per period (persist last-run), covered by a fake-clock test. (3) Tests: commands still answer when the LLM raises (through ChatRouter); report includes ledger cost from a SQLite ledger; log-capture test proving bot token, chat id and SMTP password never appear in logs; missing SMTP logs exactly one warning and Telegram still delivers; chart command returns PNG bytes from fixture data; /report must not send a duplicate Telegram message in addition to its reply. This is review cycle 2 (last): if items remain after this, the owner decides."
     },
     {
       "id": "T-092",
@@ -3899,7 +3900,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ظـز╪س╪╕┬┬ج 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -5274,6 +5275,17 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "report command providers, scheduler wiring or Telegram channel changes"
+    },
+    {
+      "id": "V-215",
+      "subject": "T-091 review: command data and scheduled reports",
+      "method": "Read full diff; ruff check/format; checked wiring in app.py/services.py against acceptance criteria.",
+      "result": "fail",
+      "evidence": "src/trader/reports/commands.py; src/trader/runtime/services.py; src/trader/api/app.py",
+      "review_notes": "Production never supplies snapshot, risk, usage, transport providers and nothing triggers scheduled reports; required tests missing. See T-091 review_notes.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "report wiring or scheduler changes"
     }
   ],
   "blockers": [
@@ -6920,7 +6932,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019╪╕┬├┤2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -8999,6 +9011,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented fixture-backed read-only command data for status, positions, P&L, risk, reports and charts, wired the service into the Telegram channel, and added a scheduler runner with Telegram-first SMTP fallback. LLM usage aggregates expose token cost without prompts or identifiers. Bundled compileall, focused report command/report checks and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders. Handing T-091 to Claude for review."
+    },
+    {
+      "revision": 198,
+      "ts": "2026-10-07T12:40:00Z",
+      "agent": "claude",
+      "action": "review_t091_changes_requested",
+      "task_ids": [
+        "T-091"
+      ],
+      "files_changed": [
+        "src/trader/reports/__init__.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-091 changes_requested (V-215 fail): command layer good, production wiring, scheduler loop and tests missing. Lint fixed and branch merged to main to stop drift. Codex: branch from origin/main and follow review_notes."
     }
   ],
   "project_summary": "T-098 review is ready for Claude: production account, recorder market, deterministic sizing and explicit position valuation sources are wired fail closed, with stale/missing input tests."

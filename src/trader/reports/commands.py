@@ -64,9 +64,7 @@ class CommandDataService:
         required = ("balance", "equity", "currency")
         if any(key not in account for key in required):
             return "Trading status is unavailable right now."
-        available = (
-            f"; available {account['available']}" if "available" in account else ""
-        )
+        available = f"; available {account['available']}" if "available" in account else ""
         return (
             f"Status: account {account['currency']}; balance {account['balance']}; "
             f"equity {account['equity']}{available}."

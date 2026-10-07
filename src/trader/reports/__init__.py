@@ -1,5 +1,6 @@
 """Deterministic owner-facing daily, weekly and monthly reports."""
 
+from trader.reports.commands import CommandDataService, ScheduledReportRunner
 from trader.reports.core import (
     ReportDocument,
     ReportPeriod,
@@ -9,7 +10,6 @@ from trader.reports.core import (
     deliver_telegram,
     run_report,
 )
-from trader.reports.commands import CommandDataService, ScheduledReportRunner
 
 __all__ = [
     "ReportDocument",
