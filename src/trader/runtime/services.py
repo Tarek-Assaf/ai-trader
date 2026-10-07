@@ -30,8 +30,9 @@ def build_runtime_services(
     Deployments may provide already-open DB and broker objects in ``overrides``
     (the unit fixture does this).  Production uses the configured database URL
     and explicit paper execution costs; no spread or broker value is guessed.
-    The remaining stateful services are required overrides because their
-    migrations and control leases belong to the process supervisor.
+    Stateful services are built from the validated database, Redis and risk
+    configuration.  Overrides remain available for deterministic fixtures and
+    deployment-owned clients.
     """
     provided: dict[str, Any] = dict(overrides or {})
     configured = configs.get("runtime_services")
@@ -89,6 +90,13 @@ def build_runtime_services(
     from trader.execution.control import ControlMode
     from trader.execution.journal import ExecutionJournal
     from trader.execution.leader import RedisLeaderLease
+    from trader.runtime.approval import (
+        PnlLossGuard,
+        ProtectivePositionManager,
+        RuntimeApproval,
+        RuntimeExecutor,
+        RuntimeReconciler,
+    )
 
     control_source: Any = provided.get("control_source")
     control_writer: Any = provided.get("control_writer")
@@ -113,37 +121,46 @@ def build_runtime_services(
             RiskLimits.from_mapping(risk_values), audit, canonical_symbols=symbols.keys()
         )
 
+    approval_adapter: Any = provided.get("approval")
     order_manager: Any = provided.get("order_manager")
     if order_manager is None:
-        from trader.execution.manager import BoundApproval, OrderManager
-        from trader.risk.guardian import RiskDecision
+        from trader.execution.manager import OrderManager
 
-        def approve(order: Any, cycle_id: str) -> BoundApproval:
-            return BoundApproval(
-                order=order,
-                cycle_id=cycle_id,
-                decision=RiskDecision(
-                    approved=False,
-                    approved_size=None,
-                    reasons=("runtime_guardian_context_required",),
-                    rules_checked=(),
-                ),
-            )
+        risk_values = _dump_mapping(configs.get("risk"))
+        try:
+            daily_loss = Decimal(str(risk_values["max_daily_loss_pct"]))
+            weekly_loss = Decimal(str(risk_values["max_weekly_loss_pct"]))
+        except (KeyError, TypeError, ValueError):
+            raise RuntimeDependencyUnavailable("runtime service unavailable: pnl guard") from None
+        approval = approval_adapter or RuntimeApproval(guardian)
+        approval_adapter = approval
+        pnl_guard = PnlLossGuard(
+            broker,
+            max_daily_loss_pct=daily_loss,
+            max_weekly_loss_pct=weekly_loss,
+            control_writer=control_writer,
+            alert=_log_alert,
+        )
+        position_manager = ProtectivePositionManager(
+            broker, control_writer=control_writer, alert=_log_alert
+        )
 
         order_manager = OrderManager(
             broker,
             journal,
             execution_lease,
             guardian_lease,
-            approve,
-            lambda _positions: None,
+            approval,
+            pnl_guard,
             _log_alert,
             control_source,
             control_writer,
-            lambda _positions: None,
+            position_manager,
         )
 
-    reconciler: Any = provided.get("reconciler") or _Reconciler(journal, broker)
+    reconciler: Any = provided.get("reconciler") or RuntimeReconciler(
+        journal, broker, alert=_log_alert
+    )
     report_scheduler: Any = provided.get("report_scheduler") or _ReportScheduler(
         configs.get("schedule")
     )
@@ -170,17 +187,29 @@ def build_runtime_services(
     graph: Any = provided.get("agent_graph")
     if graph is None:
         graph_builder = provided.get("agent_graph_builder")
-        graph = (
-            graph_builder(audit, guardian, order_manager)
-            if callable(graph_builder)
-            else _MockAgentGraph()
-        )
+        if callable(graph_builder):
+            graph = graph_builder(audit, guardian, order_manager)
+        else:
+            from trader.agents.graph import AgentGraph
+            from trader.agents.llm.providers import MockLLM
+
+            # MockLLM has no scripted output by default, so an unattended pod
+            # fails closed.  Tests/deployments may supply a scripted provider
+            # or a graph builder without bypassing the approval/executor gate.
+            llm: Any = provided.get("llm") or MockLLM(())
+            graph = AgentGraph(
+                llm=llm,
+                audit=audit,
+                guardian=approval_adapter or RuntimeApproval(guardian),
+                executor=RuntimeExecutor(order_manager),
+            )
 
     result = {
         "engine": engine,
         "audit_writer": audit,
         "broker": broker,
         "guardian": guardian,
+        "approval": approval_adapter,
         "order_manager": order_manager,
         "reconciler": reconciler,
         "report_scheduler": report_scheduler,
@@ -206,36 +235,12 @@ def _dump_mapping(value: object) -> dict[str, object]:
     return dict(raw) if isinstance(raw, Mapping) else {}
 
 
-class _Reconciler:
-    def __init__(self, journal: object, broker: object) -> None:
-        self.journal = journal
-        self.broker = broker
-        from trader.execution.reconciliation import reconcile_pnl
-
-        self.reconcile_pnl = reconcile_pnl
-
-
 class _ReportScheduler:
     def __init__(self, schedule: object) -> None:
         self.schedule = schedule
         from trader.reports.core import run_report
 
         self.run_report = run_report
-
-
-class _MockAgentGraph:
-    """Offline no-trade graph used until a deployment supplies a full graph."""
-
-    def __init__(self) -> None:
-        from trader.agents.llm.providers import MockLLM
-
-        self.llm = MockLLM(())
-
-    def run(self, cycle: object, *, executor: object) -> object:
-        del executor
-        from trader.runtime.composition import RuntimeResult
-
-        return RuntimeResult.no_trade("mock_llm_no_trade", getattr(cycle, "event_id", None))
 
 
 __all__ = ["build_runtime_services"]

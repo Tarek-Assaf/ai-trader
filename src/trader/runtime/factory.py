@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
@@ -39,7 +40,19 @@ class OrderManagerDecisionLoop:
     def run(self, cycle: object) -> object:
         runner = getattr(self.graph, "run", None)
         if callable(runner):
-            result = runner(cycle, executor=self.order_manager)
+            # Legacy fixture graphs accepted an executor keyword, while the
+            # real AgentGraph owns its Guardian and executor adapters.  Keep
+            # both contracts without swallowing errors from the graph itself.
+            parameters: Any
+            try:
+                parameters = inspect.signature(runner).parameters
+            except (TypeError, ValueError):
+                parameters = {}
+            result = (
+                runner(cycle, executor=self.order_manager)
+                if "executor" in parameters
+                else runner(cycle)
+            )
         else:
             result = RuntimeResult.no_trade(
                 "decision_graph_unavailable", getattr(cycle, "event_id", None)
