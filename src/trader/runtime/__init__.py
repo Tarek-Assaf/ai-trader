@@ -20,6 +20,14 @@ from trader.runtime.factory import (
     build_runtime_components,
 )
 from trader.runtime.feeds import RuntimeFeedAdapters
+from trader.runtime.approval import (
+    GuardianInputs,
+    PnlLossGuard,
+    ProtectivePositionManager,
+    RuntimeApproval,
+    RuntimeExecutor,
+    RuntimeReconciler,
+)
 from trader.runtime.services import build_runtime_services
 
 __all__ = [
@@ -35,6 +43,12 @@ __all__ = [
     "RuntimeDependencyUnavailable",
     "OrderManagerDecisionLoop",
     "RuntimeFeedAdapters",
+    "GuardianInputs",
+    "PnlLossGuard",
+    "ProtectivePositionManager",
+    "RuntimeApproval",
+    "RuntimeExecutor",
+    "RuntimeReconciler",
     "build_runtime_components",
     "build_default_factories",
     "build_runtime_services",
