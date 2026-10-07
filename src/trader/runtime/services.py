@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Mapping
 from decimal import Decimal
+from typing import Any
 
 from trader.core.audit import SqlAuditWriter
 from trader.core.settings import EnvironmentSettings
@@ -32,12 +33,12 @@ def build_runtime_services(
     The remaining stateful services are required overrides because their
     migrations and control leases belong to the process supervisor.
     """
-    provided = dict(overrides or {})
+    provided: dict[str, Any] = dict(overrides or {})
     configured = configs.get("runtime_services")
     if isinstance(configured, Mapping):
         provided = {**dict(configured), **provided}
 
-    redis_client = provided.get("redis_client")
+    redis_client: Any = provided.get("redis_client")
     if redis_client is None:
         redis_url = settings.redis_url
         if redis_url is None or not redis_url.get_secret_value():
@@ -49,7 +50,7 @@ def build_runtime_services(
         except Exception as exc:
             raise RuntimeDependencyUnavailable("redis client is unavailable") from exc
 
-    engine = provided.get("engine")
+    engine: Any = provided.get("engine")
     if engine is None:
         database_url = settings.database_url
         if database_url is None or not database_url.get_secret_value():
@@ -61,8 +62,8 @@ def build_runtime_services(
         except Exception as exc:
             raise RuntimeDependencyUnavailable("database engine is unavailable") from exc
 
-    audit = provided.get("audit_writer") or SqlAuditWriter(engine)
-    broker = provided.get("broker")
+    audit: Any = provided.get("audit_writer") or SqlAuditWriter(engine)
+    broker: Any = provided.get("broker")
     if broker is None:
         paper = configs.get("paper_execution")
         if not isinstance(paper, Mapping):
@@ -89,17 +90,17 @@ def build_runtime_services(
     from trader.execution.journal import ExecutionJournal
     from trader.execution.leader import RedisLeaderLease
 
-    control_source = provided.get("control_source")
-    control_writer = provided.get("control_writer")
+    control_source: Any = provided.get("control_source")
+    control_writer: Any = provided.get("control_writer")
     if control_source is None or control_writer is None:
         # Never default to an always-RUN control source: without the real
         # kill/pause channel the runtime must stay stopped (invariant 11).
         raise RuntimeDependencyUnavailable("runtime service unavailable: control channel")
-    journal = provided.get("journal") or ExecutionJournal(engine)
+    journal: Any = provided.get("journal") or ExecutionJournal(engine)
     execution_lease = RedisLeaderLease(redis_client, "ai-trader:execution:lease")
     guardian_lease = RedisLeaderLease(redis_client, "ai-trader:guardian:lease")
 
-    guardian = provided.get("guardian")
+    guardian: Any = provided.get("guardian")
     if guardian is None:
         risk_values = _dump_mapping(configs.get("risk"))
         instruments = _dump_mapping(configs.get("instruments"))
@@ -107,17 +108,17 @@ def build_runtime_services(
             raise RuntimeDependencyUnavailable("runtime service unavailable: guardian")
         from trader.risk.guardian import RiskGuardian, RiskLimits
 
-        symbols = instruments.get("instruments", instruments)
+        symbols: Any = instruments.get("instruments", instruments)
         guardian = RiskGuardian(
             RiskLimits.from_mapping(risk_values), audit, canonical_symbols=symbols.keys()
         )
 
-    order_manager = provided.get("order_manager")
+    order_manager: Any = provided.get("order_manager")
     if order_manager is None:
         from trader.execution.manager import BoundApproval, OrderManager
         from trader.risk.guardian import RiskDecision
 
-        def approve(order: object, cycle_id: str) -> BoundApproval:
+        def approve(order: Any, cycle_id: str) -> BoundApproval:
             return BoundApproval(
                 order=order,
                 cycle_id=cycle_id,
@@ -142,9 +143,11 @@ def build_runtime_services(
             lambda _positions: None,
         )
 
-    reconciler = provided.get("reconciler") or _Reconciler(journal, broker)
-    report_scheduler = provided.get("report_scheduler") or _ReportScheduler(configs.get("schedule"))
-    settings_service = provided.get("settings_service")
+    reconciler: Any = provided.get("reconciler") or _Reconciler(journal, broker)
+    report_scheduler: Any = provided.get("report_scheduler") or _ReportScheduler(
+        configs.get("schedule")
+    )
+    settings_service: Any = provided.get("settings_service")
     if settings_service is None:
         from trader.control.settings_service import SettingsService
 
@@ -164,7 +167,7 @@ def build_runtime_services(
             halt_active=lambda: control_source.read() is not ControlMode.RUN,
         )
 
-    graph = provided.get("agent_graph")
+    graph: Any = provided.get("agent_graph")
     if graph is None:
         graph_builder = provided.get("agent_graph_builder")
         graph = (
