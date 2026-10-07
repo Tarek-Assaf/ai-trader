@@ -12,7 +12,13 @@ from trader.runtime.composition import (
     build_runtime,
     runtime_enabled,
 )
-from trader.runtime.factory import RuntimeFactories, build_runtime_components
+from trader.runtime.factory import (
+    OrderManagerDecisionLoop,
+    RuntimeDependencyUnavailable,
+    RuntimeFactories,
+    build_default_factories,
+    build_runtime_components,
+)
 from trader.runtime.feeds import RuntimeFeedAdapters
 
 __all__ = [
@@ -25,8 +31,11 @@ __all__ = [
     "RuntimeState",
     "ScheduleCycleSource",
     "RuntimeFactories",
+    "RuntimeDependencyUnavailable",
+    "OrderManagerDecisionLoop",
     "RuntimeFeedAdapters",
     "build_runtime_components",
+    "build_default_factories",
     "build_runtime",
     "runtime_enabled",
 ]
