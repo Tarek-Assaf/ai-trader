@@ -19,6 +19,8 @@ from typing import Any
 from trader.agents.graph import (
     ExecutionOutcome,
     GuardianDecision,
+)
+from trader.agents.graph import (
     TradeIntent as GraphTradeIntent,
 )
 from trader.execution.brokers.base import Direction, OrderRequest, Position
@@ -247,9 +249,7 @@ class PnlLossGuard:
     def __call__(self, _positions: Sequence[Position]) -> None:
         account = self.broker.get_account()
         raw_equity = (
-            account.get("equity", account.get("balance"))
-            if isinstance(account, Mapping)
-            else None
+            account.get("equity", account.get("balance")) if isinstance(account, Mapping) else None
         )
         try:
             equity = Decimal(str(raw_equity))

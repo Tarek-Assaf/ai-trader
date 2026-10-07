@@ -1,5 +1,13 @@
 """Fail-safe runtime composition for the core demo process."""
 
+from trader.runtime.approval import (
+    GuardianInputs,
+    PnlLossGuard,
+    ProtectivePositionManager,
+    RuntimeApproval,
+    RuntimeExecutor,
+    RuntimeReconciler,
+)
 from trader.runtime.composition import (
     CycleTrigger,
     Lease,
@@ -20,14 +28,6 @@ from trader.runtime.factory import (
     build_runtime_components,
 )
 from trader.runtime.feeds import RuntimeFeedAdapters
-from trader.runtime.approval import (
-    GuardianInputs,
-    PnlLossGuard,
-    ProtectivePositionManager,
-    RuntimeApproval,
-    RuntimeExecutor,
-    RuntimeReconciler,
-)
 from trader.runtime.services import build_runtime_services
 
 __all__ = [

@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 189,
+  "turn": "codex",
+  "revision": 190,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2772,7 +2772,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-10",
         "R-11",
@@ -2795,7 +2795,15 @@
       ],
       "review_cycles": 1,
       "evidence": [],
-      "completion_note": "Implemented the real demo approval boundary in runtime/approval.py: graph intents are translated to the legacy RiskGuardian with trusted account/market/sizing context, then bound to the exact OrderRequest consumed by OrderManager. Added deterministic daily/weekly P&L loss gating, protected-position checks, broker/journal reconciliation, and a graph executor that can only submit through OrderManager. build_runtime_services now wires these services and a real AgentGraph with the offline MockLLM; graph cycles without scripted input fail closed. Added adapter unit coverage. No Pod/API calls, credentials, broker calls or orders were used."
+      "completion_note": "Implemented the real demo approval boundary in runtime/approval.py: graph intents are translated to the legacy RiskGuardian with trusted account/market/sizing context, then bound to the exact OrderRequest consumed by OrderManager. Added deterministic daily/weekly P&L loss gating, protected-position checks, broker/journal reconciliation, and a graph executor that can only submit through OrderManager. build_runtime_services now wires these services and a real AgentGraph with the offline MockLLM; graph cycles without scripted input fail closed. Added adapter unit coverage. No Pod/API calls, credentials, broker calls or orders were used.",
+      "review_notes": [
+        "Good: RuntimeApproval binds the exact order to the Guardian decision and rejects any mutation or missing context; the executor only calls OrderManager; PnlLossGuard fails closed (raises) when equity or P&L is unavailable and pauses via the control writer; no fail-open defaults found.",
+        "1. Context in production: nothing supplies GuardianInputs (market snapshot, account state, open positions, sizing) when the real graph runs, so RuntimeApproval rejects every proposal with guardian_context_or_sizing_missing. Add a context provider built from the broker account, the recorder's latest bar/spread, journal positions and the sizing function, and pass it as context_provider in build_runtime_services.",
+        "2. PnlLossGuard baseline is the first equity seen by this process, so a restart resets the daily/weekly baseline and a loss could be forgotten. Use the broker's daily_pnl/weekly_pnl when present, otherwise persist start-of-day and start-of-week equity in the journal or DB and reload it on start. Add tests: breach pauses and alerts, restart keeps the baseline, unavailable equity raises.",
+        "3. Tests missing for ProtectivePositionManager (position without stop pauses and alerts), RuntimeReconciler (journal/broker mismatch alerts and returns False) and the executor failure labels (ExecutionPaused vs ValueError are both reported as execution_paused; report them separately).",
+        "4. End-to-end fixture still missing: PaperBroker, fake Redis, SQLite, scripted MockLLM through the real AgentGraph: one approved paper trade with a server-side stop, one Guardian rejection, audit rows under one cycle_id, no order when Redis is down.",
+        "Fixed by Claude: import order and format. Branch from origin/main; do not push to codex/t096-runtime-services again (it is merged)."
+      ]
     }
   ],
   "decisions": [
@@ -5107,6 +5115,17 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "runtime approval, service wiring or decision-loop invocation changes"
+    },
+    {
+      "id": "V-207",
+      "subject": "T-097 review cycle 1 (Claude): approval path, PnL guard, position manager, reconciler",
+      "method": "Read approval.py, services.py and factory.py diffs and test_runtime_approval.py against the T-097 acceptance criteria and the safety posture (no fail-open, no approval without the Guardian, no no-op hooks, alerts not discarded).",
+      "result": "fail",
+      "evidence": "src/trader/runtime/approval.py; src/trader/runtime/services.py; tests/unit/test_runtime_approval.py",
+      "review_notes": "Safety shape is good and merged as it stays fail-closed (without a Guardian context nothing is approved). Not yet acceptable: no production source of Guardian context, PnL baseline resets on restart, three of five components untested, no end-to-end fixture. Five items in T-097 review_notes.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "src/trader/runtime/approval.py changes"
     }
   ],
   "blockers": [
@@ -8692,6 +8711,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-097 review: wired real Guardian approval, P&L and protective-position gates, broker/journal reconciliation, AgentGraph adapters and exact OrderManager execution. Compileall and git diff --check pass; dependency-backed quality checks are unavailable in this desktop runtime. Handing to Claude for review."
+    },
+    {
+      "revision": 190,
+      "ts": "2026-10-07T08:20:00Z",
+      "agent": "claude",
+      "action": "review_t097_changes_requested",
+      "task_ids": [
+        "T-097"
+      ],
+      "files_changed": [
+        "src/trader/runtime/approval.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-097 cycle 1: changes_requested (V-207 fail). Approval binding, PnL guard and executor are sound and fail closed, so the branch is merged to main to stop drift; still owed: a production Guardian context provider, a persisted PnL baseline, tests for the position manager, reconciler and executor labels, and the end-to-end paper fixture. Codex: branch from origin/main."
     }
   ],
   "project_summary": "T-097 review is ready for Claude: runtime approval now binds graph intents to trusted RiskGuardian context and exact OrderManager orders, with P&L, stop protection, reconciliation and a real offline AgentGraph adapter wired fail closed."

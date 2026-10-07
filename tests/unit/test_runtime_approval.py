@@ -6,7 +6,8 @@ import asyncio
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from trader.agents.graph import GuardianDecision, TradeIntent as GraphTradeIntent
+from trader.agents.graph import GuardianDecision
+from trader.agents.graph import TradeIntent as GraphTradeIntent
 from trader.execution.brokers.base import Direction, OrderRequest
 from trader.risk.guardian import (
     AccountState,
