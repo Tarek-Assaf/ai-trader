@@ -51,6 +51,7 @@ class OhlcUpdate:
 ConnectionFactory = Callable[..., ClientConnection]
 UpdateHandler = Callable[[OhlcUpdate], None]
 ReconnectHandler = Callable[[int, str], None]
+DataExpected = Callable[[], bool]
 
 
 class CapitalComStreamClient:
@@ -68,6 +69,7 @@ class CapitalComStreamClient:
         reconnect_max_seconds: float = 30.0,
         ping_interval: timedelta = _PING_INTERVAL,
         data_timeout_seconds: float = _DEFAULT_DATA_TIMEOUT_SECONDS,
+        data_expected: DataExpected | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
@@ -89,6 +91,7 @@ class CapitalComStreamClient:
         self._reconnect_max = reconnect_max_seconds
         self._ping_interval = ping_interval
         self._data_timeout = timedelta(seconds=data_timeout_seconds)
+        self._data_expected = data_expected
         self._clock = clock
         self._sleep = sleep
         self._last_seen: dict[tuple[str, str], datetime] = {}
@@ -358,6 +361,7 @@ class CapitalComStreamClient:
                         if (
                             not stop_event.is_set()
                             and self._last_data_at is not None
+                            and self._is_data_expected()
                             and now.astimezone(UTC) - self._last_data_at >= self._data_timeout
                         ):
                             raise StreamProtocolError("Capital.com OHLC no-data timeout")
@@ -390,3 +394,13 @@ class CapitalComStreamClient:
             if not stop_event.is_set():
                 self._sleep(backoff)
                 backoff = min(backoff * 2, self._reconnect_max)
+
+    def _is_data_expected(self) -> bool:
+        """Return whether market hours currently require stream prices."""
+        if self._data_expected is None:
+            return True
+        try:
+            return self._data_expected()
+        except Exception as exc:  # pragma: no cover - defensive worker boundary
+            _LOG.warning("Capital.com market expectation unavailable (%s)", type(exc).__name__)
+            return False

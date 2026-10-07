@@ -272,6 +272,43 @@ def test_no_data_timeout_reports_short_reason_and_retries() -> None:
     assert client.ping_reply_ok is False
 
 
+def test_no_data_timeout_is_suppressed_when_market_is_closed() -> None:
+    rest = FakeRest()
+    reconnects: list[tuple[int, str]] = []
+    stop = threading.Event()
+    current = [datetime(2026, 10, 4, 10, 0, tzinfo=UTC)]
+
+    class ClosedMarketSocket(FakeSocket):
+        calls = 0
+
+        def recv(self, *, timeout: float) -> str:
+            self.calls += 1
+            current[0] += timedelta(seconds=6)
+            if self.calls >= 3:
+                stop.set()
+            raise TimeoutError
+
+    socket = ClosedMarketSocket([subscribe_reply(), ping_reply()])
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        lambda _update: None,
+        on_reconnect=lambda count, reason: reconnects.append((count, reason)),
+        connection_factory=lambda *_args, **_kwargs: socket,
+        data_timeout_seconds=5,
+        data_expected=lambda: False,
+        reconnect_min_seconds=0.01,
+        reconnect_max_seconds=0.02,
+        clock=lambda: current[0],
+        sleep=lambda _delay: None,
+    )
+
+    client.run_forever(stop)
+
+    assert reconnects == []
+    assert client.reconnect_count == 0
+
+
 @pytest.mark.parametrize(
     "failed_reply",
     [subscribe_reply(status="ERROR"), subscribe_reply(subscription_status="ERROR")],
