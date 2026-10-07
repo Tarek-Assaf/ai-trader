@@ -4,6 +4,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+from trader.execution.control import ControlMode
+from trader.reports.commands import CommandDataService
 from trader.risk.guardian import (
     AccountState,
     MarketSnapshot,
@@ -12,10 +14,8 @@ from trader.risk.guardian import (
     SizingEstimate,
     TradeIntent,
 )
-from trader.reports.commands import CommandDataService
-from trader.runtime.soak import LogScanner, RuntimeSoakFeed
 from trader.runtime.composition import RuntimeComponents, RuntimeResult, RuntimeService
-from trader.execution.control import ControlMode
+from trader.runtime.soak import LogScanner, RuntimeSoakFeed
 from trader.soak import SoakMonitor
 
 
@@ -167,37 +167,65 @@ def test_real_guardian_observation_is_read_only() -> None:
             return None
 
     limits = RiskLimits(
-        risk_per_trade_pct=Decimal("1"), max_daily_loss_pct=Decimal("2"),
-        max_weekly_loss_pct=Decimal("5"), max_drawdown_pct=Decimal("10"),
-        max_open_positions_total=3, max_open_positions_per_instrument=2,
-        max_combined_risk_pct=Decimal("3"), max_margin_usage_pct=Decimal("50"),
-        max_effective_leverage=Decimal("5"), min_reward_risk=Decimal("1"),
-        min_stop_atr=Decimal("0.5"), max_stop_atr=Decimal("3"),
-        max_spread_atr_ratio=Decimal("2"), stale_data_max_seconds=180,
-        max_orders_per_hour=20, blackout_before_min=30, blackout_after_min=30,
-        consecutive_loss_pause=3, loss_cooldown_minutes=15,
+        risk_per_trade_pct=Decimal("1"),
+        max_daily_loss_pct=Decimal("2"),
+        max_weekly_loss_pct=Decimal("5"),
+        max_drawdown_pct=Decimal("10"),
+        max_open_positions_total=3,
+        max_open_positions_per_instrument=2,
+        max_combined_risk_pct=Decimal("3"),
+        max_margin_usage_pct=Decimal("50"),
+        max_effective_leverage=Decimal("5"),
+        min_reward_risk=Decimal("1"),
+        min_stop_atr=Decimal("0.5"),
+        max_stop_atr=Decimal("3"),
+        max_spread_atr_ratio=Decimal("2"),
+        stale_data_max_seconds=180,
+        max_orders_per_hour=20,
+        blackout_before_min=30,
+        blackout_after_min=30,
+        consecutive_loss_pause=3,
+        loss_cooldown_minutes=15,
         min_trade_quality_score=Decimal("0.5"),
     )
     guardian = RiskGuardian(limits, Audit(), canonical_symbols=("NAS100",))
     account = AccountState(
-        equity=Decimal("1000"), day_start_equity=Decimal("1000"),
-        week_start_equity=Decimal("1000"), peak_equity=Decimal("1000"),
-        daily_pnl=Decimal("0"), weekly_pnl=Decimal("0"), margin_used=Decimal("0"),
-        notional_exposure=Decimal("0"), orders_last_hour=0, consecutive_losses=0,
+        equity=Decimal("1000"),
+        day_start_equity=Decimal("1000"),
+        week_start_equity=Decimal("1000"),
+        peak_equity=Decimal("1000"),
+        daily_pnl=Decimal("0"),
+        weekly_pnl=Decimal("0"),
+        margin_used=Decimal("0"),
+        notional_exposure=Decimal("0"),
+        orders_last_hour=0,
+        consecutive_losses=0,
         last_loss_at=None,
     )
     market = MarketSnapshot(
-        datetime(2026, 10, 7, tzinfo=UTC), True, False, Decimal("100"),
-        Decimal("100.1"), Decimal("1"),
+        datetime(2026, 10, 7, tzinfo=UTC),
+        True,
+        False,
+        Decimal("100"),
+        Decimal("100.1"),
+        Decimal("1"),
     )
     sizing = SizingEstimate(
-        size=Decimal("1"), risk_amount=Decimal("20"),
-        margin_required=Decimal("10"), notional_exposure=Decimal("20"),
+        size=Decimal("1"),
+        risk_amount=Decimal("20"),
+        margin_required=Decimal("10"),
+        notional_exposure=Decimal("20"),
     )
     guardian.evaluate(
         TradeIntent("NAS100", "buy", Decimal("100"), Decimal("99"), Decimal("102")),
-        market, account, (), sizing, stage_size_cap=None, trade_quality_score=Decimal("1"),
-        now=datetime(2026, 10, 7, tzinfo=UTC), cycle_id="soak",
+        market,
+        account,
+        (),
+        sizing,
+        stage_size_cap=None,
+        trade_quality_score=Decimal("1"),
+        now=datetime(2026, 10, 7, tzinfo=UTC),
+        cycle_id="soak",
     )
     assert guardian.soak_observation() == {
         "risk_per_trade_pct": "2",
