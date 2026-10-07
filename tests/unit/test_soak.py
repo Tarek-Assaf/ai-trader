@@ -4,8 +4,8 @@ import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
-from trader.soak import SoakMonitor
 from trader.reports.commands import CommandDataService
+from trader.soak import SoakMonitor
 
 
 def test_daily_metrics_and_summary_reset_clock_on_incident(tmp_path) -> None:

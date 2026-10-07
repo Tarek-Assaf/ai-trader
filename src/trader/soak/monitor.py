@@ -282,6 +282,7 @@ class SoakMonitor:
     def _now(self) -> datetime:
         return _aware(self._clock())
 
+
 def _aware(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise ValueError("soak timestamps must be timezone-aware")
