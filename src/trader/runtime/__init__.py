@@ -8,6 +8,7 @@ from trader.runtime.composition import (
     RuntimeResult,
     RuntimeService,
     RuntimeState,
+    ScheduleCycleSource,
     build_runtime,
     runtime_enabled,
 )
@@ -20,6 +21,7 @@ __all__ = [
     "RuntimeResult",
     "RuntimeService",
     "RuntimeState",
+    "ScheduleCycleSource",
     "build_runtime",
     "runtime_enabled",
 ]

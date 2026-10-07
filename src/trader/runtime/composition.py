@@ -11,7 +11,8 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
-from collections.abc import Awaitable, Callable, Mapping
+from collections import deque
+from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import StrEnum
@@ -112,6 +113,59 @@ class CycleSource(Protocol):
     def next_cycle(self) -> object | Awaitable[object | None] | None: ...
 
 
+class ScheduleCycleSource:
+    """Deterministic trigger queue for configured bar/session/news events.
+
+    The source is deliberately fed by the market/calendar adapters.  It does
+    not poll a broker or invent market data, which keeps a missing feed
+    fail-safe while still giving the runtime one cycle id per trigger.
+    """
+
+    DEFAULT_BAR_CLOSES = ("1M", "3M", "5M")
+
+    def __init__(self, events: Iterable[CycleTrigger] = ()) -> None:
+        self._events: deque[CycleTrigger] = deque(events)
+
+    @classmethod
+    def from_config(cls, config: Mapping[str, object]) -> ScheduleCycleSource:
+        """Build a source from a validated schedule mapping.
+
+        ``config['triggers']`` may contain explicit event dictionaries.  When
+        it is absent, the source starts empty and adapters submit the actual
+        timestamped 1M/3M/5M bar, session-open and news triggers.
+        """
+        raw = config.get("triggers")
+        if raw is None:
+            return cls()
+        if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+            raise ValueError("schedule triggers must be a sequence")
+        events: list[CycleTrigger] = []
+        for item in raw:
+            if not isinstance(item, Mapping):
+                raise ValueError("schedule trigger must be a mapping")
+            at = item.get("at")
+            if not isinstance(at, datetime):
+                raise ValueError("schedule trigger timestamp must be datetime")
+            events.append(
+                CycleTrigger(
+                    str(item.get("event", "")),
+                    str(item.get("event_id", "")),
+                    at,
+                )
+            )
+        return cls(events)
+
+    def emit(self, trigger: CycleTrigger) -> None:
+        self._events.append(trigger)
+
+    def next_cycle(self) -> CycleTrigger | None:
+        return self._events.popleft() if self._events else None
+
+    @property
+    def pending(self) -> int:
+        return len(self._events)
+
+
 @dataclass(slots=True)
 class RuntimeComponents:
     """Explicit composition boundary for the services owned by the core pod."""
@@ -125,6 +179,18 @@ class RuntimeComponents:
     report_scheduler: object | None = None
     settings_service: object | None = None
     metadata: Mapping[str, object] = field(default_factory=dict)
+
+    def missing_required(self) -> tuple[str, ...]:
+        """Return names that must be present before a core runtime can start."""
+        required = {
+            "guardian": self.guardian,
+            "broker": self.broker,
+            "order_manager": self.order_manager,
+            "reconciler": self.reconciler,
+            "report_scheduler": self.report_scheduler,
+            "settings_service": self.settings_service,
+        }
+        return tuple(name for name, value in required.items() if value is None)
 
 
 def _result(value: object, cycle_id: str | None) -> RuntimeResult:
@@ -191,6 +257,8 @@ class RuntimeService:
             self._lease_held = False
             self.state = RuntimeState.DEGRADED
             self._notify("runtime_leader_unavailable")
+            if self._cycle_source is not None and self._task is None:
+                self._task = asyncio.create_task(self.run_forever(), name="ai-trader-decision-loop")
             return
         self.state = RuntimeState.RUNNING
         if self._cycle_source is not None:
@@ -247,7 +315,18 @@ class RuntimeService:
         """Consume cycles with bounded retry backoff and no exception spin."""
         if self._cycle_source is None:
             return
-        while not self._stop.is_set() and self.running:
+        while not self._stop.is_set():
+            if self.state is RuntimeState.DEGRADED:
+                await self._wait(self._backoff)
+                if self._stop.is_set():
+                    break
+                if await self._recover():
+                    self._backoff = self._backoff_initial
+                else:
+                    self._backoff = min(self._backoff * 2, self._backoff_max)
+                continue
+            if not self.running:
+                break
             try:
                 cycle = self._cycle_source.next_cycle()
                 if inspect.isawaitable(cycle):
@@ -265,6 +344,25 @@ class RuntimeService:
                 self._notify("runtime_cycle_source_failed")
                 await self._wait(self._backoff)
                 self._backoff = min(self._backoff * 2, self._backoff_max)
+
+    async def _recover(self) -> bool:
+        """Re-prove lease/control dependencies before resuming cycles."""
+        try:
+            if not self._lease_held:
+                self.components.leader.acquire()
+                self._lease_held = True
+            self.components.leader.check()
+            mode = self.control_source.read()
+            if mode is ControlMode.KILL:
+                self._notify("runtime_kill_switch_active")
+                return False
+        except Exception:
+            self._lease_held = False
+            self._notify("runtime_dependency_unavailable")
+            return False
+        self.state = RuntimeState.RUNNING
+        self._notify("runtime_recovered")
+        return True
 
     async def _wait(self, seconds: float) -> None:
         try:
@@ -303,6 +401,7 @@ __all__ = [
     "RuntimeResult",
     "RuntimeService",
     "RuntimeState",
+    "ScheduleCycleSource",
     "build_runtime",
     "runtime_enabled",
 ]
