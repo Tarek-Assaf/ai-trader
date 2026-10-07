@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 215,
+  "turn": "codex",
+  "revision": 216,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2961,7 +2961,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-05",
         "R-09"
@@ -2979,7 +2979,7 @@
         "tests/unit/test_capital_com_stream.py",
         "docs/evidence/t100_recorder_health.md"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/integrations/capital_com/stream.py",
         "src/trader/data/recorder.py",
@@ -2989,7 +2989,13 @@
         "bundled Python compileall",
         "git diff --check"
       ],
-      "completion_note": "Fixed the silent pre-connect failure path: every failed Capital.com session, subscription, ping or socket attempt now updates reconnect_count and invokes the secret-free reconnect callback while retaining exponential backoff. Added a 30-minute configurable no-data timeout with the redacted reason no_data_timeout; the recorder writes status degraded, reconnect_count and last_reconnect_reason. WebSocket updates reset the data watchdog and successful reconnects recover normally. Fake-stream tests cover initial connect failure and recovery, no-data timeout, and recorder degraded status. After redeploy, check exactly the allowlisted data_recorder fields listed in docs/evidence/t100_recorder_health.md. No Pod/API calls, credentials, broker calls or orders were used; full pytest, Ruff, mypy and make check are unavailable in this desktop runtime."
+      "completion_note": "Fixed the silent pre-connect failure path: every failed Capital.com session, subscription, ping or socket attempt now updates reconnect_count and invokes the secret-free reconnect callback while retaining exponential backoff. Added a 30-minute configurable no-data timeout with the redacted reason no_data_timeout; the recorder writes status degraded, reconnect_count and last_reconnect_reason. WebSocket updates reset the data watchdog and successful reconnects recover normally. Fake-stream tests cover initial connect failure and recovery, no-data timeout, and recorder degraded status. After redeploy, check exactly the allowlisted data_recorder fields listed in docs/evidence/t100_recorder_health.md. No Pod/API calls, credentials, broker calls or orders were used; full pytest, Ruff, mypy and make check are unavailable in this desktop runtime.",
+      "changes_requested": [
+        "The 30-minute no-data timeout fires even when the market is closed (weekends, daily break, holidays), forcing a reconnect and status degraded every 30 minutes and contradicting the documented rule that closed markets never trigger degradation. Make the watchdog market-aware: give CapitalComStreamClient an optional data_expected: Callable[[], bool] (wired in workers/recorder.py from the same expected_open/market_status logic the recorder health check uses, treating unknown as not expected), and only raise the no-data timeout while it returns True. Reset _last_data_at when data becomes expected so the timer starts at market open, not at the last tick before the weekend.",
+        "on_reconnect must not overwrite a healthy-closed status with degraded when the market is closed; keep degraded for real connect failures only.",
+        "Tests: (a) no timeout and no reconnect while data_expected is False for a simulated 3-day gap, (b) timeout fires 30 min after data becomes expected, (c) existing connect-failure and recovery tests stay green.",
+        "Root cause note: the fix makes failures visible (reconnect_count, reason) but the original reason the Pod stream never connected is still unknown; say so in completion_note and docs/evidence/t100_recorder_health.md, and state what the owner should send back after redeploy so the real cause can be read from last_reconnect_reason."
+      ]
     }
   ],
   "decisions": [
@@ -9582,6 +9588,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Added T-100 for the owner-authorized demo recorder incident and fixed silent pre-connect failures plus no-data timeout handling. Stream retries use bounded backoff and callback reasons are secret-free; recorder health becomes degraded with reconnect_count and last_reconnect_reason updated. Fake-stream tests cover connect failure/recovery and no-data timeout. Full pytest/Ruff/mypy/make check are unavailable on desktop; bundled compileall and diff-check pass. No Pod/API calls, credentials, broker calls or orders. Handing T-100 to Claude for review."
+    },
+    {
+      "revision": 216,
+      "ts": "2026-10-07T21:00:00Z",
+      "agent": "claude",
+      "action": "review_t100_changes_requested",
+      "task_ids": [
+        "T-100"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-100 cycle 1: silent pre-connect failures are now counted and reported, which is right, but the 30-minute no-data timeout is not market-aware and would reconnect and report degraded through every weekend and break. Codex: make the watchdog conditional on data_expected, add tests, then back to review. Also report the Pod startup bug the owner mentioned."
     }
   ],
   "project_summary": "T-100 fixes silent Capital.com recorder stream failures with degraded secret-free health, no-data timeout backoff and fake-stream recovery coverage; awaiting Claude review."
