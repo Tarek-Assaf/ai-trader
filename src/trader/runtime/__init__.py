@@ -37,6 +37,7 @@ from trader.runtime.factory import (
 )
 from trader.runtime.feeds import RuntimeFeedAdapters
 from trader.runtime.services import build_runtime_services
+from trader.scaling.runtime import CoreAutoscaler, build_core_autoscaler
 
 __all__ = [
     "CycleTrigger",
@@ -68,4 +69,6 @@ __all__ = [
     "build_runtime_services",
     "build_runtime",
     "runtime_enabled",
+    "CoreAutoscaler",
+    "build_core_autoscaler",
 ]

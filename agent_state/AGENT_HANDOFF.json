@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 202,
+  "turn": "claude",
+  "revision": 203,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-091 review cycle 2 is ready for Claude: production report providers, persisted schedule execution and Telegram/SMTP delivery wiring are implemented with fail-closed tests.",
+    "summary": "T-094 scaling wiring is ready for Claude review; autoscaling remains disabled by default and the live RunPod list check is owner-gated.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2683,7 +2683,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-22",
         "R-23"
@@ -2704,8 +2704,18 @@
         "tests/unit/test_runtime_scaling.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/scaling/runtime.py",
+        ".env.example",
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/integrations/runpod/client.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/composition.py",
+        "tests/unit/test_runtime_scaling.py",
+        "tests/unit/test_scaling.py",
+        "docs/evidence/t094_runpod_list.md"
+      ],
+      "completion_note": "Wired the existing worker autoscaler into the demo core runtime behind scaling.enabled, which remains false by default. CoreAutoscaler reads queue depth and age, reconciles only tagged workers, applies the configured worker and hourly-spend caps, and is never constructed for ROLE=worker. The RunPod adapter validates both supported list envelopes and the unit fixture covers the read-only response shape. A live RunPod list call was intentionally not made because no Pod/API credential or explicit external-call authorization was available; the owner must run the names-only check before enabling scaling."
     },
     {
       "id": "T-095",
@@ -5340,6 +5350,17 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "soak monitor or incident rules change"
+    },
+    {
+      "id": "V-220",
+      "subject": "T-094 scaling wiring and RunPod response validation",
+      "method": "Reviewed the core-only composition path, disabled-by-default config, autoscaler policy wiring, RunPod adapter fixture, bundled compileall, and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/scaling/runtime.py; src/trader/runtime/factory.py; src/trader/runtime/composition.py; tests/unit/test_runtime_scaling.py; tests/unit/test_scaling.py; docs/evidence/t094_runpod_list.md; bundled Python compileall; git diff --check",
+      "review_notes": "Live RunPod list verification remains owner-gated because no Pod/API credential or explicit external call was available. No Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "scaling wiring, RunPod response handling, or owner-run Pod evidence changes"
     }
   ],
   "blockers": [
@@ -5390,6 +5411,12 @@
       "text": "T-087 Pod smoke is blocked because the running /app image lacks scripts/telegram_smoke.py and scripts/telegram_set_commands.py even though the expected Telegram environment variable names are present. Redeploy the newest main image before retrying the names-only smoke check.",
       "raised_by": "codex",
       "status": "resolved"
+    },
+    {
+      "id": "B-009",
+      "text": "T-094 live RunPod list-shape verification is pending an owner-authorized names-only Pod/API check; scaling remains disabled and no credential was used.",
+      "raised_by": "codex",
+      "status": "open"
     }
   ],
   "questions": [
@@ -5863,6 +5890,19 @@
       ],
       "recommendation": "Redeploy the Pod from the newest main image now",
       "answer": "Redeployed by the owner on the newest main image (2026-10-06); smoke message received."
+    },
+    {
+      "id": "Q-042",
+      "from": "codex",
+      "to": "human",
+      "status": "open",
+      "text": "After deploying the latest main image, may the owner run the names-only GET /v2/pods?status=RUNNING check and record its redacted response before enabling scaling? The implementation remains disabled by default until that check and hourly cap confirmation.",
+      "options": [
+        "Run the names-only list check and confirm the hourly cap",
+        "Keep scaling disabled for now"
+      ],
+      "recommendation": "Keep scaling disabled until the owner confirms the hourly cap and records the read-only list response.",
+      "answer": ""
     }
   ],
   "log": [
@@ -9146,7 +9186,27 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-092 passes. Soak monitor module and /soak command accepted; runtime feed, persistence and /workspace evidence path added to T-093 criteria. Codex: branch from origin/main and take T-093."
+    },
+    {
+      "revision": 203,
+      "ts": "2026-10-07T15:00:00Z",
+      "agent": "codex",
+      "action": "complete_t094_scaling_wiring",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "src/trader/scaling/runtime.py",
+        "src/trader/scaling/__init__.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/__init__.py",
+        "tests/unit/test_runtime_scaling.py",
+        "docs/evidence/t094_runpod_list.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Wired the optional autoscaler into the core runtime with scaling.enabled false by default, added core-only policy and queue metrics, validated RunPod list envelopes offline, and recorded the owner-gated live check. Handing T-094 to Claude for review."
     }
   ],
-  "project_summary": "T-091 review cycle 2 is ready for Claude: production report providers, persisted schedule execution and Telegram/SMTP delivery wiring are implemented with fail-closed tests."
+  "project_summary": "T-094 scaling wiring is ready for Claude review; autoscaling remains disabled by default and the live RunPod list check is owner-gated."
 }

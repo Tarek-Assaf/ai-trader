@@ -178,6 +178,7 @@ class RuntimeComponents:
     reconciler: object | None = None
     report_scheduler: object | None = None
     settings_service: object | None = None
+    autoscaler: object | None = None
     metadata: Mapping[str, object] = field(default_factory=dict)
 
     def missing_required(self) -> tuple[str, ...]:
@@ -253,6 +254,9 @@ class RuntimeService:
             self.components.leader.acquire()
             self._lease_held = True
             self.components.leader.check()
+            reconcile = getattr(self.components.autoscaler, "reconcile_orphans", None)
+            if callable(reconcile):
+                reconcile()
         except Exception:
             self._lease_held = False
             self.state = RuntimeState.DEGRADED
@@ -338,6 +342,7 @@ class RuntimeService:
                     await self._wait(self._backoff)
                     continue
                 result = await self.run_cycle(cycle)
+                self._run_scaling()
                 if result.reason in {"runtime_cycle_failed", "runtime_dependency_unavailable"}:
                     await self._wait(self._backoff)
                     self._backoff = min(self._backoff * 2, self._backoff_max)
@@ -378,6 +383,16 @@ class RuntimeService:
             self._alert(message)
         except Exception:
             LOGGER.exception("runtime alert delivery failed")
+
+    def _run_scaling(self) -> None:
+        """Run optional worker scaling without letting it submit orders."""
+        tick = getattr(self.components.autoscaler, "tick", None)
+        if not callable(tick):
+            return
+        try:
+            tick()
+        except Exception:
+            self._notify("runtime_scaling_failed")
 
 
 def build_runtime(
