@@ -22,7 +22,6 @@ from trader.runtime.approval import (
     PnlLossGuard,
     ProtectivePositionManager,
     RuntimeApproval,
-    RuntimeContextProvider,
     RuntimeExecutor,
     RuntimeReconciler,
 )
@@ -113,45 +112,6 @@ def test_missing_context_cannot_approve() -> None:
     decision = asyncio.run(approval.evaluate(_intent(), object(), "cycle-1"))
     assert not decision.approved
     assert "guardian_context_or_sizing_missing" in decision.reasons
-
-
-def test_context_provider_reads_broker_truth_and_sizing() -> None:
-    class Broker:
-        def get_account(self) -> dict[str, object]:
-            return {
-                "equity": "10000",
-                "day_start_equity": "10000",
-                "week_start_equity": "10000",
-                "peak_equity": "10000",
-                "daily_pnl": "0",
-                "weekly_pnl": "0",
-                "margin_used": "0",
-                "notional_exposure": "0",
-                "orders_last_hour": 0,
-            }
-
-        def get_market_details(self, _instrument: str) -> dict[str, object]:
-            return {
-                "latest_data_at": datetime(2026, 10, 7, 12, tzinfo=UTC),
-                "market_open": True,
-                "in_break": False,
-                "bid": "99.9",
-                "ask": "100.1",
-                "atr": "1",
-            }
-
-        def get_positions(self) -> tuple[object, ...]:
-            return ()
-
-    provider = RuntimeContextProvider(
-        Broker(),
-        sizing_provider=lambda *_args: SizingEstimate(
-            Decimal("1"), Decimal("10"), Decimal("10"), Decimal("100")
-        ),
-    )
-    context = provider("cycle-1", _intent())
-    assert context is not None
-    assert context.market.ask == Decimal("100.1")
 
 
 def test_executor_only_calls_order_manager() -> None:

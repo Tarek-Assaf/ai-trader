@@ -5,7 +5,6 @@ from trader.runtime.approval import (
     PnlLossGuard,
     ProtectivePositionManager,
     RuntimeApproval,
-    RuntimeContextProvider,
     RuntimeExecutor,
     RuntimeReconciler,
 )
@@ -20,6 +19,14 @@ from trader.runtime.composition import (
     ScheduleCycleSource,
     build_runtime,
     runtime_enabled,
+)
+from trader.runtime.context import (
+    AccountContextSource,
+    ContextUnavailable,
+    MarketContextSource,
+    RuntimeContextProvider,
+    SizingContextSource,
+    position_source,
 )
 from trader.runtime.factory import (
     OrderManagerDecisionLoop,
@@ -49,6 +56,11 @@ __all__ = [
     "ProtectivePositionManager",
     "RuntimeApproval",
     "RuntimeContextProvider",
+    "AccountContextSource",
+    "ContextUnavailable",
+    "MarketContextSource",
+    "SizingContextSource",
+    "position_source",
     "RuntimeExecutor",
     "RuntimeReconciler",
     "build_runtime_components",
