@@ -91,7 +91,7 @@ def test_missing_control_channel_keeps_runtime_stopped() -> None:
 
 
 def test_report_scheduler_persists_each_period_once_per_scheduled_target() -> None:
-    from tests.unit.test_reports import _snapshot
+    from test_reports import _snapshot
 
     from trader.runtime.services import _ReportScheduler
 

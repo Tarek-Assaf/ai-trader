@@ -77,7 +77,7 @@ def test_chart_returns_png_bytes_from_fixture_equity_data() -> None:
 
 
 def test_report_render_does_not_send_duplicate_telegram_message() -> None:
-    from tests.unit.test_reports import _FakeTelegram, _snapshot
+    from test_reports import _FakeTelegram, _snapshot
 
     transport = _FakeTelegram()
     runner = ScheduledReportRunner(
@@ -93,7 +93,7 @@ def test_report_render_does_not_send_duplicate_telegram_message() -> None:
 
 
 def test_scheduled_report_includes_llm_cost_from_usage_summary() -> None:
-    from tests.unit.test_reports import _snapshot
+    from test_reports import _snapshot
 
     runner = ScheduledReportRunner(
         {},
