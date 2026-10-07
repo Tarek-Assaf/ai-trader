@@ -222,12 +222,18 @@ def test_connect_failure_reports_reconnect_and_recovers() -> None:
     )
     attempts = iter([OSError("connect refused"), recovered])
 
+    def connect(*_args: object, **_kwargs: object) -> FakeSocket:
+        attempt = next(attempts)
+        if isinstance(attempt, Exception):
+            raise attempt
+        return attempt
+
     client = CapitalComStreamClient(
         rest,
         ["US100"],
         updates.append,
         on_reconnect=lambda count, reason: reconnects.append((count, reason)),
-        connection_factory=lambda *_args, **_kwargs: next(attempts),
+        connection_factory=connect,
         reconnect_min_seconds=0.01,
         reconnect_max_seconds=0.02,
         sleep=lambda _delay: None,
@@ -247,7 +253,12 @@ def test_no_data_timeout_reports_short_reason_and_retries() -> None:
     current = [datetime(2026, 10, 3, 10, 0, tzinfo=UTC)]
 
     class IdleSocket(FakeSocket):
+        raw = 0
+
         def recv(self, *, timeout: float) -> str:
+            self.raw += 1
+            if self.raw <= 2:
+                return super().recv(timeout=timeout)
             current[0] += timedelta(seconds=6)
             raise TimeoutError
 
@@ -259,6 +270,7 @@ def test_no_data_timeout_reports_short_reason_and_retries() -> None:
         on_reconnect=lambda count, reason: reconnects.append((count, reason)),
         connection_factory=lambda *_args, **_kwargs: socket,
         data_timeout_seconds=5,
+        ping_interval=timedelta(days=30),
         reconnect_min_seconds=0.01,
         reconnect_max_seconds=0.02,
         clock=lambda: current[0],
