@@ -63,8 +63,7 @@ def build_runtime_services(
                         str(k): Decimal(str(v)) for k, v in dict(paper["spread_points"]).items()
                     },
                     slippage_points={
-                        str(k): Decimal(str(v))
-                        for k, v in dict(paper["slippage_points"]).items()
+                        str(k): Decimal(str(v)) for k, v in dict(paper["slippage_points"]).items()
                     },
                 ),
             )
