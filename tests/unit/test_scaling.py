@@ -13,6 +13,7 @@ from trader.scaling.autoscaler import (
     Autoscaler,
     AutoscalerPolicy,
     QueueMetrics,
+    ScalingAction,
     Worker,
 )
 from trader.scaling.queue import Priority, QueueTask, RedisTaskQueue
