@@ -28,6 +28,14 @@ from trader.runtime.factory import (
     build_runtime_components,
 )
 from trader.runtime.feeds import RuntimeFeedAdapters
+from trader.runtime.context import (
+    AccountContextSource,
+    ContextUnavailable,
+    MarketContextSource,
+    RuntimeContextProvider,
+    SizingContextSource,
+    position_source,
+)
 from trader.runtime.services import build_runtime_services
 
 __all__ = [
@@ -47,6 +55,12 @@ __all__ = [
     "PnlLossGuard",
     "ProtectivePositionManager",
     "RuntimeApproval",
+    "RuntimeContextProvider",
+    "AccountContextSource",
+    "ContextUnavailable",
+    "MarketContextSource",
+    "SizingContextSource",
+    "position_source",
     "RuntimeExecutor",
     "RuntimeReconciler",
     "build_runtime_components",

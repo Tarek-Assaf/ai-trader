@@ -142,6 +142,41 @@ class ExecutionJournal:
         except Exception:
             raise JournalError("execution pause reset failed") from None
 
+    def save_snapshot(self, snapshot_id: str, payload: Mapping[str, Any]) -> None:
+        """Persist a normalized account baseline or other runtime snapshot."""
+        if not snapshot_id.strip() or not isinstance(payload, Mapping):
+            raise JournalError("snapshot id and payload are required")
+        table = tables["snapshots"]
+        try:
+            with self._engine.begin() as connection:
+                exists = connection.execute(
+                    select(table.c.id).where(table.c.id == snapshot_id)
+                ).scalar_one_or_none()
+                values = {"id": snapshot_id, "payload": dict(payload)}
+                if exists is None:
+                    connection.execute(insert(table).values(**values))
+                else:
+                    connection.execute(
+                        update(table).where(table.c.id == snapshot_id).values(payload=dict(payload))
+                    )
+        except Exception:
+            raise JournalError("runtime snapshot persistence failed") from None
+
+    def get_snapshot(self, snapshot_id: str) -> Mapping[str, Any] | None:
+        """Read a runtime snapshot without exposing database exceptions."""
+        if not snapshot_id.strip():
+            raise JournalError("snapshot id is required")
+        try:
+            with self._engine.connect() as connection:
+                payload = connection.execute(
+                    select(tables["snapshots"].c.payload).where(
+                        tables["snapshots"].c.id == snapshot_id
+                    )
+                ).scalar_one_or_none()
+            return payload if isinstance(payload, Mapping) else None
+        except Exception:
+            raise JournalError("runtime snapshot read failed") from None
+
     def reserve(self, cycle_id: str, order: OrderRequest) -> bool:
         if not cycle_id or len(cycle_id) > 36 or order.client_order_id != cycle_id:
             raise JournalError("client_order_id must equal the cycle_id (maximum 36 characters)")

@@ -132,24 +132,29 @@ class RuntimeApproval:
         self,
         guardian: RiskGuardian,
         *,
-        context_provider: Callable[[str], GuardianInputs | None] | None = None,
+        context_provider: Callable[..., GuardianInputs | None] | None = None,
     ) -> None:
         self.guardian = guardian
         self._context_provider = context_provider
         self._bound: dict[str, BoundApproval] = {}
 
-    def _context(self, cycle_id: str, supplied: object) -> GuardianInputs | None:
+    def _context(
+        self, cycle_id: str, supplied: object, intent: GraphTradeIntent
+    ) -> GuardianInputs | None:
         value = _inputs(supplied)
         if value is not None:
             return value
         if self._context_provider is not None:
-            return self._context_provider(cycle_id)
+            try:
+                return self._context_provider(cycle_id, intent)
+            except TypeError:
+                return self._context_provider(cycle_id)
         return None
 
     async def evaluate(
         self, intent: GraphTradeIntent, context: object, cycle_id: str
     ) -> GuardianDecision:
-        inputs = self._context(cycle_id, context)
+        inputs = self._context(cycle_id, context, intent)
         if inputs is None or inputs.sizing is None:
             return _reject("guardian_context_or_sizing_missing")
         try:

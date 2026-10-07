@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -97,6 +98,13 @@ def build_runtime_services(
         RuntimeExecutor,
         RuntimeReconciler,
     )
+    from trader.runtime.context import (
+        AccountContextSource,
+        MarketContextSource,
+        RuntimeContextProvider,
+        SizingContextSource,
+        position_source,
+    )
 
     control_source: Any = provided.get("control_source")
     control_writer: Any = provided.get("control_writer")
@@ -123,6 +131,39 @@ def build_runtime_services(
 
     approval_adapter: Any = provided.get("approval")
     order_manager: Any = provided.get("order_manager")
+    context_provider: Any = provided.get("guardian_context_provider")
+    if context_provider is None:
+        account_source = provided.get("account_context_source")
+        if account_source is None:
+            account_source = AccountContextSource(broker, journal, clock=lambda: datetime.now(UTC))
+        market_source = provided.get("market_context_source")
+        if market_source is None and provided.get("recorder") is not None:
+            market_source = MarketContextSource(
+                provided["recorder"],
+                clock=lambda: datetime.now(UTC),
+                stale_after_seconds=float(provided.get("market_stale_after_seconds", 180.0)),
+            )
+        sizing_source = provided.get("sizing_context_source")
+        if sizing_source is None:
+            mapper = provided.get("instrument_mapper")
+            limits = provided.get("sizing_limits")
+            currency = provided.get("account_currency_provider")
+            if mapper is not None and limits is not None and callable(currency):
+                sizing_source = SizingContextSource(
+                    mapper.get,
+                    limits,
+                    account_currency=currency,
+                    quote_rate_provider=provided.get("quote_rate_provider"),
+                )
+        positions_source = provided.get("positions_provider") or position_source(
+            broker, valuation=provided.get("position_valuation")
+        )
+        if callable(account_source) and callable(market_source) and callable(sizing_source):
+            context_provider = RuntimeContextProvider(
+                account_source, market_source, sizing_source, positions_source
+            )
+        else:
+            context_provider = lambda *_args: None
     if order_manager is None:
         from trader.execution.manager import OrderManager
 
@@ -132,7 +173,9 @@ def build_runtime_services(
             weekly_loss = Decimal(str(risk_values["max_weekly_loss_pct"]))
         except (KeyError, TypeError, ValueError):
             raise RuntimeDependencyUnavailable("runtime service unavailable: pnl guard") from None
-        approval = approval_adapter or RuntimeApproval(guardian)
+        approval = approval_adapter or RuntimeApproval(
+            guardian, context_provider=context_provider
+        )
         approval_adapter = approval
         pnl_guard = PnlLossGuard(
             broker,
@@ -200,7 +243,8 @@ def build_runtime_services(
             graph = AgentGraph(
                 llm=llm,
                 audit=audit,
-                guardian=approval_adapter or RuntimeApproval(guardian),
+                guardian=approval_adapter
+                or RuntimeApproval(guardian, context_provider=context_provider),
                 executor=RuntimeExecutor(order_manager),
             )
 
