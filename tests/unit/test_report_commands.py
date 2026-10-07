@@ -102,4 +102,4 @@ def test_scheduled_report_includes_llm_cost_from_usage_summary() -> None:
     )
     document = runner.render("daily")
     assert document is not None
-    assert "1.2345" in document.plain_text
+    assert "Spend: USD 1.23" in document.plain_text
