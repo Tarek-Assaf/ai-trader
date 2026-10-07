@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 200,
+  "revision": 202,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2608,7 +2608,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-08",
         "R-12",
@@ -2633,8 +2633,14 @@
         "tests/unit/test_soak.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/soak/monitor.py",
+        "src/trader/soak/__init__.py",
+        "src/trader/reports/commands.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_soak.py"
+      ],
+      "completion_note": "Added a broker/LLM-independent SoakMonitor that records daily cycles, intents, Guardian rejections, orders, fills, reconciliation mismatches, alerts, uptime, restarts, LLM spend and equity/drawdown. All seven Phase 8 incident rules emit an alert, write sanitized JSON evidence and reset the four-week clock with a post-mortem requirement. Wired /soak as a deterministic command and added simulated incident, secret-redaction and summary tests. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders."
     },
     {
       "id": "T-093",
@@ -2659,7 +2665,8 @@
         "Promotion follows strategy_lab.yaml from lab Gate 1 through paper to demo Gate 2",
         "Gate 2 requires four weeks and 200 demo trades",
         "Promotion Gate records every stage change and Risk Guardian enforces the cap",
-        "No code path reaches stage 3 or 4 without live trading enabled and a recorded gate"
+        "No code path reaches stage 3 or 4 without live trading enabled and a recorded gate",
+        "SoakMonitor (T-092) is fed by runtime events (cycles, intents, Guardian rejections, orders, fills, reconciliation, restarts, uptime, spend, equity) and evaluates the incident rules each cycle; its state and four-week clock persist in the journal across restarts; evidence is written under /workspace (SOAK_EVIDENCE_DIR), never relative to the working directory"
       ],
       "deliverables": [
         "src/trader/lab/promotion.py",
@@ -5311,6 +5318,28 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "report wiring or scheduler changes"
+    },
+    {
+      "id": "V-218",
+      "subject": "T-092 soak monitor and incident rules",
+      "method": "Ran bundled Python compileall, git diff --check and a direct SoakMonitor smoke; reviewed all seven incident rules, evidence sanitization, clock reset and /soak command wiring.",
+      "result": "pass",
+      "evidence": "src/trader/soak/monitor.py; src/trader/reports/commands.py; src/trader/api/app.py; tests/unit/test_soak.py",
+      "review_notes": "Focused pytest, Ruff, mypy and make check are unavailable in this desktop runtime. Evidence stores observations only after key/value sanitization; no external calls were made.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "soak incident rules or runtime command wiring changes"
+    },
+    {
+      "id": "V-219",
+      "subject": "T-092 review: soak monitor and incident rules",
+      "method": "Read monitor.py and tests; ruff; merged main into the stale branch; CI quality authoritative.",
+      "result": "pass",
+      "evidence": "src/trader/soak/monitor.py; src/trader/reports/commands.py; src/trader/api/app.py; tests/unit/test_soak.py",
+      "review_notes": "Module meets T-092 criteria. Gap carried into T-093: the monitor is not yet fed by runtime events, its state is in memory only (a restart would silently reset the four-week clock) and the default evidence dir is relative to cwd.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "soak monitor or incident rules change"
     }
   ],
   "blockers": [
@@ -9086,6 +9115,37 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-091 passes (V-216). Scheduler retries failed snapshots, chart test fixed, ledger-cost test added. Codex: branch from origin/main and take T-092."
+    },
+    {
+      "revision": 201,
+      "ts": "2026-10-07T13:20:00Z",
+      "agent": "codex",
+      "action": "complete_t092_soak_monitor",
+      "task_ids": [
+        "T-092"
+      ],
+      "files_changed": [
+        "src/trader/soak/__init__.py",
+        "src/trader/soak/monitor.py",
+        "src/trader/reports/commands.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_soak.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-092 soak metrics and seven incident rules with secret-free evidence, four-week clock reset and /soak summary command. Compileall, diff-check and direct smoke pass; no Pod/API calls, credentials or orders. Handing T-092 to Claude for review."
+    },
+    {
+      "revision": 202,
+      "ts": "2026-10-07T13:45:00Z",
+      "agent": "claude",
+      "action": "review_t092_pass",
+      "task_ids": [
+        "T-092"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-092 passes. Soak monitor module and /soak command accepted; runtime feed, persistence and /workspace evidence path added to T-093 criteria. Codex: branch from origin/main and take T-093."
     }
   ],
   "project_summary": "T-091 review cycle 2 is ready for Claude: production report providers, persisted schedule execution and Telegram/SMTP delivery wiring are implemented with fail-closed tests."
