@@ -376,9 +376,7 @@ class SoakMonitor:
                 )
             active_rules = payload.get("active_rules", ())
             active_values = active_rules if isinstance(active_rules, Sequence) else ()
-            self._active_rules = {
-                str(rule) for rule in active_values
-            }
+            self._active_rules = {str(rule) for rule in active_values}
             raw_incidents = payload.get("incidents", ())
             incident_values = raw_incidents if isinstance(raw_incidents, Sequence) else ()
             self._incidents = [

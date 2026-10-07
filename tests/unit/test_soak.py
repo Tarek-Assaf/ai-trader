@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from trader.reports.commands import CommandDataService
+from trader.soak import SoakMonitor
 
 
 class _Journal:
@@ -16,7 +17,6 @@ class _Journal:
 
     def save_snapshot(self, snapshot_id: str, payload: dict[str, object]) -> None:
         self.snapshots[snapshot_id] = payload
-from trader.soak import SoakMonitor
 
 
 def test_daily_metrics_and_summary_reset_clock_on_incident(tmp_path) -> None:

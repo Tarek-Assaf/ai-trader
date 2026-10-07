@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 205,
+  "turn": "codex",
+  "revision": 206,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -151,7 +151,8 @@
         "T-090",
         "T-091",
         "T-092",
-        "T-093"
+        "T-093",
+        "T-099"
       ]
     },
     {
@@ -194,7 +195,8 @@
         "T-095",
         "T-096",
         "T-097",
-        "T-098"
+        "T-098",
+        "T-099"
       ]
     },
     {
@@ -270,7 +272,8 @@
         "T-033",
         "T-087",
         "T-091",
-        "T-092"
+        "T-092",
+        "T-099"
       ]
     },
     {
@@ -2648,7 +2651,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -2897,6 +2900,35 @@
         "3. If the recorder cannot be reached, keep the runtime running but rejecting (alert once), never defaulting.",
         "Claude fixes: the branch was based before PR #79 and would have reverted the persisted PnL baselines and executor labels; merged origin/main (kept persisted baselines, order_invalid label, e2e fixture), removed the duplicate RuntimeContextProvider in approval.py and the obsolete broker-based test, replaced a lambda with a def (E731). Always branch from origin/main."
       ]
+    },
+    {
+      "id": "T-099",
+      "title": "Feed soak incident rules from runtime safety components",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-08",
+        "R-11",
+        "R-18"
+      ],
+      "depends_on": [
+        "T-093"
+      ],
+      "acceptance_criteria": [
+        "SoakMonitor.evaluate receives real observations: ProtectivePositionManager reports open_position_without_broker_stop, OrderManager/executor reports order_without_server_side_stop, PnlLossGuard reports daily_loss_pct and limit, the reconciler reports mismatch age, the control channel reports kill/pause requested vs honored, and a log scan feeds secret_found_in_logs",
+        "Each rule has a runtime-level test that triggers a simulated breach and asserts an alert, a secret-free evidence file and a clock reset",
+        "No observation is invented: a missing source skips that rule and logs one warning"
+      ],
+      "deliverables": [
+        "src/trader/runtime",
+        "src/trader/soak",
+        "tests/unit/test_soak.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Added by Claude at T-093 review: counters are fed but incident rules still get empty observations."
     }
   ],
   "decisions": [
@@ -5384,6 +5416,17 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "stage-gate config, runtime soak feed or journal persistence changes"
+    },
+    {
+      "id": "V-223",
+      "subject": "T-093 review cycle 2: stage gates, soak persistence and runtime feed",
+      "method": "Read diff against review_notes; lint fix in test_soak imports; CI quality authoritative.",
+      "result": "pass",
+      "evidence": "src/trader/lab/promotion.py; src/trader/soak/monitor.py; src/trader/runtime/composition.py; tests/unit/test_strategy_promotion.py; tests/unit/test_soak.py",
+      "review_notes": "Gates tested against real strategy_lab.yaml; soak counters and four-week clock persist in the journal. Gap moved to new task T-099: incident rules still receive empty observations.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "promotion gate or soak wiring changes"
     }
   ],
   "blockers": [
@@ -9239,6 +9282,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed real strategy_lab gate requirements and wired SoakMonitor runtime event feed plus journal persistence/restart restore. Handing T-093 to Claude for review."
+    },
+    {
+      "revision": 206,
+      "ts": "2026-10-07T14:30:00Z",
+      "agent": "claude",
+      "action": "review_t093_pass",
+      "task_ids": [
+        "T-093",
+        "T-099"
+      ],
+      "files_changed": [
+        "tests/unit/test_soak.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-093 passes. New T-099 feeds soak incident rules from runtime safety components. Codex: branch from origin/main and take T-094 then T-099."
     }
   ],
   "project_summary": "T-093 review fixes complete: real Gate 2 config thresholds and requirements are tested, and SoakMonitor runtime persistence/feed wiring is fail-closed."
