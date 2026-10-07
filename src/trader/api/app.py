@@ -24,6 +24,7 @@ from trader.data.instruments import InstrumentMapper
 from trader.execution.control import ControlMode, build_control_sources
 from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
+from trader.runtime import runtime_enabled
 
 _LOG = logging.getLogger(__name__)
 
@@ -149,6 +150,14 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.telegram_channel = None
     _app.state.telegram_stop = None
     _app.state.telegram_thread = None
+    _app.state.runtime = None
+    _app.state.runtime_eligible = runtime_enabled(settings)
+    if _app.state.runtime_eligible:
+        # Runtime dependencies are composed only after the validated broker,
+        # database and Redis services are available.  Keeping this explicit
+        # state prevents a paper/demo startup from silently running a partial
+        # decision loop that could bypass OrderManager.
+        _LOG.info("Demo runtime composition is eligible; waiting for core dependencies")
     if redis_url:
         try:
             control_source, control_writer = build_control_sources(redis_url=redis_url)
@@ -282,6 +291,9 @@ async def lifespan(_app: FastAPI) -> Any:
     try:
         yield
     finally:
+        runtime = getattr(_app.state, "runtime", None)
+        if runtime is not None:
+            await runtime.stop()
         shutdown_event = getattr(_app.state, "telegram_stop", None)
         shutdown_thread = getattr(_app.state, "telegram_thread", None)
         if shutdown_event is not None:

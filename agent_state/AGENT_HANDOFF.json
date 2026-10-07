@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 176,
+  "turn": "claude",
+  "revision": 177,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-070 passed (V-191); its flaky shared-session-cache fixture follow-up is ready for review. Pod redeploy from the newest main image is with the owner (Q-041); then the Telegram smoke test. T-044/T-017 remain blocked on B-007, and T-060 remains blocked on Pod access.",
+    "summary": "Phase 8 is owner-approved. T-090 runtime composition is complete and handed to Claude for review; T-091..T-094 remain queued in dependency order. Demo-only, mock-LLM-first, fail-safe invariants remain mandatory.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -56,7 +56,8 @@
       "covered_by": [
         "T-030",
         "T-031",
-        "T-087"
+        "T-087",
+        "T-091"
       ]
     },
     {
@@ -79,7 +80,8 @@
         "T-051",
         "T-052",
         "T-054",
-        "T-084"
+        "T-084",
+        "T-093"
       ]
     },
     {
@@ -90,7 +92,8 @@
       "covered_by": [
         "T-053",
         "T-054",
-        "T-084"
+        "T-084",
+        "T-093"
       ]
     },
     {
@@ -116,7 +119,8 @@
       "status": "not_started",
       "covered_by": [
         "T-020",
-        "T-022"
+        "T-022",
+        "T-093"
       ]
     },
     {
@@ -143,7 +147,11 @@
         "T-025",
         "T-028",
         "T-085",
-        "T-086"
+        "T-086",
+        "T-090",
+        "T-091",
+        "T-092",
+        "T-093"
       ]
     },
     {
@@ -165,7 +173,8 @@
         "C-003",
         "T-010",
         "T-011",
-        "T-024"
+        "T-024",
+        "T-090"
       ]
     },
     {
@@ -175,7 +184,9 @@
       "status": "not_started",
       "covered_by": [
         "T-023",
-        "T-024"
+        "T-024",
+        "T-090",
+        "T-093"
       ]
     },
     {
@@ -187,7 +198,10 @@
         "T-027",
         "T-031",
         "T-034",
-        "T-087"
+        "T-087",
+        "T-090",
+        "T-091",
+        "T-092"
       ]
     },
     {
@@ -196,7 +210,8 @@
       "notes": "",
       "status": "not_started",
       "covered_by": [
-        "T-032"
+        "T-032",
+        "T-091"
       ]
     },
     {
@@ -206,7 +221,8 @@
       "status": "not_started",
       "covered_by": [
         "T-005",
-        "T-060"
+        "T-060",
+        "T-092"
       ]
     },
     {
@@ -244,7 +260,9 @@
       "covered_by": [
         "T-030",
         "T-033",
-        "T-087"
+        "T-087",
+        "T-091",
+        "T-092"
       ]
     },
     {
@@ -255,7 +273,8 @@
       "covered_by": [
         "C-001",
         "C-100",
-        "T-005"
+        "T-005",
+        "T-090"
       ]
     },
     {
@@ -264,7 +283,8 @@
       "notes": "",
       "status": "not_started",
       "covered_by": [
-        "T-004"
+        "T-004",
+        "T-092"
       ]
     },
     {
@@ -282,7 +302,10 @@
         "T-028",
         "T-043",
         "T-052",
-        "T-086"
+        "T-086",
+        "T-090",
+        "T-092",
+        "T-093"
       ]
     },
     {
@@ -292,7 +315,8 @@
       "status": "not_started",
       "covered_by": [
         "T-003",
-        "T-070"
+        "T-070",
+        "T-094"
       ]
     },
     {
@@ -311,7 +335,8 @@
         "T-009",
         "T-018",
         "T-019",
-        "T-081"
+        "T-081",
+        "T-094"
       ]
     },
     {
@@ -2466,6 +2491,182 @@
         "V-184"
       ],
       "completion_note": "Implemented Telegram runtime wiring with mock-by-default ChatRouter, guarded opt-in Anthropic budget path, daemon long-poll startup/shutdown, owner control commands, command menu and safe smoke scripts. Added production account normalization reread forwarding and wiring coverage. Focused runtime/reconciliation tests: 43 passed; Ruff, format, mypy, and compile checks pass. No Pod, broker, or order actions were performed."
+    },
+    {
+      "id": "T-090",
+      "title": "Runtime composition for the demo core pod",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-08",
+        "R-10",
+        "R-11",
+        "R-12",
+        "R-19",
+        "R-21"
+      ],
+      "depends_on": [
+        "T-026",
+        "T-027",
+        "T-034",
+        "T-087"
+      ],
+      "acceptance_criteria": [
+        "FastAPI lifespan starts the runtime only for ROLE all/core with paper/auto demo settings",
+        "Leader lock gates decision cycles and losing the lease stops new entries and alerts",
+        "Schedule triggers produce deterministic audit cycles with the mock LLM and paper broker",
+        "Component failures, stale data, reconciliation mismatches and broker errors fail safe with backoff",
+        "Pause, stop and kill remain available when Redis, the LLM or database is unavailable"
+      ],
+      "deliverables": [
+        "src/trader/runtime",
+        "tests/unit/test_runtime.py",
+        "tests/invariants/test_runtime_safety.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "src/trader/runtime/__init__.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime.py",
+        "tests/invariants/test_runtime_safety.py",
+        "V-194"
+      ],
+      "completion_note": "Added a demo-only runtime composition boundary with Redis lease gating, pause/kill controls, bounded dependency backoff, fail-safe NO_TRADE results, and FastAPI lifespan eligibility/shutdown wiring. Runtime orchestration never calls a broker directly; the injected decision loop remains the OrderManager integration point. Deterministic unit and invariant tests cover startup gating, control modes, dependency failure, and broker-boundary safety."
+    },
+    {
+      "id": "T-091",
+      "title": "Real command data and scheduled reports",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-01",
+        "R-08",
+        "R-12",
+        "R-13",
+        "R-18"
+      ],
+      "depends_on": [
+        "T-087"
+      ],
+      "acceptance_criteria": [
+        "Status, positions, pnl, risk, report and chart commands return fixture-backed data",
+        "Commands still answer when the LLM raises",
+        "Daily, weekly and monthly reports use the scheduler and include ledger token cost",
+        "Missing SMTP downgrades to Telegram with one warning and no error loop",
+        "Secret and chat-id redaction is covered by log-capture tests"
+      ],
+      "deliverables": [
+        "src/trader/reports",
+        "src/trader/channels",
+        "tests/unit/test_reports.py",
+        "tests/unit/test_telegram_runtime.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-092",
+      "title": "Soak monitor and incident rules",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-08",
+        "R-12",
+        "R-14",
+        "R-18",
+        "R-20",
+        "R-21"
+      ],
+      "depends_on": [
+        "T-090",
+        "T-091"
+      ],
+      "acceptance_criteria": [
+        "Daily soak metrics record cycles, intents, Guardian rejections, orders, fills, mismatches, alerts, uptime, restarts, spend and equity/drawdown",
+        "Every listed incident rule emits an alert and secret-free JSON evidence",
+        "Soak summary reports days, incidents and the four-week clock",
+        "Each incident resets the clock and records the post-mortem requirement"
+      ],
+      "deliverables": [
+        "src/trader/soak",
+        "docs/evidence/soak",
+        "tests/unit/test_soak.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-093",
+      "title": "Strategy stage gates in demo",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-06",
+        "R-08",
+        "R-11",
+        "R-21"
+      ],
+      "depends_on": [
+        "T-090",
+        "T-092"
+      ],
+      "acceptance_criteria": [
+        "Promotion follows strategy_lab.yaml from lab Gate 1 through paper to demo Gate 2",
+        "Gate 2 requires four weeks and 200 demo trades",
+        "Promotion Gate records every stage change and Risk Guardian enforces the cap",
+        "No code path reaches stage 3 or 4 without live trading enabled and a recorded gate"
+      ],
+      "deliverables": [
+        "src/trader/lab/promotion.py",
+        "src/trader/risk/guardian.py",
+        "tests/unit/test_strategy_promotion.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-094",
+      "title": "Optional scaling wiring and RunPod check",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-22",
+        "R-23"
+      ],
+      "depends_on": [
+        "T-070",
+        "T-090"
+      ],
+      "acceptance_criteria": [
+        "Autoscaler is behind scaling.enabled and remains disabled by default",
+        "Scaling is wired in the core pod only",
+        "RunPod REST list response shape is verified with one read-only call and recorded as evidence",
+        "Enabling the autoscaler remains owner-gated by the hourly cap"
+      ],
+      "deliverables": [
+        "src/trader/runtime",
+        "src/trader/scaling",
+        "tests/unit/test_runtime_scaling.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -4634,6 +4835,17 @@
       "validated_by": "claude",
       "date": "2026-10-06",
       "reverify_if": "the Telegram channel, settings aliases or Pod image change materially"
+    },
+    {
+      "id": "V-194",
+      "subject": "T-090 demo runtime composition safety and lifecycle",
+      "method": "Reviewed the injected runtime composition, FastAPI eligibility gate and shutdown path; compiled runtime/app/tests with bundled Python, ran git diff --check, and verified the runtime source contains no direct broker/order submission calls.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/composition.py; src/trader/api/app.py; tests/unit/test_runtime.py; tests/invariants/test_runtime_safety.py; bundled Python compileall; git diff --check",
+      "review_notes": "Focused pytest, ruff/mypy and make are unavailable in this desktop runtime. Claude/CI should run the focused test and repository quality checks. No Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "runtime composition, FastAPI lifespan wiring, or execution boundary changes"
     }
   ],
   "blockers": [
@@ -8000,6 +8212,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed the session-cache test fixture (V-192 pass; fixed one over-long line). Recorded the live Telegram smoke as pass (V-193) on the owner confirmation, resolved B-008 and answered Q-041. Next for Codex: add T-090..T-094 from docs/specs/phase8.md only if the owner wants Phase 8 started; otherwise idle."
+    },
+    {
+      "revision": 177,
+      "ts": "2026-10-07T04:48:36Z",
+      "agent": "codex",
+      "action": "complete_t090_runtime_composition",
+      "task_ids": [
+        "T-090"
+      ],
+      "files_changed": [
+        "src/trader/runtime/__init__.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime.py",
+        "tests/invariants/test_runtime_safety.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed owner-approved T-090 runtime composition for the demo core pod. Added lease/control gating, deterministic cycle orchestration, bounded fail-safe backoff, explicit execution-boundary composition, and FastAPI eligibility/shutdown wiring. Bundled Python compileall and git diff --check pass; focused pytest and make quality checks are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders. Handing T-090 to Claude for review."
     }
   ],
   "project_summary": "T-070 passed review (V-191); the flaky Capital.com session-cache fixture follow-up is ready for Claude review. T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-087 runtime wiring passed review (V-184); the Pod names-only check passed but its smoke script is missing from the running image (V-186/B-008). T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
