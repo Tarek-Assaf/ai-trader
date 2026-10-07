@@ -534,7 +534,7 @@ def _build_report_snapshot_provider(
             if r_values
             else Decimal(0)
         )
-        issues = ()
+        issues: tuple[str, ...] = ()
         reconciliation = getattr(pnl, "reconciliation", None)
         if getattr(reconciliation, "alert_required", False):
             issues = ("P&L reconciliation is outside tolerance",)
@@ -671,8 +671,8 @@ class _ReportScheduler:
                 target += timedelta(days=(weekdays[day] - target.weekday()) % 7)
             elif period == "monthly":
                 try:
-                    day = int(config.get("day_of_month"))
-                    target = target.replace(day=day)
+                    day_of_month = int(config.get("day_of_month") or 0)
+                    target = target.replace(day=day_of_month)
                 except (TypeError, ValueError):
                     continue
             output.append((period, target))
