@@ -58,7 +58,8 @@ def _start_runtime_if_configured(
         if missing:
             raise RuntimeError(f"runtime composition is incomplete: {', '.join(missing)}")
         schedule = configs.get("schedule")
-        schedule_values = schedule.model_dump() if hasattr(schedule, "model_dump") else schedule
+        dump = getattr(schedule, "model_dump", None)
+        schedule_values = dump() if callable(dump) else schedule
         cycle_source = (
             ScheduleCycleSource.from_config(schedule_values)
             if isinstance(schedule_values, dict)
