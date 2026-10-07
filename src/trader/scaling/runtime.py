@@ -95,7 +95,7 @@ def _number(values: Mapping[str, Any], key: str, default: float) -> float:
 def build_core_autoscaler(
     settings: object,
     configs: Mapping[str, object],
-    redis_client: object,
+    redis_client: Any,
     *,
     api: RunPodWorkerApi | None = None,
 ) -> CoreAutoscaler | None:
