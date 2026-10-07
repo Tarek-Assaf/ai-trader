@@ -276,7 +276,11 @@ async def lifespan(_app: FastAPI) -> Any:
         _app.state.runtime_services = build_runtime_services(
             settings,
             configs,
-            overrides=getattr(_app.state, "runtime_service_overrides", None),
+            overrides={
+                "control_source": _app.state.execution_control_source,
+                "control_writer": _app.state.execution_control_writer,
+                **(getattr(_app.state, "runtime_service_overrides", None) or {}),
+            },
         )
         for source_name in ("recorder", "session_calendar", "news_calendar"):
             setattr(_app.state, source_name, _app.state.runtime_services.get(source_name))

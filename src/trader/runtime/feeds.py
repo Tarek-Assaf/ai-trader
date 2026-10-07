@@ -35,9 +35,9 @@ class RuntimeFeedAdapters:
         """Forward a 1M close and the configured 3M/5M derived boundaries."""
         minute = at.minute
         self.on_bar_close("1M", bar_id, at)
-        if minute % 3 == 0:
+        if (minute + 1) % 3 == 0:
             self.on_bar_close("3M", bar_id, at)
-        if minute % 5 == 0:
+        if (minute + 1) % 5 == 0:
             self.on_bar_close("5M", bar_id, at)
 
     def on_session_open(self, session_id: str, at: datetime) -> None:
