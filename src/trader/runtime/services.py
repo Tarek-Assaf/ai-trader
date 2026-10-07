@@ -193,7 +193,7 @@ def build_runtime_services(
                         raise ContextUnavailable("account currency is unavailable")
                     return value
 
-            if mapper is not None and callable(currency):
+            if mapper is not None and limits is not None and callable(currency):
                 sizing_source = SizingContextSource(
                     mapper.get,
                     limits,
