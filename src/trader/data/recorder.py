@@ -158,11 +158,13 @@ class CapitalDataRecorder:
         status_path: str | Path,
         *,
         clock: Any = lambda: datetime.now(UTC),
+        feed_adapters: Any | None = None,
     ) -> None:
         self._store = store
         self._symbols = dict(symbols_by_epic)
         self._status_path = Path(status_path)
         self._clock = clock
+        self._feed_adapters = feed_adapters
         self._pending: dict[tuple[str, datetime, str], _BufferedUpdate] = {}
         self._last_tick_by_epic: dict[str, datetime] = {}
         self._started_at = self._clock().astimezone(UTC)
@@ -214,6 +216,24 @@ class CapitalDataRecorder:
             item.update.timestamp.astimezone(UTC).replace(second=0, microsecond=0)
             for item in updates
         ).isoformat()
+        adapter = self._feed_adapters
+        derived_callback = getattr(adapter, "on_closed_bar", None)
+        callback = derived_callback
+        if not callable(callback):
+            callback = getattr(adapter, "on_bar_close", None)
+        if callable(callback):
+            for item in updates:
+                stamp = item.update.timestamp.astimezone(UTC).replace(second=0, microsecond=0)
+                bar_id = f"{item.update.epic}:{stamp.isoformat()}"
+                if callable(derived_callback):
+                    callback(bar_id, stamp)
+                else:
+                    callback("1M", bar_id, stamp)
+
+    def register_feed_adapters(self, adapters: Any | None) -> None:
+        """Attach the shared runtime trigger adapter after construction."""
+        with self._lock:
+            self._feed_adapters = adapters
 
     def on_update(self, update: OhlcUpdate) -> None:
         """Keep partial values in memory until their minute closes or REST confirms it."""

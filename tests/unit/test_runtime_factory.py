@@ -8,7 +8,11 @@ from types import SimpleNamespace
 import pytest
 
 from trader.runtime import RuntimeFactories, RuntimeFeedAdapters, ScheduleCycleSource
-from trader.runtime.factory import build_runtime_components
+from trader.runtime.factory import (
+    OrderManagerDecisionLoop,
+    build_default_factories,
+    build_runtime_components,
+)
 
 
 class FakeRedis:
@@ -74,3 +78,32 @@ def test_feed_adapters_emit_stable_ids_and_alert_missing_feed() -> None:
         "news:cpi-2026-01",
     ]
     assert alerts == ["runtime_feed_unavailable:calendar"]
+
+
+def test_default_factories_build_paper_broker_and_audit_cycle() -> None:
+    audit_rows: list[object] = []
+    services = {
+        "guardian": object(),
+        "order_manager": object(),
+        "reconciler": object(),
+        "report_scheduler": object(),
+        "settings_service": object(),
+        "redis_client": lambda _settings: FakeRedis(),
+        "audit_writer": SimpleNamespace(append=audit_rows.append),
+    }
+    configured = {
+        "paper_execution": {
+            "starting_cash": "10000",
+            "currency": "USD",
+            "spread_points": {"NAS100": "1"},
+            "slippage_points": {"NAS100": "0.5"},
+        }
+    }
+    built = build_default_factories(settings(), configured, services=services)
+    components = build_runtime_components(settings(), configured, SimpleNamespace(), built)
+    assert components.missing_required() == ()
+    loop = OrderManagerDecisionLoop(object(), audit_writer=services["audit_writer"])
+    cycle = SimpleNamespace(event_id="cycle-1")
+    result = loop.run(cycle)
+    assert result.action == "NO_TRADE"
+    assert audit_rows[0].cycle_id == "cycle-1"

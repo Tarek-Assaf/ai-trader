@@ -24,7 +24,15 @@ from trader.data.instruments import InstrumentMapper
 from trader.execution.control import ControlMode, build_control_sources
 from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
-from trader.runtime import RuntimeComponents, ScheduleCycleSource, build_runtime, runtime_enabled
+from trader.runtime import (
+    RuntimeComponents,
+    RuntimeFeedAdapters,
+    ScheduleCycleSource,
+    build_default_factories,
+    build_runtime,
+    build_runtime_services,
+    runtime_enabled,
+)
 from trader.runtime.factory import RuntimeFactories, build_runtime_components
 
 _LOG = logging.getLogger(__name__)
@@ -49,6 +57,16 @@ def _start_runtime_if_configured(
     control_source = app.state.execution_control_source
     factory = getattr(app.state, "runtime_components_factory", None)
     factories = getattr(app.state, "runtime_factories", None)
+    if factory is None and not isinstance(factories, RuntimeFactories):
+        try:
+            factories = build_default_factories(
+                settings,
+                configs,
+                services=getattr(app.state, "runtime_services", None),
+            )
+            app.state.runtime_factories = factories
+        except Exception as exc:
+            _LOG.warning("runtime default composition unavailable (%s)", type(exc).__name__)
     if factory is None and isinstance(factories, RuntimeFactories):
 
         def factory(current_settings: EnvironmentSettings, current_configs: dict[str, Any]) -> Any:
@@ -77,6 +95,19 @@ def _start_runtime_if_configured(
             if isinstance(schedule_values, dict)
             else None
         )
+        if cycle_source is not None:
+            # Recorder, session-calendar and news workers share this exact
+            # source; adapters only enqueue stable trigger IDs and never trade.
+            app.state.runtime_cycle_source = cycle_source
+            app.state.runtime_feed_adapters = RuntimeFeedAdapters(
+                cycle_source,
+                alert=lambda message: _LOG.error("runtime feed alert: %s", message),
+            )
+            for source_name in ("recorder", "session_calendar", "news_calendar"):
+                source = getattr(app.state, source_name, None)
+                register = getattr(source, "register_feed_adapters", None)
+                if callable(register):
+                    register(app.state.runtime_feed_adapters)
         runtime = build_runtime(
             components=components,
             control_source=control_source,
@@ -213,6 +244,10 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.telegram_stop = None
     _app.state.telegram_thread = None
     _app.state.runtime = None
+    _app.state.runtime_cycle_source = None
+    _app.state.runtime_feed_adapters = None
+    _app.state.runtime_services = None
+    _app.state.runtime_service_overrides = None
     _app.state.runtime_eligible = runtime_enabled(settings)
     if _app.state.runtime_eligible:
         # Runtime dependencies are composed only after the validated broker,
@@ -237,6 +272,18 @@ async def lifespan(_app: FastAPI) -> Any:
         volume_config_dir=volume_dir if volume_dir.is_dir() else None,
         baked_ceilings_path=baked_ceilings,
     )
+    try:
+        _app.state.runtime_services = build_runtime_services(
+            settings,
+            configs,
+            overrides=getattr(_app.state, "runtime_service_overrides", None),
+        )
+        for source_name in ("recorder", "session_calendar", "news_calendar"):
+            setattr(_app.state, source_name, _app.state.runtime_services.get(source_name))
+    except Exception as exc:
+        # Keep controls available while recording one clear fail-safe alert;
+        # _start_runtime_if_configured will not compose a partial runtime.
+        _LOG.error("runtime alert: dependencies unavailable (%s)", type(exc).__name__)
     _start_runtime_if_configured(_app, settings, configs)
     runtime = getattr(_app.state, "runtime", None)
     if runtime is not None:
