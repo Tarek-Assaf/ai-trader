@@ -69,9 +69,7 @@ class CoreAutoscaler:
             QueueMetrics(
                 depth=depth,
                 oldest_task_age_seconds=oldest,
-                hourly_spend_usd=(
-                    None if hourly_spend is None else max(0.0, float(hourly_spend))
-                ),
+                hourly_spend_usd=(None if hourly_spend is None else max(0.0, float(hourly_spend))),
                 pressure_since=self._pressure_since,
             ),
             workers,

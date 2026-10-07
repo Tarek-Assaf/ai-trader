@@ -114,8 +114,6 @@ def test_core_autoscaler_sums_managed_cost_and_blocks_unknown_cost() -> None:
         ScalingAction(Action.TERMINATE, "w1", "hourly spend cap reached"),
         ScalingAction(Action.TERMINATE, "w2", "hourly spend cap reached"),
     ]
-    workers[0] = Worker(
-        "w1", role="worker", tags=frozenset({"managed_by=ai-trader-autoscaler"})
-    )
+    workers[0] = Worker("w1", role="worker", tags=frozenset({"managed_by=ai-trader-autoscaler"}))
     blocked = runtime.tick()
     assert blocked == [ScalingAction(Action.NONE, reason="hourly spend unknown; scaling blocked")]

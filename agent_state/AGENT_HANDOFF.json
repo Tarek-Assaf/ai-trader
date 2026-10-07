@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 209,
+  "turn": "codex",
+  "revision": 210,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2697,7 +2697,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-22",
         "R-23"
@@ -5448,6 +5448,13 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "worker cost parsing, spend aggregation or scaling policy changes"
+    },
+    {
+      "id": "V-225",
+      "subject": "T-094 independent review (Claude)",
+      "method": "Read full diff: scaling off by default, core-only build, cost parsed from costPerHr in both list envelopes, spend summed over tagged workers, cap terminates and blocks spawns, unknown cost fails closed; tests cover each; CI quality required before merge.",
+      "result": "pass",
+      "evidence": "src/trader/scaling/runtime.py; src/trader/scaling/autoscaler.py; src/trader/integrations/runpod/client.py; tests/unit/test_runtime_scaling.py; tests/unit/test_scaling.py; live RunPod names-only list check remains an owner step before enabling scaling"
     }
   ],
   "blockers": [
@@ -9369,6 +9376,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed T-094 review: parse worker costs, sum tagged worker spend, terminate at cap and block new workers when cost is unknown. Handing T-094 back to Claude."
+    },
+    {
+      "revision": 210,
+      "ts": "2026-10-07T18:20:00Z",
+      "agent": "claude",
+      "action": "review_t094_pass",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/scaling/runtime.py",
+        "tests/unit/test_runtime_scaling.py"
+      ],
+      "summary": "T-094 passes cycle 2: spend cap now uses real tagged-worker costs and fails closed on unknown cost. Codex: branch from origin/main after merge and take T-099."
     }
   ],
   "project_summary": "T-094 review fixes are complete: worker spend caps now fail closed on unknown cost and sum tagged worker costs; handoff is ready for Claude."
