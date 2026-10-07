@@ -22,6 +22,9 @@ def test_service_bundle_accepts_fixture_dependencies_and_graph() -> None:
         "report_scheduler": sentinel,
         "settings_service": sentinel,
         "agent_graph_builder": lambda *_args: sentinel,
+        "control_source": sentinel,
+        "control_writer": sentinel,
+        "redis_client": sentinel,
     }
     settings = SimpleNamespace(database_url=None)
     result = build_runtime_services(settings, {}, overrides=values)
@@ -60,6 +63,26 @@ def test_no_service_overrides_builds_real_paper_services() -> None:
         },
         "schedule": {},
     }
-    result = build_runtime_services(settings, configs, overrides={"redis_client": _Redis()})
+    result = build_runtime_services(
+        settings,
+        configs,
+        overrides={
+            "redis_client": _Redis(),
+            "control_source": object(),
+            "control_writer": object(),
+        },
+    )
     assert result["order_manager"].__class__.__name__ == "OrderManager"
     assert result["broker"].__class__.__name__ == "PaperBroker"
+
+
+def test_missing_control_channel_keeps_runtime_stopped() -> None:
+    import pytest
+
+    from trader.runtime import RuntimeDependencyUnavailable
+
+    settings = SimpleNamespace(
+        redis_url=SecretStr("redis://unused"), database_url=SecretStr("sqlite://")
+    )
+    with pytest.raises(RuntimeDependencyUnavailable):
+        build_runtime_services(settings, {}, overrides={"redis_client": _Redis()})

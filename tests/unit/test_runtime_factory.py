@@ -84,9 +84,7 @@ def test_closed_bar_forwarding_uses_bar_open_boundaries() -> None:
     source = ScheduleCycleSource()
     feeds = RuntimeFeedAdapters(source)
     for minute in (2, 3, 4, 5):
-        feeds.on_closed_bar(
-            f"bar-{minute}", datetime(2026, 1, 1, 0, minute, tzinfo=UTC)
-        )
+        feeds.on_closed_bar(f"bar-{minute}", datetime(2026, 1, 1, 0, minute, tzinfo=UTC))
     ids = []
     while source.pending:
         ids.append(source.next_cycle().event_id)

@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 187,
+  "turn": "codex",
+  "revision": 188,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -176,7 +176,8 @@
         "T-024",
         "T-090",
         "T-095",
-        "T-096"
+        "T-096",
+        "T-097"
       ]
     },
     {
@@ -190,7 +191,8 @@
         "T-090",
         "T-093",
         "T-095",
-        "T-096"
+        "T-096",
+        "T-097"
       ]
     },
     {
@@ -280,7 +282,8 @@
         "T-005",
         "T-090",
         "T-095",
-        "T-096"
+        "T-096",
+        "T-097"
       ]
     },
     {
@@ -2728,7 +2731,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-10",
         "R-11",
@@ -2759,7 +2762,40 @@
         "V-204"
       ],
       "completion_note": "Addressed V-203: build_runtime_services now constructs the Redis client, SQLAlchemy audit/journal, explicit-cost PaperBroker, RiskGuardian, Redis execution/Guardian leases, real OrderManager, reconciler wrapper, SettingsService, report scheduler and offline mock-LLM graph; overrides remain test-only. Corrected derived bar boundaries to close 3M at open minute 2 mod 3 and 5M at open minute 4 mod 5. Added timestamp boundary coverage and a no-service-overrides SQLite/fake-Redis assembly test. Bundled Python compileall and git diff --check pass; pytest/make quality checks are unavailable in this desktop runtime.",
-      "review_notes": []
+      "review_notes": [
+        "Pass (cycle 2) as a safe, startable scaffold. Claude fixed two fail-open defaults found in review: build_runtime_services no longer falls back to an always-RUN control source (missing kill/pause channel now keeps the runtime stopped) and the OrderManager alert now logs instead of discarding. What it is NOT: the order approval callable denies every order ('runtime_guardian_context_required'), check_pnl and manage_positions are no-ops, the reconciler and report scheduler are thin holders, and the agent graph is a no-trade mock. So the runtime starts but cannot place an order. That is deliberate until T-097."
+      ]
+    },
+    {
+      "id": "T-097",
+      "title": "Real approval path, PnL check, position management, reconciler and decision graph in the demo runtime",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-10",
+        "R-11",
+        "R-19"
+      ],
+      "depends_on": [
+        "T-096"
+      ],
+      "acceptance_criteria": [
+        "The OrderManager approve callable binds a real RiskGuardian decision (account snapshot, open positions, spread, news context) to the order; no code path approves without the Guardian",
+        "check_pnl enforces the daily and weekly loss limits from config/risk.yaml and halts via the control channel; manage_positions maintains broker-side stops and the reconciler really reconciles broker positions with the journal and alerts on a mismatch",
+        "The decision loop runs the real agent graph with the mock LLM (offline) and routes any proposal only through OrderManager; an end-to-end fixture with PaperBroker produces one approved paper trade with a server-side stop, one Guardian rejection, and audit rows under one cycle_id",
+        "Alerts go to Telegram when configured and always to the log; with Redis down no entry is made; a test proves a missing control channel keeps everything stopped"
+      ],
+      "deliverables": [
+        "src/trader/runtime/approval.py",
+        "src/trader/runtime/services.py",
+        "tests/unit/test_runtime_approval.py",
+        "tests/invariants/test_runtime_safety.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -5049,6 +5085,17 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "runtime service construction or feed boundary logic changes"
+    },
+    {
+      "id": "V-205",
+      "subject": "T-096 review cycle 2 (Claude): real service assembly",
+      "method": "Read services.py, lifespan and feed changes and tests; searched for fail-open defaults; ruff check and format; handoff validated against main. CI quality runs the suite.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/services.py; src/trader/api/app.py; src/trader/runtime/feeds.py; tests/unit/test_runtime_services.py; tests/unit/test_runtime_factory.py",
+      "review_notes": "Pass for what it is: services build from the real classes with no overrides and the runtime can start, fail-closed. Two fail-open defaults fixed by Claude (always-RUN control source, silent alert). Orders are impossible by design (approval denies all) until T-097 supplies the real approval, PnL check, position management, reconciler and graph.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "src/trader/runtime/services.py changes"
     }
   ],
   "blockers": [
@@ -8600,6 +8647,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed V-203 by constructing real runtime services internally, correcting 3M/5M feed boundaries and adding no-override SQLite/fake-Redis and timestamp tests. No Pod/API calls, credentials, broker calls or orders. Handing T-096 to Claude for review."
+    },
+    {
+      "revision": 188,
+      "ts": "2026-10-07T08:00:00Z",
+      "agent": "claude",
+      "action": "review_t096_pass_add_t097",
+      "task_ids": [
+        "T-096",
+        "T-097"
+      ],
+      "files_changed": [
+        "src/trader/runtime/services.py",
+        "tests/unit/test_runtime_services.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-096 cycle 2: pass as a safe startable scaffold (V-205). Fixed two fail-open defaults (always-RUN control source, discarded alert). The runtime now starts but cannot place orders because approval denies everything; T-097 adds the real approval path, PnL check, position management, reconciler and decision graph with an end-to-end paper fixture. Next for Codex: T-097."
     }
   ],
   "project_summary": "T-096 review cycle 2 is ready for Claude. Runtime service construction no longer requires production overrides; feed boundaries and no-service override assembly are covered. No Pod/API calls, credentials, broker calls or orders were used."

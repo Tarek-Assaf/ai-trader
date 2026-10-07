@@ -7,12 +7,15 @@ partial mapping, keeping startup fail closed.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from decimal import Decimal
 
 from trader.core.audit import SqlAuditWriter
 from trader.core.settings import EnvironmentSettings
 from trader.runtime.factory import RuntimeDependencyUnavailable
+
+LOGGER = logging.getLogger(__name__)
 
 
 def build_runtime_services(
@@ -88,12 +91,10 @@ def build_runtime_services(
 
     control_source = provided.get("control_source")
     control_writer = provided.get("control_writer")
-    if control_source is None:
-        class _RunControl:
-            def read(self) -> ControlMode:
-                return ControlMode.RUN
-
-        control_source = _RunControl()
+    if control_source is None or control_writer is None:
+        # Never default to an always-RUN control source: without the real
+        # kill/pause channel the runtime must stay stopped (invariant 11).
+        raise RuntimeDependencyUnavailable("runtime service unavailable: control channel")
     journal = provided.get("journal") or ExecutionJournal(engine)
     execution_lease = RedisLeaderLease(redis_client, "ai-trader:execution:lease")
     guardian_lease = RedisLeaderLease(redis_client, "ai-trader:guardian:lease")
@@ -135,7 +136,7 @@ def build_runtime_services(
             guardian_lease,
             approve,
             lambda _positions: None,
-            lambda _message: None,
+            _log_alert,
             control_source,
             control_writer,
             lambda _positions: None,
@@ -154,7 +155,7 @@ def build_runtime_services(
         flat_values = {
             key: value
             for key, value in risk_values.items()
-            if isinstance(value, (int, float, Decimal))
+            if isinstance(value, int | float | Decimal)
         }
         settings_service = SettingsService(
             flat_values,
@@ -190,6 +191,10 @@ def build_runtime_services(
         if optional in provided:
             result[optional] = provided[optional]
     return result
+
+
+def _log_alert(message: str) -> None:
+    LOGGER.error("runtime alert: %s", message)
 
 
 def _dump_mapping(value: object) -> dict[str, object]:
