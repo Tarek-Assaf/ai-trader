@@ -268,44 +268,51 @@ class PnlLossGuard:
         day = now.date().isoformat()
         iso = now.date().isocalendar()
         week = f"{iso.year}-W{iso.week:02d}"
-        snapshot = None
+        snapshot: Any = None
         getter = getattr(self.journal, "get_snapshot", None)
-        if self._day_baseline is None and callable(getter):
+        if callable(getter):
             snapshot = getter("runtime:pnl-baseline")
-        if isinstance(snapshot, Mapping):
-            try:
-                self._day_baseline = Decimal(
-                    str(snapshot.get("day_equity") or snapshot["day_start_equity"])
-                )
-                self._week_baseline = Decimal(
-                    str(snapshot.get("week_equity") or snapshot["week_start_equity"])
-                )
-                self._peak_equity = Decimal(str(snapshot.get("peak_equity", snapshot["week_equity"])))
-                self._baseline_day = str(snapshot["day"])
-                self._baseline_week = str(snapshot["week"])
-            except (ArithmeticError, KeyError, TypeError, ValueError):
-                self._day_baseline = None
-                self._week_baseline = None
-                self._peak_equity = None
-        if self._day_baseline is None or self._baseline_day != day:
-            self._day_baseline = equity
-            self._baseline_day = day
-        if self._week_baseline is None or self._baseline_week != week:
-            self._week_baseline = equity
-            self._baseline_week = week
-        self._peak_equity = max(self._peak_equity or equity, equity)
+        stored: dict[str, Any] = dict(snapshot) if isinstance(snapshot, Mapping) else {}
+
+        def stored_value(*names: str) -> Decimal | None:
+            for name in names:
+                if name in stored:
+                    try:
+                        value = Decimal(str(stored[name]))
+                    except (ArithmeticError, TypeError, ValueError):
+                        return None
+                    return value if value.is_finite() and value > 0 else None
+            return None
+
+        day_base = stored_value("day_equity", "day_start_equity")
+        week_base = stored_value("week_equity", "week_start_equity")
+        stored_day, stored_week = stored.get("day"), stored.get("week")
+        if day_base is None and self._baseline_day == day:
+            day_base, stored_day = self._day_baseline, day
+        if week_base is None and self._baseline_week == week:
+            week_base, stored_week = self._week_baseline, week
+        if day_base is None or stored_day != day:
+            day_base = equity
+        if week_base is None or stored_week != week:
+            week_base = equity
+        peak = max(stored_value("peak_equity") or equity, self._peak_equity or equity, equity)
+        self._day_baseline, self._week_baseline, self._peak_equity = day_base, week_base, peak
+        self._baseline_day, self._baseline_week = day, week
         saver = getattr(self.journal, "save_snapshot", None)
         if callable(saver):
-            saver(
-                "runtime:pnl-baseline",
+            merged = {
+                key: stored[key] for key in ("consecutive_losses", "last_loss_at") if key in stored
+            }
+            merged.update(
                 {
-                    "day_equity": str(self._day_baseline),
-                    "week_equity": str(self._week_baseline),
-                    "peak_equity": str(self._peak_equity),
-                    "day": self._baseline_day,
-                    "week": self._baseline_week,
-                },
+                    "day_equity": str(day_base),
+                    "week_equity": str(week_base),
+                    "peak_equity": str(peak),
+                    "day": day,
+                    "week": week,
+                }
             )
+            saver("runtime:pnl-baseline", merged)
         assert self._day_baseline is not None and self._week_baseline is not None
         return self._day_baseline, self._week_baseline
 

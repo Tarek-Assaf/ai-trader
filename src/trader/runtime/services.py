@@ -209,6 +209,8 @@ def build_runtime_services(
                     stop = getattr(position, "stop_level", None)
                     level = getattr(position, "level", None)
                     size = getattr(position, "size", None)
+                    if str(terms.margin_factor_unit).upper() != "PERCENTAGE":
+                        raise ContextUnavailable("margin factor unit is unsupported")
                     if (
                         terms.value_per_point is None
                         or not isinstance(stop, Decimal)
@@ -223,6 +225,7 @@ def build_runtime_services(
                     margin = exposure * terms.margin_factor / Decimal("100")
                     risk = abs(level - stop) * terms.value_per_point * size
                     return OpenPosition(position.epic, risk, margin, exposure)
+
         if sizing_source is None:
 
             def unavailable_sizing(*_args: Any) -> Any:
