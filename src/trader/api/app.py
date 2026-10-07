@@ -341,7 +341,7 @@ async def lifespan(_app: FastAPI) -> Any:
         )
         for source_name in ("recorder", "session_calendar", "news_calendar"):
             setattr(_app.state, source_name, _app.state.runtime_services.get(source_name))
-        services = _app.state.runtime_services
+        services: Any = _app.state.runtime_services
         scheduler = services.get("report_scheduler")
 
         def report_provider(period: str) -> Any:

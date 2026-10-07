@@ -12,7 +12,7 @@ import logging
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from decimal import Decimal, InvalidOperation
-from typing import Protocol, cast
+from typing import Any, Protocol, cast
 
 from trader.execution.brokers.base import Position
 from trader.reports.core import ReportDocument, ReportPeriod, ReportSnapshot, run_report
@@ -129,7 +129,7 @@ class CommandDataService:
             return "Report data is unavailable right now."
         return document.plain_text if isinstance(document, ReportDocument) else str(document)
 
-    def chart(self, argument: str = "") -> bytes:
+    def chart(self, _command: str, argument: str = "") -> bytes:
         if self._chart_provider is not None:
             return self._chart_provider(argument)
         if self._pnl_provider is None:
@@ -195,8 +195,8 @@ class ScheduledReportRunner:
         schedule: object,
         snapshot_provider: Callable[[ReportPeriod], ReportSnapshot],
         *,
-        telegram: object | None = None,
-        email: object | None = None,
+        telegram: Any = None,
+        email: Any = None,
         owner_chat_ids: Sequence[str] = (),
         usage_summary: Callable[[], Mapping[str, object]] | None = None,
     ) -> None:
