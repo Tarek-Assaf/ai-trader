@@ -280,8 +280,12 @@ def test_no_data_timeout_is_suppressed_when_market_is_closed() -> None:
 
     class ClosedMarketSocket(FakeSocket):
         calls = 0
+        raw = 0
 
         def recv(self, *, timeout: float) -> str:
+            self.raw += 1
+            if self.raw <= 2:
+                return super().recv(timeout=timeout)
             self.calls += 1
             current[0] += timedelta(seconds=6)
             if self.calls >= 3:
@@ -296,6 +300,7 @@ def test_no_data_timeout_is_suppressed_when_market_is_closed() -> None:
         on_reconnect=lambda count, reason: reconnects.append((count, reason)),
         connection_factory=lambda *_args, **_kwargs: socket,
         data_timeout_seconds=5,
+        ping_interval=timedelta(days=30),
         data_expected=lambda: False,
         reconnect_min_seconds=0.01,
         reconnect_max_seconds=0.02,
@@ -342,6 +347,7 @@ def test_watchdog_starts_at_market_open_not_at_last_tick() -> None:
         on_reconnect=lambda count, reason: reconnects.append((count, reason)),
         connection_factory=lambda *_args, **_kwargs: socket,
         data_timeout_seconds=5,
+        ping_interval=timedelta(days=30),
         data_expected=lambda: expected[0],
         reconnect_min_seconds=0.01,
         reconnect_max_seconds=0.02,
