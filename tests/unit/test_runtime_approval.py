@@ -474,7 +474,10 @@ def test_real_agent_graph_paper_fixture_routes_one_trade_through_order_manager(t
             )
         )
     )
-    assert result.action == "TRADE"
+    assert result.action == "TRADE", (
+        result,
+        [(e.event_type, getattr(e, "payload", None)) for e in audit.events],
+    )
     assert len(broker.get_positions()) == 1
     assert broker.get_positions()[0].stop_level == Decimal("99")
     assert any(event.event_type == "risk.decision" for event in audit.events)
