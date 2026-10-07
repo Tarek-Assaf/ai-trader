@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 import os
@@ -39,6 +40,44 @@ from trader.runtime.factory import RuntimeFactories, build_runtime_components
 from trader.soak import SoakMonitor
 
 _LOG = logging.getLogger(__name__)
+_RUNTIME_SERVICE_RETRIES = 3
+_RUNTIME_SERVICE_BACKOFF_SECONDS = 0.5
+
+
+def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
+    """Return the configured report transport, falling back safely.
+
+    Runtime service construction can fail while the broker is rate limited.  In
+    that path the optional transport is never assigned, but Telegram channel
+    startup still needs a transport when the owner has configured Telegram.
+    ``getattr`` keeps the degraded startup path alive without exposing the
+    broker exception or any credentials.
+    """
+    configured = getattr(state, "report_telegram_transport", None)
+    return configured or TelegramBotTransport(token)
+
+
+async def _build_runtime_services_with_retry(
+    settings: EnvironmentSettings,
+    configs: dict[str, Any],
+    *,
+    overrides: dict[str, Any],
+) -> dict[str, object]:
+    """Retry transient runtime dependency failures without blocking API health."""
+    for attempt in range(_RUNTIME_SERVICE_RETRIES):
+        try:
+            return build_runtime_services(settings, configs, overrides=overrides)
+        except Exception as exc:
+            if attempt == _RUNTIME_SERVICE_RETRIES - 1:
+                raise
+            delay = _RUNTIME_SERVICE_BACKOFF_SECONDS * (2**attempt)
+            _LOG.warning(
+                "runtime dependencies unavailable (%s); retrying in %.1fs",
+                type(exc).__name__,
+                delay,
+            )
+            await asyncio.sleep(delay)
+    raise RuntimeError("runtime service retries exhausted")
 
 
 def _start_runtime_if_configured(
@@ -257,6 +296,10 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime_feed_adapters = None
     _app.state.runtime_services = None
     _app.state.runtime_service_overrides = None
+    # Runtime service assembly is best effort.  Always create this state slot
+    # before the optional report scheduler wiring so a broker 429 cannot turn
+    # into an AttributeError while the Telegram channel starts.
+    _app.state.report_telegram_transport = None
     _app.state.command_data_service = None
     _app.state.soak_monitor = SoakMonitor(
         Path(os.getenv("SOAK_EVIDENCE_DIR", "/workspace/state/soak"))
@@ -337,7 +380,7 @@ async def lifespan(_app: FastAPI) -> Any:
     except Exception as exc:
         _LOG.warning("Recorder context unavailable (%s)", type(exc).__name__)
     try:
-        _app.state.runtime_services = build_runtime_services(
+        _app.state.runtime_services = await _build_runtime_services_with_retry(
             settings,
             configs,
             overrides={
@@ -469,7 +512,7 @@ async def lifespan(_app: FastAPI) -> Any:
                 control_handler=control_handler,
                 command_handlers=command_handlers,
             )
-            transport = _app.state.report_telegram_transport or TelegramBotTransport(token)
+            transport = _report_telegram_transport(_app.state, token)
             channel = TelegramChannel(
                 transport,
                 owner_ids,

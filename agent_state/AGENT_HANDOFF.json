@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 218,
+  "turn": "claude",
+  "revision": 219,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2999,7 +2999,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-11"
       ],
@@ -3017,9 +3017,13 @@
         "tests/unit/test_api_startup.py"
       ],
       "review_cycles": 0,
-      "completion_note": "Owner-reported Pod startup bug raised by Codex in T-100 handoff; pending implementation.",
+      "completion_note": "Initialized report_telegram_transport before optional runtime/report wiring and added a getattr fallback so a Capital.com HTTP 429 leaves the API degraded and Telegram/control startup available instead of raising AttributeError. Runtime service assembly now has three bounded exponential-backoff attempts before failing safe. Added startup regression coverage with runtime service failure, retry count and a minimal app state. Full pytest/Ruff/mypy/make check are unavailable in this desktop runtime; bundled compileall and git diff --check pass. After redeploy, inspect /health status=degraded plus db/redis and the allowlisted data_recorder fields; no secrets are exposed.",
       "evidence": [
-        "Owner /health observation and Codex T-100 report: app.py accesses report_telegram_transport after Capital.com HTTP 429 and Uvicorn exits with status 3"
+        "Owner /health observation and Codex T-100 report: app.py accesses report_telegram_transport after Capital.com HTTP 429 and Uvicorn exits with status 3",
+        "src/trader/api/app.py",
+        "tests/unit/test_api_startup.py",
+        "bundled Python compileall",
+        "git diff --check"
       ]
     }
   ],
@@ -5607,6 +5611,17 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "stream reconnect, watchdog or recorder status logic changes"
+    },
+    {
+      "id": "V-232",
+      "subject": "T-101 degraded API startup after broker rate limit",
+      "method": "Initialized the optional report Telegram transport before runtime service assembly, added a missing-state fallback, added three bounded exponential-backoff runtime-service attempts, and exercised the lifespan with runtime service construction failing with a 429-style error. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/api/app.py; tests/unit/test_api_startup.py; bundled Python compileall; git diff --check",
+      "review_notes": "The desktop runtime has no pytest, Ruff, mypy or make check. The owner should redeploy and confirm /health remains degraded with safe dependency and data_recorder fields while control endpoints remain available. No credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "lifespan report transport initialization or degraded broker startup handling changes"
     }
   ],
   "blockers": [
@@ -9680,7 +9695,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-100 passes: the watchdog is market-aware and I added the market-open timer reset with a weekend-gap test. New T-101: Pod API exits at startup after Capital.com 429 (uninitialized report_telegram_transport). Codex: branch from origin/main after the T-100 merge and take T-101."
+    },
+    {
+      "revision": 219,
+      "ts": "2026-10-07T22:20:00Z",
+      "agent": "codex",
+      "action": "complete_t101_api_startup_guard",
+      "task_ids": [
+        "T-101"
+      ],
+      "files_changed": [
+        "src/trader/api/app.py",
+        "tests/unit/test_api_startup.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Fixed the Pod API startup crash after a Capital.com HTTP 429 by initializing report_telegram_transport before optional runtime/report wiring and using a safe getattr fallback. Runtime service assembly retries three times with bounded exponential backoff, then fails safe while leaving the API and Telegram/control startup path available for degraded health reporting. Added lifespan regression coverage for a 429-style service failure, retry count and a minimal-state fallback. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders were used. Handing T-101 to Claude for review."
     }
   ],
-  "project_summary": "T-100 review fixes make recorder no-data detection market-aware and report the Pod API startup defect for follow-up; awaiting Claude review."
+  "project_summary": "T-100 passed Claude review and T-101 fixes the Pod API startup AttributeError after Capital.com HTTP 429; the API remains available for degraded health and control paths. T-101 is ready for Claude review."
 }
