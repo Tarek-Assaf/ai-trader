@@ -204,7 +204,7 @@ def build_default_factories(
         if "guardian" in supplied:
             value = supplied["guardian"]
             return value(current_settings, current_configs) if callable(value) else value
-        audit = supplied.get("audit_writer")
+        audit: Any = supplied.get("audit_writer")
         risk_values = dump(current_configs.get("risk"))
         instruments = dump(current_configs.get("instruments"))
         if audit is None or not isinstance(risk_values, Mapping):
