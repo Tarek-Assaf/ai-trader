@@ -6,10 +6,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from trader.core.audit import AuditEvent
 from trader.core.settings import EnvironmentSettings
 from trader.execution.control import ControlSource
 from trader.execution.leader import RedisLeaderLease
-from trader.core.audit import AuditEvent
 from trader.runtime.composition import RuntimeComponents, RuntimeResult
 
 
@@ -184,6 +184,7 @@ def build_default_factories(
     def service(name: str) -> RuntimeFactoryFn:
         value = supplied.get(name)
         if value is None:
+
             def missing(*_args: Any, **_kwargs: Any) -> Any:
                 raise RuntimeDependencyUnavailable(f"runtime service unavailable: {name}")
 
@@ -248,6 +249,7 @@ def build_default_factories(
             raise RuntimeDependencyUnavailable("runtime service unavailable: broker")
         try:
             from decimal import Decimal
+
             from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
 
             costs = PaperExecutionCosts(
@@ -266,6 +268,22 @@ def build_default_factories(
         except (KeyError, TypeError, ValueError) as exc:
             raise RuntimeDependencyUnavailable("paper broker configuration is invalid") from exc
 
+    def decision_loop(
+        current_settings: EnvironmentSettings,
+        current_configs: Mapping[str, object],
+        order_manager: Any,
+        guardian: Any,
+        reconciler: Any,
+    ) -> Any:
+        custom = supplied.get("decision_loop")
+        if callable(custom):
+            return custom(current_settings, current_configs, order_manager, guardian, reconciler)
+        return OrderManagerDecisionLoop(
+            order_manager,
+            supplied.get("agent_graph"),
+            supplied.get("audit_writer"),
+        )
+
     return RuntimeFactories(
         redis_client=redis_client,
         broker=broker,
@@ -274,15 +292,7 @@ def build_default_factories(
         reconciler=service("reconciler"),
         report_scheduler=service("report_scheduler"),
         settings_service=service("settings_service"),
-        decision_loop=lambda current_settings, current_configs, order_manager, guardian, reconciler: (
-            supplied["decision_loop"](current_settings, current_configs, order_manager, guardian, reconciler)
-            if callable(supplied.get("decision_loop"))
-            else OrderManagerDecisionLoop(
-                order_manager,
-                supplied.get("agent_graph"),
-                supplied.get("audit_writer"),
-            )
-        ),
+        decision_loop=decision_loop,
     )
 
 
