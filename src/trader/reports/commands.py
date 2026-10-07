@@ -228,6 +228,20 @@ class ScheduledReportRunner:
         self._usage_summary = usage_summary
 
     def run(self, period: ReportPeriod) -> ReportDocument | None:
+        return self._execute(period, deliver=True)
+
+    def configure_delivery(
+        self, *, telegram: object | None, email: object | None, owner_chat_ids: Sequence[str]
+    ) -> None:
+        self._telegram = telegram
+        self._email = email
+        self._owner_chat_ids = tuple(owner_chat_ids)
+
+    def render(self, period: ReportPeriod) -> ReportDocument | None:
+        """Render an interactive reply without sending a second Telegram message."""
+        return self._execute(period, deliver=False)
+
+    def _execute(self, period: ReportPeriod, *, deliver: bool) -> ReportDocument | None:
         def snapshot_provider(current_period: ReportPeriod) -> ReportSnapshot:
             snapshot = self._snapshot_provider(current_period)
             if self._usage_summary is None:
@@ -247,9 +261,9 @@ class ScheduledReportRunner:
         return run_report(
             period,
             snapshot_provider,
-            self._telegram,
-            self._email,
-            self._owner_chat_ids,
+            self._telegram if deliver else None,
+            self._email if deliver else None,
+            self._owner_chat_ids if deliver else (),
         )
 
 

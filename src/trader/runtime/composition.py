@@ -328,6 +328,9 @@ class RuntimeService:
             if not self.running:
                 break
             try:
+                run_due = getattr(self.components.report_scheduler, "run_due", None)
+                if callable(run_due):
+                    run_due(datetime.now(UTC))
                 cycle = self._cycle_source.next_cycle()
                 if inspect.isawaitable(cycle):
                     cycle = await cycle

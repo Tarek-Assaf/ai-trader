@@ -47,6 +47,10 @@ def test_usage_ledger_enforces_daily_and_monthly_caps() -> None:
     assert rows[0] == (Decimal("1.25000000"), "success")
     assert rows[1] == (Decimal("2.75000000"), "reserved")
     assert second
+    summary = ledger.summary(now=now)
+    assert summary["input_tokens"] == 20
+    assert summary["output_tokens"] == 10
+    assert summary["cost_usd"] == Decimal("1.25")
 
 
 def test_usage_ledger_preserves_full_reservation_after_uncertain_failure() -> None:
