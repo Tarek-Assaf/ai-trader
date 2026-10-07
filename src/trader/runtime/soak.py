@@ -3,9 +3,53 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping
+import re
+from collections.abc import Mapping, Sequence
+from pathlib import Path
 
 LOGGER = logging.getLogger(__name__)
+_SECRET_SHAPED = re.compile(r"(?:sk-[A-Za-z0-9_-]{12,}|bot\d+:[A-Za-z0-9_-]{20,})")
+
+
+class LogScanner:
+    """Read recent workspace log files for secret-shaped values.
+
+    The matching text is returned only for the current soak evaluation.  It is
+    immediately sanitized by ``SoakMonitor`` and is never logged or persisted
+    by this scanner.
+    """
+
+    def __init__(
+        self,
+        root: str | Path = "/workspace",
+        *,
+        secret_patterns: Sequence[str] = (),
+        max_files: int = 20,
+        max_bytes: int = 65_536,
+    ) -> None:
+        self._root = Path(root)
+        self._patterns = tuple(value for value in secret_patterns if value)
+        self._max_files = max(1, max_files)
+        self._max_bytes = max(1, max_bytes)
+
+    def soak_observation(self) -> Mapping[str, object]:
+        matches: list[str] = []
+        try:
+            paths = sorted(
+                (path for path in self._root.rglob("*.log") if path.is_file()),
+                key=lambda path: path.stat().st_mtime,
+                reverse=True,
+            )[: self._max_files]
+            for path in paths:
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")[-self._max_bytes :]
+                except OSError:
+                    continue
+                if any(secret in text for secret in self._patterns) or _SECRET_SHAPED.search(text):
+                    matches.append(text)
+        except OSError:
+            return {}
+        return {"log_text": "\n".join(matches)} if matches else {}
 
 
 class RuntimeSoakFeed:
@@ -23,18 +67,7 @@ class RuntimeSoakFeed:
                 continue
             provider = getattr(source, "soak_observation", None)
             if not callable(provider):
-                if name == "control":
-                    try:
-                        mode = source.read()  # type: ignore[attr-defined]
-                        value = getattr(mode, "value", mode)
-                        if value in {"kill", "pause"}:
-                            result.update(
-                                {"control_requested": str(value), "control_honored": True}
-                            )
-                    except Exception:
-                        self._warn(name)
-                else:
-                    self._warn(name)
+                self._warn(name)
                 continue
             try:
                 value = provider()
@@ -51,4 +84,4 @@ class RuntimeSoakFeed:
             self._warned.add(name)
 
 
-__all__ = ["RuntimeSoakFeed"]
+__all__ = ["LogScanner", "RuntimeSoakFeed"]

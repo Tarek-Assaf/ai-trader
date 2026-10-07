@@ -120,6 +120,12 @@ def build_runtime_services(
         raise RuntimeDependencyUnavailable("runtime service unavailable: control channel")
     journal: Any = provided.get("journal") or ExecutionJournal(engine)
     soak_monitor = provided.get("soak_monitor")
+    if "log_scanner" not in provided:
+        from trader.runtime.soak import LogScanner
+
+        workspace = os.getenv("WORKSPACE_DIR", "/workspace")
+        patterns = settings.sensitive_values()
+        provided["log_scanner"] = LogScanner(workspace, secret_patterns=patterns)
     attach_journal = getattr(soak_monitor, "attach_journal", None)
     if callable(attach_journal):
         attach_journal(journal)

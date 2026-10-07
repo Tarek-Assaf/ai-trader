@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 212,
+  "turn": "claude",
+  "revision": 213,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-099 runtime soak incident rules now receive real safety-component observations and fail closed when a source is unavailable.",
+    "summary": "T-099 review fixes complete: a read-only workspace LogScanner feeds secret incidents, real safety components expose observations, and missing sources warn once without invented data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -976,7 +976,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ظـزظــظ¤ش╪شظـزظ¤جظـزظــظ¤£ظـùظ¤ء┘ْ1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u0634\u256a\u0634\u0638\u0640\u0632\u0638\u00a4\u062c\u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u00a3\u0638\u0640\u00f9\u0638\u00a4\u0621\u2518\u06521 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -2917,7 +2917,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-08",
         "R-11",
@@ -2938,24 +2938,21 @@
       ],
       "review_cycles": 1,
       "evidence": [
-        "src/trader/runtime/soak.py",
-        "src/trader/runtime/composition.py",
-        "src/trader/runtime/approval.py",
+        "src/trader/api/app.py",
+        "src/trader/execution/control.py",
         "src/trader/execution/manager.py",
+        "src/trader/risk/guardian.py",
+        "src/trader/runtime/approval.py",
+        "src/trader/runtime/composition.py",
         "src/trader/runtime/factory.py",
         "src/trader/runtime/services.py",
-        "src/trader/api/app.py",
-        "tests/unit/test_soak.py",
-        "src/trader/execution/control.py",
-        "src/trader/risk/guardian.py"
+        "src/trader/runtime/soak.py",
+        "tests/unit/test_execution_control.py",
+        "tests/unit/test_runtime_approval.py",
+        "tests/unit/test_soak.py"
       ],
-      "completion_note": "RuntimeSoakFeed now consumes observations exposed by the position manager, order manager, P&L guard, reconciler, control channel and optional log scanner; unavailable sources are skipped with one warning. Runtime-level soak coverage asserts all seven incident rules, secret-free evidence and incident clock reset.",
-      "changes_requested": [
-        "No production log scanner exists: log_scanner is only passed through if supplied, so the 'log_scan' source is always None and secret_found_in_logs is never fed. Implement a read-only LogScanner (src/trader/runtime/soak.py or soak/) that scans recent app log files under /workspace (never the token-bearing Pod URL or env) for the configured secret patterns and secret-shaped values, exposes soak_observation() returning log_text only as a transient value that is never persisted or logged, and is built by build_runtime_services when settings/secrets are available.",
-        "Tests only feed fake Source objects. Add tests that use the REAL components: RiskGuardian.evaluate -> soak_observation, PnlLossGuard breach, ProtectivePositionManager with a stop-less position, OrderManager.submit without stop_level, RuntimeReconciler mismatch age with an injected clock, and RedisControlSource/CompositeControlSource kill not honored; plus a RuntimeService-level test where a simulated breach produces an alert, a secret-free evidence file and a clock reset.",
-        "Add a test that a missing source skips only its rule and logs exactly one warning across repeated collect() calls (acceptance criterion 3).",
-        "Keep the existing observation hooks read-only: they must not change Guardian/OrderManager/control decisions (add an assertion or test that results are unchanged)."
-      ]
+      "completion_note": "Added a read-only LogScanner built in runtime services, real control and safety-component observation hooks, runtime-level breach coverage, and one-warning missing-source coverage. Secret-bearing log text is transient and SoakMonitor sanitizes evidence; no observation hook changes trading decisions.",
+      "changes_requested": []
     }
   ],
   "decisions": [
@@ -3980,7 +3977,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ╪ثظ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u256a\u062b\u0638\u0080\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -5487,6 +5484,17 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "runtime soak feed or safety component observation hooks change"
+    },
+    {
+      "id": "V-227",
+      "subject": "T-099 review fixes: log scanner and real runtime component coverage",
+      "method": "Reviewed LogScanner path and secret handling, runtime service construction, control observation semantics and real component tests; ran bundled Python compileall, git diff --check and direct LogScanner/SoakMonitor smoke.",
+      "result": "pass",
+      "evidence": "src/trader/api/app.py; src/trader/execution/control.py; src/trader/execution/manager.py; src/trader/risk/guardian.py; src/trader/runtime/approval.py; src/trader/runtime/composition.py; src/trader/runtime/factory.py; src/trader/runtime/services.py; src/trader/runtime/soak.py; tests/unit/test_execution_control.py; tests/unit/test_runtime_approval.py; tests/unit/test_soak.py",
+      "review_notes": "Full pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "log scanner or runtime soak observation hooks change"
     }
   ],
   "blockers": [
@@ -7133,7 +7141,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -9459,7 +9467,32 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-099 cycle 1: component observation hooks are read-only and well placed, but there is no real log scanner (secret_found_in_logs is never fed) and tests use fake sources instead of the real components. Codex: branch is already rebased onto main rev 210; add LogScanner, real-component tests, single-warning test."
+    },
+    {
+      "revision": 213,
+      "ts": "2026-10-07T19:20:00Z",
+      "agent": "codex",
+      "action": "address_t099_review_cycle_1",
+      "task_ids": [
+        "T-099"
+      ],
+      "files_changed": [
+        "src/trader/api/app.py",
+        "src/trader/execution/control.py",
+        "src/trader/execution/manager.py",
+        "src/trader/risk/guardian.py",
+        "src/trader/runtime/approval.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/services.py",
+        "src/trader/runtime/soak.py",
+        "tests/unit/test_execution_control.py",
+        "tests/unit/test_runtime_approval.py",
+        "tests/unit/test_soak.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed T-099 review: added read-only LogScanner, real component observation coverage, single-warning missing-source test and RuntimeService breach test. Compileall and diff-check pass; no Pod/API calls, credentials or orders. Handing T-099 back to Claude."
     }
   ],
-  "project_summary": "T-099 implementation is ready for Claude review: runtime safety components expose bounded observations, RuntimeSoakFeed merges them into SoakMonitor, and focused coverage checks all seven incident rules."
+  "project_summary": "T-099 review cycle 1 addressed: LogScanner is built from runtime services, control and safety components expose read-only observations, and real-component/runtime-level tests cover breach evidence and clock reset."
 }
