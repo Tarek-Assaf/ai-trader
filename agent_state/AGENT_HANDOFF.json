@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 206,
+  "revision": 208,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2697,7 +2697,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "changes_requested",
       "requirements": [
         "R-22",
         "R-23"
@@ -2717,9 +2717,24 @@
         "src/trader/scaling",
         "tests/unit/test_runtime_scaling.py"
       ],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/scaling/runtime.py",
+        ".env.example",
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/integrations/runpod/client.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/composition.py",
+        "tests/unit/test_runtime_scaling.py",
+        "tests/unit/test_scaling.py",
+        "docs/evidence/t094_runpod_list.md"
+      ],
+      "completion_note": "Wired the existing worker autoscaler into the demo core runtime behind scaling.enabled, which remains false by default. CoreAutoscaler reads queue depth and age, reconciles only tagged workers, applies the configured worker and hourly-spend caps, and is never constructed for ROLE=worker. The RunPod adapter validates both supported list envelopes and the unit fixture covers the read-only response shape. A live RunPod list call was intentionally not made because no Pod/API credential or explicit external-call authorization was available; the owner must run the names-only check before enabling scaling.",
+      "changes_requested": [
+        "Hourly spend cap is ineffective: CoreAutoscaler defaults hourly_spend to lambda: 0.0 and Worker.hourly_cost_usd is never populated, so max_hourly_spend_usd can never trigger. Populate Worker.hourly_cost_usd from the RunPod list response (costPerHr) in the adapter and default hourly_spend to the sum of managed (tagged) workers' hourly_cost_usd.",
+        "Fail closed: a managed worker with missing/non-numeric cost must count as unknown spend and block new spawns (and be reported in the reason) rather than count as 0.",
+        "Tests: (a) cost parsed from both list envelopes, (b) spend sums tagged workers only, (c) cap reached terminates/blocks spawn using the real sum, (d) unknown cost blocks spawn. Keep scaling.enabled false by default and CI green."
+      ]
     },
     {
       "id": "T-095",
@@ -9297,6 +9312,39 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-093 passes. New T-099 feeds soak incident rules from runtime safety components. Codex: branch from origin/main and take T-094 then T-099."
+    },
+    {
+      "revision": 207,
+      "ts": "2026-10-07T15:00:00Z",
+      "agent": "codex",
+      "action": "complete_t094_scaling_wiring",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "src/trader/scaling/runtime.py",
+        "src/trader/scaling/__init__.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/__init__.py",
+        "tests/unit/test_runtime_scaling.py",
+        "docs/evidence/t094_runpod_list.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Wired the optional autoscaler into the core runtime with scaling.enabled false by default, added core-only policy and queue metrics, validated RunPod list envelopes offline, and recorded the owner-gated live check. Handing T-094 to Claude for review."
+    },
+    {
+      "revision": 208,
+      "ts": "2026-10-07T17:30:00Z",
+      "agent": "claude",
+      "action": "review_t094_changes_requested",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-094 cycle 1: wiring, core-only gating, default-off and tests are good, but the hourly spend cap is ineffective (spend defaults to 0 and worker cost is never populated). Codex: on this branch (already merged with main rev 208), populate worker cost from RunPod costPerHr, sum tagged workers as spend, fail closed on unknown cost, add tests. Then back to review."
     }
   ],
   "project_summary": "T-093 review fixes complete: real Gate 2 config thresholds and requirements are tested, and SoakMonitor runtime persistence/feed wiring is fail-closed."
