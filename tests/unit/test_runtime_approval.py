@@ -392,7 +392,7 @@ def test_real_agent_graph_paper_fixture_routes_one_trade_through_order_manager(t
             {
                 "bias": "long",
                 "confidence": 0.9,
-                "regime": "trend",
+                "regime": "trending_up",
                 "timeframe_agreement": "aligned",
                 "key_levels": [],
                 "risks": [],
@@ -412,7 +412,7 @@ def test_real_agent_graph_paper_fixture_routes_one_trade_through_order_manager(t
                     "entry_level": "100",
                     "stop_level": "99",
                     "target_levels": ["102"],
-                    "time_horizon": "intraday",
+                    "time_horizon": "1h",
                     "thesis": "fixture",
                     "confidence": 0.9,
                 },
@@ -429,7 +429,7 @@ def test_real_agent_graph_paper_fixture_routes_one_trade_through_order_manager(t
             "cheap": {
                 "provider": "cheap",
                 "model": "cheap",
-                "max_input_tokens": 1000,
+                "max_input_tokens": 50000,
                 "max_output_tokens": 1000,
                 "input_usd_per_million": 1,
                 "output_usd_per_million": 1,
