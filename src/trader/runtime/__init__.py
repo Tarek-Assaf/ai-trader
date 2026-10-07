@@ -5,6 +5,7 @@ from trader.runtime.approval import (
     PnlLossGuard,
     ProtectivePositionManager,
     RuntimeApproval,
+    RuntimeContextProvider,
     RuntimeExecutor,
     RuntimeReconciler,
 )
@@ -47,6 +48,7 @@ __all__ = [
     "PnlLossGuard",
     "ProtectivePositionManager",
     "RuntimeApproval",
+    "RuntimeContextProvider",
     "RuntimeExecutor",
     "RuntimeReconciler",
     "build_runtime_components",
