@@ -24,8 +24,71 @@ from trader.data.instruments import InstrumentMapper
 from trader.execution.control import ControlMode, build_control_sources
 from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
+from trader.runtime import RuntimeComponents, ScheduleCycleSource, build_runtime, runtime_enabled
+from trader.runtime.factory import RuntimeFactories, build_runtime_components
 
 _LOG = logging.getLogger(__name__)
+
+
+def _start_runtime_if_configured(
+    app: FastAPI,
+    settings: EnvironmentSettings,
+    configs: dict[str, Any],
+) -> None:
+    """Start the core runtime only after an explicit complete composition.
+
+    The application owns environment/config validation, while deployment code
+    supplies ``app.state.runtime_components_factory`` once Redis, the database,
+    PaperBroker, Guardian, OrderManager, reconciler, scheduler and settings
+    service are constructed.  Refusing to invent partial components is a
+    deliberate fail-safe: an eligible pod with missing dependencies stays
+    stopped and keeps pause/kill controls available.
+    """
+    if not app.state.runtime_eligible:
+        return
+    control_source = app.state.execution_control_source
+    factory = getattr(app.state, "runtime_components_factory", None)
+    factories = getattr(app.state, "runtime_factories", None)
+    if factory is None and isinstance(factories, RuntimeFactories):
+
+        def factory(current_settings: EnvironmentSettings, current_configs: dict[str, Any]) -> Any:
+            return build_runtime_components(
+                current_settings,
+                current_configs,
+                control_source,
+                factories,
+            )
+
+    if not callable(factory) or control_source is None:
+        _LOG.warning("runtime dependencies unavailable; core runtime remains stopped")
+        return
+    try:
+        components = factory(settings, configs)
+        if not isinstance(components, RuntimeComponents):
+            raise TypeError("runtime component factory returned an invalid composition")
+        missing = components.missing_required()
+        if missing:
+            raise RuntimeError(f"runtime composition is incomplete: {', '.join(missing)}")
+        schedule = configs.get("schedule")
+        dump = getattr(schedule, "model_dump", None)
+        schedule_values = dump() if callable(dump) else schedule
+        cycle_source = (
+            ScheduleCycleSource.from_config(schedule_values)
+            if isinstance(schedule_values, dict)
+            else None
+        )
+        runtime = build_runtime(
+            components=components,
+            control_source=control_source,
+            alert=lambda message: _LOG.error("runtime alert: %s", message),
+            cycle_source=cycle_source,
+        )
+        app.state.runtime = runtime
+        # Lifespan is async, so the caller starts the service immediately after
+        # this composition hook returns.
+    except Exception as exc:
+        app.state.runtime = None
+        _LOG.error("runtime composition unavailable (%s)", type(exc).__name__)
 
 
 class _MemoryUsageLedger:
@@ -149,6 +212,14 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.telegram_channel = None
     _app.state.telegram_stop = None
     _app.state.telegram_thread = None
+    _app.state.runtime = None
+    _app.state.runtime_eligible = runtime_enabled(settings)
+    if _app.state.runtime_eligible:
+        # Runtime dependencies are composed only after the validated broker,
+        # database and Redis services are available.  Keeping this explicit
+        # state prevents a paper/demo startup from silently running a partial
+        # decision loop that could bypass OrderManager.
+        _LOG.info("Demo runtime composition is eligible; waiting for core dependencies")
     if redis_url:
         try:
             control_source, control_writer = build_control_sources(redis_url=redis_url)
@@ -166,6 +237,10 @@ async def lifespan(_app: FastAPI) -> Any:
         volume_config_dir=volume_dir if volume_dir.is_dir() else None,
         baked_ceilings_path=baked_ceilings,
     )
+    _start_runtime_if_configured(_app, settings, configs)
+    runtime = getattr(_app.state, "runtime", None)
+    if runtime is not None:
+        await runtime.start()
     # Keep the loaded schedule available to the report runner and channel wiring.
     # The scheduler is owned by the runtime process; exposing the validated config
     # here avoids duplicating config reads or accidentally using defaults.
@@ -282,6 +357,9 @@ async def lifespan(_app: FastAPI) -> Any:
     try:
         yield
     finally:
+        runtime = getattr(_app.state, "runtime", None)
+        if runtime is not None:
+            await runtime.stop()
         shutdown_event = getattr(_app.state, "telegram_stop", None)
         shutdown_thread = getattr(_app.state, "telegram_thread", None)
         if shutdown_event is not None:
