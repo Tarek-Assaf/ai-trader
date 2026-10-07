@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 201,
+  "turn": "codex",
+  "revision": 204,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-093 stage gates are covered by config-driven Gate 1/Gate 2 promotion tests and fail-closed live-stage recording.",
+    "summary": "T-091 review cycle 2 is ready for Claude: production report providers, persisted schedule execution and Telegram/SMTP delivery wiring are implemented with fail-closed tests.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2648,7 +2648,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03",
         "R-04",
@@ -2673,13 +2673,14 @@
         "src/trader/risk/guardian.py",
         "tests/unit/test_strategy_promotion.py"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/lab/promotion.py",
         "src/trader/risk/guardian.py",
         "tests/unit/test_strategy_promotion.py"
       ],
-      "completion_note": "Verified config-driven PromotionGate transitions from backtest to paper and paper to micro_live using the checked-in strategy_lab thresholds. Gate 2 requires four weeks and 200 trades; insufficient metrics reject. Added a durable-audit requirement for micro/live stage transitions, preserving the LIVE_TRADING_ENABLED fail-closed guard, and added regression coverage for stage changes, alerts, capital caps and missing live-stage evidence. Risk Guardian stage-cap rule remains fail-closed for missing, non-positive or oversized sizing caps. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders."
+      "completion_note": "Verified config-driven PromotionGate transitions from backtest to paper and paper to micro_live using the checked-in strategy_lab thresholds. Gate 2 requires four weeks and 200 trades; insufficient metrics reject. Added a durable-audit requirement for micro/live stage transitions, preserving the LIVE_TRADING_ENABLED fail-closed guard, and added regression coverage for stage changes, alerts, capital caps and missing live-stage evidence. Risk Guardian stage-cap rule remains fail-closed for missing, non-positive or oversized sizing caps. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders.",
+      "review_notes": "Stage-gate code is accepted and merged to main. Fix exactly: (1) Tests must use the real config/strategy_lab.yaml (load it), not a trimmed copy: Gate 2 also requires require_within_backtest_confidence_band, require_costs_match_model and max_risk_rule_violations 0 - add metrics keys and tests that each missing/failed requirement rejects, and that 4 weeks + 200 trades alone is not enough. (2) You branched from rev 200 and never saw the T-093 criterion added at rev 202: branch from origin/main now. Feed SoakMonitor (src/trader/soak) from runtime events (cycles, intents, Guardian rejections, orders, fills, reconciliation mismatches, restarts, uptime, spend, equity) and evaluate the incident rules every cycle; persist its days, incidents and four-week clock in the journal snapshot (e.g. 'soak:state') so a restart does not reset the clock; default evidence dir /workspace/state/soak via SOAK_EVIDENCE_DIR, never relative to cwd; tests with a fake clock covering restart persistence. (3) Gate 3/live path: add a test that no promotion reaches micro_live or live when LIVE_TRADING_ENABLED is false even with perfect metrics."
     },
     {
       "id": "T-094",
@@ -5325,6 +5326,28 @@
     },
     {
       "id": "V-218",
+      "subject": "T-092 soak monitor and incident rules",
+      "method": "Ran bundled Python compileall, git diff --check and a direct SoakMonitor smoke; reviewed all seven incident rules, evidence sanitization, clock reset and /soak command wiring.",
+      "result": "pass",
+      "evidence": "src/trader/soak/monitor.py; src/trader/reports/commands.py; src/trader/api/app.py; tests/unit/test_soak.py",
+      "review_notes": "Focused pytest, Ruff, mypy and make check are unavailable in this desktop runtime. Evidence stores observations only after key/value sanitization; no external calls were made.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "soak incident rules or runtime command wiring changes"
+    },
+    {
+      "id": "V-219",
+      "subject": "T-092 review: soak monitor and incident rules",
+      "method": "Read monitor.py and tests; ruff; merged main into the stale branch; CI quality authoritative.",
+      "result": "pass",
+      "evidence": "src/trader/soak/monitor.py; src/trader/reports/commands.py; src/trader/api/app.py; tests/unit/test_soak.py",
+      "review_notes": "Module meets T-092 criteria. Gap carried into T-093: the monitor is not yet fed by runtime events, its state is in memory only (a restart would silently reset the four-week clock) and the default evidence dir is relative to cwd.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "soak monitor or incident rules change"
+    },
+    {
+      "id": "V-220",
       "subject": "T-093 strategy stage gates in demo",
       "method": "Reviewed PromotionGate transitions and Risk Guardian stage-cap enforcement; ran direct stage-gate smoke assertions plus compileall and git diff --check.",
       "result": "pass",
@@ -5333,6 +5356,17 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "promotion gate or Guardian stage-cap wiring changes"
+    },
+    {
+      "id": "V-221",
+      "subject": "T-093 review cycle 1: stage gates",
+      "method": "Read diff; checked against config/strategy_lab.yaml and the T-093 criteria.",
+      "result": "fail",
+      "evidence": "src/trader/lab/promotion.py; tests/unit/test_strategy_promotion.py",
+      "review_notes": "Accepted code is merged. Tests use a trimmed config and the soak feed/persistence criterion is not implemented. See T-093 review_notes.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "promotion gate or soak wiring changes"
     }
   ],
   "blockers": [
@@ -9111,6 +9145,37 @@
     },
     {
       "revision": 201,
+      "ts": "2026-10-07T13:20:00Z",
+      "agent": "codex",
+      "action": "complete_t092_soak_monitor",
+      "task_ids": [
+        "T-092"
+      ],
+      "files_changed": [
+        "src/trader/soak/__init__.py",
+        "src/trader/soak/monitor.py",
+        "src/trader/reports/commands.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_soak.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-092 soak metrics and seven incident rules with secret-free evidence, four-week clock reset and /soak summary command. Compileall, diff-check and direct smoke pass; no Pod/API calls, credentials or orders. Handing T-092 to Claude for review."
+    },
+    {
+      "revision": 202,
+      "ts": "2026-10-07T13:45:00Z",
+      "agent": "claude",
+      "action": "review_t092_pass",
+      "task_ids": [
+        "T-092"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-092 passes. Soak monitor module and /soak command accepted; runtime feed, persistence and /workspace evidence path added to T-093 criteria. Codex: branch from origin/main and take T-093."
+    },
+    {
+      "revision": 203,
       "ts": "2026-10-07T14:00:00Z",
       "agent": "codex",
       "action": "complete_t093_strategy_stage_gates",
@@ -9123,7 +9188,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Completed T-093 config-driven Gate 1/Gate 2 promotion coverage, fail-closed live-stage recording and regression tests. Risk Guardian stage-cap behavior reviewed; handing T-093 to Claude."
+    },
+    {
+      "revision": 204,
+      "ts": "2026-10-07T14:10:00Z",
+      "agent": "claude",
+      "action": "review_t093_changes_requested",
+      "task_ids": [
+        "T-093"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-093 changes_requested (cycle 1): gate code merged; tests must use real strategy_lab.yaml, soak feed/persistence missing. Codex: branch from origin/main (rev 204)."
     }
   ],
-  "project_summary": "T-093 stage gates are covered by config-driven Gate 1/Gate 2 promotion tests and fail-closed live-stage recording."
+  "project_summary": "T-091 review cycle 2 is ready for Claude: production report providers, persisted schedule execution and Telegram/SMTP delivery wiring are implemented with fail-closed tests."
 }
