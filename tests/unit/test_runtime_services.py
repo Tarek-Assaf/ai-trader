@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+from datetime import UTC, datetime
 
 import yaml
 from pydantic import SecretStr
@@ -87,3 +88,38 @@ def test_missing_control_channel_keeps_runtime_stopped() -> None:
     )
     with pytest.raises(RuntimeDependencyUnavailable):
         build_runtime_services(settings, {}, overrides={"redis_client": _Redis()})
+
+
+def test_report_scheduler_persists_each_period_once_per_scheduled_target() -> None:
+    from trader.runtime.services import _ReportScheduler
+    from tests.unit.test_reports import _snapshot
+
+    class Store:
+        def __init__(self) -> None:
+            self.value = None
+
+        def get_snapshot(self, _key: str) -> object:
+            return self.value
+
+        def save_snapshot(self, _key: str, value: object) -> None:
+            self.value = value
+
+    schedule = {
+        "reports": {
+            "daily": {"at": "09:00"},
+            "weekly": {"day": "wednesday", "at": "09:30"},
+            "monthly": {"day_of_month": 7, "at": "10:00"},
+        }
+    }
+    store = Store()
+    calls: list[str] = []
+    scheduler = _ReportScheduler(
+        schedule,
+        snapshot_provider=lambda period: (calls.append(period) or _snapshot()),
+        state_store=store,
+    )
+    now = datetime(2026, 10, 7, 11, tzinfo=UTC)
+    assert set(scheduler.run_due(now)) == {"daily", "weekly", "monthly"}
+    assert len(calls) == 3
+    assert scheduler.run_due(now) == ()
+    assert len(calls) == 3

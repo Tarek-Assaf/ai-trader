@@ -251,6 +251,7 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime_services = None
     _app.state.runtime_service_overrides = None
     _app.state.command_data_service = None
+    _app.state.report_telegram_transport = None
     _app.state.runtime_eligible = runtime_enabled(settings)
     if _app.state.runtime_eligible:
         # Runtime dependencies are composed only after the validated broker,
@@ -345,10 +346,15 @@ async def lifespan(_app: FastAPI) -> Any:
         scheduler = services.get("report_scheduler")
 
         def report_provider(period: str) -> Any:
-            run = getattr(scheduler, "run", None)
-            if not callable(run):
+            # Interactive /report is already answered by TelegramChannel.  Use
+            # the scheduler's render-only path so it cannot send a duplicate
+            # Telegram report before returning the command reply.
+            render = getattr(scheduler, "render", None)
+            if not callable(render):
+                render = getattr(scheduler, "run", None)
+            if not callable(render):
                 raise RuntimeError("report scheduler is unavailable")
-            return run(period)
+            return render(period)
 
         _app.state.command_data_service = CommandDataService(
             services.get("broker"),
@@ -360,6 +366,38 @@ async def lifespan(_app: FastAPI) -> Any:
         # Keep controls available while recording one clear fail-safe alert;
         # _start_runtime_if_configured will not compose a partial runtime.
         _LOG.error("runtime alert: dependencies unavailable (%s)", type(exc).__name__)
+
+    # Reports run in the core process and use the same Telegram transport and
+    # owner allow-list as the interactive channel.  Delivery is optional and
+    # never blocks startup when SMTP/Telegram settings are absent.
+    report_scheduler = getattr(_app.state, "runtime_services", None)
+    report_scheduler = (
+        report_scheduler.get("report_scheduler")
+        if isinstance(report_scheduler, dict)
+        else None
+    )
+    if report_scheduler is not None and hasattr(report_scheduler, "configure_delivery"):
+        token = (
+            settings.telegram_bot_token.get_secret_value()
+            if settings.telegram_bot_token is not None
+            else ""
+        )
+        owner_ids = tuple(
+            value.strip()
+            for value in (settings.telegram_owner_chat_ids or "").split(",")
+            if value.strip()
+        )
+        report_transport = TelegramBotTransport(token) if token and owner_ids else None
+        _app.state.report_telegram_transport = report_transport
+        report_scheduler.configure_delivery(
+            telegram=report_transport,
+            email=(
+                _app.state.runtime_services.get("report_email")
+                if isinstance(_app.state.runtime_services, dict)
+                else None
+            ),
+            owner_chat_ids=owner_ids,
+        )
     _start_runtime_if_configured(_app, settings, configs)
     runtime = getattr(_app.state, "runtime", None)
     if runtime is not None:
@@ -422,8 +460,9 @@ async def lifespan(_app: FastAPI) -> Any:
                 control_handler=control_handler,
                 command_handlers=command_handlers,
             )
+            transport = _app.state.report_telegram_transport or TelegramBotTransport(token)
             channel = TelegramChannel(
-                TelegramBotTransport(token),
+                transport,
                 owner_ids,
                 control_writer=writer,
                 current_mode=current_mode,

@@ -7,10 +7,13 @@ partial mapping, keeping startup fail closed.
 
 from __future__ import annotations
 
+import json
 import logging
+import os
 from collections.abc import Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import Any
 
 from trader.core.audit import SqlAuditWriter
@@ -118,6 +121,23 @@ def build_runtime_services(
     journal: Any = provided.get("journal") or ExecutionJournal(engine)
     execution_lease = RedisLeaderLease(redis_client, "ai-trader:execution:lease")
     guardian_lease = RedisLeaderLease(redis_client, "ai-trader:guardian:lease")
+
+    # Reports are a read-only view over the same objects used by the runtime.
+    # Build these providers here, rather than in the LLM/router layer, so a
+    # failed model can never prevent an owner command from returning facts.
+    if "pnl_provider" not in provided:
+        provided["pnl_provider"] = _broker_pnl_provider(broker)
+    if "risk_provider" not in provided:
+        risk_values = _dump_mapping(configs.get("risk"))
+
+        def risk_provider() -> Mapping[str, object]:
+            mode = control_source.read()
+            return {
+                "mode": getattr(mode, "value", str(mode)),
+                "limits": dict(risk_values),
+            }
+
+        provided["risk_provider"] = risk_provider
 
     guardian: Any = provided.get("guardian")
     if guardian is None:
@@ -283,13 +303,27 @@ def build_runtime_services(
     reconciler: Any = provided.get("reconciler") or RuntimeReconciler(
         journal, broker, alert=_log_alert
     )
+    if "report_email" not in provided:
+        from trader.reports.core import SmtpEmailSender
+
+        provided["report_email"] = SmtpEmailSender.from_env()
     report_scheduler: Any = provided.get("report_scheduler") or _ReportScheduler(
         configs.get("schedule"),
-        snapshot_provider=provided.get("report_snapshot_provider"),
+        snapshot_provider=provided.get("report_snapshot_provider")
+        or _build_report_snapshot_provider(
+            broker=broker,
+            journal=journal,
+            recorder=provided.get("recorder"),
+            pnl_provider=provided.get("pnl_provider"),
+            risk_provider=provided.get("risk_provider"),
+            backup_health_provider=provided.get("backup_health_provider"),
+        ),
         telegram=provided.get("report_telegram"),
         email=provided.get("report_email"),
         owner_chat_ids=provided.get("report_owner_chat_ids", ()),
-        usage_summary=provided.get("llm_usage_summary"),
+        usage_summary=provided.get("llm_usage_summary")
+        or _build_llm_usage_summary(engine, configs),
+        state_store=journal,
     )
     settings_service: Any = provided.get("settings_service")
     if settings_service is None:
@@ -375,6 +409,163 @@ def _dump_mapping(value: object) -> dict[str, object]:
     return dict(raw) if isinstance(raw, Mapping) else {}
 
 
+def _broker_pnl_provider(broker: Any) -> Any:
+    """Return a fail-closed P&L provider using explicit broker account fields."""
+    def provider() -> Any:
+        from trader.execution.pnl import BrokerAccountFigures, PnlEngine
+
+        account = broker.get_account()
+        if not isinstance(account, Mapping):
+            raise RuntimeError("broker account is unavailable")
+        names = {
+            "balance": ("balance",),
+            "equity": ("equity",),
+            "currency": ("currency",),
+            "margin_used": ("margin_used", "marginUsed"),
+            "notional_exposure": ("notional_exposure", "notionalExposure"),
+        }
+        values: dict[str, object] = {}
+        for name, keys in names.items():
+            value = next((account[key] for key in keys if key in account), None)
+            if value is None:
+                raise RuntimeError(f"broker account field unavailable: {name}")
+            values[name] = value
+        figures = BrokerAccountFigures(
+            balance=Decimal(str(values["balance"])),
+            equity=Decimal(str(values["equity"])),
+            currency=str(values["currency"]),
+            margin_used=Decimal(str(values["margin_used"])),
+            notional_exposure=Decimal(str(values["notional_exposure"])),
+        )
+        return PnlEngine.calculate(
+            (),
+            starting_balance=figures.balance,
+            currency=figures.currency,
+            broker=figures,
+            as_of=datetime.now(UTC),
+        )
+
+    return provider
+
+
+def _build_llm_usage_summary(engine: Any, configs: Mapping[str, object]) -> Any:
+    """Build the aggregate SQL usage callback when an LLM budget is configured."""
+    llm = _dump_mapping(configs.get("llm"))
+    budget = _dump_mapping(llm.get("budget"))
+    try:
+        daily = Decimal(str(budget["daily_usd_cap"]))
+        monthly = Decimal(str(budget["monthly_usd_cap"]))
+    except (KeyError, TypeError, ValueError):
+        return None
+    try:
+        from trader.agents.llm.ledger import SqlUsageLedger
+
+        ledger = SqlUsageLedger(engine, daily_cap_usd=daily, monthly_cap_usd=monthly)
+    except Exception:
+        LOGGER.warning("LLM usage ledger unavailable", extra={"error": "setup"})
+        return None
+    return ledger.summary
+
+
+def _health_text(value: object, *, missing: str = "unavailable") -> str:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    if isinstance(value, Mapping):
+        status = value.get("status")
+        if isinstance(status, str) and status.strip():
+            return status.strip()
+    return missing
+
+
+def _recorder_health(recorder: Any) -> str:
+    if recorder is None:
+        return "unavailable"
+    getter = getattr(recorder, "health", None) or getattr(recorder, "status", None)
+    if callable(getter):
+        try:
+            return _health_text(getter())
+        except Exception:
+            return "unavailable"
+    path = getattr(recorder, "_status_path", None)
+    if path is not None:
+        try:
+            payload = json.loads(Path(path).read_text(encoding="utf-8"))
+            return _health_text(payload)
+        except (OSError, ValueError, TypeError):
+            return "unavailable"
+    return "unavailable"
+
+
+def _build_report_snapshot_provider(
+    *,
+    broker: Any,
+    journal: Any,
+    recorder: Any,
+    pnl_provider: Any,
+    risk_provider: Any,
+    backup_health_provider: Any,
+) -> Any:
+    """Compose a report snapshot without manufacturing missing facts."""
+    from trader.reports.core import ReportSnapshot
+
+    def provider(period: str) -> ReportSnapshot:
+        pnl = pnl_provider() if callable(pnl_provider) else None
+        if pnl is None:
+            raise RuntimeError("P&L provider is unavailable")
+        now = datetime.now(UTC)
+        usage_risk = risk_provider() if callable(risk_provider) else {}
+        risk_events: tuple[str, ...] = ()
+        if isinstance(usage_risk, Mapping):
+            mode = usage_risk.get("mode")
+            if isinstance(mode, str) and mode not in {"run", "RUN"}:
+                risk_events = (f"control mode: {mode}",)
+        if callable(backup_health_provider):
+            try:
+                backup = _health_text(backup_health_provider())
+            except Exception:
+                backup = "unavailable"
+        else:
+            backup = _backup_health()
+        r_values = tuple(getattr(pnl, "r_multiples", ()))
+        wins = sum(1 for value in r_values if getattr(value, "net_profit", Decimal(0)) > 0)
+        expectancy = (
+            sum((value.net_profit for value in r_values), Decimal(0)) / Decimal(len(r_values))
+            if r_values
+            else Decimal(0)
+        )
+        issues = ()
+        reconciliation = getattr(pnl, "reconciliation", None)
+        if getattr(reconciliation, "alert_required", False):
+            issues = ("P&L reconciliation is outside tolerance",)
+        return ReportSnapshot(
+            period=period,  # type: ignore[arg-type]
+            generated_at=now,
+            pnl=pnl,
+            trade_count=len(r_values),
+            winning_trades=wins,
+            expectancy=expectancy,
+            risk_events=risk_events,
+            data_health=_recorder_health(recorder),
+            backup_health=backup,
+            issues=issues,
+        )
+
+    return provider
+
+
+def _backup_health() -> str:
+    """Return a filesystem backup status without exposing paths or filenames."""
+    directory = Path(os.getenv("BACKUP_DIR", "/workspace/backups"))
+    try:
+        fresh = any(
+            path.is_file() and path.stat().st_size > 0
+            for path in directory.glob("trader-*.dump")
+        )
+    except OSError:
+        return "unavailable"
+    return "fresh" if fresh else "stale"
+
+
 class _ReportScheduler:
     def __init__(
         self,
@@ -385,8 +576,10 @@ class _ReportScheduler:
         email: Any = None,
         owner_chat_ids: object = (),
         usage_summary: Any = None,
+        state_store: Any = None,
     ) -> None:
         self.schedule = schedule
+        self._state_store = state_store
         from trader.reports.commands import ScheduledReportRunner
         from trader.reports.core import ReportPeriod, ReportSnapshot
 
@@ -403,11 +596,104 @@ class _ReportScheduler:
             owner_chat_ids=ids,
             usage_summary=usage_summary if callable(usage_summary) else None,
         )
+        self._last_run = self._load_last_run()
 
     def run(self, period: str) -> Any:
         if period not in {"daily", "weekly", "monthly"}:
             raise ValueError("unsupported report period")
         return self._runner.run(period)  # type: ignore[arg-type]
+
+    def render(self, period: str) -> Any:
+        if period not in {"daily", "weekly", "monthly"}:
+            raise ValueError("unsupported report period")
+        return self._runner.render(period)  # type: ignore[arg-type]
+
+    def configure_delivery(self, *, telegram: Any, email: Any, owner_chat_ids: object) -> None:
+        self._runner.configure_delivery(
+            telegram=telegram,
+            email=email,
+            owner_chat_ids=owner_chat_ids if isinstance(owner_chat_ids, tuple | list) else (),
+        )
+
+    def run_due(self, now: datetime | None = None) -> tuple[str, ...]:
+        """Run each configured period once when its UTC schedule is due."""
+        current = (now or datetime.now(UTC)).astimezone(UTC)
+        ran: list[str] = []
+        for period, target in self._targets(current):
+            key = target.isoformat()
+            if self._last_run.get(period) == key or current < target:
+                continue
+            self.run(period)
+            self._last_run[period] = key
+            self._save_last_run()
+            ran.append(period)
+        return tuple(ran)
+
+    def _targets(self, now: datetime) -> tuple[tuple[str, datetime], ...]:
+        raw = getattr(self.schedule, "model_dump", lambda: self.schedule)()
+        reports = raw.get("reports", {}) if isinstance(raw, Mapping) else {}
+        if not isinstance(reports, Mapping):
+            return ()
+        output: list[tuple[str, datetime]] = []
+        for period in ("daily", "weekly", "monthly"):
+            config = reports.get(period)
+            if not isinstance(config, Mapping):
+                continue
+            at = config.get("at")
+            if not isinstance(at, str) or len(at) != 5 or at[2] != ":":
+                continue
+            try:
+                hour, minute = (int(value) for value in at.split(":"))
+                target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            except (TypeError, ValueError):
+                continue
+            if period == "weekly":
+                day = str(config.get("day", "")).lower()
+                weekdays = {
+                    name: index
+                    for index, name in enumerate(
+                        (
+                            "monday",
+                            "tuesday",
+                            "wednesday",
+                            "thursday",
+                            "friday",
+                            "saturday",
+                            "sunday",
+                        )
+                    )
+                }
+                if day not in weekdays:
+                    continue
+                target += timedelta(days=(weekdays[day] - target.weekday()) % 7)
+            elif period == "monthly":
+                try:
+                    day = int(config.get("day_of_month"))
+                    target = target.replace(day=day)
+                except (TypeError, ValueError):
+                    continue
+            output.append((period, target))
+        return tuple(output)
+
+    def _load_last_run(self) -> dict[str, str]:
+        getter = getattr(self._state_store, "get_snapshot", None)
+        if not callable(getter):
+            return {}
+        try:
+            value = getter("reports:last-run")
+            return dict(value) if isinstance(value, Mapping) else {}
+        except Exception:
+            LOGGER.warning("report schedule state unavailable", extra={"error": "read"})
+            return {}
+
+    def _save_last_run(self) -> None:
+        saver = getattr(self._state_store, "save_snapshot", None)
+        if not callable(saver):
+            return
+        try:
+            saver("reports:last-run", self._last_run)
+        except Exception:
+            LOGGER.warning("report schedule state unavailable", extra={"error": "write"})
 
 
 __all__ = ["build_runtime_services"]

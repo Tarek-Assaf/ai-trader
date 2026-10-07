@@ -148,9 +148,27 @@ def test_smtp_sender_uses_plain_and_html_parts_without_secret_logging() -> None:
     assert "Daily trading report" in body.get_content()
 
 
-def test_missing_smtp_configuration_is_a_noop() -> None:
+def test_missing_smtp_configuration_warns_once_and_telegram_still_delivers(caplog: Any) -> None:
     sender = SmtpEmailSender(None, None, None, None, None)
-    assert not sender.send(build_report(_snapshot()))
+    transport = _FakeTelegram()
+    document = build_report(_snapshot())
+    assert not sender.send(document)
+    assert not sender.send(document)
+    deliver_telegram(document, transport, ["owner"])
+    assert len(transport.messages) == 1
+    warnings = [record for record in caplog.records if "using Telegram only" in record.getMessage()]
+    assert len(warnings) == 1
+
+
+def test_report_delivery_logs_never_include_transport_secrets(caplog: Any) -> None:
+    sender = SmtpEmailSender(None, None, "reporter", "smtp-password", "owner@example.com")
+    transport = _FakeTelegram()
+    document = build_report(_snapshot())
+    sender.send(document)
+    deliver_telegram(document, transport, ["123456789"])
+    output = "\n".join(record.getMessage() for record in caplog.records)
+    assert "smtp-password" not in output
+    assert "123456789" not in output
 
 
 def test_smtp_from_env_bad_port_disables_delivery() -> None:
