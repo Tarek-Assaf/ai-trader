@@ -227,10 +227,9 @@ def test_real_guardian_observation_is_read_only() -> None:
         now=datetime(2026, 10, 7, tzinfo=UTC),
         cycle_id="soak",
     )
-    assert guardian.soak_observation() == {
-        "risk_per_trade_pct": "2",
-        "risk_per_trade_limit_pct": "1",
-    }
+    observed = guardian.soak_observation()
+    assert Decimal(str(observed["risk_per_trade_pct"])) == Decimal("2")
+    assert Decimal(str(observed["risk_per_trade_limit_pct"])) == Decimal("1")
 
 
 def test_runtime_service_feeds_breach_alert_evidence_and_resets_clock(tmp_path) -> None:

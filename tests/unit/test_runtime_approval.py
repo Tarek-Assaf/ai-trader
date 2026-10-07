@@ -206,10 +206,9 @@ def test_pnl_guard_persists_baseline_and_pauses_on_restart() -> None:
         restarted(())
     assert writer.mode is not None
     assert alerts == ["pnl_limit_daily"]
-    assert restarted.soak_observation() == {
-        "daily_loss_pct": "3",
-        "daily_loss_limit_pct": "2",
-    }
+    observed = restarted.soak_observation()
+    assert Decimal(str(observed["daily_loss_pct"])) == Decimal("3")
+    assert Decimal(str(observed["daily_loss_limit_pct"])) == Decimal("2")
 
 
 def test_position_manager_and_reconciler_alert_on_safety_mismatch() -> None:

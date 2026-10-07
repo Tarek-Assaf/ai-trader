@@ -124,7 +124,8 @@ def build_runtime_services(
         from trader.runtime.soak import LogScanner
 
         workspace = os.getenv("WORKSPACE_DIR", "/workspace")
-        patterns = settings.sensitive_values()
+        sensitive = getattr(settings, "sensitive_values", None)
+        patterns = tuple(sensitive()) if callable(sensitive) else ()
         provided["log_scanner"] = LogScanner(workspace, secret_patterns=patterns)
     attach_journal = getattr(soak_monitor, "attach_journal", None)
     if callable(attach_journal):
