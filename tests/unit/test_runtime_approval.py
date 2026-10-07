@@ -506,3 +506,45 @@ def test_real_agent_graph_paper_fixture_routes_one_trade_through_order_manager(t
     assert blocked.execution is not None
     assert blocked.execution.reason == "execution_paused"
     assert len(broker.get_positions()) == 1
+
+
+def test_loss_guard_keeps_shared_baseline_fields_and_peak() -> None:
+    class Broker:
+        def get_account(self) -> dict[str, object]:
+            return {"equity": "100"}
+
+        def get_positions(self) -> list[object]:
+            return []
+
+    class Journal:
+        def __init__(self) -> None:
+            self.snapshot: dict[str, object] | None = {
+                "day": datetime.now(UTC).date().isoformat(),
+                "week": "x",
+                "day_equity": "100",
+                "week_equity": "100",
+                "peak_equity": "120",
+                "consecutive_losses": 2,
+                "last_loss_at": "2026-10-07T10:00:00+00:00",
+            }
+
+        def get_snapshot(self, _snapshot_id: str) -> dict[str, object] | None:
+            return self.snapshot
+
+        def save_snapshot(self, _snapshot_id: str, payload: dict[str, object]) -> None:
+            self.snapshot = payload
+
+    journal = Journal()
+    guard = PnlLossGuard(
+        Broker(),
+        max_daily_loss_pct=Decimal("2"),
+        max_weekly_loss_pct=Decimal("5"),
+        control_writer=object(),
+        alert=lambda _m: None,
+        journal=journal,
+    )
+    guard(())
+    assert journal.snapshot is not None
+    assert journal.snapshot["peak_equity"] == "120"
+    assert journal.snapshot["consecutive_losses"] == 2
+    assert journal.snapshot["last_loss_at"] == "2026-10-07T10:00:00+00:00"

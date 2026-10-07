@@ -60,10 +60,14 @@ class AccountContextSource:
             raise ContextUnavailable("broker account is unavailable")
 
         equity = _decimal(raw.get("equity", raw.get("balance")), "equity", positive=True)
-        snapshot = self._snapshot()
+        snapshot = self._load_or_store_baseline(equity)
 
         def field(name: str, *, positive: bool = False) -> Decimal:
-            value = raw.get(name, snapshot.get(name))
+            baseline_name = {
+                "day_start_equity": "day_equity",
+                "week_start_equity": "week_equity",
+            }.get(name, name)
+            value = snapshot.get(baseline_name, raw.get(name))
             return _decimal(value, name, positive=positive)
 
         day_start = field("day_start_equity", positive=True)
@@ -105,38 +109,68 @@ class AccountContextSource:
             kill_switch_active=bool(raw.get("kill_switch_active", False)),
             drawdown_halt_active=bool(raw.get("drawdown_halt_active", False)),
         )
-        saver = getattr(self.journal, "save_snapshot", None)
-        if callable(saver):
-            now = self.clock().astimezone(UTC)
-            iso = now.date().isocalendar()
-            saver(
-                "runtime:account-baseline",
-                {
-                    "day": now.date().isoformat(),
-                    "week": f"{iso.year}-W{iso.week:02d}",
-                    "day_start_equity": str(day_start),
-                    "week_start_equity": str(week_start),
-                    "peak_equity": str(peak),
-                    "consecutive_losses": consecutive,
-                    "last_loss_at": last_loss.isoformat() if last_loss is not None else None,
-                },
-            )
         return state
 
-    def _snapshot(self) -> Mapping[str, object]:
+    def _load_or_store_baseline(self, equity: Decimal) -> Mapping[str, object]:
+        """Load and atomically refresh the single durable P&L baseline store.
+
+        The first observed equity seeds the UTC day and ISO week.  A restart
+        reloads the same values, a new UTC day rolls only the day baseline, and
+        the peak is retained and advanced monotonically.  Account context and
+        :class:`PnlLossGuard` intentionally share this snapshot id/schema.
+        """
         getter = getattr(self.journal, "get_snapshot", None)
-        if not callable(getter):
-            return {}
-        value = getter("runtime:account-baseline")
-        if not isinstance(value, Mapping):
-            return {}
         now = self.clock().astimezone(UTC)
         iso = now.date().isocalendar()
         current_day = now.date().isoformat()
         current_week = f"{iso.year}-W{iso.week:02d}"
-        if value.get("day") != current_day or value.get("week") != current_week:
-            return {}
-        return value
+        value = getter("runtime:pnl-baseline") if callable(getter) else None
+
+        def stored(name: str) -> Decimal | None:
+            if not isinstance(value, Mapping) or name not in value:
+                return None
+            try:
+                result = Decimal(str(value[name]))
+            except (ArithmeticError, TypeError, ValueError):
+                return None
+            return result if result.is_finite() and result > 0 else None
+
+        day_start = (
+            stored("day_equity") or stored("day_start_equity")
+            if isinstance(value, Mapping)
+            else None
+        )
+        week_start = (
+            stored("week_equity") or stored("week_start_equity")
+            if isinstance(value, Mapping)
+            else None
+        )
+        peak = stored("peak_equity") if isinstance(value, Mapping) else None
+        if not isinstance(value, Mapping) or value.get("day") != current_day:
+            day_start = equity
+        if not isinstance(value, Mapping) or value.get("week") != current_week:
+            week_start = equity
+        peak = max(peak or equity, equity)
+
+        result: dict[str, object] = {
+            "day": current_day,
+            "week": current_week,
+            "day_equity": str(day_start),
+            "week_equity": str(week_start),
+            "peak_equity": str(peak),
+        }
+        if isinstance(value, Mapping):
+            for name in ("consecutive_losses", "last_loss_at"):
+                if name in value:
+                    result[name] = value[name]
+        saver = getattr(self.journal, "save_snapshot", None)
+        if not callable(saver):
+            raise ContextUnavailable("runtime P&L baseline store is unavailable")
+        try:
+            saver("runtime:pnl-baseline", result)
+        except Exception as exc:
+            raise ContextUnavailable("runtime P&L baseline store is unavailable") from exc
+        return result
 
     def _orders_last_hour(self) -> int:
         records = getattr(self.journal, "records", None)
