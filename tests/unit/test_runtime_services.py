@@ -74,6 +74,7 @@ def test_no_service_overrides_builds_real_paper_services() -> None:
     )
     assert result["order_manager"].__class__.__name__ == "OrderManager"
     assert result["broker"].__class__.__name__ == "PaperBroker"
+    assert result["guardian_context_provider"].__class__.__name__ == "RuntimeContextProvider"
 
 
 def test_missing_control_channel_keeps_runtime_stopped() -> None:
