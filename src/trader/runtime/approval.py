@@ -58,6 +58,130 @@ class GuardianInputs:
         return value
 
 
+class RuntimeContextProvider:
+    """Build Guardian inputs from broker truth and explicitly supplied feeds.
+
+    Feed and sizing providers are injected because only those components know
+    how to value an instrument.  Missing fields return ``None`` and therefore
+    reject the proposal instead of inventing market prices or position size.
+    """
+
+    def __init__(
+        self,
+        broker: object,
+        *,
+        market_provider: Callable[[str], MarketSnapshot | None] | None = None,
+        sizing_provider: Callable[
+            [GraphTradeIntent, AccountState, tuple[OpenPosition, ...]], SizingEstimate | None
+        ]
+        | None = None,
+        positions_provider: Callable[[], Sequence[OpenPosition]] | None = None,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ) -> None:
+        self.broker = broker
+        self.market_provider = market_provider
+        self.sizing_provider = sizing_provider
+        self.positions_provider = positions_provider
+        self.clock = clock
+
+    def __call__(self, _cycle_id: str, intent: GraphTradeIntent) -> GuardianInputs | None:
+        try:
+            account = self._account()
+            market = self._market(intent.instrument)
+            positions = (
+                tuple(self.positions_provider())
+                if self.positions_provider is not None
+                else self._positions()
+            )
+            sizing = (
+                self.sizing_provider(intent, account, positions)
+                if self.sizing_provider is not None
+                else None
+            )
+            if market is None or sizing is None:
+                return None
+            return GuardianInputs(
+                market=market,
+                account=account,
+                open_positions=positions,
+                sizing=sizing,
+                stage_size_cap=None,
+                trade_quality_score=Decimal("1"),
+                now=self.clock(),
+            )
+        except (ArithmeticError, KeyError, TypeError, ValueError, RuntimeError):
+            LOGGER.warning("runtime Guardian context unavailable; proposal rejected")
+            return None
+
+    def _account(self) -> AccountState:
+        raw = self.broker.get_account()
+        if not isinstance(raw, Mapping):
+            raise ValueError("broker account is unavailable")
+
+        def decimal(name: str) -> Decimal:
+            value = raw[name]
+            result = Decimal(str(value))
+            if not result.is_finite():
+                raise ValueError(f"account field {name} is not finite")
+            return result
+
+        return AccountState(
+            equity=decimal("equity"),
+            day_start_equity=decimal("day_start_equity"),
+            week_start_equity=decimal("week_start_equity"),
+            peak_equity=decimal("peak_equity"),
+            daily_pnl=decimal("daily_pnl"),
+            weekly_pnl=decimal("weekly_pnl"),
+            margin_used=decimal("margin_used"),
+            notional_exposure=decimal("notional_exposure"),
+            orders_last_hour=int(raw["orders_last_hour"]),
+            consecutive_losses=int(raw.get("consecutive_losses", 0)),
+            last_loss_at=raw.get("last_loss_at")
+            if isinstance(raw.get("last_loss_at"), datetime)
+            else None,
+            paused=bool(raw.get("paused", False)),
+            kill_switch_active=bool(raw.get("kill_switch_active", False)),
+            drawdown_halt_active=bool(raw.get("drawdown_halt_active", False)),
+        )
+
+    def _market(self, instrument: str) -> MarketSnapshot | None:
+        if self.market_provider is not None:
+            return self.market_provider(instrument)
+        details = self.broker.get_market_details(instrument)
+        if not isinstance(details, Mapping):
+            return None
+        required = ("latest_data_at", "market_open", "in_break", "bid", "ask", "atr")
+        if any(key not in details for key in required):
+            return None
+        return MarketSnapshot(
+            latest_data_at=details["latest_data_at"],
+            market_open=bool(details["market_open"]),
+            in_break=bool(details["in_break"]),
+            bid=Decimal(str(details["bid"])),
+            ask=Decimal(str(details["ask"])),
+            atr=Decimal(str(details["atr"])),
+            spread_ceiling=(
+                Decimal(str(details["spread_ceiling"]))
+                if details.get("spread_ceiling") is not None
+                else None
+            ),
+        )
+
+    def _positions(self) -> tuple[OpenPosition, ...]:
+        # Broker adapters must expose risk/margin valuations for production
+        # Guardian context.  The paper fixture supplies these explicitly.
+        values = self.broker.get_positions()
+        result: list[OpenPosition] = []
+        for value in values:
+            risk = getattr(value, "risk_amount", None)
+            margin = getattr(value, "margin_required", None)
+            exposure = getattr(value, "notional_exposure", None)
+            if not all(isinstance(item, Decimal) for item in (risk, margin, exposure)):
+                raise ValueError("position valuation is unavailable")
+            result.append(OpenPosition(value.epic, risk, margin, exposure))
+        return tuple(result)
+
+
 def _reject(reason: str, *, details: Mapping[str, Any] | None = None) -> GuardianDecision:
     return GuardianDecision(approved=False, reasons=(reason,), details=dict(details or {}))
 
@@ -75,12 +199,12 @@ def _inputs(value: object) -> GuardianInputs | None:
         positions = value.get("open_positions", ())
         if not isinstance(positions, Sequence) or isinstance(positions, str | bytes):
             return None
+        if any(not isinstance(position, OpenPosition) for position in positions):
+            return None
         return GuardianInputs(
             market=market,
             account=account,
-            open_positions=tuple(
-                position for position in positions if isinstance(position, OpenPosition)
-            ),
+            open_positions=tuple(positions),
             sizing=value.get("sizing") if isinstance(value.get("sizing"), SizingEstimate) else None,
             stage_size_cap=value.get("stage_size_cap")
             if isinstance(value.get("stage_size_cap"), Decimal)
@@ -132,24 +256,29 @@ class RuntimeApproval:
         self,
         guardian: RiskGuardian,
         *,
-        context_provider: Callable[[str], GuardianInputs | None] | None = None,
+        context_provider: Callable[..., GuardianInputs | None] | None = None,
     ) -> None:
         self.guardian = guardian
         self._context_provider = context_provider
         self._bound: dict[str, BoundApproval] = {}
 
-    def _context(self, cycle_id: str, supplied: object) -> GuardianInputs | None:
+    def _context(
+        self, cycle_id: str, supplied: object, intent: GraphTradeIntent
+    ) -> GuardianInputs | None:
         value = _inputs(supplied)
         if value is not None:
             return value
         if self._context_provider is not None:
-            return self._context_provider(cycle_id)
+            try:
+                return self._context_provider(cycle_id, intent)
+            except TypeError:
+                return self._context_provider(cycle_id)
         return None
 
     async def evaluate(
         self, intent: GraphTradeIntent, context: object, cycle_id: str
     ) -> GuardianDecision:
-        inputs = self._context(cycle_id, context)
+        inputs = self._context(cycle_id, context, intent)
         if inputs is None or inputs.sizing is None:
             return _reject("guardian_context_or_sizing_missing")
         try:
@@ -220,8 +349,12 @@ class RuntimeExecutor:
             if receipt is None:
                 return ExecutionOutcome(status="rejected", reason="duplicate_cycle")
             return ExecutionOutcome(status="submitted", reference=receipt.deal_reference)
-        except (ExecutionPaused, ValueError, RuntimeError):
+        except ExecutionPaused:
             return ExecutionOutcome(status="failed", reason="execution_paused")
+        except ValueError:
+            return ExecutionOutcome(status="failed", reason="order_invalid")
+        except RuntimeError:
+            return ExecutionOutcome(status="failed", reason="execution_failed")
         except Exception:
             LOGGER.exception("execution adapter failed closed")
             return ExecutionOutcome(status="failed", reason="execution_failed")
@@ -238,13 +371,58 @@ class PnlLossGuard:
         max_weekly_loss_pct: Decimal,
         control_writer: Any | None,
         alert: Callable[[str], None],
+        journal: object | None = None,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self.broker = broker
         self.max_daily_loss_pct = max_daily_loss_pct
         self.max_weekly_loss_pct = max_weekly_loss_pct
         self.control_writer = control_writer
         self.alert = alert
-        self._baseline: Decimal | None = None
+        self.journal = journal
+        self.clock = clock
+        self._day_baseline: Decimal | None = None
+        self._week_baseline: Decimal | None = None
+        self._baseline_day: str | None = None
+        self._baseline_week: str | None = None
+
+    def _load_or_store_baseline(self, equity: Decimal) -> tuple[Decimal, Decimal]:
+        now = self.clock().astimezone(UTC)
+        day = now.date().isoformat()
+        iso = now.date().isocalendar()
+        week = f"{iso.year}-W{iso.week:02d}"
+        snapshot = None
+        getter = getattr(self.journal, "get_snapshot", None)
+        if self._day_baseline is None and callable(getter):
+            snapshot = getter("runtime:pnl-baseline")
+        if isinstance(snapshot, Mapping):
+            try:
+                self._day_baseline = Decimal(str(snapshot["day_equity"]))
+                self._week_baseline = Decimal(str(snapshot["week_equity"]))
+                self._baseline_day = str(snapshot["day"])
+                self._baseline_week = str(snapshot["week"])
+            except (ArithmeticError, KeyError, TypeError, ValueError):
+                self._day_baseline = None
+                self._week_baseline = None
+        if self._day_baseline is None or self._baseline_day != day:
+            self._day_baseline = equity
+            self._baseline_day = day
+        if self._week_baseline is None or self._baseline_week != week:
+            self._week_baseline = equity
+            self._baseline_week = week
+        saver = getattr(self.journal, "save_snapshot", None)
+        if callable(saver):
+            saver(
+                "runtime:pnl-baseline",
+                {
+                    "day_equity": str(self._day_baseline),
+                    "week_equity": str(self._week_baseline),
+                    "day": self._baseline_day,
+                    "week": self._baseline_week,
+                },
+            )
+        assert self._day_baseline is not None and self._week_baseline is not None
+        return self._day_baseline, self._week_baseline
 
     def __call__(self, _positions: Sequence[Position]) -> None:
         account = self.broker.get_account()
@@ -257,23 +435,22 @@ class PnlLossGuard:
             equity = Decimal("NaN")
         if not equity.is_finite() or equity <= 0:
             raise RuntimeError("account equity is unavailable")
-        if self._baseline is None:
-            self._baseline = equity
+        day_baseline, week_baseline = self._load_or_store_baseline(equity)
         daily = account.get("daily_pnl") if isinstance(account, Mapping) else None
         weekly = account.get("weekly_pnl") if isinstance(account, Mapping) else None
         try:
-            daily_pnl = Decimal(str(daily)) if daily is not None else equity - self._baseline
-            weekly_pnl = Decimal(str(weekly)) if weekly is not None else equity - self._baseline
+            daily_pnl = Decimal(str(daily)) if daily is not None else equity - day_baseline
+            weekly_pnl = Decimal(str(weekly)) if weekly is not None else equity - week_baseline
         except (ArithmeticError, TypeError, ValueError):
             raise RuntimeError("account P&L is unavailable") from None
         breached = []
-        for name, pnl, limit in (
-            ("daily", daily_pnl, self.max_daily_loss_pct),
-            ("weekly", weekly_pnl, self.max_weekly_loss_pct),
+        for name, pnl, baseline, limit in (
+            ("daily", daily_pnl, day_baseline, self.max_daily_loss_pct),
+            ("weekly", weekly_pnl, week_baseline, self.max_weekly_loss_pct),
         ):
             if not isinstance(pnl, Decimal) or pnl.is_nan() or pnl.is_infinite():
                 raise RuntimeError(f"{name} P&L is unavailable")
-            if max(Decimal(0), -pnl) / self._baseline * 100 >= limit:
+            if max(Decimal(0), -pnl) / baseline * 100 >= limit:
                 breached.append(name)
         if breached:
             if self.control_writer is not None:
@@ -367,6 +544,7 @@ __all__ = [
     "PnlLossGuard",
     "ProtectivePositionManager",
     "RuntimeApproval",
+    "RuntimeContextProvider",
     "RuntimeExecutor",
     "RuntimeReconciler",
     "legacy_intent",

@@ -94,6 +94,7 @@ def build_runtime_services(
         PnlLossGuard,
         ProtectivePositionManager,
         RuntimeApproval,
+        RuntimeContextProvider,
         RuntimeExecutor,
         RuntimeReconciler,
     )
@@ -123,6 +124,14 @@ def build_runtime_services(
 
     approval_adapter: Any = provided.get("approval")
     order_manager: Any = provided.get("order_manager")
+    context_provider = provided.get("guardian_context_provider")
+    if context_provider is None:
+        context_provider = RuntimeContextProvider(
+            broker,
+            market_provider=provided.get("market_provider"),
+            sizing_provider=provided.get("sizing_provider"),
+            positions_provider=provided.get("positions_provider"),
+        )
     if order_manager is None:
         from trader.execution.manager import OrderManager
 
@@ -132,7 +141,9 @@ def build_runtime_services(
             weekly_loss = Decimal(str(risk_values["max_weekly_loss_pct"]))
         except (KeyError, TypeError, ValueError):
             raise RuntimeDependencyUnavailable("runtime service unavailable: pnl guard") from None
-        approval = approval_adapter or RuntimeApproval(guardian)
+        approval = approval_adapter or RuntimeApproval(
+            guardian, context_provider=context_provider
+        )
         approval_adapter = approval
         pnl_guard = PnlLossGuard(
             broker,
@@ -140,6 +151,7 @@ def build_runtime_services(
             max_weekly_loss_pct=weekly_loss,
             control_writer=control_writer,
             alert=_log_alert,
+            journal=journal,
         )
         position_manager = ProtectivePositionManager(
             broker, control_writer=control_writer, alert=_log_alert
@@ -200,7 +212,8 @@ def build_runtime_services(
             graph = AgentGraph(
                 llm=llm,
                 audit=audit,
-                guardian=approval_adapter or RuntimeApproval(guardian),
+                guardian=approval_adapter
+                or RuntimeApproval(guardian, context_provider=context_provider),
                 executor=RuntimeExecutor(order_manager),
             )
 
