@@ -13,7 +13,7 @@ from trader.runtime.composition import RuntimeComponents
 
 
 class RuntimeFactoryFn(Protocol):
-    def __call__(self, *args: Any, **kwargs: Any) -> object: ...
+    def __call__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
 @dataclass(frozen=True, slots=True)
