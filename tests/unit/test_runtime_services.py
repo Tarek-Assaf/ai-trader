@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from types import SimpleNamespace
 from datetime import UTC, datetime
+from types import SimpleNamespace
 
 import yaml
 from pydantic import SecretStr
@@ -91,8 +91,9 @@ def test_missing_control_channel_keeps_runtime_stopped() -> None:
 
 
 def test_report_scheduler_persists_each_period_once_per_scheduled_target() -> None:
-    from trader.runtime.services import _ReportScheduler
     from tests.unit.test_reports import _snapshot
+
+    from trader.runtime.services import _ReportScheduler
 
     class Store:
         def __init__(self) -> None:
@@ -115,7 +116,7 @@ def test_report_scheduler_persists_each_period_once_per_scheduled_target() -> No
     calls: list[str] = []
     scheduler = _ReportScheduler(
         schedule,
-        snapshot_provider=lambda period: (calls.append(period) or _snapshot()),
+        snapshot_provider=lambda period: calls.append(period) or _snapshot(),
         state_store=store,
     )
     now = datetime(2026, 10, 7, 11, tzinfo=UTC)

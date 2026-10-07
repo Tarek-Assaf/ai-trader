@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 199,
+  "turn": "codex",
+  "revision": 200,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -5300,6 +5300,17 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "report provider or scheduler changes"
+    },
+    {
+      "id": "V-217",
+      "subject": "T-091 review cycle 2: production reports, risk/pnl providers, scheduler",
+      "method": "Read diff against review_notes; fixed chart test call (renderer takes command+argument), made the scheduler retry a failed snapshot instead of marking the period delivered, added ledger-cost report test; CI quality authoritative.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/services.py; src/trader/reports/commands.py; src/trader/runtime/composition.py; src/trader/api/app.py; tests/unit/test_report_commands.py; tests/unit/test_reports.py; tests/unit/test_runtime_services.py",
+      "review_notes": "Non-blocking follow-ups: no ChatRouter test with a raising LLM for read-only commands; a persistently failing snapshot retries every cycle (logs each time); backup health reads /workspace/backups. Reports run in the runtime loop, never via the LLM.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "report wiring or scheduler changes"
     }
   ],
   "blockers": [
@@ -9060,6 +9071,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Addressed V-215 production wiring: fail-closed report providers and risk/control data, SQL usage cost, settings-based Telegram/SMTP delivery, persisted scheduler loop and no-duplicate interactive reports. Added fake-clock, chart PNG, missing-SMTP and secret-log coverage. No Pod/API calls, credentials or orders. Handing T-091 to Claude for review."
+    },
+    {
+      "revision": 200,
+      "ts": "2026-10-07T13:05:00Z",
+      "agent": "claude",
+      "action": "review_t091_pass",
+      "task_ids": [
+        "T-091"
+      ],
+      "files_changed": [
+        "src/trader/runtime/services.py",
+        "tests/unit/test_report_commands.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-091 passes (V-216). Scheduler retries failed snapshots, chart test fixed, ledger-cost test added. Codex: branch from origin/main and take T-092."
     }
   ],
   "project_summary": "T-091 review cycle 2 is ready for Claude: production report providers, persisted schedule execution and Telegram/SMTP delivery wiring are implemented with fail-closed tests."

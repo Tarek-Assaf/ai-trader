@@ -1,12 +1,10 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from decimal import Decimal
 
 from trader.execution.brokers.base import Direction, Position
-from dataclasses import replace
-
 from trader.reports.commands import CommandDataService, ScheduledReportRunner
-from trader.reports.core import ReportSnapshot
 
 
 class Broker:
@@ -55,6 +53,7 @@ def test_missing_provider_fails_closed_and_does_not_invent_numbers() -> None:
 
 def test_chart_returns_png_bytes_from_fixture_equity_data() -> None:
     from datetime import UTC, datetime
+
     from trader.execution.pnl import BrokerAccountFigures, EquityPoint, PnlEngine
 
     now = datetime(2026, 10, 7, tzinfo=UTC)
@@ -73,7 +72,7 @@ def test_chart_returns_png_bytes_from_fixture_equity_data() -> None:
         as_of=now,
         equity_history=(EquityPoint(now, Decimal("999")),),
     )
-    png = CommandDataService(pnl_provider=lambda: pnl).chart()
+    png = CommandDataService(pnl_provider=lambda: pnl).chart("/chart")
     assert png.startswith(b"\x89PNG")
 
 
@@ -91,3 +90,16 @@ def test_report_render_does_not_send_duplicate_telegram_message() -> None:
     assert transport.messages == []
     assert runner.run("daily") is not None
     assert len(transport.messages) == 1
+
+
+def test_scheduled_report_includes_llm_cost_from_usage_summary() -> None:
+    from tests.unit.test_reports import _snapshot
+
+    runner = ScheduledReportRunner(
+        {},
+        lambda period: replace(_snapshot(), period=period),
+        usage_summary=lambda: {"cost_usd": Decimal("1.2345")},
+    )
+    document = runner.render("daily")
+    assert document is not None
+    assert "1.2345" in document.plain_text

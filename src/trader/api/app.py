@@ -372,9 +372,7 @@ async def lifespan(_app: FastAPI) -> Any:
     # never blocks startup when SMTP/Telegram settings are absent.
     report_scheduler = getattr(_app.state, "runtime_services", None)
     report_scheduler = (
-        report_scheduler.get("report_scheduler")
-        if isinstance(report_scheduler, dict)
-        else None
+        report_scheduler.get("report_scheduler") if isinstance(report_scheduler, dict) else None
     )
     if report_scheduler is not None and hasattr(report_scheduler, "configure_delivery"):
         token = (

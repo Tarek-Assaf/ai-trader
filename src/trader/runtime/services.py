@@ -411,6 +411,7 @@ def _dump_mapping(value: object) -> dict[str, object]:
 
 def _broker_pnl_provider(broker: Any) -> Any:
     """Return a fail-closed P&L provider using explicit broker account fields."""
+
     def provider() -> Any:
         from trader.execution.pnl import BrokerAccountFigures, PnlEngine
 
@@ -558,8 +559,7 @@ def _backup_health() -> str:
     directory = Path(os.getenv("BACKUP_DIR", "/workspace/backups"))
     try:
         fresh = any(
-            path.is_file() and path.stat().st_size > 0
-            for path in directory.glob("trader-*.dump")
+            path.is_file() and path.stat().st_size > 0 for path in directory.glob("trader-*.dump")
         )
     except OSError:
         return "unavailable"
@@ -623,7 +623,10 @@ class _ReportScheduler:
             key = target.isoformat()
             if self._last_run.get(period) == key or current < target:
                 continue
-            self.run(period)
+            if self.run(period) is None:
+                # Snapshot failed (already logged); retry on the next cycle
+                # instead of marking the period as delivered.
+                continue
             self._last_run[period] = key
             self._save_last_run()
             ran.append(period)
