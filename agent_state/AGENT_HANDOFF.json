@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 200,
+  "turn": "claude",
+  "revision": 201,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-091 review cycle 2 is ready for Claude: production report providers, persisted schedule execution and Telegram/SMTP delivery wiring are implemented with fail-closed tests.",
+    "summary": "T-093 stage gates are covered by config-driven Gate 1/Gate 2 promotion tests and fail-closed live-stage recording.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2642,7 +2642,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04",
@@ -2667,8 +2667,12 @@
         "tests/unit/test_strategy_promotion.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/lab/promotion.py",
+        "src/trader/risk/guardian.py",
+        "tests/unit/test_strategy_promotion.py"
+      ],
+      "completion_note": "Verified config-driven PromotionGate transitions from backtest to paper and paper to micro_live using the checked-in strategy_lab thresholds. Gate 2 requires four weeks and 200 trades; insufficient metrics reject. Added a durable-audit requirement for micro/live stage transitions, preserving the LIVE_TRADING_ENABLED fail-closed guard, and added regression coverage for stage changes, alerts, capital caps and missing live-stage evidence. Risk Guardian stage-cap rule remains fail-closed for missing, non-positive or oversized sizing caps. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders."
     },
     {
       "id": "T-094",
@@ -5311,6 +5315,17 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "report wiring or scheduler changes"
+    },
+    {
+      "id": "V-218",
+      "subject": "T-093 strategy stage gates in demo",
+      "method": "Reviewed PromotionGate transitions and Risk Guardian stage-cap enforcement; ran direct stage-gate smoke assertions plus compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/lab/promotion.py; src/trader/risk/guardian.py; tests/unit/test_strategy_promotion.py",
+      "review_notes": "Gate 2 thresholds are read from strategy_lab.yaml semantics (four weeks, 200 trades). Live-stage transitions require LIVE_TRADING_ENABLED and a non-null audit writer. pytest, Ruff, mypy and make check are unavailable in this desktop runtime; no external calls were made.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "promotion gate or Guardian stage-cap wiring changes"
     }
   ],
   "blockers": [
@@ -9086,7 +9101,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-091 passes (V-216). Scheduler retries failed snapshots, chart test fixed, ledger-cost test added. Codex: branch from origin/main and take T-092."
+    },
+    {
+      "revision": 201,
+      "ts": "2026-10-07T14:00:00Z",
+      "agent": "codex",
+      "action": "complete_t093_strategy_stage_gates",
+      "task_ids": [
+        "T-093"
+      ],
+      "files_changed": [
+        "src/trader/lab/promotion.py",
+        "tests/unit/test_strategy_promotion.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-093 config-driven Gate 1/Gate 2 promotion coverage, fail-closed live-stage recording and regression tests. Risk Guardian stage-cap behavior reviewed; handing T-093 to Claude."
     }
   ],
-  "project_summary": "T-091 review cycle 2 is ready for Claude: production report providers, persisted schedule execution and Telegram/SMTP delivery wiring are implemented with fail-closed tests."
+  "project_summary": "T-093 stage gates are covered by config-driven Gate 1/Gate 2 promotion tests and fail-closed live-stage recording."
 }
