@@ -19,7 +19,6 @@ from trader.runtime.context import (
     position_source,
 )
 
-
 NOW = datetime(2026, 10, 7, 12, tzinfo=UTC)
 
 

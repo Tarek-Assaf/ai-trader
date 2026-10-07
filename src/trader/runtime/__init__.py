@@ -20,14 +20,6 @@ from trader.runtime.composition import (
     build_runtime,
     runtime_enabled,
 )
-from trader.runtime.factory import (
-    OrderManagerDecisionLoop,
-    RuntimeDependencyUnavailable,
-    RuntimeFactories,
-    build_default_factories,
-    build_runtime_components,
-)
-from trader.runtime.feeds import RuntimeFeedAdapters
 from trader.runtime.context import (
     AccountContextSource,
     ContextUnavailable,
@@ -36,6 +28,14 @@ from trader.runtime.context import (
     SizingContextSource,
     position_source,
 )
+from trader.runtime.factory import (
+    OrderManagerDecisionLoop,
+    RuntimeDependencyUnavailable,
+    RuntimeFactories,
+    build_default_factories,
+    build_runtime_components,
+)
+from trader.runtime.feeds import RuntimeFeedAdapters
 from trader.runtime.services import build_runtime_services
 
 __all__ = [

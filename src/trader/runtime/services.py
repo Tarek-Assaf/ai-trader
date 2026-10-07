@@ -163,7 +163,10 @@ def build_runtime_services(
                 account_source, market_source, sizing_source, positions_source
             )
         else:
-            context_provider = lambda *_args: None
+
+            def context_provider(*_args: Any) -> None:
+                return None
+
     if order_manager is None:
         from trader.execution.manager import OrderManager
 
@@ -173,9 +176,7 @@ def build_runtime_services(
             weekly_loss = Decimal(str(risk_values["max_weekly_loss_pct"]))
         except (KeyError, TypeError, ValueError):
             raise RuntimeDependencyUnavailable("runtime service unavailable: pnl guard") from None
-        approval = approval_adapter or RuntimeApproval(
-            guardian, context_provider=context_provider
-        )
+        approval = approval_adapter or RuntimeApproval(guardian, context_provider=context_provider)
         approval_adapter = approval
         pnl_guard = PnlLossGuard(
             broker,
@@ -183,6 +184,7 @@ def build_runtime_services(
             max_weekly_loss_pct=weekly_loss,
             control_writer=control_writer,
             alert=_log_alert,
+            journal=journal,
         )
         position_manager = ProtectivePositionManager(
             broker, control_writer=control_writer, alert=_log_alert

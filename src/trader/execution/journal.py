@@ -143,7 +143,7 @@ class ExecutionJournal:
             raise JournalError("execution pause reset failed") from None
 
     def save_snapshot(self, snapshot_id: str, payload: Mapping[str, Any]) -> None:
-        """Persist a normalized account baseline or other runtime snapshot."""
+        """Persist a small runtime snapshot used across process restarts."""
         if not snapshot_id.strip() or not isinstance(payload, Mapping):
             raise JournalError("snapshot id and payload are required")
         table = tables["snapshots"]

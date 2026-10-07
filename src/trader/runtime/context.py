@@ -11,7 +11,6 @@ from __future__ import annotations
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import Any
 
 from trader.agents.graph import TradeIntent as GraphTradeIntent
 from trader.data.instruments import InstrumentTerms
