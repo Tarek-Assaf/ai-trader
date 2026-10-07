@@ -217,11 +217,18 @@ class CapitalDataRecorder:
             for item in updates
         ).isoformat()
         adapter = self._feed_adapters
-        callback = getattr(adapter, "on_bar_close", None)
+        derived_callback = getattr(adapter, "on_closed_bar", None)
+        callback = derived_callback
+        if not callable(callback):
+            callback = getattr(adapter, "on_bar_close", None)
         if callable(callback):
             for item in updates:
                 stamp = item.update.timestamp.astimezone(UTC).replace(second=0, microsecond=0)
-                callback("1M", f"{item.update.epic}:{stamp.isoformat()}", stamp)
+                bar_id = f"{item.update.epic}:{stamp.isoformat()}"
+                if callable(derived_callback):
+                    callback(bar_id, stamp)
+                else:
+                    callback("1M", bar_id, stamp)
 
     def register_feed_adapters(self, adapters: Any | None) -> None:
         """Attach the shared runtime trigger adapter after construction."""

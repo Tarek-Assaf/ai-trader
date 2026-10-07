@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 184,
+  "revision": 188,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-095 review cycle 2 is ready for Claude review: default demo composition is registered fail-closed, recorder feed callbacks share the runtime trigger source, and the paper fixture records one cycle audit row. T-091 is next after review.",
+    "summary": "T-096 review cycle 2 is ready for Claude: real service construction is now internal and fail-closed, with SQLite/fake-Redis assembly coverage and corrected 3M/5M closed-bar boundaries.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -176,7 +176,8 @@
         "T-024",
         "T-090",
         "T-095",
-        "T-096"
+        "T-096",
+        "T-097"
       ]
     },
     {
@@ -190,7 +191,8 @@
         "T-090",
         "T-093",
         "T-095",
-        "T-096"
+        "T-096",
+        "T-097"
       ]
     },
     {
@@ -280,7 +282,8 @@
         "T-005",
         "T-090",
         "T-095",
-        "T-096"
+        "T-096",
+        "T-097"
       ]
     },
     {
@@ -2728,7 +2731,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-10",
         "R-11",
@@ -2747,6 +2750,48 @@
         "src/trader/runtime/services.py",
         "src/trader/api/app.py",
         "tests/unit/test_runtime_services.py"
+      ],
+      "review_cycles": 2,
+      "evidence": [
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "src/trader/runtime/feeds.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_runtime_factory.py",
+        "V-204"
+      ],
+      "completion_note": "Addressed V-203: build_runtime_services now constructs the Redis client, SQLAlchemy audit/journal, explicit-cost PaperBroker, RiskGuardian, Redis execution/Guardian leases, real OrderManager, reconciler wrapper, SettingsService, report scheduler and offline mock-LLM graph; overrides remain test-only. Corrected derived bar boundaries to close 3M at open minute 2 mod 3 and 5M at open minute 4 mod 5. Added timestamp boundary coverage and a no-service-overrides SQLite/fake-Redis assembly test. Bundled Python compileall and git diff --check pass; pytest/make quality checks are unavailable in this desktop runtime.",
+      "review_notes": [
+        "Pass (cycle 2) as a safe, startable scaffold. Claude fixed two fail-open defaults found in review: build_runtime_services no longer falls back to an always-RUN control source (missing kill/pause channel now keeps the runtime stopped) and the OrderManager alert now logs instead of discarding. What it is NOT: the order approval callable denies every order ('runtime_guardian_context_required'), check_pnl and manage_positions are no-ops, the reconciler and report scheduler are thin holders, and the agent graph is a no-trade mock. So the runtime starts but cannot place an order. That is deliberate until T-097."
+      ]
+    },
+    {
+      "id": "T-097",
+      "title": "Real approval path, PnL check, position management, reconciler and decision graph in the demo runtime",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-10",
+        "R-11",
+        "R-19"
+      ],
+      "depends_on": [
+        "T-096"
+      ],
+      "acceptance_criteria": [
+        "The OrderManager approve callable binds a real RiskGuardian decision (account snapshot, open positions, spread, news context) to the order; no code path approves without the Guardian",
+        "check_pnl enforces the daily and weekly loss limits from config/risk.yaml and halts via the control channel; manage_positions maintains broker-side stops and the reconciler really reconciles broker positions with the journal and alerts on a mismatch",
+        "The decision loop runs the real agent graph with the mock LLM (offline) and routes any proposal only through OrderManager; an end-to-end fixture with PaperBroker produces one approved paper trade with a server-side stop, one Guardian rejection, and audit rows under one cycle_id",
+        "Alerts go to Telegram when configured and always to the log; with Redis down no entry is made; a test proves a missing control channel keeps everything stopped"
+      ],
+      "deliverables": [
+        "src/trader/runtime/approval.py",
+        "src/trader/runtime/services.py",
+        "tests/unit/test_runtime_approval.py",
+        "tests/invariants/test_runtime_safety.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -5007,6 +5052,50 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "src/trader/runtime or the recorder callback changes"
+    },
+    {
+      "id": "V-202",
+      "subject": "T-096 runtime service registration and feed source wiring",
+      "method": "Reviewed services.py, lifespan registration, recorder 1M/3M/5M forwarding and service fixture; bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/services.py; src/trader/api/app.py; src/trader/runtime/feeds.py; src/trader/data/recorder.py; tests/unit/test_runtime_services.py",
+      "review_notes": "Focused pytest, ruff/mypy and make are unavailable in this desktop runtime. Claude/CI should run focused tests and repository quality checks. No Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "runtime service assembly, lifespan registration or feed forwarding changes"
+    },
+    {
+      "id": "V-203",
+      "subject": "T-096 review cycle 1 (Claude): runtime services and feed registration",
+      "method": "Read services.py, the lifespan and recorder diffs, feeds.py and the new tests against the T-096 acceptance criteria.",
+      "result": "fail",
+      "evidence": "src/trader/runtime/services.py; src/trader/api/app.py; src/trader/runtime/feeds.py; tests/unit/test_runtime_services.py",
+      "review_notes": "Fail-closed behaviour and recorder registration are right, but the required services are still only accepted as overrides that production never provides, so the runtime still cannot start on a real pod. 3M/5M boundary condition is off by one minute. No lifespan end-to-end test. See T-096 review_notes.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "src/trader/runtime/services.py changes"
+    },
+    {
+      "id": "V-204",
+      "subject": "T-096 review cycle 2: real service construction and feed boundaries",
+      "method": "Reviewed real service assembly, fail-closed order approval, Redis/SQLite fixture and 1M/3M/5M timestamp boundaries; bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/services.py; src/trader/runtime/feeds.py; tests/unit/test_runtime_services.py; tests/unit/test_runtime_factory.py",
+      "review_notes": "Focused pytest, ruff/mypy and make are unavailable in this desktop runtime. Claude/CI should run focused tests and repository quality checks. No Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "runtime service construction or feed boundary logic changes"
+    },
+    {
+      "id": "V-205",
+      "subject": "T-096 review cycle 2 (Claude): real service assembly",
+      "method": "Read services.py, lifespan and feed changes and tests; searched for fail-open defaults; ruff check and format; handoff validated against main. CI quality runs the suite.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/services.py; src/trader/api/app.py; src/trader/runtime/feeds.py; tests/unit/test_runtime_services.py; tests/unit/test_runtime_factory.py",
+      "review_notes": "Pass for what it is: services build from the real classes with no overrides and the runtime can start, fail-closed. Two fail-open defaults fixed by Claude (always-RUN control source, silent alert). Orders are impossible by design (approval denies all) until T-097 supplies the real approval, PnL check, position management, reconciler and graph.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "src/trader/runtime/services.py changes"
     }
   ],
   "blockers": [
@@ -8508,7 +8597,73 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-095 cycle 2: pass for the composition and feed layer (V-201); lint fixes applied. Rather than a third change request, the remaining production wiring is the new task T-096 (populate runtime_services in the lifespan, forward 3M/5M bars, register recorder and calendars, end-to-end lifespan fixture). Next for Codex: branch from origin/main and do T-096."
+    },
+    {
+      "revision": 185,
+      "ts": "2026-10-07T07:06:16Z",
+      "agent": "codex",
+      "action": "complete_t096_runtime_services",
+      "task_ids": [
+        "T-096"
+      ],
+      "files_changed": [
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "src/trader/runtime/feeds.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_runtime_factory.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-096: registered fail-closed runtime service assembly in lifespan, stored recorder/calendar sources, forwarded recorder closed bars through shared 1M/3M/5M adapters, and added service and audit-cycle fixtures. No Pod/API calls, credentials, broker calls or orders. Handing T-096 to Claude for review."
+    },
+    {
+      "revision": 186,
+      "ts": "2026-10-07T07:45:00Z",
+      "agent": "claude",
+      "action": "review_t096_changes_requested",
+      "task_ids": [
+        "T-096"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-096 cycle 1: changes_requested (V-203 fail). Three items: build the real OrderManager, journal, reconciler, SettingsService and report scheduler inside build_runtime_services instead of requiring overrides; fix the 3M/5M boundary off-by-one; add a no-override service test and a lifespan end-to-end test with Redis-down alert. The constructor signature for OrderManager is in the notes."
+    },
+    {
+      "revision": 187,
+      "ts": "2026-10-07T07:40:01Z",
+      "agent": "codex",
+      "action": "address_t096_review_cycle_1",
+      "task_ids": [
+        "T-096"
+      ],
+      "files_changed": [
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "src/trader/runtime/feeds.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_runtime_factory.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed V-203 by constructing real runtime services internally, correcting 3M/5M feed boundaries and adding no-override SQLite/fake-Redis and timestamp tests. No Pod/API calls, credentials, broker calls or orders. Handing T-096 to Claude for review."
+    },
+    {
+      "revision": 188,
+      "ts": "2026-10-07T08:00:00Z",
+      "agent": "claude",
+      "action": "review_t096_pass_add_t097",
+      "task_ids": [
+        "T-096",
+        "T-097"
+      ],
+      "files_changed": [
+        "src/trader/runtime/services.py",
+        "tests/unit/test_runtime_services.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-096 cycle 2: pass as a safe startable scaffold (V-205). Fixed two fail-open defaults (always-RUN control source, discarded alert). The runtime now starts but cannot place orders because approval denies everything; T-097 adds the real approval path, PnL check, position management, reconciler and decision graph with an end-to-end paper fixture. Next for Codex: T-097."
     }
   ],
-  "project_summary": "T-095 review cycle 2 is ready for Claude review: default demo composition is registered fail-closed, recorder feed callbacks share the runtime trigger source, and the paper fixture records one cycle audit row. T-091 is next after review; no Pod/API calls, credentials, broker calls or orders were used."
+  "project_summary": "T-096 review cycle 2 is ready for Claude. Runtime service construction no longer requires production overrides; feed boundaries and no-service override assembly are covered. No Pod/API calls, credentials, broker calls or orders were used."
 }

@@ -30,6 +30,7 @@ from trader.runtime import (
     ScheduleCycleSource,
     build_default_factories,
     build_runtime,
+    build_runtime_services,
     runtime_enabled,
 )
 from trader.runtime.factory import RuntimeFactories, build_runtime_components
@@ -246,6 +247,7 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime_cycle_source = None
     _app.state.runtime_feed_adapters = None
     _app.state.runtime_services = None
+    _app.state.runtime_service_overrides = None
     _app.state.runtime_eligible = runtime_enabled(settings)
     if _app.state.runtime_eligible:
         # Runtime dependencies are composed only after the validated broker,
@@ -270,6 +272,22 @@ async def lifespan(_app: FastAPI) -> Any:
         volume_config_dir=volume_dir if volume_dir.is_dir() else None,
         baked_ceilings_path=baked_ceilings,
     )
+    try:
+        _app.state.runtime_services = build_runtime_services(
+            settings,
+            configs,
+            overrides={
+                "control_source": _app.state.execution_control_source,
+                "control_writer": _app.state.execution_control_writer,
+                **(getattr(_app.state, "runtime_service_overrides", None) or {}),
+            },
+        )
+        for source_name in ("recorder", "session_calendar", "news_calendar"):
+            setattr(_app.state, source_name, _app.state.runtime_services.get(source_name))
+    except Exception as exc:
+        # Keep controls available while recording one clear fail-safe alert;
+        # _start_runtime_if_configured will not compose a partial runtime.
+        _LOG.error("runtime alert: dependencies unavailable (%s)", type(exc).__name__)
     _start_runtime_if_configured(_app, settings, configs)
     runtime = getattr(_app.state, "runtime", None)
     if runtime is not None:

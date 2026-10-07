@@ -80,6 +80,25 @@ def test_feed_adapters_emit_stable_ids_and_alert_missing_feed() -> None:
     assert alerts == ["runtime_feed_unavailable:calendar"]
 
 
+def test_closed_bar_forwarding_uses_bar_open_boundaries() -> None:
+    source = ScheduleCycleSource()
+    feeds = RuntimeFeedAdapters(source)
+    for minute in (2, 3, 4, 5):
+        feeds.on_closed_bar(f"bar-{minute}", datetime(2026, 1, 1, 0, minute, tzinfo=UTC))
+    ids = []
+    while source.pending:
+        ids.append(source.next_cycle().event_id)
+    assert ids == [
+        "bar:1M:bar-2",
+        "bar:3M:bar-2",
+        "bar:1M:bar-3",
+        "bar:1M:bar-4",
+        "bar:5M:bar-4",
+        "bar:1M:bar-5",
+        "bar:3M:bar-5",
+    ]
+
+
 def test_default_factories_build_paper_broker_and_audit_cycle() -> None:
     audit_rows: list[object] = []
     services = {
