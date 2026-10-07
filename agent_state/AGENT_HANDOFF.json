@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 181,
+  "turn": "codex",
+  "revision": 182,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -2682,7 +2682,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-10",
         "R-11",
@@ -2702,7 +2702,7 @@
         "src/trader/runtime/feeds.py",
         "tests/unit/test_runtime_factory.py"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "src/trader/runtime/factory.py",
         "src/trader/runtime/feeds.py",
@@ -2712,7 +2712,13 @@
         "tests/unit/test_runtime_factory.py",
         "V-198"
       ],
-      "completion_note": "Added the demo-gated production composition factory and feed-trigger adapters requested after T-090. RuntimeFactories validates callable constructors; build_runtime_components creates the Redis leader lease and wires broker, Guardian, OrderManager, reconciler, report scheduler, SettingsService and decision loop through explicit providers, while rejecting live or incomplete compositions. The FastAPI lifespan registers the factory path and starts only a complete composition. RuntimeFeedAdapters emits stable bar_close 1M/3M/5M, session_open and news_event IDs and alerts on missing feeds. Factory/feed tests cover demo gates, malformed Redis, stable IDs and missing-feed safety."
+      "completion_note": "Added the demo-gated production composition factory and feed-trigger adapters requested after T-090. RuntimeFactories validates callable constructors; build_runtime_components creates the Redis leader lease and wires broker, Guardian, OrderManager, reconciler, report scheduler, SettingsService and decision loop through explicit providers, while rejecting live or incomplete compositions. The FastAPI lifespan registers the factory path and starts only a complete composition. RuntimeFeedAdapters emits stable bar_close 1M/3M/5M, session_open and news_event IDs and alerts on missing feeds. Factory/feed tests cover demo gates, malformed Redis, stable IDs and missing-feed safety.",
+      "review_notes": [
+        "1. Concrete wiring is still missing: nothing in the app sets app.state.runtime_factories, so on a real pod the runtime still never starts. Add build_default_factories(settings, configs) that constructs the real services (Redis client from the configured URL, demo PaperBroker, Risk Guardian from config/risk.yaml, OrderManager, reconciler, SettingsService, report scheduler, and a decision-loop adapter around the agent graph with the mock LLM whose executor is OrderManager) and register it in the lifespan. Missing Redis, DB or broker: stay stopped and alert.",
+        "2. Nothing calls RuntimeFeedAdapters. Hook the data recorder's closed-bar event to on_bar_close (1M/3M/5M), session opens from config/schedule.yaml, and the news calendar to on_news_event, using one shared ScheduleCycleSource that the runtime also consumes.",
+        "3. Acceptance test from T-095: a fixture run drives one full cycle with the mock LLM and PaperBroker and writes audit rows under one cycle_id; with Redis down no entry is made and one alert is raised.",
+        "Fixed by Claude: E731 lambda in app.py (now a def), unused Callable import. Branch from origin/main after this merges; do not push to codex/t090-runtime-composition again."
+      ]
     }
   ],
   "decisions": [
@@ -4936,6 +4942,17 @@
       "validated_by": "codex",
       "date": "2026-10-07",
       "reverify_if": "runtime factory providers, feed adapters, or lifespan registration changes"
+    },
+    {
+      "id": "V-199",
+      "subject": "T-095 review cycle 1 (Claude): runtime factory and feed adapters",
+      "method": "Read factory.py, feeds.py, the lifespan change and test_runtime_factory.py; ruff; searched for callers of RuntimeFactories and RuntimeFeedAdapters.",
+      "result": "fail",
+      "evidence": "src/trader/runtime/factory.py; src/trader/runtime/feeds.py; tests/unit/test_runtime_factory.py",
+      "review_notes": "Good dependency-injection shape and live/incomplete rejection, but no production code constructs RuntimeFactories or calls the feed adapters, and no end-to-end fixture cycle exists. The framework is merged because the runtime stays stopped without a complete composition (safe); the wiring is what T-095 still owes.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "src/trader/runtime changes"
     }
   ],
   "blockers": [
@@ -8389,6 +8406,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Completed T-095 with a demo-gated dependency-injected production runtime factory, Redis leader lease construction, complete-component startup gate, FastAPI factory registration, and stable feed trigger adapters for 1M/3M/5M bars, session open and news events. Bundled Python compileall and git diff --check pass; focused pytest and make quality checks are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders. Handing T-095 to Claude for review; T-091 is next."
+    },
+    {
+      "revision": 182,
+      "ts": "2026-10-07T07:00:00Z",
+      "agent": "claude",
+      "action": "review_t095_changes_requested",
+      "task_ids": [
+        "T-095"
+      ],
+      "files_changed": [
+        "src/trader/api/app.py",
+        "src/trader/runtime/factory.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-095 cycle 1: changes_requested (V-199 fail). DI shape is sound but production never builds the factories or calls the feed adapters, and there is no end-to-end fixture cycle. Three items in T-095 review_notes. Lint fixes applied. Framework merged to main since the runtime stays stopped without a complete composition."
     }
   ],
   "project_summary": "T-070 passed review (V-191); the flaky Capital.com session-cache fixture follow-up is ready for Claude review. T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-087 runtime wiring passed review (V-184); the Pod names-only check passed but its smoke script is missing from the running image (V-186/B-008). T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
