@@ -48,7 +48,7 @@ def _aware(value: object, field: str) -> datetime:
 class AccountContextSource:
     """Normalize broker account data and durable journal baselines."""
 
-    def __init__(self, broker: object, journal: object, *, clock: Callable[[], datetime]) -> None:
+    def __init__(self, broker: Any, journal: Any, *, clock: Callable[[], datetime]) -> None:
         self.broker = broker
         self.journal = journal
         self.clock = clock
@@ -268,22 +268,19 @@ class SizingContextSource:
             if self.quote_rate_provider is not None
             else None,
         )
-        if not decision.approved or any(
-            value is None
-            for value in (
-                decision.size,
-                decision.estimated_risk,
-                decision.margin_required,
-                decision.projected_effective_leverage,
-            )
+        size = decision.size
+        risk = decision.estimated_risk
+        margin = decision.margin_required
+        leverage = decision.projected_effective_leverage
+        if (
+            not decision.approved
+            or size is None
+            or risk is None
+            or margin is None
+            or leverage is None
         ):
             raise ContextUnavailable(decision.reason or "position sizing rejected")
-        return SizingEstimate(
-            decision.size,
-            decision.estimated_risk,
-            decision.margin_required,
-            decision.projected_effective_leverage * account.equity,
-        )
+        return SizingEstimate(size, risk, margin, leverage * account.equity)
 
 
 class RuntimeContextProvider:
@@ -330,7 +327,7 @@ class RuntimeContextProvider:
 
 
 def position_source(
-    broker: object,
+    broker: Any,
     *,
     valuation: Callable[[object], OpenPosition | None] | None = None,
 ) -> Callable[[], tuple[OpenPosition, ...]]:
@@ -344,7 +341,11 @@ def position_source(
                 risk = getattr(position, "risk_amount", None)
                 margin = getattr(position, "margin_required", None)
                 exposure = getattr(position, "notional_exposure", None)
-                if not all(isinstance(item, Decimal) for item in (risk, margin, exposure)):
+                if (
+                    not isinstance(risk, Decimal)
+                    or not isinstance(margin, Decimal)
+                    or not isinstance(exposure, Decimal)
+                ):
                     raise ContextUnavailable("position valuation is unavailable")
                 value = OpenPosition(position.epic, risk, margin, exposure)
             result.append(value)
