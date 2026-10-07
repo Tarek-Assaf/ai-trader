@@ -25,6 +25,7 @@ from trader.execution.control import ControlMode, build_control_sources
 from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
 from trader.runtime import RuntimeComponents, ScheduleCycleSource, build_runtime, runtime_enabled
+from trader.runtime.factory import RuntimeFactories, build_runtime_components
 
 _LOG = logging.getLogger(__name__)
 
@@ -45,8 +46,16 @@ def _start_runtime_if_configured(
     """
     if not app.state.runtime_eligible:
         return
-    factory = getattr(app.state, "runtime_components_factory", None)
     control_source = app.state.execution_control_source
+    factory = getattr(app.state, "runtime_components_factory", None)
+    factories = getattr(app.state, "runtime_factories", None)
+    if factory is None and isinstance(factories, RuntimeFactories):
+        factory = lambda current_settings, current_configs: build_runtime_components(
+            current_settings,
+            current_configs,
+            control_source,
+            factories,
+        )
     if not callable(factory) or control_source is None:
         _LOG.warning("runtime dependencies unavailable; core runtime remains stopped")
         return

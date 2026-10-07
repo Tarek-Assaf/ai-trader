@@ -12,6 +12,8 @@ from trader.runtime.composition import (
     build_runtime,
     runtime_enabled,
 )
+from trader.runtime.factory import RuntimeFactories, build_runtime_components
+from trader.runtime.feeds import RuntimeFeedAdapters
 
 __all__ = [
     "CycleTrigger",
@@ -22,6 +24,9 @@ __all__ = [
     "RuntimeService",
     "RuntimeState",
     "ScheduleCycleSource",
+    "RuntimeFactories",
+    "RuntimeFeedAdapters",
+    "build_runtime_components",
     "build_runtime",
     "runtime_enabled",
 ]

@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 180,
+  "turn": "claude",
+  "revision": 181,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Phase 8 is owner-approved. T-090 review cycle 2 is complete and handed to Claude; T-091..T-094 remain queued in dependency order. Demo-only, mock-LLM-first, fail-safe invariants remain mandatory.",
+    "summary": "Phase 8 is owner-approved. T-090 is done and T-095 production runtime factory/feed adapters are handed to Claude for review; T-091..T-094 remain queued in dependency order. Demo-only, mock-LLM-first, fail-safe invariants remain mandatory.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2682,7 +2682,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-10",
         "R-11",
@@ -2703,8 +2703,16 @@
         "tests/unit/test_runtime_factory.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/feeds.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/__init__.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime_factory.py",
+        "V-198"
+      ],
+      "completion_note": "Added the demo-gated production composition factory and feed-trigger adapters requested after T-090. RuntimeFactories validates callable constructors; build_runtime_components creates the Redis leader lease and wires broker, Guardian, OrderManager, reconciler, report scheduler, SettingsService and decision loop through explicit providers, while rejecting live or incomplete compositions. The FastAPI lifespan registers the factory path and starts only a complete composition. RuntimeFeedAdapters emits stable bar_close 1M/3M/5M, session_open and news_event IDs and alerts on missing feeds. Factory/feed tests cover demo gates, malformed Redis, stable IDs and missing-feed safety."
     }
   ],
   "decisions": [
@@ -4917,6 +4925,17 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "src/trader/runtime or the lifespan wiring changes"
+    },
+    {
+      "id": "V-198",
+      "subject": "T-095 production runtime factory and feed trigger adapters",
+      "method": "Reviewed the dependency-injected demo factory, Redis lease construction, complete-component gate, FastAPI registration path and stable recorder/calendar trigger adapters. Compiled changed runtime, app and tests with bundled Python and ran git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/factory.py; src/trader/runtime/feeds.py; src/trader/runtime/composition.py; src/trader/runtime/__init__.py; src/trader/api/app.py; tests/unit/test_runtime_factory.py; bundled Python compileall; git diff --check",
+      "review_notes": "Focused pytest, ruff/mypy and make are unavailable in this desktop runtime. Claude/CI should run the focused tests and repository quality checks. No Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "runtime factory providers, feed adapters, or lifespan registration changes"
     }
   ],
   "blockers": [
@@ -8351,6 +8370,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-090 cycle 2: pass as the runtime framework (V-197); lint and format fixes applied. Added T-095 (production components factory and feed trigger adapters), which must land before the soak because without it the runtime stays stopped. Next for Codex: T-095, then T-091."
+    },
+    {
+      "revision": 181,
+      "ts": "2026-10-07T06:35:32Z",
+      "agent": "codex",
+      "action": "complete_t095_runtime_factory_feeds",
+      "task_ids": [
+        "T-095"
+      ],
+      "files_changed": [
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/feeds.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/__init__.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime_factory.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-095 with a demo-gated dependency-injected production runtime factory, Redis leader lease construction, complete-component startup gate, FastAPI factory registration, and stable feed trigger adapters for 1M/3M/5M bars, session open and news events. Bundled Python compileall and git diff --check pass; focused pytest and make quality checks are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders. Handing T-095 to Claude for review; T-091 is next."
     }
   ],
   "project_summary": "T-070 passed review (V-191); the flaky Capital.com session-cache fixture follow-up is ready for Claude review. T-028 Q-040 held-open demo passed review (V-178). T-086 account mapping is implemented and handed to Claude for review. T-087 runtime wiring passed review (V-184); the Pod names-only check passed but its smoke script is missing from the running image (V-186/B-008). T-044 remains blocked on B-007 and T-060 remains blocked on Pod access."
