@@ -169,16 +169,21 @@ def build_runtime_services(
             limits = provided.get("sizing_limits")
             if limits is None:
                 risk_values = _dump_mapping(configs.get("risk"))
-                try:
-                    limits = SizingLimits(
-                        Decimal(str(risk_values["risk_per_trade_pct"])),
-                        Decimal(str(risk_values["max_margin_usage_pct"])),
-                        Decimal(str(risk_values["max_effective_leverage"])),
-                    )
-                except (KeyError, TypeError, ValueError) as exc:
-                    raise RuntimeDependencyUnavailable(
-                        "runtime service unavailable: sizing limits"
-                    ) from exc
+                if {
+                    "risk_per_trade_pct",
+                    "max_margin_usage_pct",
+                    "max_effective_leverage",
+                }.issubset(risk_values):
+                    try:
+                        limits = SizingLimits(
+                            Decimal(str(risk_values["risk_per_trade_pct"])),
+                            Decimal(str(risk_values["max_margin_usage_pct"])),
+                            Decimal(str(risk_values["max_effective_leverage"])),
+                        )
+                    except (TypeError, ValueError) as exc:
+                        raise RuntimeDependencyUnavailable(
+                            "runtime service unavailable: sizing limits"
+                        ) from exc
             currency = provided.get("account_currency_provider")
             if not callable(currency):
 
