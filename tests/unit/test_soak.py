@@ -6,6 +6,7 @@ from decimal import Decimal
 
 from trader.reports.commands import CommandDataService
 from trader.soak import SoakMonitor
+from trader.runtime.soak import RuntimeSoakFeed
 
 
 class _Journal:
@@ -98,3 +99,31 @@ def test_state_and_four_week_clock_survive_restart(tmp_path) -> None:
     assert summary["days"][0]["guardian_rejections"] == {"guardian_rejected": 1}
     assert second.clock_started_at == started
     assert second.summary_command().startswith("Soak: 1 days run; 1 incidents;")
+
+
+def test_runtime_feed_collects_real_safety_component_observations(tmp_path) -> None:
+    class Source:
+        def __init__(self, values):
+            self.values = values
+
+        def soak_observation(self):
+            return self.values
+
+    feed = RuntimeSoakFeed(
+        {
+            "guardian": Source({"risk_per_trade_pct": "1", "risk_per_trade_limit_pct": "0.5"}),
+            "position_manager": Source({"open_position_without_broker_stop": True}),
+            "order_manager": Source({"order_without_server_side_stop": True}),
+            "pnl_guard": Source({"daily_loss_pct": "3", "daily_loss_limit_pct": "2"}),
+            "reconciler": Source({"reconciliation_mismatch_age_seconds": 301}),
+            "control": Source({"control_requested": "kill", "control_honored": False}),
+            "log_scan": Source({"log_text": "owner-token"}),
+        }
+    )
+    monitor = SoakMonitor(tmp_path, secret_patterns=("owner-token",))
+    incidents = monitor.evaluate(feed.collect())
+    assert {item.rule for item in incidents} == set(SoakMonitor.RULES)
+    assert all(
+        "owner-token" not in path.read_text(encoding="utf-8")
+        for path in tmp_path.glob("incident-*.json")
+    )

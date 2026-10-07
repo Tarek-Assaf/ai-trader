@@ -91,6 +91,9 @@ class RuntimeFactories:
     report_scheduler: RuntimeFactoryFn
     settings_service: RuntimeFactoryFn
     decision_loop: RuntimeFactoryFn
+    pnl_guard: RuntimeFactoryFn | None = None
+    position_manager: RuntimeFactoryFn | None = None
+    log_scanner: RuntimeFactoryFn | None = None
     lease_key: str = "ai-trader:core:lease"
     lease_ttl_ms: int = 30_000
 
@@ -149,6 +152,21 @@ def build_runtime_components(
         reconciler,
         control_source,
     )
+    pnl_guard = (
+        factories.pnl_guard(settings, configs, broker)
+        if callable(factories.pnl_guard)
+        else None
+    )
+    position_manager = (
+        factories.position_manager(settings, configs, broker)
+        if callable(factories.position_manager)
+        else None
+    )
+    log_scanner = (
+        factories.log_scanner(settings, configs)
+        if callable(factories.log_scanner)
+        else None
+    )
     decision_loop = factories.decision_loop(
         settings,
         configs,
@@ -165,6 +183,9 @@ def build_runtime_components(
         reconciler=reconciler,
         report_scheduler=report_scheduler,
         settings_service=settings_service,
+        pnl_guard=pnl_guard,
+        position_manager=position_manager,
+        log_scanner=log_scanner,
         metadata={"broker_env": settings.broker_env, "trading_mode": settings.trading_mode},
     )
     missing = components.missing_required()
@@ -306,6 +327,9 @@ def build_default_factories(
         report_scheduler=service("report_scheduler"),
         settings_service=service("settings_service"),
         decision_loop=decision_loop,
+        pnl_guard=service("pnl_guard") if "pnl_guard" in supplied else None,
+        position_manager=service("position_manager") if "position_manager" in supplied else None,
+        log_scanner=service("log_scanner") if "log_scanner" in supplied else None,
     )
 
 

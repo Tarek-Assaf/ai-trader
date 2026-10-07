@@ -20,6 +20,7 @@ from typing import Any, Protocol, runtime_checkable
 from uuid import uuid4
 
 from trader.execution.control import ControlMode, ControlSource
+from trader.runtime.soak import RuntimeSoakFeed
 
 LOGGER = logging.getLogger(__name__)
 
@@ -179,6 +180,9 @@ class RuntimeComponents:
     report_scheduler: object | None = None
     settings_service: object | None = None
     soak_monitor: object | None = None
+    pnl_guard: object | None = None
+    position_manager: object | None = None
+    log_scanner: object | None = None
     metadata: Mapping[str, object] = field(default_factory=dict)
 
     def missing_required(self) -> tuple[str, ...]:
@@ -235,6 +239,17 @@ class RuntimeService:
         self._backoff_initial = backoff_initial
         self._backoff_max = backoff_max
         self._last_soak_at: datetime | None = None
+        self._soak_feed = RuntimeSoakFeed(
+            {
+                "guardian": components.guardian,
+                "position_manager": getattr(components, "position_manager", None),
+                "order_manager": components.order_manager,
+                "pnl_guard": getattr(components, "pnl_guard", None),
+                "reconciler": components.reconciler,
+                "control": control_source,
+                "log_scan": components.log_scanner,
+            }
+        )
         self._backoff = backoff_initial
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
@@ -411,15 +426,18 @@ class RuntimeService:
             status = action_status
         if reason is None:
             reason = result.reason
+        component_observation = self._soak_feed.collect()
         if isinstance(value, Mapping):
             status = value.get("status", status)
             reason = value.get("reason", reason)
             observation = value.get("soak_observation")
         else:
             observation = getattr(value, "soak_observation", None)
+        if isinstance(observation, Mapping):
+            component_observation.update(observation)
         self._soak_call(
             "observe_cycle",
-            observation if isinstance(observation, Mapping) else {},
+            component_observation,
             status=status if isinstance(status, str) else None,
             reason=reason if isinstance(reason, str) else None,
             at=now,

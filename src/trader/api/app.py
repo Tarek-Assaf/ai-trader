@@ -89,6 +89,10 @@ def _start_runtime_if_configured(
             raise TypeError("runtime component factory returned an invalid composition")
         if components.soak_monitor is None:
             components.soak_monitor = getattr(app.state, "soak_monitor", None)
+        services = getattr(app.state, "runtime_services", None) or {}
+        for name in ("pnl_guard", "position_manager", "log_scanner"):
+            if getattr(components, name, None) is None and isinstance(services, dict):
+                setattr(components, name, services.get(name))
         missing = components.missing_required()
         if missing:
             raise RuntimeError(f"runtime composition is incomplete: {', '.join(missing)}")

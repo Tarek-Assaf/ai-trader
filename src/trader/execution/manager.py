@@ -82,6 +82,7 @@ class OrderManager:
         self._mutex = threading.RLock()
         self._kill_alerted = False
         self._external_pause_latched = False
+        self._order_without_server_side_stop: bool | None = None
 
     @property
     def paused(self) -> bool:
@@ -397,6 +398,7 @@ class OrderManager:
 
     def submit(self, cycle_id: str, order: OrderRequest) -> OrderReceipt | None:
         with self._mutex:
+            self._order_without_server_side_stop = order.stop_level is None
             if not self._started:
                 raise ExecutionPaused("execution has not started")
             mode = self._apply_controls()
@@ -464,3 +466,10 @@ class OrderManager:
             if mode is ControlMode.KILL:
                 raise ExecutionPaused("kill activated during order submission")
             return receipt
+
+    def soak_observation(self) -> Mapping[str, object]:
+        """Expose the last order stop invariant check without secrets."""
+
+        if self._order_without_server_side_stop is None:
+            return {}
+        return {"order_without_server_side_stop": self._order_without_server_side_stop}

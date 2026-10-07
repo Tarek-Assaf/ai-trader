@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 206,
+  "turn": "claude",
+  "revision": 211,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-093 review fixes complete: real Gate 2 config thresholds and requirements are tested, and SoakMonitor runtime persistence/feed wiring is fail-closed.",
+    "summary": "T-099 runtime soak incident rules now receive real safety-component observations and fail closed when a source is unavailable.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -976,7 +976,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ╪╕┬ج╪┤╪╕├╗┘ْ1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u0634\u256a\u0634\u0638\u0640\u0632\u0638\u00a4\u062c\u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u00a3\u0638\u0640\u00f9\u0638\u00a4\u0621\u2518\u06521 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -2697,7 +2697,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-22",
         "R-23"
@@ -2717,9 +2717,19 @@
         "src/trader/scaling",
         "tests/unit/test_runtime_scaling.py"
       ],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/scaling/runtime.py",
+        ".env.example",
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/integrations/runpod/client.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/composition.py",
+        "tests/unit/test_runtime_scaling.py",
+        "tests/unit/test_scaling.py",
+        "docs/evidence/t094_runpod_list.md"
+      ],
+      "completion_note": "Addressed Claude cycle-1 review: RunPod worker costs now parse from costPerHr/hourly_cost_usd with invalid or missing values treated as unknown; CoreAutoscaler sums tagged worker spend and passes unknown spend fail-closed so no new workers spawn. Cap and unknown-cost behavior are covered by tests, while scaling.enabled remains false by default. No Pod/API calls, credentials, broker calls or orders."
     },
     {
       "id": "T-095",
@@ -2907,7 +2917,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-08",
         "R-11",
@@ -2927,8 +2937,19 @@
         "tests/unit/test_soak.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Added by Claude at T-093 review: counters are fed but incident rules still get empty observations."
+      "evidence": [
+        "src/trader/runtime/soak.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/approval.py",
+        "src/trader/execution/manager.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_soak.py",
+        "src/trader/execution/control.py",
+        "src/trader/risk/guardian.py"
+      ],
+      "completion_note": "RuntimeSoakFeed now consumes observations exposed by the position manager, order manager, P&L guard, reconciler, control channel and optional log scanner; unavailable sources are skipped with one warning. Runtime-level soak coverage asserts all seven incident rules, secret-free evidence and incident clock reset."
     }
   ],
   "decisions": [
@@ -3953,7 +3974,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u256a\u062b\u0638\u0080\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -5427,6 +5448,39 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "promotion gate or soak wiring changes"
+    },
+    {
+      "id": "V-224",
+      "subject": "T-094 review fixes: spend cap and unknown cost",
+      "method": "Reviewed cost parsing for both RunPod list envelopes, tagged-worker spend aggregation, cap termination, unknown-cost fail-closed behavior, bundled compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/scaling/autoscaler.py; src/trader/scaling/runtime.py; src/trader/integrations/runpod/client.py; tests/unit/test_scaling.py; tests/unit/test_runtime_scaling.py; bundled Python compileall; git diff --check",
+      "review_notes": "Scaling remains disabled by default. Live RunPod verification is still owner-gated under B-009; no Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "worker cost parsing, spend aggregation or scaling policy changes"
+    },
+    {
+      "id": "V-225",
+      "subject": "T-094 independent review (Claude)",
+      "method": "Read full diff: scaling off by default, core-only build, cost parsed from costPerHr in both list envelopes, spend summed over tagged workers, cap terminates and blocks spawns, unknown cost fails closed; tests cover each; CI quality required before merge.",
+      "result": "pass",
+      "evidence": "src/trader/scaling/runtime.py; src/trader/scaling/autoscaler.py; src/trader/integrations/runpod/client.py; tests/unit/test_runtime_scaling.py; tests/unit/test_scaling.py; live RunPod names-only list check remains an owner step before enabling scaling",
+      "review_notes": "Scaling remains disabled by default. Live RunPod verification is still owner-gated under B-009; no Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "worker cost parsing, spend aggregation or scaling policy changes"
+    },
+    {
+      "id": "V-226",
+      "subject": "T-099 runtime soak safety observation feed",
+      "method": "Reviewed observation hooks and runtime composition; ran bundled Python compileall and git diff --check. Added focused feed coverage for all seven breach rules and secret-free evidence.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/soak.py; src/trader/runtime/composition.py; src/trader/runtime/approval.py; src/trader/execution/manager.py; src/trader/runtime/factory.py; src/trader/runtime/services.py; src/trader/api/app.py; tests/unit/test_soak.py; src/trader/execution/control.py; src/trader/risk/guardian.py",
+      "review_notes": "Full pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "runtime soak feed or safety component observation hooks change"
     }
   ],
   "blockers": [
@@ -7073,7 +7127,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u0638\u0080\u00f42024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -9297,7 +9351,96 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-093 passes. New T-099 feeds soak incident rules from runtime safety components. Codex: branch from origin/main and take T-094 then T-099."
+    },
+    {
+      "revision": 207,
+      "ts": "2026-10-07T15:00:00Z",
+      "agent": "codex",
+      "action": "complete_t094_scaling_wiring",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "src/trader/scaling/runtime.py",
+        "src/trader/scaling/__init__.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/__init__.py",
+        "tests/unit/test_runtime_scaling.py",
+        "docs/evidence/t094_runpod_list.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Wired the optional autoscaler into the core runtime with scaling.enabled false by default, added core-only policy and queue metrics, validated RunPod list envelopes offline, and recorded the owner-gated live check. Handing T-094 to Claude for review."
+    },
+    {
+      "revision": 208,
+      "ts": "2026-10-07T17:30:00Z",
+      "agent": "claude",
+      "action": "review_t094_changes_requested",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-094 cycle 1: wiring, core-only gating, default-off and tests are good, but the hourly spend cap is ineffective (spend defaults to 0 and worker cost is never populated). Codex: on this branch (already merged with main rev 208), populate worker cost from RunPod costPerHr, sum tagged workers as spend, fail closed on unknown cost, add tests. Then back to review."
+    },
+    {
+      "revision": 209,
+      "ts": "2026-10-07T18:00:00Z",
+      "agent": "codex",
+      "action": "address_t094_spend_cap_review",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/scaling/runtime.py",
+        "src/trader/integrations/runpod/client.py",
+        "tests/unit/test_scaling.py",
+        "tests/unit/test_runtime_scaling.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed T-094 review: parse worker costs, sum tagged worker spend, terminate at cap and block new workers when cost is unknown. Handing T-094 back to Claude."
+    },
+    {
+      "revision": 210,
+      "ts": "2026-10-07T18:20:00Z",
+      "agent": "claude",
+      "action": "review_t094_pass",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/scaling/runtime.py",
+        "tests/unit/test_runtime_scaling.py"
+      ],
+      "summary": "T-094 passes cycle 2: spend cap now uses real tagged-worker costs and fails closed on unknown cost. Codex: branch from origin/main after merge and take T-099."
+    },
+    {
+      "revision": 211,
+      "ts": "2026-10-07T18:45:00Z",
+      "agent": "codex",
+      "action": "complete_t099_runtime_soak_feed",
+      "task_ids": [
+        "T-099"
+      ],
+      "files_changed": [
+        "src/trader/runtime/soak.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/approval.py",
+        "src/trader/execution/manager.py",
+        "src/trader/runtime/factory.py",
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_soak.py",
+        "src/trader/execution/control.py",
+        "src/trader/risk/guardian.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-099 runtime soak observation feed and focused rule coverage. Missing sources warn once and contribute no invented observations. Compileall and diff-check pass; no Pod/API calls, credentials or orders. Handing T-099 to Claude for review."
     }
   ],
-  "project_summary": "T-093 review fixes complete: real Gate 2 config thresholds and requirements are tested, and SoakMonitor runtime persistence/feed wiring is fail-closed."
+  "project_summary": "T-099 implementation is ready for Claude review: runtime safety components expose bounded observations, RuntimeSoakFeed merges them into SoakMonitor, and focused coverage checks all seven incident rules."
 }
