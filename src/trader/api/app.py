@@ -36,6 +36,7 @@ from trader.runtime import (
     runtime_enabled,
 )
 from trader.runtime.factory import RuntimeFactories, build_runtime_components
+from trader.soak import SoakMonitor
 
 _LOG = logging.getLogger(__name__)
 
@@ -251,7 +252,9 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime_services = None
     _app.state.runtime_service_overrides = None
     _app.state.command_data_service = None
-    _app.state.report_telegram_transport = None
+    _app.state.soak_monitor = SoakMonitor(
+        Path(os.getenv("SOAK_EVIDENCE_DIR", "docs/evidence/soak"))
+    )
     _app.state.runtime_eligible = runtime_enabled(settings)
     if _app.state.runtime_eligible:
         # Runtime dependencies are composed only after the validated broker,
@@ -361,6 +364,7 @@ async def lifespan(_app: FastAPI) -> Any:
             pnl_provider=services.get("pnl_provider"),
             risk_provider=services.get("risk_provider"),
             report_provider=report_provider,
+            soak_provider=lambda: _app.state.soak_monitor,
         )
     except Exception as exc:
         # Keep controls available while recording one clear fail-safe alert;

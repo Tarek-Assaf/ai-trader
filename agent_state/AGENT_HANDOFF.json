@@ -2608,7 +2608,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-08",
         "R-12",
@@ -2633,8 +2633,14 @@
         "tests/unit/test_soak.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/soak/monitor.py",
+        "src/trader/soak/__init__.py",
+        "src/trader/reports/commands.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_soak.py"
+      ],
+      "completion_note": "Added a broker/LLM-independent SoakMonitor that records daily cycles, intents, Guardian rejections, orders, fills, reconciliation mismatches, alerts, uptime, restarts, LLM spend and equity/drawdown. All seven Phase 8 incident rules emit an alert, write sanitized JSON evidence and reset the four-week clock with a post-mortem requirement. Wired /soak as a deterministic command and added simulated incident, secret-redaction and summary tests. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders."
     },
     {
       "id": "T-093",
@@ -2659,7 +2665,8 @@
         "Promotion follows strategy_lab.yaml from lab Gate 1 through paper to demo Gate 2",
         "Gate 2 requires four weeks and 200 demo trades",
         "Promotion Gate records every stage change and Risk Guardian enforces the cap",
-        "No code path reaches stage 3 or 4 without live trading enabled and a recorded gate"
+        "No code path reaches stage 3 or 4 without live trading enabled and a recorded gate",
+        "SoakMonitor (T-092) is fed by runtime events (cycles, intents, Guardian rejections, orders, fills, reconciliation, restarts, uptime, spend, equity) and evaluates the incident rules each cycle; its state and four-week clock persist in the journal across restarts; evidence is written under /workspace (SOAK_EVIDENCE_DIR), never relative to the working directory"
       ],
       "deliverables": [
         "src/trader/lab/promotion.py",
