@@ -152,10 +152,14 @@ def test_degraded_runtime_recovers_after_dependencies_return() -> None:
 def test_schedule_source_preserves_trigger_order_and_cycle_ids() -> None:
     first = CycleTrigger.now("bar_close", "bar-1")
     second = CycleTrigger.now("session_open", "session-1")
-    source = ScheduleCycleSource.from_config({"triggers": [
-        {"event": first.event, "event_id": first.event_id, "at": first.at},
-        {"event": second.event, "event_id": second.event_id, "at": second.at},
-    ]})
+    source = ScheduleCycleSource.from_config(
+        {
+            "triggers": [
+                {"event": first.event, "event_id": first.event_id, "at": first.at},
+                {"event": second.event, "event_id": second.event_id, "at": second.at},
+            ]
+        }
+    )
     assert source.next_cycle() == first
     assert source.next_cycle() == second
     assert source.next_cycle() is None

@@ -137,7 +137,7 @@ class ScheduleCycleSource:
         raw = config.get("triggers")
         if raw is None:
             return cls()
-        if not isinstance(raw, Sequence) or isinstance(raw, (str, bytes)):
+        if not isinstance(raw, Sequence) or isinstance(raw, str | bytes):
             raise ValueError("schedule triggers must be a sequence")
         events: list[CycleTrigger] = []
         for item in raw:
