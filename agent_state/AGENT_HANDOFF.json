@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 214,
+  "turn": "claude",
+  "revision": 215,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-099 review fixes complete: a read-only workspace LogScanner feeds secret incidents, real safety components expose observations, and missing sources warn once without invented data.",
+    "summary": "T-100 fixes silent Capital.com recorder stream failures with degraded secret-free health, no-data timeout backoff and fake-stream recovery coverage; awaiting Claude review.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -109,7 +109,8 @@
         "T-050",
         "T-080",
         "T-082",
-        "T-083"
+        "T-083",
+        "T-100"
       ]
     },
     {
@@ -162,7 +163,8 @@
       "status": "not_started",
       "covered_by": [
         "T-013",
-        "T-014"
+        "T-014",
+        "T-100"
       ]
     },
     {
@@ -2952,6 +2954,42 @@
         "tests/unit/test_soak.py"
       ],
       "completion_note": "Added a read-only LogScanner built in runtime services, real control and safety-component observation hooks, runtime-level breach coverage, and one-warning missing-source coverage. Secret-bearing log text is transient and SoakMonitor sanitizes evidence; no observation hook changes trading decisions."
+    },
+    {
+      "id": "T-100",
+      "title": "Recorder never receives prices on the demo Pod",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-05",
+        "R-09"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Find why the Capital.com stream never delivers prices (session/login, WebSocket subscribe, wrong epic or symbol, token refresh, or silently swallowed exception) and fix it.",
+        "When the stream fails to connect or gets no data, report recorder status degraded with a short secret-free reason and retry with backoff so reconnect_count and last_reconnect_reason change.",
+        "Unit tests with a fake stream cover connect failure, no-data timeout, and recovery.",
+        "Tell the owner the exact redacted /health fields to check after redeploying."
+      ],
+      "deliverables": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "docs/evidence/t100_recorder_health.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_data_recorder.py",
+        "docs/evidence/t100_recorder_health.md",
+        "bundled Python compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Fixed the silent pre-connect failure path: every failed Capital.com session, subscription, ping or socket attempt now updates reconnect_count and invokes the secret-free reconnect callback while retaining exponential backoff. Added a 30-minute configurable no-data timeout with the redacted reason no_data_timeout; the recorder writes status degraded, reconnect_count and last_reconnect_reason. WebSocket updates reset the data watchdog and successful reconnects recover normally. Fake-stream tests cover initial connect failure and recovery, no-data timeout, and recorder degraded status. After redeploy, check exactly the allowlisted data_recorder fields listed in docs/evidence/t100_recorder_health.md. No Pod/API calls, credentials, broker calls or orders were used; full pytest, Ruff, mypy and make check are unavailable in this desktop runtime."
     }
   ],
   "decisions": [
@@ -5505,6 +5543,17 @@
       "date": "2026-10-07",
       "reverify_if": "observation hooks, soak feed or log scanner change",
       "evidence": "src/trader/runtime/soak.py; src/trader/runtime/services.py; src/trader/runtime/composition.py; src/trader/runtime/approval.py; tests/unit/test_soak.py; tests/unit/test_runtime_approval.py; tests/unit/test_execution_control.py"
+    },
+    {
+      "id": "V-229",
+      "subject": "T-100 recorder stream failure and no-data recovery",
+      "method": "Reviewed CapitalComStreamClient session, subscribe, ping and receive exception paths; confirmed initial connect failures are surfaced, no-data timeout triggers bounded retry, successful event recovery resets the watchdog, and recorder status writes only safe reasons. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/integrations/capital_com/stream.py; src/trader/data/recorder.py; tests/unit/test_capital_com_stream.py; tests/unit/test_data_recorder.py; docs/evidence/t100_recorder_health.md; bundled Python compileall; git diff --check",
+      "review_notes": "Full pytest, Ruff, mypy and make check are unavailable in this desktop runtime. Owner must redeploy the current image and inspect the redacted /health fields; no Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "Capital.com stream reconnect, no-data watchdog or recorder health fields change"
     }
   ],
   "blockers": [
@@ -9515,7 +9564,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-099 passes cycle 2: soak incident rules now fed by real safety components and a log scanner. Codex: branch from origin/main after merge; no open build tasks besides blocked T-017/T-044/T-060 pending Q-022 recorder data."
+    },
+    {
+      "revision": 215,
+      "ts": "2026-10-07T20:30:00Z",
+      "agent": "codex",
+      "action": "complete_t100_recorder_stream",
+      "task_ids": [
+        "T-100"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_data_recorder.py",
+        "docs/evidence/t100_recorder_health.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Added T-100 for the owner-authorized demo recorder incident and fixed silent pre-connect failures plus no-data timeout handling. Stream retries use bounded backoff and callback reasons are secret-free; recorder health becomes degraded with reconnect_count and last_reconnect_reason updated. Fake-stream tests cover connect failure/recovery and no-data timeout. Full pytest/Ruff/mypy/make check are unavailable on desktop; bundled compileall and diff-check pass. No Pod/API calls, credentials, broker calls or orders. Handing T-100 to Claude for review."
     }
   ],
-  "project_summary": "T-099 review cycle 1 addressed: LogScanner is built from runtime services, control and safety components expose read-only observations, and real-component/runtime-level tests cover breach evidence and clock reset."
+  "project_summary": "T-100 fixes silent Capital.com recorder stream failures with degraded secret-free health, no-data timeout backoff and fake-stream recovery coverage; awaiting Claude review."
 }

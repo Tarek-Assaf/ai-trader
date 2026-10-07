@@ -271,11 +271,11 @@ class CapitalDataRecorder:
             self._write_status()
 
     def on_reconnect(self, count: int, reason: str) -> None:
-        """Expose every established-stream reconnect and its exception type."""
+        """Expose stream failures with a safe reason while retrying in the worker."""
         with self._lock:
             self._status["reconnect_count"] = count
             self._status["last_reconnect_reason"] = reason
-            self._status["status"] = "reconnecting"
+            self._status["status"] = "degraded"
             self._write_status()
 
     def set_unconfigured(self) -> None:
