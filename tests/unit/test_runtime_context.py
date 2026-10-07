@@ -160,17 +160,13 @@ def test_account_baseline_seeds_reloads_and_rolls_the_utc_day() -> None:
             account["equity"] = "10100"
             return account
 
-    restarted = AccountContextSource(
-        HigherEquityBroker(), journal, clock=lambda: current[0]
-    )()
+    restarted = AccountContextSource(HigherEquityBroker(), journal, clock=lambda: current[0])()
     assert restarted.day_start_equity == Decimal("10000")
     assert restarted.week_start_equity == Decimal("10000")
     assert restarted.peak_equity == Decimal("10100")
 
     current[0] = NOW + timedelta(days=1)
-    rolled = AccountContextSource(
-        HigherEquityBroker(), journal, clock=lambda: current[0]
-    )()
+    rolled = AccountContextSource(HigherEquityBroker(), journal, clock=lambda: current[0])()
     assert rolled.day_start_equity == Decimal("10100")
     assert rolled.week_start_equity == Decimal("10000")
     assert rolled.peak_equity == Decimal("10100")
