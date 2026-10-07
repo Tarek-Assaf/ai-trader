@@ -318,8 +318,12 @@ def test_watchdog_starts_at_market_open_not_at_last_tick() -> None:
 
     class WeekendSocket(FakeSocket):
         calls = 0
+        raw = 0
 
         def recv(self, *, timeout: float) -> str:
+            self.raw += 1
+            if self.raw <= 2:
+                return super().recv(timeout=timeout)
             self.calls += 1
             if self.calls == 2:
                 current[0] += timedelta(days=2)
