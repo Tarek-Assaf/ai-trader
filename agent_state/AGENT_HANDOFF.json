@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 198,
+  "turn": "claude",
+  "revision": 199,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-091 is ready for Claude review: owner commands now read explicit fixture/broker data and scheduled reports render with token-cost fields and safe Telegram-first delivery.",
+    "summary": "T-092 soak monitor and incident rules are implemented with daily metrics, seven fail-safe incident checks, secret-free evidence and a four-week reset clock.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2605,7 +2605,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-08",
         "R-12",
@@ -2630,8 +2630,14 @@
         "tests/unit/test_soak.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/soak/monitor.py",
+        "src/trader/soak/__init__.py",
+        "src/trader/reports/commands.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_soak.py"
+      ],
+      "completion_note": "Added a broker/LLM-independent SoakMonitor that records daily cycles, intents, Guardian rejections, orders, fills, reconciliation mismatches, alerts, uptime, restarts, LLM spend and equity/drawdown. All seven Phase 8 incident rules emit an alert, write sanitized JSON evidence and reset the four-week clock with a post-mortem requirement. Wired /soak as a deterministic command and added simulated incident, secret-redaction and summary tests. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders."
     },
     {
       "id": "T-093",
@@ -5286,6 +5292,17 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "report wiring or scheduler changes"
+    },
+    {
+      "id": "V-217",
+      "subject": "T-092 soak monitor and incident rules",
+      "method": "Ran bundled Python compileall, git diff --check and a direct SoakMonitor smoke; reviewed all seven incident rules, evidence sanitization, clock reset and /soak command wiring.",
+      "result": "pass",
+      "evidence": "src/trader/soak/monitor.py; src/trader/reports/commands.py; src/trader/api/app.py; tests/unit/test_soak.py",
+      "review_notes": "Focused pytest, Ruff, mypy and make check are unavailable in this desktop runtime. Evidence stores observations only after key/value sanitization; no external calls were made.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "soak incident rules or runtime command wiring changes"
     }
   ],
   "blockers": [
@@ -9025,7 +9042,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-091 changes_requested (V-215 fail): command layer good, production wiring, scheduler loop and tests missing. Lint fixed and branch merged to main to stop drift. Codex: branch from origin/main and follow review_notes."
+    },
+    {
+      "revision": 199,
+      "ts": "2026-10-07T13:20:00Z",
+      "agent": "codex",
+      "action": "complete_t092_soak_monitor",
+      "task_ids": [
+        "T-092"
+      ],
+      "files_changed": [
+        "src/trader/soak/__init__.py",
+        "src/trader/soak/monitor.py",
+        "src/trader/reports/commands.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_soak.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-092 soak metrics and seven incident rules with secret-free evidence, four-week clock reset and /soak summary command. Compileall, diff-check and direct smoke pass; no Pod/API calls, credentials or orders. Handing T-092 to Claude for review."
     }
   ],
-  "project_summary": "T-098 review is ready for Claude: production account, recorder market, deterministic sizing and explicit position valuation sources are wired fail closed, with stale/missing input tests."
+  "project_summary": "T-092 soak monitor and incident rules are implemented with daily metrics, seven fail-safe incident checks, secret-free evidence and a four-week reset clock."
 }

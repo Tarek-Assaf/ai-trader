@@ -43,12 +43,14 @@ class CommandDataService:
         risk_provider: Callable[[], object] | None = None,
         report_provider: Callable[[ReportPeriod], object] | None = None,
         chart_provider: Callable[[str], bytes] | None = None,
+        soak_provider: Callable[[], object] | None = None,
     ) -> None:
         self._broker = broker
         self._pnl_provider = pnl_provider
         self._risk_provider = risk_provider
         self._report_provider = report_provider
         self._chart_provider = chart_provider
+        self._soak_provider = soak_provider
 
     def handlers(self) -> dict[str, Callable[[str], str]]:
         return {
@@ -57,6 +59,7 @@ class CommandDataService:
             "/pnl": lambda _command: self.pnl(),
             "/risk": lambda _command: self.risk(),
             "/report": lambda command: self.report(command),
+            "/soak": lambda _command: self.soak(),
         }
 
     def status(self) -> str:
@@ -150,6 +153,23 @@ class CommandDataService:
             clear = getattr(figure, "clear", None)
             if callable(clear):
                 clear()
+
+    def soak(self) -> str:
+        """Return the deterministic soak summary without invoking an LLM."""
+        if self._soak_provider is None:
+            return "Soak status is unavailable right now."
+        try:
+            value = self._soak_provider()
+        except Exception as exc:
+            self._log_provider_failure("soak", exc)
+            return "Soak status is unavailable right now."
+        summary = getattr(value, "summary_command", None)
+        if callable(summary):
+            rendered = summary()
+            if isinstance(rendered, str) and rendered.strip():
+                return rendered
+        rendered = self._render_value(value, "Soak")
+        return rendered or "Soak status is unavailable right now."
 
     def _account(self) -> Mapping[str, object]:
         if self._broker is None:
