@@ -18,6 +18,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import cast
 
 LOGGER = logging.getLogger(__name__)
 _SECRET_KEY = re.compile(r"(?:token|secret|password|passwd|api[_-]?key|chat[_-]?id)", re.I)
@@ -84,6 +85,7 @@ class SoakMonitor:
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
         alert: Callable[[str], None] | None = None,
         secret_patterns: Sequence[str] = (),
+        journal: object | None = None,
     ) -> None:
         self.evidence_dir = Path(evidence_dir)
         self._clock = clock
@@ -94,6 +96,9 @@ class SoakMonitor:
         self._active_rules: set[str] = set()
         self._clock_started_at = self._now()
         self._lock = threading.RLock()
+        self._journal = journal
+        self._snapshot_id = "soak:state"
+        self._restore()
 
     @property
     def incidents(self) -> tuple[Incident, ...]:
@@ -115,34 +120,43 @@ class SoakMonitor:
 
     def record_cycle(self, *, at: datetime | None = None) -> None:
         self._day(at).cycles += 1
+        self._persist()
 
     def record_intent(self, *, at: datetime | None = None) -> None:
         self._day(at).intents += 1
+        self._persist()
 
     def record_guardian_rejection(self, rule: str, *, at: datetime | None = None) -> None:
         if not rule.strip():
             raise ValueError("guardian rejection rule must be non-empty")
         self._day(at).guardian_rejections[rule] += 1
+        self._persist()
 
     def record_order(self, *, at: datetime | None = None) -> None:
         self._day(at).orders += 1
+        self._persist()
 
     def record_fill(self, *, at: datetime | None = None) -> None:
         self._day(at).fills += 1
+        self._persist()
 
     def record_reconciliation_mismatch(self, *, at: datetime | None = None) -> None:
         self._day(at).reconciliation_mismatches += 1
+        self._persist()
 
     def record_alert(self, *, at: datetime | None = None) -> None:
         self._day(at).alerts += 1
+        self._persist()
 
     def record_restart(self, *, at: datetime | None = None) -> None:
         self._day(at).restarts += 1
+        self._persist()
 
     def record_uptime(self, seconds: float, *, at: datetime | None = None) -> None:
         if not isinstance(seconds, int | float) or seconds < 0:
             raise ValueError("uptime seconds must be non-negative")
         self._day(at).uptime_seconds += float(seconds)
+        self._persist()
 
     def record_llm_spend(
         self, amount: Decimal | str | int | float, *, at: datetime | None = None
@@ -151,6 +165,7 @@ class SoakMonitor:
         if not value.is_finite() or value < 0:
             raise ValueError("LLM spend must be non-negative and finite")
         self._day(at).llm_spend += value
+        self._persist()
 
     def record_equity(
         self,
@@ -165,6 +180,46 @@ class SoakMonitor:
         day = self._day(at)
         day.equity = value
         day.drawdown_pct = None if drawdown_pct is None else Decimal(str(drawdown_pct))
+        self._persist()
+
+    def attach_journal(self, journal: object | None) -> None:
+        """Attach the durable journal and restore the soak clock once."""
+        self._journal = journal
+        self._restore()
+
+    def observe_cycle(
+        self,
+        observation: Mapping[str, object] | None = None,
+        *,
+        status: str | None = None,
+        reason: str | None = None,
+        at: datetime | None = None,
+    ) -> tuple[Incident, ...]:
+        """Record runtime events and evaluate safety rules for one cycle."""
+        values = observation or {}
+        if status in {"submitted", "rejected", "failed"}:
+            self.record_intent(at=at)
+        if status == "submitted":
+            self.record_order(at=at)
+        if status == "rejected" and reason:
+            self.record_guardian_rejection(reason, at=at)
+        fills = values.get("fills", 0)
+        if values.get("fill") is True:
+            fills = 1
+        if isinstance(fills, int) and not isinstance(fills, bool):
+            for _ in range(max(0, fills)):
+                self.record_fill(at=at)
+        if values.get("reconciliation_mismatch") is True:
+            self.record_reconciliation_mismatch(at=at)
+        if values.get("restart") is True:
+            self.record_restart(at=at)
+        if values.get("uptime_seconds") is not None:
+            self.record_uptime(float(values["uptime_seconds"]), at=at)
+        if values.get("llm_spend") is not None:
+            self.record_llm_spend(values["llm_spend"], at=at)
+        if values.get("equity") is not None:
+            self.record_equity(values["equity"], drawdown_pct=values.get("drawdown_pct"), at=at)
+        return self.evaluate(values)
 
     def evaluate(self, observation: Mapping[str, object]) -> tuple[Incident, ...]:
         """Evaluate one observation and emit at most one incident per rule.
@@ -184,6 +239,7 @@ class SoakMonitor:
                 continue
             created.append(self._emit(rule, details))
             self._active_rules.add(rule)
+        self._persist()
         return tuple(created)
 
     def summary(self) -> dict[str, object]:
@@ -282,11 +338,97 @@ class SoakMonitor:
     def _now(self) -> datetime:
         return _aware(self._clock())
 
+    def _restore(self) -> None:
+        getter = getattr(self._journal, "get_snapshot", None)
+        if not callable(getter):
+            return
+        try:
+            payload = getter(self._snapshot_id)
+        except Exception:
+            LOGGER.warning("soak state restore unavailable")
+            return
+        if not isinstance(payload, Mapping):
+            return
+        try:
+            started = payload.get("clock_started_at")
+            if isinstance(started, str):
+                self._clock_started_at = _aware(datetime.fromisoformat(started))
+            for raw in payload.get("days", ()):
+                if not isinstance(raw, Mapping):
+                    continue
+                day = date.fromisoformat(str(raw["day"]))
+                self._days[day] = SoakDay(
+                    day=day,
+                    cycles=int(raw.get("cycles", 0)),
+                    intents=int(raw.get("intents", 0)),
+                    guardian_rejections=Counter(
+                        cast(Mapping[str, int], raw.get("guardian_rejections", {}))
+                    ),
+                    orders=int(raw.get("orders", 0)),
+                    fills=int(raw.get("fills", 0)),
+                    reconciliation_mismatches=int(raw.get("reconciliation_mismatches", 0)),
+                    alerts=int(raw.get("alerts", 0)),
+                    uptime_seconds=float(raw.get("uptime_seconds", 0)),
+                    restarts=int(raw.get("restarts", 0)),
+                    llm_spend=Decimal(str(raw.get("llm_spend", "0"))),
+                    equity=_optional_decimal(raw.get("equity")),
+                    drawdown_pct=_optional_decimal(raw.get("drawdown_pct")),
+                )
+            active_rules = payload.get("active_rules", ())
+            active_values = active_rules if isinstance(active_rules, Sequence) else ()
+            self._active_rules = {
+                str(rule) for rule in active_values
+            }
+            raw_incidents = payload.get("incidents", ())
+            incident_values = raw_incidents if isinstance(raw_incidents, Sequence) else ()
+            self._incidents = [
+                Incident(
+                    str(raw["rule"]),
+                    _aware(datetime.fromisoformat(str(raw["occurred_at"]))),
+                    cast(Mapping[str, object], raw.get("details", {}))
+                    if isinstance(raw.get("details", {}), Mapping)
+                    else {},
+                    str(raw.get("evidence_path", "")),
+                )
+                for raw in incident_values
+                if isinstance(raw, Mapping)
+            ]
+        except (KeyError, TypeError, ValueError, ArithmeticError):
+            LOGGER.warning("soak state snapshot is invalid; starting fresh")
+
+    def _persist(self) -> None:
+        saver = getattr(self._journal, "save_snapshot", None)
+        if not callable(saver):
+            return
+        with self._lock:
+            payload = {
+                "clock_started_at": self._clock_started_at.isoformat(),
+                "active_rules": sorted(self._active_rules),
+                "days": [self._days[key].as_dict() for key in sorted(self._days)],
+                "incidents": [
+                    {
+                        "rule": item.rule,
+                        "occurred_at": item.occurred_at.isoformat(),
+                        "details": dict(item.details),
+                        "evidence_path": item.evidence_path,
+                    }
+                    for item in self._incidents
+                ],
+            }
+        try:
+            saver(self._snapshot_id, payload)
+        except Exception:
+            LOGGER.warning("soak state persistence unavailable")
+
 
 def _aware(value: datetime) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise ValueError("soak timestamps must be timezone-aware")
     return value.astimezone(UTC)
+
+
+def _optional_decimal(value: object) -> Decimal | None:
+    return None if value is None else Decimal(str(value))
 
 
 def _sanitize(value: object) -> object:

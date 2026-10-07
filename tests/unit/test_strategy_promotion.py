@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
+from pathlib import Path
+from typing import cast
+
+import yaml
 
 from trader.lab.promotion import PromotionGate
 from trader.lab.validator import ValidationResult
@@ -15,12 +20,25 @@ class _Audit:
 
 
 def _config() -> dict[str, object]:
-    return {
-        "gate1_backtest_to_paper": {"min_trades": 300},
-        "gate2_paper_to_micro_live": {"min_weeks": 4, "min_trades": 200},
-        "gate3_micro_to_live": {"min_weeks": 4, "min_trades": 100},
-        "stage_capital": {"micro_live_size_pct_of_target": 20, "live_ramp_pct": [25, 50, 100]},
-    }
+    return yaml.safe_load(
+        (Path(__file__).parents[2] / "config" / "strategy_lab.yaml").read_text(encoding="utf-8")
+    )
+
+
+def _gate(config: Mapping[str, object], name: str) -> dict[str, object]:
+    return cast(dict[str, object], config[name])
+
+
+def _metrics(gate: Mapping[str, object]) -> dict[str, object]:
+    metrics: dict[str, object] = {}
+    for key, expected in gate.items():
+        if key.startswith("min_"):
+            metrics[key.removeprefix("min_")] = expected
+        elif key.startswith("require_"):
+            metrics[key.removeprefix("require_")] = True
+    metrics["cost_stress_net_positive"] = True
+    metrics["risk_rule_violations"] = 0
+    return metrics
 
 
 def test_gate1_then_demo_gate2_uses_configured_thresholds_and_records_transition() -> None:
@@ -28,29 +46,44 @@ def test_gate1_then_demo_gate2_uses_configured_thresholds_and_records_transition
     alerts: list[str] = []
     gate = PromotionGate(_config(), live_trading_enabled=True, audit=audit, alert=alerts.append)
     validation = ValidationResult(True, (), 0.05, 1, "s1", True)
+    config = _config()
 
+    gate1 = _gate(config, "gate1_backtest_to_paper")
     paper = gate.promote(
         "s1",
         "backtest",
-        {"trades": 300},
+        _metrics(gate1),
         target_stage="paper",
         validation=validation,
     )
     assert paper.approved and paper.stage == "paper"
 
-    blocked = gate.promote("s1", "paper", {"weeks": 3, "trades": 200}, target_stage="micro_live")
+    gate2 = _gate(config, "gate2_paper_to_micro_live")
+    blocked_metrics = _metrics(gate2)
+    blocked_metrics["weeks"] = 3
+    blocked = gate.promote("s1", "paper", blocked_metrics, target_stage="micro_live")
     assert not blocked.approved and "min_weeks_failed" in blocked.reasons
 
-    demo = gate.promote(
-        "s1",
-        "paper",
-        {"weeks": 4, "trades": 200, "risk_rule_violations": 0},
-        target_stage="micro_live",
-    )
+    demo = gate.promote("s1", "paper", _metrics(gate2), target_stage="micro_live")
     assert demo.approved and demo.stage == "micro_live"
     assert demo.capital_cap == 20
     assert alerts == ["strategy_stage_changed:s1:paper", "strategy_stage_changed:s1:micro_live"]
     assert len(audit.events) == 2
+
+
+def test_gate2_requires_all_real_config_requirements() -> None:
+    config = _config()
+    gate = PromotionGate(config, live_trading_enabled=True, audit=_Audit([]))
+    gate2 = _gate(config, "gate2_paper_to_micro_live")
+    weeks_and_trades_only = {"weeks": gate2["min_weeks"], "trades": gate2["min_trades"]}
+    blocked = gate.promote("s1", "paper", weeks_and_trades_only, target_stage="micro_live")
+    assert not blocked.approved
+    assert "require_within_backtest_confidence_band_failed" in blocked.reasons
+    assert "require_costs_match_model_failed" in blocked.reasons
+    assert "risk_rule_violations" in blocked.reasons
+
+    perfect = _metrics(gate2)
+    assert gate.promote("s1", "paper", perfect, target_stage="micro_live").approved
 
 
 def test_live_stages_fail_closed_without_flag_or_recorded_gate() -> None:
@@ -65,3 +98,9 @@ def test_live_stages_fail_closed_without_flag_or_recorded_gate() -> None:
         "s1", "paper", {"weeks": 4, "trades": 200}, target_stage="micro_live"
     )
     assert not decision.approved and decision.reasons == ("stage_gate_not_recorded",)
+
+    live_disabled = PromotionGate(_config(), live_trading_enabled=False, audit=_Audit([]))
+    decision = live_disabled.promote(
+        "s1", "micro_live", _metrics(_gate(_config(), "gate3_micro_to_live")), target_stage="live"
+    )
+    assert not decision.approved and decision.reasons == ("live_trading_disabled",)

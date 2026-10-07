@@ -5,6 +5,17 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from trader.reports.commands import CommandDataService
+
+
+class _Journal:
+    def __init__(self) -> None:
+        self.snapshots: dict[str, dict[str, object]] = {}
+
+    def get_snapshot(self, snapshot_id: str) -> dict[str, object] | None:
+        return self.snapshots.get(snapshot_id)
+
+    def save_snapshot(self, snapshot_id: str, payload: dict[str, object]) -> None:
+        self.snapshots[snapshot_id] = payload
 from trader.soak import SoakMonitor
 
 
@@ -66,3 +77,24 @@ def test_soak_command_is_available_without_the_llm(tmp_path) -> None:
     monitor = SoakMonitor(tmp_path)
     service = CommandDataService(soak_provider=lambda: monitor)
     assert service.handlers()["/soak"]("/soak").startswith("Soak:")
+
+
+def test_state_and_four_week_clock_survive_restart(tmp_path) -> None:
+    current = [datetime(2026, 10, 7, 12, tzinfo=UTC)]
+    journal = _Journal()
+    first = SoakMonitor(tmp_path, clock=lambda: current[0], journal=journal)
+    first.record_cycle()
+    first.observe_cycle(status="rejected", reason="guardian_rejected")
+    first.evaluate({"daily_loss_pct": 3, "daily_loss_limit_pct": 2})
+    started = first.clock_started_at
+
+    current[0] += timedelta(days=1)
+    second = SoakMonitor(tmp_path, clock=lambda: current[0], journal=journal)
+    summary = second.summary()
+    assert summary["days_run"] == 1
+    assert summary["incidents"] == 1
+    assert summary["days"][0]["cycles"] == 1
+    assert summary["days"][0]["intents"] == 1
+    assert summary["days"][0]["guardian_rejections"] == {"guardian_rejected": 1}
+    assert second.clock_started_at == started
+    assert second.summary_command().startswith("Soak: 1 days run; 1 incidents;")

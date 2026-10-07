@@ -178,6 +178,7 @@ class RuntimeComponents:
     reconciler: object | None = None
     report_scheduler: object | None = None
     settings_service: object | None = None
+    soak_monitor: object | None = None
     metadata: Mapping[str, object] = field(default_factory=dict)
 
     def missing_required(self) -> tuple[str, ...]:
@@ -233,6 +234,7 @@ class RuntimeService:
         self._sleep = sleep
         self._backoff_initial = backoff_initial
         self._backoff_max = backoff_max
+        self._last_soak_at: datetime | None = None
         self._backoff = backoff_initial
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
@@ -261,6 +263,7 @@ class RuntimeService:
                 self._task = asyncio.create_task(self.run_forever(), name="ai-trader-decision-loop")
             return
         self.state = RuntimeState.RUNNING
+        self._soak_call("record_restart")
         if self._cycle_source is not None:
             self._task = asyncio.create_task(self.run_forever(), name="ai-trader-decision-loop")
 
@@ -305,7 +308,9 @@ class RuntimeService:
             if inspect.isawaitable(value):
                 value = await value
             self._backoff = self._backoff_initial
-            return _result(value, resolved_cycle_id)
+            result = _result(value, resolved_cycle_id)
+            self._record_soak(result)
+            return result
         except Exception:
             self.state = RuntimeState.DEGRADED
             self._notify("runtime_cycle_failed")
@@ -378,6 +383,47 @@ class RuntimeService:
             self._alert(message)
         except Exception:
             LOGGER.exception("runtime alert delivery failed")
+
+    def _soak_call(self, method: str, *args: object, **kwargs: object) -> None:
+        monitor = self.components.soak_monitor
+        callback = getattr(monitor, method, None)
+        if callable(callback):
+            try:
+                callback(*args, **kwargs)
+            except Exception:
+                LOGGER.warning("soak metric %s unavailable", method)
+
+    def _record_soak(self, result: RuntimeResult) -> None:
+        now = datetime.now(UTC)
+        self._soak_call("record_cycle", at=now)
+        if self._last_soak_at is not None:
+            self._soak_call("record_uptime", (now - self._last_soak_at).total_seconds(), at=now)
+        self._last_soak_at = now
+        value = result.value
+        status = getattr(value, "status", None)
+        reason = getattr(value, "reason", None)
+        if status is None:
+            action_status = {
+                "SUBMITTED": "submitted",
+                "REJECTED": "rejected",
+                "FAILED": "failed",
+            }.get(result.action)
+            status = action_status
+        if reason is None:
+            reason = result.reason
+        if isinstance(value, Mapping):
+            status = value.get("status", status)
+            reason = value.get("reason", reason)
+            observation = value.get("soak_observation")
+        else:
+            observation = getattr(value, "soak_observation", None)
+        self._soak_call(
+            "observe_cycle",
+            observation if isinstance(observation, Mapping) else {},
+            status=status if isinstance(status, str) else None,
+            reason=reason if isinstance(reason, str) else None,
+            at=now,
+        )
 
 
 def build_runtime(

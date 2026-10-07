@@ -119,6 +119,10 @@ def build_runtime_services(
         # kill/pause channel the runtime must stay stopped (invariant 11).
         raise RuntimeDependencyUnavailable("runtime service unavailable: control channel")
     journal: Any = provided.get("journal") or ExecutionJournal(engine)
+    soak_monitor = provided.get("soak_monitor")
+    attach_journal = getattr(soak_monitor, "attach_journal", None)
+    if callable(attach_journal):
+        attach_journal(journal)
     execution_lease = RedisLeaderLease(redis_client, "ai-trader:execution:lease")
     guardian_lease = RedisLeaderLease(redis_client, "ai-trader:guardian:lease")
 
@@ -301,7 +305,7 @@ def build_runtime_services(
         )
 
     reconciler: Any = provided.get("reconciler") or RuntimeReconciler(
-        journal, broker, alert=_log_alert
+        journal, broker, alert=_log_alert, soak_monitor=soak_monitor
     )
     if "report_email" not in provided:
         from trader.reports.core import SmtpEmailSender
@@ -393,6 +397,7 @@ def build_runtime_services(
         "report_telegram",
         "report_owner_chat_ids",
         "llm_usage_summary",
+        "soak_monitor",
     ):
         if optional in provided:
             result[optional] = provided[optional]
