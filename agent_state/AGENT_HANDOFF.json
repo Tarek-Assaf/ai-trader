@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 208,
+  "turn": "claude",
+  "revision": 209,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-093 review fixes complete: real Gate 2 config thresholds and requirements are tested, and SoakMonitor runtime persistence/feed wiring is fail-closed.",
+    "summary": "T-094 review fixes are complete: worker spend caps now fail closed on unknown cost and sum tagged worker costs; handoff is ready for Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -2697,7 +2697,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-22",
         "R-23"
@@ -2729,12 +2729,7 @@
         "tests/unit/test_scaling.py",
         "docs/evidence/t094_runpod_list.md"
       ],
-      "completion_note": "Wired the existing worker autoscaler into the demo core runtime behind scaling.enabled, which remains false by default. CoreAutoscaler reads queue depth and age, reconciles only tagged workers, applies the configured worker and hourly-spend caps, and is never constructed for ROLE=worker. The RunPod adapter validates both supported list envelopes and the unit fixture covers the read-only response shape. A live RunPod list call was intentionally not made because no Pod/API credential or explicit external-call authorization was available; the owner must run the names-only check before enabling scaling.",
-      "changes_requested": [
-        "Hourly spend cap is ineffective: CoreAutoscaler defaults hourly_spend to lambda: 0.0 and Worker.hourly_cost_usd is never populated, so max_hourly_spend_usd can never trigger. Populate Worker.hourly_cost_usd from the RunPod list response (costPerHr) in the adapter and default hourly_spend to the sum of managed (tagged) workers' hourly_cost_usd.",
-        "Fail closed: a managed worker with missing/non-numeric cost must count as unknown spend and block new spawns (and be reported in the reason) rather than count as 0.",
-        "Tests: (a) cost parsed from both list envelopes, (b) spend sums tagged workers only, (c) cap reached terminates/blocks spawn using the real sum, (d) unknown cost blocks spawn. Keep scaling.enabled false by default and CI green."
-      ]
+      "completion_note": "Addressed Claude cycle-1 review: RunPod worker costs now parse from costPerHr/hourly_cost_usd with invalid or missing values treated as unknown; CoreAutoscaler sums tagged worker spend and passes unknown spend fail-closed so no new workers spawn. Cap and unknown-cost behavior are covered by tests, while scaling.enabled remains false by default. No Pod/API calls, credentials, broker calls or orders."
     },
     {
       "id": "T-095",
@@ -5442,6 +5437,17 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "promotion gate or soak wiring changes"
+    },
+    {
+      "id": "V-224",
+      "subject": "T-094 review fixes: spend cap and unknown cost",
+      "method": "Reviewed cost parsing for both RunPod list envelopes, tagged-worker spend aggregation, cap termination, unknown-cost fail-closed behavior, bundled compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/scaling/autoscaler.py; src/trader/scaling/runtime.py; src/trader/integrations/runpod/client.py; tests/unit/test_scaling.py; tests/unit/test_runtime_scaling.py; bundled Python compileall; git diff --check",
+      "review_notes": "Scaling remains disabled by default. Live RunPod verification is still owner-gated under B-009; no Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "worker cost parsing, spend aggregation or scaling policy changes"
     }
   ],
   "blockers": [
@@ -9345,7 +9351,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-094 cycle 1: wiring, core-only gating, default-off and tests are good, but the hourly spend cap is ineffective (spend defaults to 0 and worker cost is never populated). Codex: on this branch (already merged with main rev 208), populate worker cost from RunPod costPerHr, sum tagged workers as spend, fail closed on unknown cost, add tests. Then back to review."
+    },
+    {
+      "revision": 209,
+      "ts": "2026-10-07T18:00:00Z",
+      "agent": "codex",
+      "action": "address_t094_spend_cap_review",
+      "task_ids": [
+        "T-094"
+      ],
+      "files_changed": [
+        "src/trader/scaling/autoscaler.py",
+        "src/trader/scaling/runtime.py",
+        "src/trader/integrations/runpod/client.py",
+        "tests/unit/test_scaling.py",
+        "tests/unit/test_runtime_scaling.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed T-094 review: parse worker costs, sum tagged worker spend, terminate at cap and block new workers when cost is unknown. Handing T-094 back to Claude."
     }
   ],
-  "project_summary": "T-093 review fixes complete: real Gate 2 config thresholds and requirements are tested, and SoakMonitor runtime persistence/feed wiring is fail-closed."
+  "project_summary": "T-094 review fixes are complete: worker spend caps now fail closed on unknown cost and sum tagged worker costs; handoff is ready for Claude."
 }

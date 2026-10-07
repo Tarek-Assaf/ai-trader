@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from math import isfinite
 from typing import Any, Protocol
 
 import httpx
@@ -69,11 +70,18 @@ class RunPodClient:
         role = data.get("role")
         if role is None and isinstance(env, Mapping):
             role = env.get("ROLE")
+        raw_cost = data.get("costPerHr", data.get("hourly_cost_usd"))
+        try:
+            hourly_cost = float(raw_cost) if raw_cost is not None else None
+        except (TypeError, ValueError):
+            hourly_cost = None
+        if hourly_cost is not None and (hourly_cost < 0 or not isfinite(hourly_cost)):
+            hourly_cost = None
         return Worker(
             pod_id=pod_id,
             role=str(role or "unknown"),
             status=str(data.get("status", data.get("desiredStatus", "unknown"))),
-            hourly_cost_usd=float(data.get("costPerHr", data.get("hourly_cost_usd", 0.0)) or 0.0),
+            hourly_cost_usd=hourly_cost,
             tags=cls._tags(data.get("tags", ())),
             cpu_percent=float(data.get("cpuPercent", data.get("cpu_percent", 0.0)) or 0.0),
         )

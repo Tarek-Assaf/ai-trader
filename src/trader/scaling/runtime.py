@@ -27,12 +27,12 @@ class CoreAutoscaler:
         queue: RedisTaskQueue,
         *,
         clock: Callable[[], float] = time.time,
-        hourly_spend: Callable[[], float] | None = None,
+        hourly_spend: Callable[[], float | None] | None = None,
     ) -> None:
         self.autoscaler = autoscaler
         self.queue = queue
         self._clock = clock
-        self._hourly_spend = hourly_spend or (lambda: 0.0)
+        self._hourly_spend = hourly_spend
         self._pressure_since: float | None = None
 
     def _workers(self) -> list[Worker]:
@@ -56,11 +56,22 @@ class CoreAutoscaler:
             self._pressure_since = self._pressure_since or now
         else:
             self._pressure_since = None
+        managed = [worker for worker in workers if worker.is_scalable()]
+        if self._hourly_spend is None:
+            hourly_spend = (
+                None
+                if any(worker.hourly_cost_usd is None for worker in managed)
+                else sum(worker.hourly_cost_usd or 0.0 for worker in managed)
+            )
+        else:
+            hourly_spend = self._hourly_spend()
         actions = self.autoscaler.evaluate(
             QueueMetrics(
                 depth=depth,
                 oldest_task_age_seconds=oldest,
-                hourly_spend_usd=max(0.0, float(self._hourly_spend())),
+                hourly_spend_usd=(
+                    None if hourly_spend is None else max(0.0, float(hourly_spend))
+                ),
                 pressure_since=self._pressure_since,
             ),
             workers,
