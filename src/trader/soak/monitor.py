@@ -224,8 +224,8 @@ class SoakMonitor:
         if observation.get("open_position_without_broker_stop") is True:
             checks.append(("open_position_without_broker_stop", {"detected": True}))
         age = observation.get("reconciliation_mismatch_age_seconds")
-        if age is not None and float(age) >= 300:
-            checks.append(("reconciliation_mismatch_unhealed", {"age_seconds": float(age)}))
+        if age is not None and float(str(age)) >= 300:
+            checks.append(("reconciliation_mismatch_unhealed", {"age_seconds": float(str(age))}))
         risk = observation.get("risk_per_trade_pct")
         limit = observation.get("risk_per_trade_limit_pct")
         if risk is not None and limit is not None and Decimal(str(risk)) > Decimal(str(limit)):
