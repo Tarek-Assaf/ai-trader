@@ -25,6 +25,7 @@ from trader.data.recorder import CapitalDataRecorder, ParquetCandleStore
 from trader.execution.control import ControlMode, build_control_sources
 from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
+from trader.reports.commands import CommandDataService
 from trader.runtime import (
     RuntimeComponents,
     RuntimeFeedAdapters,
@@ -249,6 +250,7 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime_feed_adapters = None
     _app.state.runtime_services = None
     _app.state.runtime_service_overrides = None
+    _app.state.command_data_service = None
     _app.state.runtime_eligible = runtime_enabled(settings)
     if _app.state.runtime_eligible:
         # Runtime dependencies are composed only after the validated broker,
@@ -339,6 +341,21 @@ async def lifespan(_app: FastAPI) -> Any:
         )
         for source_name in ("recorder", "session_calendar", "news_calendar"):
             setattr(_app.state, source_name, _app.state.runtime_services.get(source_name))
+        services: Any = _app.state.runtime_services
+        scheduler = services.get("report_scheduler")
+
+        def report_provider(period: str) -> Any:
+            run = getattr(scheduler, "run", None)
+            if not callable(run):
+                raise RuntimeError("report scheduler is unavailable")
+            return run(period)
+
+        _app.state.command_data_service = CommandDataService(
+            services.get("broker"),
+            pnl_provider=services.get("pnl_provider"),
+            risk_provider=services.get("risk_provider"),
+            report_provider=report_provider,
+        )
     except Exception as exc:
         # Keep controls available while recording one clear fail-safe alert;
         # _start_runtime_if_configured will not compose a partial runtime.
@@ -393,13 +410,12 @@ async def lifespan(_app: FastAPI) -> Any:
                     return "Execution control is unavailable; execution remains halted."
                 return f"{command} accepted; execution mode is {mode.value}."
 
-            command_handlers = {
-                "/status": lambda _command: "Trading status is available.",
-                "/positions": lambda _command: "Positions are available.",
-                "/pnl": lambda _command: "P&L is available.",
-                "/risk": lambda _command: "Risk limits are enforced by Risk Guardian.",
-                "/report": lambda _command: "Report delivery is scheduled.",
-            }
+            command_service = getattr(_app.state, "command_data_service", None)
+            command_handlers = (
+                command_service.handlers()
+                if isinstance(command_service, CommandDataService)
+                else {}
+            )
             router = _build_chat_router(
                 settings,
                 configs,
@@ -412,7 +428,11 @@ async def lifespan(_app: FastAPI) -> Any:
                 control_writer=writer,
                 current_mode=current_mode,
                 router=router,
-                render_chart=_chart_png,
+                render_chart=(
+                    command_service.chart
+                    if isinstance(command_service, CommandDataService)
+                    else _chart_png
+                ),
                 authorize_resume=lambda: settings.owner_totp_secret is None,
             )
             stop_event = threading.Event()
