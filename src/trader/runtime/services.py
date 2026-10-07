@@ -88,9 +88,11 @@ def build_runtime_services(
         except (KeyError, TypeError, ValueError) as exc:
             raise RuntimeDependencyUnavailable("paper broker configuration is invalid") from exc
 
+    from trader.data.instruments import InstrumentMapper
     from trader.execution.control import ControlMode
     from trader.execution.journal import ExecutionJournal
     from trader.execution.leader import RedisLeaderLease
+    from trader.risk.sizing import SizingLimits
     from trader.runtime.approval import (
         PnlLossGuard,
         ProtectivePositionManager,
@@ -100,6 +102,7 @@ def build_runtime_services(
     )
     from trader.runtime.context import (
         AccountContextSource,
+        ContextUnavailable,
         MarketContextSource,
         RuntimeContextProvider,
         SizingContextSource,
@@ -143,20 +146,86 @@ def build_runtime_services(
                 clock=lambda: datetime.now(UTC),
                 stale_after_seconds=float(provided.get("market_stale_after_seconds", 180.0)),
             )
+        if market_source is None:
+
+            def unavailable_market(_instrument: str) -> Any:
+                raise ContextUnavailable("recorder market snapshot is unavailable")
+
+            market_source = unavailable_market
         sizing_source = provided.get("sizing_context_source")
+        position_valuation = provided.get("position_valuation")
         if sizing_source is None:
             mapper = provided.get("instrument_mapper")
+            if mapper is None:
+                market_details_client = provided.get("market_details_client")
+                instrument_config = _dump_mapping(configs.get("instruments"))
+                if market_details_client is not None and instrument_config:
+                    try:
+                        mapper = InstrumentMapper(instrument_config, market_details_client)
+                    except (TypeError, ValueError) as exc:
+                        raise RuntimeDependencyUnavailable(
+                            "runtime service unavailable: instrument mapper"
+                        ) from exc
             limits = provided.get("sizing_limits")
+            if limits is None:
+                risk_values = _dump_mapping(configs.get("risk"))
+                try:
+                    limits = SizingLimits(
+                        Decimal(str(risk_values["risk_per_trade_pct"])),
+                        Decimal(str(risk_values["max_margin_usage_pct"])),
+                        Decimal(str(risk_values["max_effective_leverage"])),
+                    )
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise RuntimeDependencyUnavailable(
+                        "runtime service unavailable: sizing limits"
+                    ) from exc
             currency = provided.get("account_currency_provider")
-            if mapper is not None and limits is not None and callable(currency):
+            if not callable(currency):
+
+                def currency(_account: Any) -> str:
+                    value = broker.get_account().get("currency")
+                    if not isinstance(value, str) or not value.strip():
+                        raise ContextUnavailable("account currency is unavailable")
+                    return value
+
+            if mapper is not None and callable(currency):
                 sizing_source = SizingContextSource(
                     mapper.get,
                     limits,
                     account_currency=currency,
                     quote_rate_provider=provided.get("quote_rate_provider"),
                 )
+            if position_valuation is None and mapper is not None:
+
+                def position_valuation(position: Any) -> Any:
+                    from trader.risk.guardian import OpenPosition
+
+                    terms = mapper.get(position.epic)
+                    stop = getattr(position, "stop_level", None)
+                    level = getattr(position, "level", None)
+                    size = getattr(position, "size", None)
+                    if (
+                        terms.value_per_point is None
+                        or not isinstance(stop, Decimal)
+                        or not isinstance(level, Decimal)
+                        or not isinstance(size, Decimal)
+                        or stop <= 0
+                        or level <= 0
+                        or size <= 0
+                    ):
+                        raise ContextUnavailable("position valuation is unavailable")
+                    exposure = level * terms.contract_size * size
+                    margin = exposure * terms.margin_factor / Decimal("100")
+                    risk = abs(level - stop) * terms.value_per_point * size
+                    return OpenPosition(position.epic, risk, margin, exposure)
+        if sizing_source is None:
+
+            def unavailable_sizing(*_args: Any) -> Any:
+                raise ContextUnavailable("instrument terms or sizing limits are unavailable")
+
+            sizing_source = unavailable_sizing
         positions_source = provided.get("positions_provider") or position_source(
-            broker, valuation=provided.get("position_valuation")
+            broker, valuation=position_valuation
         )
         if callable(account_source) and callable(market_source) and callable(sizing_source):
             context_provider = RuntimeContextProvider(
@@ -264,6 +333,7 @@ def build_runtime_services(
         "control_writer": control_writer,
         "journal": journal,
         "agent_graph": graph,
+        "guardian_context_provider": context_provider,
     }
     for optional in ("recorder", "session_calendar", "news_calendar"):
         if optional in provided:

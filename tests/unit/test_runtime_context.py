@@ -24,13 +24,13 @@ NOW = datetime(2026, 10, 7, 12, tzinfo=UTC)
 
 class Journal:
     def __init__(self) -> None:
-        self.snapshot: dict[str, object] | None = None
+        self.snapshots: dict[str, dict[str, object]] = {}
 
-    def get_snapshot(self, _snapshot_id: str) -> dict[str, object] | None:
-        return self.snapshot
+    def get_snapshot(self, snapshot_id: str) -> dict[str, object] | None:
+        return self.snapshots.get(snapshot_id)
 
-    def save_snapshot(self, _snapshot_id: str, payload: dict[str, object]) -> None:
-        self.snapshot = payload
+    def save_snapshot(self, snapshot_id: str, payload: dict[str, object]) -> None:
+        self.snapshots[snapshot_id] = payload
 
     def records(self) -> tuple[dict[str, object], ...]:
         return ()
@@ -142,10 +142,41 @@ def test_context_sources_build_account_market_size_and_positions() -> None:
     assert context.market.ask == Decimal("100.1")
     assert context.sizing is not None and context.sizing.size > 0
     assert context.open_positions[0].margin_required == Decimal("5")
-    assert journal.snapshot is not None
+    assert journal.snapshots["runtime:pnl-baseline"]["peak_equity"] == "10000"
 
 
-def test_missing_baseline_and_stale_market_reject_without_defaults() -> None:
+def test_account_baseline_seeds_reloads_and_rolls_the_utc_day() -> None:
+    broker, journal = Broker(), Journal()
+    current = [NOW]
+    source = AccountContextSource(broker, journal, clock=lambda: current[0])
+    first = source()
+    assert first.day_start_equity == Decimal("10000")
+    assert first.week_start_equity == Decimal("10000")
+    assert first.peak_equity == Decimal("10000")
+
+    class HigherEquityBroker(Broker):
+        def get_account(self) -> dict[str, object]:
+            account = super().get_account()
+            account["equity"] = "10100"
+            return account
+
+    restarted = AccountContextSource(
+        HigherEquityBroker(), journal, clock=lambda: current[0]
+    )()
+    assert restarted.day_start_equity == Decimal("10000")
+    assert restarted.week_start_equity == Decimal("10000")
+    assert restarted.peak_equity == Decimal("10100")
+
+    current[0] = NOW + timedelta(days=1)
+    rolled = AccountContextSource(
+        HigherEquityBroker(), journal, clock=lambda: current[0]
+    )()
+    assert rolled.day_start_equity == Decimal("10100")
+    assert rolled.week_start_equity == Decimal("10000")
+    assert rolled.peak_equity == Decimal("10100")
+
+
+def test_missing_account_fields_and_stale_market_reject_without_defaults() -> None:
     class IncompleteBroker:
         def get_account(self) -> dict[str, object]:
             return {"equity": "10000"}
@@ -153,7 +184,7 @@ def test_missing_baseline_and_stale_market_reject_without_defaults() -> None:
     try:
         AccountContextSource(IncompleteBroker(), Journal(), clock=lambda: NOW)()
     except ContextUnavailable as exc:
-        assert "day_start_equity" in str(exc)
+        assert "margin_used" in str(exc)
     else:
         raise AssertionError("missing account baseline must reject")
 

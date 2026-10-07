@@ -21,6 +21,7 @@ from trader.core.config import load_all_configs
 from trader.core.logging import configure_logging
 from trader.core.settings import EnvironmentSettings
 from trader.data.instruments import InstrumentMapper
+from trader.data.recorder import CapitalDataRecorder, ParquetCandleStore
 from trader.execution.control import ControlMode, build_control_sources
 from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
@@ -272,6 +273,57 @@ async def lifespan(_app: FastAPI) -> Any:
         volume_config_dir=volume_dir if volume_dir.is_dir() else None,
         baked_ceilings_path=baked_ceilings,
     )
+    _app.state.instrument_mapper = None
+    _app.state.capital_account_fields = None
+    capital_client: CapitalComClient | None = None
+    has_capital_credentials = all(
+        value is not None and bool(value.get_secret_value())
+        for value in (
+            settings.capital_api_key,
+            settings.capital_identifier,
+            settings.capital_api_password,
+        )
+    )
+    if settings.role in {"all", "core"} and has_capital_credentials:
+        try:
+            _app.state.capital_account_fields = capital_account_field_map_from_config(
+                configs["settings"].model_dump()
+            )
+        except ValueError as exc:
+            _LOG.error(
+                "Capital.com account mapping not verified; reconciliation disabled (%s)", exc
+            )
+        try:
+            capital_client = CapitalComClient(settings)
+            mapper = InstrumentMapper(configs["instruments"].model_dump(), capital_client)
+            _app.state.instrument_mapper = mapper
+            mapper.refresh_all()
+        except Exception as exc:
+            _app.state.instrument_mapper = None
+            _LOG.warning("Capital.com instrument metadata unavailable (%s)", type(exc).__name__)
+            if capital_client is not None:
+                capital_client.close()
+                capital_client = None
+    recorder: CapitalDataRecorder | None = None
+    try:
+        raw_instruments = configs["instruments"].model_dump()["instruments"]
+        symbols_by_epic = {
+            str(values["capital_epic"]): str(symbol)
+            for symbol, values in raw_instruments.items()
+            if isinstance(values, dict) and values.get("capital_epic")
+        }
+        workspace = Path(os.getenv("WORKSPACE_DIR", "/workspace"))
+        lake_root = Path(os.getenv("DATA_LAKE_DIR", str(workspace / "data" / "lake")))
+        status_path = Path(
+            os.getenv("RECORDER_STATUS_PATH", str(workspace / "state" / "recorder.json"))
+        )
+        recorder = CapitalDataRecorder(
+            ParquetCandleStore(lake_root),
+            symbols_by_epic,
+            status_path,
+        )
+    except Exception as exc:
+        _LOG.warning("Recorder context unavailable (%s)", type(exc).__name__)
     try:
         _app.state.runtime_services = build_runtime_services(
             settings,
@@ -279,6 +331,9 @@ async def lifespan(_app: FastAPI) -> Any:
             overrides={
                 "control_source": _app.state.execution_control_source,
                 "control_writer": _app.state.execution_control_writer,
+                "recorder": recorder,
+                "instrument_mapper": _app.state.instrument_mapper,
+                "market_details_client": capital_client,
                 **(getattr(_app.state, "runtime_service_overrides", None) or {}),
             },
         )
@@ -296,40 +351,6 @@ async def lifespan(_app: FastAPI) -> Any:
     # The scheduler is owned by the runtime process; exposing the validated config
     # here avoids duplicating config reads or accidentally using defaults.
     _app.state.report_schedule = configs["schedule"]
-    _app.state.instrument_mapper = None
-    capital_client: CapitalComClient | None = None
-    has_capital_credentials = all(
-        value is not None and bool(value.get_secret_value())
-        for value in (
-            settings.capital_api_key,
-            settings.capital_identifier,
-            settings.capital_api_password,
-        )
-    )
-    _app.state.capital_account_fields = None
-    if settings.role in {"all", "core"} and has_capital_credentials:
-        try:
-            _app.state.capital_account_fields = capital_account_field_map_from_config(
-                configs["settings"].model_dump()
-            )
-        except ValueError as exc:
-            # Fail closed for P&L reconciliation and order wiring, but keep the API and the
-            # owner kill/pause/resume endpoints up: control must never depend on this check.
-            _LOG.error(
-                "Capital.com account mapping not verified; reconciliation disabled (%s)", exc
-            )
-    if settings.role in {"all", "core"} and has_capital_credentials:
-        try:
-            capital_client = CapitalComClient(settings)
-            mapper = InstrumentMapper(configs["instruments"].model_dump(), capital_client)
-            _app.state.instrument_mapper = mapper
-            mapper.refresh_all()
-        except Exception as exc:
-            _app.state.instrument_mapper = None
-            _LOG.warning("Capital.com instrument metadata unavailable (%s)", type(exc).__name__)
-            if capital_client is not None:
-                capital_client.close()
-                capital_client = None
     if settings.role in {"all", "core"}:
         token = (
             settings.telegram_bot_token.get_secret_value()

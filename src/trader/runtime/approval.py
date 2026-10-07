@@ -259,6 +259,7 @@ class PnlLossGuard:
         self.clock = clock
         self._day_baseline: Decimal | None = None
         self._week_baseline: Decimal | None = None
+        self._peak_equity: Decimal | None = None
         self._baseline_day: str | None = None
         self._baseline_week: str | None = None
 
@@ -273,19 +274,26 @@ class PnlLossGuard:
             snapshot = getter("runtime:pnl-baseline")
         if isinstance(snapshot, Mapping):
             try:
-                self._day_baseline = Decimal(str(snapshot["day_equity"]))
-                self._week_baseline = Decimal(str(snapshot["week_equity"]))
+                self._day_baseline = Decimal(
+                    str(snapshot.get("day_equity") or snapshot["day_start_equity"])
+                )
+                self._week_baseline = Decimal(
+                    str(snapshot.get("week_equity") or snapshot["week_start_equity"])
+                )
+                self._peak_equity = Decimal(str(snapshot.get("peak_equity", snapshot["week_equity"])))
                 self._baseline_day = str(snapshot["day"])
                 self._baseline_week = str(snapshot["week"])
             except (ArithmeticError, KeyError, TypeError, ValueError):
                 self._day_baseline = None
                 self._week_baseline = None
+                self._peak_equity = None
         if self._day_baseline is None or self._baseline_day != day:
             self._day_baseline = equity
             self._baseline_day = day
         if self._week_baseline is None or self._baseline_week != week:
             self._week_baseline = equity
             self._baseline_week = week
+        self._peak_equity = max(self._peak_equity or equity, equity)
         saver = getattr(self.journal, "save_snapshot", None)
         if callable(saver):
             saver(
@@ -293,6 +301,7 @@ class PnlLossGuard:
                 {
                     "day_equity": str(self._day_baseline),
                     "week_equity": str(self._week_baseline),
+                    "peak_equity": str(self._peak_equity),
                     "day": self._baseline_day,
                     "week": self._baseline_week,
                 },
