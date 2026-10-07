@@ -284,7 +284,12 @@ def build_runtime_services(
         journal, broker, alert=_log_alert
     )
     report_scheduler: Any = provided.get("report_scheduler") or _ReportScheduler(
-        configs.get("schedule")
+        configs.get("schedule"),
+        snapshot_provider=provided.get("report_snapshot_provider"),
+        telegram=provided.get("report_telegram"),
+        email=provided.get("report_email"),
+        owner_chat_ids=provided.get("report_owner_chat_ids", ()),
+        usage_summary=provided.get("llm_usage_summary"),
     )
     settings_service: Any = provided.get("settings_service")
     if settings_service is None:
@@ -343,7 +348,18 @@ def build_runtime_services(
         "agent_graph": graph,
         "guardian_context_provider": context_provider,
     }
-    for optional in ("recorder", "session_calendar", "news_calendar"):
+    for optional in (
+        "recorder",
+        "session_calendar",
+        "news_calendar",
+        "pnl_provider",
+        "risk_provider",
+        "report_snapshot_provider",
+        "report_email",
+        "report_telegram",
+        "report_owner_chat_ids",
+        "llm_usage_summary",
+    ):
         if optional in provided:
             result[optional] = provided[optional]
     return result
@@ -360,11 +376,38 @@ def _dump_mapping(value: object) -> dict[str, object]:
 
 
 class _ReportScheduler:
-    def __init__(self, schedule: object) -> None:
+    def __init__(
+        self,
+        schedule: object,
+        *,
+        snapshot_provider: Any = None,
+        telegram: Any = None,
+        email: Any = None,
+        owner_chat_ids: object = (),
+        usage_summary: Any = None,
+    ) -> None:
         self.schedule = schedule
-        from trader.reports.core import run_report
+        from trader.reports.commands import ScheduledReportRunner
+        from trader.reports.core import ReportPeriod, ReportSnapshot
 
-        self.run_report = run_report
+        def unavailable(_period: ReportPeriod) -> ReportSnapshot:
+            raise RuntimeError("report snapshot provider is unavailable")
+
+        provider = snapshot_provider if callable(snapshot_provider) else unavailable
+        ids = tuple(owner_chat_ids) if isinstance(owner_chat_ids, tuple | list) else ()
+        self._runner = ScheduledReportRunner(
+            schedule,
+            provider,
+            telegram=telegram,
+            email=email,
+            owner_chat_ids=ids,
+            usage_summary=usage_summary if callable(usage_summary) else None,
+        )
+
+    def run(self, period: str) -> Any:
+        if period not in {"daily", "weekly", "monthly"}:
+            raise ValueError("unsupported report period")
+        return self._runner.run(period)  # type: ignore[arg-type]
 
 
 __all__ = ["build_runtime_services"]

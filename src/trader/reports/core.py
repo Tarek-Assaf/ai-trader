@@ -321,7 +321,7 @@ class SmtpEmailSender:
         """Send one document; return false for a disabled or failed delivery."""
         if not self._host or not self._port or not self._recipient:
             if not self._warned_missing:
-                LOGGER.info("report email is not configured; skipping email delivery")
+                LOGGER.warning("report email is not configured; using Telegram only")
                 self._warned_missing = True
             return False
         message = EmailMessage()

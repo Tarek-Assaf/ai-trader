@@ -9,6 +9,7 @@ from trader.reports.core import (
     deliver_telegram,
     run_report,
 )
+from trader.reports.commands import CommandDataService, ScheduledReportRunner
 
 __all__ = [
     "ReportDocument",
@@ -18,4 +19,6 @@ __all__ = [
     "build_report",
     "deliver_telegram",
     "run_report",
+    "CommandDataService",
+    "ScheduledReportRunner",
 ]

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
@@ -131,3 +131,38 @@ class SqlUsageLedger:
             )
             if result.rowcount != 1:
                 raise RuntimeError("LLM usage reservation was not found")
+
+    def summary(self, *, now: datetime | None = None) -> Mapping[str, Decimal | int]:
+        """Return current token and cost totals for read-only reports.
+
+        The query exposes aggregates only; prompts, model credentials and
+        reservation identifiers never enter the report payload.
+        """
+        current_time = self._clock() if now is None else now
+        if current_time.tzinfo is None or current_time.utcoffset() is None:
+            raise ValueError("LLM usage clock must return timezone-aware time")
+        current_time = current_time.astimezone(UTC)
+        day_start = current_time.replace(hour=0, minute=0, second=0, microsecond=0)
+        month_start = day_start.replace(day=1)
+        usage = tables["llm_usage"]
+        with self.engine.connect() as connection:
+            row = connection.execute(
+                select(
+                    func.coalesce(func.sum(usage.c.input_tokens), 0),
+                    func.coalesce(func.sum(usage.c.output_tokens), 0),
+                    func.coalesce(func.sum(usage.c.cost_usd), 0),
+                    func.coalesce(
+                        func.sum(usage.c.cost_usd).filter(usage.c.created_at >= day_start), 0
+                    ),
+                    func.coalesce(
+                        func.sum(usage.c.cost_usd).filter(usage.c.created_at >= month_start), 0
+                    ),
+                )
+            ).one()
+        return {
+            "input_tokens": int(row[0]),
+            "output_tokens": int(row[1]),
+            "cost_usd": Decimal(str(row[2])),
+            "daily_cost_usd": Decimal(str(row[3])),
+            "monthly_cost_usd": Decimal(str(row[4])),
+        }
