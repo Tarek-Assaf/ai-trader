@@ -18,6 +18,15 @@ RECORDER_MAX_LIVENESS_AGE_SECONDS = 30
 RECORDER_STATUS_PATH = Path(
     os.getenv("RECORDER_STATUS_PATH", "/workspace/data/recorder-status.json")
 )
+_RUNTIME_HEALTH_REASON: str | None = None
+
+
+def set_runtime_health(reason: str | None) -> None:
+    """Set the short, secret-free runtime health reason exposed by /health."""
+    global _RUNTIME_HEALTH_REASON
+    if reason is not None and reason != "runtime_unavailable":
+        raise ValueError("unsupported runtime health reason")
+    _RUNTIME_HEALTH_REASON = reason
 
 
 def _service_urls() -> tuple[str, str]:
@@ -197,10 +206,14 @@ def health_payload() -> dict[str, Any]:
     recorder_ok = settings.role != "all" or _recorder_liveness_ok(
         recorder, required=recorder_credentials
     )
+    runtime_reason = _RUNTIME_HEALTH_REASON
     return {
         "status": (
-            "healthy" if database_ok and redis_ok and backup_ok and recorder_ok else "degraded"
+            "healthy"
+            if database_ok and redis_ok and backup_ok and recorder_ok and runtime_reason is None
+            else "degraded"
         ),
+        "runtime_reason": runtime_reason,
         "role": settings.role,
         "version": os.getenv("GIT_SHA", "unknown"),
         "last_backup_at": last_backup_at,

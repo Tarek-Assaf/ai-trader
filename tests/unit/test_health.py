@@ -62,6 +62,20 @@ def test_health_is_degraded_when_role_all_has_no_backup(tmp_path: Path, monkeypa
     assert payload["last_backup_age_seconds"] is None
 
 
+def test_health_exposes_runtime_unavailable_reason(monkeypatch) -> None:
+    """A transient runtime outage has a short, secret-free health reason."""
+    monkeypatch.setattr(health, "_probe_database", lambda _url: True)
+    monkeypatch.setattr(health, "_probe_redis", lambda _url: True)
+    monkeypatch.setenv("ROLE", "worker")
+    health.set_runtime_health("runtime_unavailable")
+
+    payload = health.health_payload()
+
+    assert payload["status"] == "degraded"
+    assert payload["runtime_reason"] == "runtime_unavailable"
+    health.set_runtime_health(None)
+
+
 def test_recorder_health_exposes_reconnect_reason_and_market_liveness(tmp_path: Path) -> None:
     """Health uses ping and market status; a quiet but open price feed is not inspected."""
     status_file = tmp_path / "recorder.json"

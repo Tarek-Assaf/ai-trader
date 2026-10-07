@@ -6,7 +6,9 @@ import asyncio
 import io
 import logging
 import os
+import random
 import threading
+from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from pathlib import Path
@@ -15,7 +17,7 @@ from typing import Any
 from fastapi import FastAPI
 
 from trader.api.control import router as control_router
-from trader.api.health import health_payload
+from trader.api.health import health_payload, set_runtime_health
 from trader.channels.router import ChatRouter, RoutedIntent
 from trader.channels.telegram import TelegramBotTransport, TelegramChannel
 from trader.core.config import load_all_configs
@@ -40,8 +42,6 @@ from trader.runtime.factory import RuntimeFactories, build_runtime_components
 from trader.soak import SoakMonitor
 
 _LOG = logging.getLogger(__name__)
-_RUNTIME_SERVICE_RETRIES = 3
-_RUNTIME_SERVICE_BACKOFF_SECONDS = 0.5
 
 
 def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
@@ -57,27 +57,6 @@ def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
     return configured or TelegramBotTransport(token)
 
 
-async def _build_runtime_services_with_retry(
-    settings: EnvironmentSettings,
-    configs: dict[str, Any],
-    *,
-    overrides: dict[str, Any],
-) -> dict[str, object]:
-    """Retry transient runtime dependency failures without blocking API health."""
-    for attempt in range(_RUNTIME_SERVICE_RETRIES):
-        try:
-            return build_runtime_services(settings, configs, overrides=overrides)
-        except Exception as exc:
-            if attempt == _RUNTIME_SERVICE_RETRIES - 1:
-                raise
-            delay = _RUNTIME_SERVICE_BACKOFF_SECONDS * (2**attempt)
-            _LOG.warning(
-                "runtime dependencies unavailable (%s); retrying in %.1fs",
-                type(exc).__name__,
-                delay,
-            )
-            await asyncio.sleep(delay)
-    raise RuntimeError("runtime service retries exhausted")
 
 
 def _start_runtime_if_configured(
@@ -278,6 +257,89 @@ def _build_chat_router(
     )
 
 
+def _install_runtime_services(
+    app: FastAPI,
+    settings: EnvironmentSettings,
+    configs: dict[str, Any],
+    *,
+    recorder: CapitalDataRecorder | None,
+    capital_client: CapitalComClient | None,
+) -> None:
+    """Build and register the complete runtime service mapping."""
+    app.state.runtime_services = build_runtime_services(
+        settings,
+        configs,
+        overrides={
+            "control_source": app.state.execution_control_source,
+            "control_writer": app.state.execution_control_writer,
+            "recorder": recorder,
+            "instrument_mapper": app.state.instrument_mapper,
+            "market_details_client": capital_client,
+            "soak_monitor": app.state.soak_monitor,
+            **(getattr(app.state, "runtime_service_overrides", None) or {}),
+        },
+    )
+    for source_name in ("recorder", "session_calendar", "news_calendar"):
+        setattr(app.state, source_name, app.state.runtime_services.get(source_name))
+    services: Any = app.state.runtime_services
+    scheduler = services.get("report_scheduler")
+
+    def report_provider(period: str) -> Any:
+        render = getattr(scheduler, "render", None)
+        if not callable(render):
+            render = getattr(scheduler, "run", None)
+        if not callable(render):
+            raise RuntimeError("report scheduler is unavailable")
+        return render(period)
+
+    app.state.command_data_service = CommandDataService(
+        services.get("broker"),
+        pnl_provider=services.get("pnl_provider"),
+        risk_provider=services.get("risk_provider"),
+        report_provider=report_provider,
+        soak_provider=lambda: app.state.soak_monitor,
+    )
+
+
+async def _runtime_retry_loop(
+    app: FastAPI,
+    settings: EnvironmentSettings,
+    configs: dict[str, Any],
+    *,
+    recorder: CapitalDataRecorder | None,
+    capital_client: CapitalComClient | None,
+    sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    jitter: Callable[[float, float], float] = random.uniform,
+) -> None:
+    """Retry runtime composition in the background with bounded backoff."""
+    attempt = 0
+    while True:
+        base_delay = min(30.0 * (2**attempt), 300.0)
+        delay = base_delay + jitter(0.0, min(30.0, base_delay * 0.1))
+        await sleep(delay)
+        try:
+            _install_runtime_services(
+                app,
+                settings,
+                configs,
+                recorder=recorder,
+                capital_client=capital_client,
+            )
+            _start_runtime_if_configured(app, settings, configs)
+            runtime = getattr(app.state, "runtime", None)
+            if runtime is None:
+                raise RuntimeError("runtime composition unavailable")
+            await runtime.start()
+            set_runtime_health(None)
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001 - keep API alive while retrying
+            set_runtime_health("runtime_unavailable")
+            _LOG.warning("runtime retry unavailable (%s)", type(exc).__name__)
+            attempt = min(attempt + 1, 4)
+
+
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> Any:
     """Fail startup on invalid settings or config; register secret redaction."""
@@ -296,6 +358,7 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime_feed_adapters = None
     _app.state.runtime_services = None
     _app.state.runtime_service_overrides = None
+    set_runtime_health(None)
     # Runtime service assembly is best effort.  Always create this state slot
     # before the optional report scheduler wiring so a broker 429 cannot turn
     # into an AttributeError while the Telegram channel starts.
@@ -379,47 +442,30 @@ async def lifespan(_app: FastAPI) -> Any:
         )
     except Exception as exc:
         _LOG.warning("Recorder context unavailable (%s)", type(exc).__name__)
+    runtime_retry_task: asyncio.Task[None] | None = None
     try:
-        _app.state.runtime_services = await _build_runtime_services_with_retry(
+        _install_runtime_services(
+            _app,
             settings,
             configs,
-            overrides={
-                "control_source": _app.state.execution_control_source,
-                "control_writer": _app.state.execution_control_writer,
-                "recorder": recorder,
-                "instrument_mapper": _app.state.instrument_mapper,
-                "market_details_client": capital_client,
-                "soak_monitor": _app.state.soak_monitor,
-                **(getattr(_app.state, "runtime_service_overrides", None) or {}),
-            },
-        )
-        for source_name in ("recorder", "session_calendar", "news_calendar"):
-            setattr(_app.state, source_name, _app.state.runtime_services.get(source_name))
-        services: Any = _app.state.runtime_services
-        scheduler = services.get("report_scheduler")
-
-        def report_provider(period: str) -> Any:
-            # Interactive /report is already answered by TelegramChannel.  Use
-            # the scheduler's render-only path so it cannot send a duplicate
-            # Telegram report before returning the command reply.
-            render = getattr(scheduler, "render", None)
-            if not callable(render):
-                render = getattr(scheduler, "run", None)
-            if not callable(render):
-                raise RuntimeError("report scheduler is unavailable")
-            return render(period)
-
-        _app.state.command_data_service = CommandDataService(
-            services.get("broker"),
-            pnl_provider=services.get("pnl_provider"),
-            risk_provider=services.get("risk_provider"),
-            report_provider=report_provider,
-            soak_provider=lambda: _app.state.soak_monitor,
+            recorder=recorder,
+            capital_client=capital_client,
         )
     except Exception as exc:
         # Keep controls available while recording one clear fail-safe alert;
         # _start_runtime_if_configured will not compose a partial runtime.
         _LOG.error("runtime alert: dependencies unavailable (%s)", type(exc).__name__)
+        set_runtime_health("runtime_unavailable")
+        if _app.state.runtime_eligible:
+            runtime_retry_task = asyncio.create_task(
+                _runtime_retry_loop(
+                    _app,
+                    settings,
+                    configs,
+                    recorder=recorder,
+                    capital_client=capital_client,
+                )
+            )
 
     # Reports run in the core process and use the same Telegram transport and
     # owner allow-list as the interactive channel.  Delivery is optional and
@@ -453,7 +499,33 @@ async def lifespan(_app: FastAPI) -> Any:
     _start_runtime_if_configured(_app, settings, configs)
     runtime = getattr(_app.state, "runtime", None)
     if runtime is not None:
-        await runtime.start()
+        try:
+            await runtime.start()
+            set_runtime_health(None)
+        except Exception as exc:
+            _LOG.error("runtime alert: startup unavailable (%s)", type(exc).__name__)
+            set_runtime_health("runtime_unavailable")
+            if runtime_retry_task is None and _app.state.runtime_eligible:
+                runtime_retry_task = asyncio.create_task(
+                    _runtime_retry_loop(
+                        _app,
+                        settings,
+                        configs,
+                        recorder=recorder,
+                        capital_client=capital_client,
+                    )
+                )
+    elif _app.state.runtime_eligible and runtime_retry_task is None:
+        set_runtime_health("runtime_unavailable")
+        runtime_retry_task = asyncio.create_task(
+            _runtime_retry_loop(
+                _app,
+                settings,
+                configs,
+                recorder=recorder,
+                capital_client=capital_client,
+            )
+        )
     # Keep the loaded schedule available to the report runner and channel wiring.
     # The scheduler is owned by the runtime process; exposing the validated config
     # here avoids duplicating config reads or accidentally using defaults.
@@ -540,6 +612,12 @@ async def lifespan(_app: FastAPI) -> Any:
     try:
         yield
     finally:
+        if runtime_retry_task is not None:
+            runtime_retry_task.cancel()
+            try:
+                await runtime_retry_task
+            except asyncio.CancelledError:
+                pass
         runtime = getattr(_app.state, "runtime", None)
         if runtime is not None:
             await runtime.stop()
