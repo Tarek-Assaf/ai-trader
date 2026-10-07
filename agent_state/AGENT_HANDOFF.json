@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 214,
+  "revision": 218,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-099 review fixes complete: a read-only workspace LogScanner feeds secret incidents, real safety components expose observations, and missing sources warn once without invented data.",
+    "summary": "T-100 review fixes make recorder no-data detection market-aware and report the Pod API startup defect for follow-up; awaiting Claude review.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -109,7 +109,8 @@
         "T-050",
         "T-080",
         "T-082",
-        "T-083"
+        "T-083",
+        "T-100"
       ]
     },
     {
@@ -162,7 +163,8 @@
       "status": "not_started",
       "covered_by": [
         "T-013",
-        "T-014"
+        "T-014",
+        "T-100"
       ]
     },
     {
@@ -196,7 +198,8 @@
         "T-096",
         "T-097",
         "T-098",
-        "T-099"
+        "T-099",
+        "T-101"
       ]
     },
     {
@@ -2952,6 +2955,72 @@
         "tests/unit/test_soak.py"
       ],
       "completion_note": "Added a read-only LogScanner built in runtime services, real control and safety-component observation hooks, runtime-level breach coverage, and one-warning missing-source coverage. Secret-bearing log text is transient and SoakMonitor sanitizes evidence; no observation hook changes trading decisions."
+    },
+    {
+      "id": "T-100",
+      "title": "Recorder never receives prices on the demo Pod",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-05",
+        "R-09"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Find why the Capital.com stream never delivers prices (session/login, WebSocket subscribe, wrong epic or symbol, token refresh, or silently swallowed exception) and fix it.",
+        "When the stream fails to connect or gets no data, report recorder status degraded with a short secret-free reason and retry with backoff so reconnect_count and last_reconnect_reason change.",
+        "Unit tests with a fake stream cover connect failure, no-data timeout, and recovery.",
+        "Tell the owner the exact redacted /health fields to check after redeploying."
+      ],
+      "deliverables": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "docs/evidence/t100_recorder_health.md"
+      ],
+      "review_cycles": 1,
+      "evidence": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_data_recorder.py",
+        "docs/evidence/t100_recorder_health.md",
+        "bundled Python compileall",
+        "git diff --check",
+        "src/trader/workers/recorder.py"
+      ],
+      "completion_note": "Fixed the silent pre-connect failure path: every failed Capital.com session, subscription, ping or socket attempt now updates reconnect_count and invokes the secret-free reconnect callback while retaining exponential backoff. Added a configurable no-data timeout with the redacted reason no_data_timeout; the recorder writes status degraded, reconnect_count and last_reconnect_reason. The watchdog is now conditional on the worker's market-hours data_expected callback, so closed weekends do not produce false reconnects; WebSocket updates reset the watchdog and successful reconnects recover normally. Fake-stream tests cover initial connect failure and recovery, no-data timeout, and no-data suppression when the market is closed. After redeploy, check exactly the allowlisted data_recorder fields listed in docs/evidence/t100_recorder_health.md. The Pod also exposed a separate API startup bug: Capital.com HTTP 429 was handled as degraded, but /app/src/trader/api/app.py line 472 accessed an uninitialized report_telegram_transport state and caused Uvicorn exit status 3; this is reported for follow-up. No Pod/API calls, credentials, broker calls or orders were used by the code validation; full pytest, Ruff, mypy and make check are unavailable in this desktop runtime."
+    },
+    {
+      "id": "T-101",
+      "title": "Pod API exits at startup after Capital.com HTTP 429",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-11"
+      ],
+      "depends_on": [
+        "T-099"
+      ],
+      "acceptance_criteria": [
+        "app.state.report_telegram_transport (and any other app.state attribute read later in startup) is always initialized, including when runtime services or the report scheduler are unavailable; no AttributeError at api/app.py around line 472",
+        "A Capital.com HTTP 429 or other transient broker failure at startup must not exit Uvicorn: the API stays up, /health reports degraded with a short secret-free reason, and runtime start retries with backoff",
+        "Tests reproduce startup with runtime services failing with a 429-style error and assert the app starts, /health is degraded and no exception escapes",
+        "Control channel (kill/pause) and /health stay available while the broker is unavailable"
+      ],
+      "deliverables": [
+        "src/trader/api/app.py",
+        "tests/unit/test_api_startup.py"
+      ],
+      "review_cycles": 0,
+      "completion_note": "Owner-reported Pod startup bug raised by Codex in T-100 handoff; pending implementation.",
+      "evidence": [
+        "Owner /health observation and Codex T-100 report: app.py accesses report_telegram_transport after Capital.com HTTP 429 and Uvicorn exits with status 3"
+      ]
     }
   ],
   "decisions": [
@@ -5505,6 +5574,39 @@
       "date": "2026-10-07",
       "reverify_if": "observation hooks, soak feed or log scanner change",
       "evidence": "src/trader/runtime/soak.py; src/trader/runtime/services.py; src/trader/runtime/composition.py; src/trader/runtime/approval.py; tests/unit/test_soak.py; tests/unit/test_runtime_approval.py; tests/unit/test_execution_control.py"
+    },
+    {
+      "id": "V-229",
+      "subject": "T-100 recorder stream failure and no-data recovery",
+      "method": "Reviewed CapitalComStreamClient session, subscribe, ping and receive exception paths; confirmed initial connect failures are surfaced, no-data timeout triggers bounded retry, successful event recovery resets the watchdog, and recorder status writes only safe reasons. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/integrations/capital_com/stream.py; src/trader/data/recorder.py; tests/unit/test_capital_com_stream.py; tests/unit/test_data_recorder.py; docs/evidence/t100_recorder_health.md; bundled Python compileall; git diff --check",
+      "review_notes": "Full pytest, Ruff, mypy and make check are unavailable in this desktop runtime. Owner must redeploy the current image and inspect the redacted /health fields; no Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "Capital.com stream reconnect, no-data watchdog or recorder health fields change"
+    },
+    {
+      "id": "V-230",
+      "subject": "T-100 review fix: market-aware recorder watchdog",
+      "method": "Reviewed the worker market-hours callback wiring and stream watchdog; verified no-data timeout is skipped when all required epics are closed, while connect failure, timeout and recovery behavior remains covered. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/integrations/capital_com/stream.py; src/trader/workers/recorder.py; tests/unit/test_capital_com_stream.py; docs/evidence/t100_recorder_health.md; bundled Python compileall; git diff --check",
+      "review_notes": "Full pytest, Ruff, mypy and make check are unavailable in this desktop runtime. Pod evidence reported a separate API startup AttributeError after a Capital.com HTTP 429; no credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "Capital.com stream data_expected callback or no-data watchdog changes"
+    },
+    {
+      "id": "V-231",
+      "subject": "T-100 independent review (Claude)",
+      "method": "Read full diff across both cycles: pre-connect failures now counted and reported with secret-free reasons; no-data watchdog is market-aware via data_expected and starts at market open (added by reviewer with a weekend-gap test); closed-market suppression test; CI quality required before merge.",
+      "result": "pass",
+      "evidence": "src/trader/integrations/capital_com/stream.py; src/trader/data/recorder.py; src/trader/workers/recorder.py; tests/unit/test_capital_com_stream.py; tests/unit/test_data_recorder.py; docs/evidence/t100_recorder_health.md",
+      "review_notes": "Root cause of the Pod stream never connecting is still unknown; after redeploy last_reconnect_reason will show it. No Pod/API calls or orders.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "stream reconnect, watchdog or recorder status logic changes"
     }
   ],
   "blockers": [
@@ -9515,7 +9617,70 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-099 passes cycle 2: soak incident rules now fed by real safety components and a log scanner. Codex: branch from origin/main after merge; no open build tasks besides blocked T-017/T-044/T-060 pending Q-022 recorder data."
+    },
+    {
+      "revision": 215,
+      "ts": "2026-10-07T20:30:00Z",
+      "agent": "codex",
+      "action": "complete_t100_recorder_stream",
+      "task_ids": [
+        "T-100"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_data_recorder.py",
+        "docs/evidence/t100_recorder_health.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Added T-100 for the owner-authorized demo recorder incident and fixed silent pre-connect failures plus no-data timeout handling. Stream retries use bounded backoff and callback reasons are secret-free; recorder health becomes degraded with reconnect_count and last_reconnect_reason updated. Fake-stream tests cover connect failure/recovery and no-data timeout. Full pytest/Ruff/mypy/make check are unavailable on desktop; bundled compileall and diff-check pass. No Pod/API calls, credentials, broker calls or orders. Handing T-100 to Claude for review."
+    },
+    {
+      "revision": 216,
+      "ts": "2026-10-07T21:00:00Z",
+      "agent": "claude",
+      "action": "review_t100_changes_requested",
+      "task_ids": [
+        "T-100"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-100 cycle 1: silent pre-connect failures are now counted and reported, which is right, but the 30-minute no-data timeout is not market-aware and would reconnect and report degraded through every weekend and break. Codex: make the watchdog conditional on data_expected, add tests, then back to review. Also report the Pod startup bug the owner mentioned."
+    },
+    {
+      "revision": 217,
+      "ts": "2026-10-07T21:20:00Z",
+      "agent": "codex",
+      "action": "address_t100_market_aware_watchdog",
+      "task_ids": [
+        "T-100"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_capital_com_stream.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed Claude cycle-1 review: the no-data watchdog now runs only when the worker market-hours callback says prices are expected, preventing weekend reconnect churn; added closed-market suppression coverage while retaining connect failure, timeout and recovery tests. Reported Pod API startup follow-up: after Capital.com HTTP 429, app.py line 472 accesses uninitialized report_telegram_transport and Uvicorn exits status 3. Compileall and diff-check pass; full pytest/Ruff/mypy/make check unavailable. Handing T-100 back to Claude for review."
+    },
+    {
+      "revision": 218,
+      "ts": "2026-10-07T21:40:00Z",
+      "agent": "claude",
+      "action": "review_t100_pass_add_t101",
+      "task_ids": [
+        "T-100",
+        "T-101"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/stream.py",
+        "tests/unit/test_capital_com_stream.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-100 passes: the watchdog is market-aware and I added the market-open timer reset with a weekend-gap test. New T-101: Pod API exits at startup after Capital.com 429 (uninitialized report_telegram_transport). Codex: branch from origin/main after the T-100 merge and take T-101."
     }
   ],
-  "project_summary": "T-099 review cycle 1 addressed: LogScanner is built from runtime services, control and safety components expose read-only observations, and real-component/runtime-level tests cover breach evidence and clock reset."
+  "project_summary": "T-100 review fixes make recorder no-data detection market-aware and report the Pod API startup defect for follow-up; awaiting Claude review."
 }

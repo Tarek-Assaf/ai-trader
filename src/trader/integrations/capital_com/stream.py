@@ -22,6 +22,7 @@ logging.getLogger("websockets").setLevel(logging.WARNING)
 _STREAM_URL = "wss://api-streaming-capital.backend-capital.com/connect"
 _PING_INTERVAL = timedelta(minutes=8)
 _REPLY_TIMEOUT_SECONDS = 30.0
+_DEFAULT_DATA_TIMEOUT_SECONDS = 1800.0
 
 
 class StreamProtocolError(RuntimeError):
@@ -50,6 +51,7 @@ class OhlcUpdate:
 ConnectionFactory = Callable[..., ClientConnection]
 UpdateHandler = Callable[[OhlcUpdate], None]
 ReconnectHandler = Callable[[int, str], None]
+DataExpected = Callable[[], bool]
 
 
 class CapitalComStreamClient:
@@ -66,6 +68,8 @@ class CapitalComStreamClient:
         reconnect_min_seconds: float = 1.0,
         reconnect_max_seconds: float = 30.0,
         ping_interval: timedelta = _PING_INTERVAL,
+        data_timeout_seconds: float = _DEFAULT_DATA_TIMEOUT_SECONDS,
+        data_expected: DataExpected | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
@@ -76,6 +80,8 @@ class CapitalComStreamClient:
             raise ValueError("Capital.com supports at most 40 subscribed epics")
         if reconnect_min_seconds <= 0 or reconnect_max_seconds < reconnect_min_seconds:
             raise ValueError("invalid reconnect backoff bounds")
+        if data_timeout_seconds <= 0:
+            raise ValueError("data_timeout_seconds must be positive")
         self._rest = rest_client
         self._epics = normalized
         self._on_update = on_update
@@ -84,6 +90,8 @@ class CapitalComStreamClient:
         self._reconnect_min = reconnect_min_seconds
         self._reconnect_max = reconnect_max_seconds
         self._ping_interval = ping_interval
+        self._data_timeout = timedelta(seconds=data_timeout_seconds)
+        self._data_expected = data_expected
         self._clock = clock
         self._sleep = sleep
         self._last_seen: dict[tuple[str, str], datetime] = {}
@@ -91,10 +99,11 @@ class CapitalComStreamClient:
         self._reconnect_count = 0
         self._ping_reply_ok: bool | None = None
         self._reply_status = "missing"
+        self._last_data_at: datetime | None = None
 
     @property
     def reconnect_count(self) -> int:
-        """Number of disconnects after the stream was successfully established."""
+        """Number of failed connection or established-stream attempts."""
         return self._reconnect_count
 
     @property
@@ -318,6 +327,7 @@ class CapitalComStreamClient:
         if update is None or update.epic not in self._epics:
             return
         self._emit(update)
+        self._last_data_at = self._clock().astimezone(UTC)
         key = (update.epic, update.price_type)
         previous = self._last_seen.get(key)
         if previous is None or update.timestamp > previous:
@@ -326,7 +336,6 @@ class CapitalComStreamClient:
     def run_forever(self, stop_event: threading.Event) -> None:
         """Run until stopped; validate replies, reconnect, and REST-backfill gaps."""
         backoff = self._reconnect_min
-        established = False
         while not stop_event.is_set():
             try:
                 self._rest.ping()
@@ -338,9 +347,10 @@ class CapitalComStreamClient:
                     self._subscribe(socket)
                     self._ping(socket)
                     self._backfill()
-                    established = True
+                    self._last_data_at = self._clock().astimezone(UTC)
                     backoff = self._reconnect_min
                     last_ping = self._clock()
+                    was_expected = self._is_data_expected()
                     while not stop_event.is_set():
                         try:
                             raw = socket.recv(timeout=1)
@@ -349,6 +359,18 @@ class CapitalComStreamClient:
                         if raw is not None:
                             self._handle(raw)
                         now = self._clock()
+                        expected = self._is_data_expected()
+                        if expected and not was_expected:
+                            # Start the watchdog at market open, not at the last pre-close tick.
+                            self._last_data_at = now.astimezone(UTC)
+                        was_expected = expected
+                        if (
+                            not stop_event.is_set()
+                            and self._last_data_at is not None
+                            and expected
+                            and now.astimezone(UTC) - self._last_data_at >= self._data_timeout
+                        ):
+                            raise StreamProtocolError("Capital.com OHLC no-data timeout")
                         if not stop_event.is_set() and now - last_ping >= self._ping_interval:
                             self._ping(socket)
                             last_ping = now
@@ -356,22 +378,33 @@ class CapitalComStreamClient:
                 raise exc.original from None
             except (ConnectionClosed, OSError, TimeoutError, StreamProtocolError) as exc:
                 self._ping_reply_ok = False
-                if established:
-                    self._reconnect_count += 1
+                self._reconnect_count += 1
                 if stop_event.is_set():
                     break
                 _LOG.warning("Capital.com WebSocket disconnected (%s)", type(exc).__name__)
-                if established and self._on_reconnect is not None:
-                    self._on_reconnect(self._reconnect_count, type(exc).__name__)
+                if self._on_reconnect is not None:
+                    reason = (
+                        "no_data_timeout" if "no-data timeout" in str(exc) else type(exc).__name__
+                    )
+                    self._on_reconnect(self._reconnect_count, reason)
             except Exception as exc:
                 self._ping_reply_ok = False
-                if established:
-                    self._reconnect_count += 1
+                self._reconnect_count += 1
                 if stop_event.is_set():
                     break
                 _LOG.warning("Capital.com WebSocket reconnecting (%s)", type(exc).__name__)
-                if established and self._on_reconnect is not None:
+                if self._on_reconnect is not None:
                     self._on_reconnect(self._reconnect_count, type(exc).__name__)
             if not stop_event.is_set():
                 self._sleep(backoff)
                 backoff = min(backoff * 2, self._reconnect_max)
+
+    def _is_data_expected(self) -> bool:
+        """Return whether market hours currently require stream prices."""
+        if self._data_expected is None:
+            return True
+        try:
+            return self._data_expected()
+        except Exception as exc:  # pragma: no cover - defensive worker boundary
+            _LOG.warning("Capital.com market expectation unavailable (%s)", type(exc).__name__)
+            return False

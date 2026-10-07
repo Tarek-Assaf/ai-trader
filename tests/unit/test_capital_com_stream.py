@@ -206,6 +206,172 @@ def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
     assert json.loads(sockets[1].sent[0])["cst"] == "fresh-cst"
 
 
+def test_connect_failure_reports_reconnect_and_recovers() -> None:
+    rest = FakeRest()
+    updates: list[OhlcUpdate] = []
+    reconnects: list[tuple[int, str]] = []
+    stop = threading.Event()
+
+    def stop_on_event(raw: str) -> None:
+        if json.loads(raw).get("destination") == "ohlc.event":
+            stop.set()
+
+    recovered = FakeSocket(
+        [subscribe_reply(), ping_reply(), event(1791021600000)],
+        on_message=stop_on_event,
+    )
+    attempts = iter([OSError("connect refused"), recovered])
+
+    def connect(*_args: object, **_kwargs: object) -> FakeSocket:
+        attempt = next(attempts)
+        if isinstance(attempt, Exception):
+            raise attempt
+        return attempt
+
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        updates.append,
+        on_reconnect=lambda count, reason: reconnects.append((count, reason)),
+        connection_factory=connect,
+        reconnect_min_seconds=0.01,
+        reconnect_max_seconds=0.02,
+        sleep=lambda _delay: None,
+    )
+    client.run_forever(stop)
+
+    assert reconnects == [(1, "OSError")]
+    assert client.reconnect_count == 1
+    assert client.ping_reply_ok is True
+    assert updates and updates[0].source == "capital_ws"
+
+
+def test_no_data_timeout_reports_short_reason_and_retries() -> None:
+    rest = FakeRest()
+    reconnects: list[tuple[int, str]] = []
+    stop = threading.Event()
+    current = [datetime(2026, 10, 3, 10, 0, tzinfo=UTC)]
+
+    class IdleSocket(FakeSocket):
+        raw = 0
+
+        def recv(self, *, timeout: float) -> str:
+            self.raw += 1
+            if self.raw <= 2:
+                return super().recv(timeout=timeout)
+            current[0] += timedelta(seconds=6)
+            raise TimeoutError
+
+    socket = IdleSocket([subscribe_reply(), ping_reply()])
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        lambda _update: None,
+        on_reconnect=lambda count, reason: reconnects.append((count, reason)),
+        connection_factory=lambda *_args, **_kwargs: socket,
+        data_timeout_seconds=5,
+        ping_interval=timedelta(days=30),
+        reconnect_min_seconds=0.01,
+        reconnect_max_seconds=0.02,
+        clock=lambda: current[0],
+        sleep=lambda _delay: stop.set(),
+    )
+
+    client.run_forever(stop)
+
+    assert reconnects == [(1, "no_data_timeout")]
+    assert client.reconnect_count == 1
+    assert client.ping_reply_ok is False
+
+
+def test_no_data_timeout_is_suppressed_when_market_is_closed() -> None:
+    rest = FakeRest()
+    reconnects: list[tuple[int, str]] = []
+    stop = threading.Event()
+    current = [datetime(2026, 10, 4, 10, 0, tzinfo=UTC)]
+
+    class ClosedMarketSocket(FakeSocket):
+        calls = 0
+        raw = 0
+
+        def recv(self, *, timeout: float) -> str:
+            self.raw += 1
+            if self.raw <= 2:
+                return super().recv(timeout=timeout)
+            self.calls += 1
+            current[0] += timedelta(seconds=6)
+            if self.calls >= 3:
+                stop.set()
+            raise TimeoutError
+
+    socket = ClosedMarketSocket([subscribe_reply(), ping_reply()])
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        lambda _update: None,
+        on_reconnect=lambda count, reason: reconnects.append((count, reason)),
+        connection_factory=lambda *_args, **_kwargs: socket,
+        data_timeout_seconds=5,
+        ping_interval=timedelta(days=30),
+        data_expected=lambda: False,
+        reconnect_min_seconds=0.01,
+        reconnect_max_seconds=0.02,
+        clock=lambda: current[0],
+        sleep=lambda _delay: None,
+    )
+
+    client.run_forever(stop)
+
+    assert reconnects == []
+    assert client.reconnect_count == 0
+
+
+def test_watchdog_starts_at_market_open_not_at_last_tick() -> None:
+    rest = FakeRest()
+    reconnects: list[tuple[int, str]] = []
+    stop = threading.Event()
+    current = [datetime(2026, 10, 2, 21, 0, tzinfo=UTC)]
+    expected = [False]
+
+    class WeekendSocket(FakeSocket):
+        calls = 0
+        raw = 0
+
+        def recv(self, *, timeout: float) -> str:
+            self.raw += 1
+            if self.raw <= 2:
+                return super().recv(timeout=timeout)
+            self.calls += 1
+            if self.calls == 2:
+                current[0] += timedelta(days=2)
+                expected[0] = True
+            else:
+                current[0] += timedelta(seconds=2)
+            if self.calls >= 4:
+                stop.set()
+            raise TimeoutError
+
+    socket = WeekendSocket([subscribe_reply(), ping_reply()])
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        lambda _update: None,
+        on_reconnect=lambda count, reason: reconnects.append((count, reason)),
+        connection_factory=lambda *_args, **_kwargs: socket,
+        data_timeout_seconds=5,
+        ping_interval=timedelta(days=30),
+        data_expected=lambda: expected[0],
+        reconnect_min_seconds=0.01,
+        reconnect_max_seconds=0.02,
+        clock=lambda: current[0],
+        sleep=lambda _delay: None,
+    )
+
+    client.run_forever(stop)
+
+    assert reconnects == []
+
+
 @pytest.mark.parametrize(
     "failed_reply",
     [subscribe_reply(status="ERROR"), subscribe_reply(subscription_status="ERROR")],

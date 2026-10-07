@@ -158,11 +158,13 @@ def run_data_recorder() -> None:
 
     try:
         with CapitalComClient(settings) as rest:
+            expected_open: dict[str, bool | None] = {}
             stream = CapitalComStreamClient(
                 rest,
                 symbols_by_epic.keys(),
                 recorder.on_update,
                 on_reconnect=recorder.on_reconnect,
+                data_expected=lambda: any(value is True for value in expected_open.values()),
             )
             stream.seed_watermarks(recorder.watermarks())
 
@@ -179,7 +181,6 @@ def run_data_recorder() -> None:
             stream_thread.start()
             market_status = "unknown"
             market_status_source = "unknown"
-            expected_open: dict[str, bool | None] = {}
             stale_after_by_epic = {
                 epic: config["stale_after_seconds"] for epic, config in session_settings.items()
             }

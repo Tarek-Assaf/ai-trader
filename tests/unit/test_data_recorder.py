@@ -106,6 +106,22 @@ def test_startup_watermarks_and_liveness_use_ping_and_market_status(tmp_path: Pa
     assert value["last_reconnect_reason"] == "ConnectionClosed"
 
 
+def test_stream_failure_is_degraded_and_secret_free(tmp_path: Path) -> None:
+    recorder = CapitalDataRecorder(
+        ParquetCandleStore(tmp_path / "lake"),
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+    )
+
+    recorder.on_reconnect(1, "no_data_timeout")
+
+    value = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert value["status"] == "degraded"
+    assert value["reconnect_count"] == 1
+    assert value["last_reconnect_reason"] == "no_data_timeout"
+    assert all(secret not in json.dumps(value) for secret in ("CST", "securityToken"))
+
+
 def test_closed_market_suppresses_stale_tick_alarm(tmp_path: Path) -> None:
     now = [datetime(2026, 10, 3, 12, 0, tzinfo=UTC)]
     recorder = CapitalDataRecorder(
