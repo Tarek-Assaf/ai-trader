@@ -5454,7 +5454,11 @@
       "subject": "T-094 independent review (Claude)",
       "method": "Read full diff: scaling off by default, core-only build, cost parsed from costPerHr in both list envelopes, spend summed over tagged workers, cap terminates and blocks spawns, unknown cost fails closed; tests cover each; CI quality required before merge.",
       "result": "pass",
-      "evidence": "src/trader/scaling/runtime.py; src/trader/scaling/autoscaler.py; src/trader/integrations/runpod/client.py; tests/unit/test_runtime_scaling.py; tests/unit/test_scaling.py; live RunPod names-only list check remains an owner step before enabling scaling"
+      "evidence": "src/trader/scaling/runtime.py; src/trader/scaling/autoscaler.py; src/trader/integrations/runpod/client.py; tests/unit/test_runtime_scaling.py; tests/unit/test_scaling.py; live RunPod names-only list check remains an owner step before enabling scaling",
+      "review_notes": "Scaling remains disabled by default. Live RunPod verification is still owner-gated under B-009; no Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "claude",
+      "date": "2026-10-07",
+      "reverify_if": "worker cost parsing, spend aggregation or scaling policy changes"
     }
   ],
   "blockers": [
