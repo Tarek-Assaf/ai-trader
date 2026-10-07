@@ -68,7 +68,7 @@ class RuntimeContextProvider:
 
     def __init__(
         self,
-        broker: object,
+        broker: Any,
         *,
         market_provider: Callable[[str], MarketSnapshot | None] | None = None,
         sizing_provider: Callable[
@@ -176,7 +176,11 @@ class RuntimeContextProvider:
             risk = getattr(value, "risk_amount", None)
             margin = getattr(value, "margin_required", None)
             exposure = getattr(value, "notional_exposure", None)
-            if not all(isinstance(item, Decimal) for item in (risk, margin, exposure)):
+            if (
+                not isinstance(risk, Decimal)
+                or not isinstance(margin, Decimal)
+                or not isinstance(exposure, Decimal)
+            ):
                 raise ValueError("position valuation is unavailable")
             result.append(OpenPosition(value.epic, risk, margin, exposure))
         return tuple(result)
