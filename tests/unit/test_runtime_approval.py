@@ -206,6 +206,9 @@ def test_pnl_guard_persists_baseline_and_pauses_on_restart() -> None:
         restarted(())
     assert writer.mode is not None
     assert alerts == ["pnl_limit_daily"]
+    observed = restarted.soak_observation()
+    assert Decimal(str(observed["daily_loss_pct"])) == Decimal("3")
+    assert Decimal(str(observed["daily_loss_limit_pct"])) == Decimal("2")
 
 
 def test_position_manager_and_reconciler_alert_on_safety_mismatch() -> None:
@@ -226,6 +229,7 @@ def test_position_manager_and_reconciler_alert_on_safety_mismatch() -> None:
     with pytest.raises(RuntimeError, match="position_without_server_stop"):
         manager((position,))
     assert writer.calls == 1 and alerts == ["position_without_server_stop"]
+    assert manager.soak_observation() == {"open_position_without_broker_stop": True}
 
     class Journal:
         def records(self) -> tuple[dict[str, object], ...]:
@@ -238,6 +242,7 @@ def test_position_manager_and_reconciler_alert_on_safety_mismatch() -> None:
     reconciler = RuntimeReconciler(Journal(), Broker(), alert=alerts.append)
     assert not reconciler.reconcile()
     assert alerts[-1] == "broker_journal_mismatch"
+    assert reconciler.soak_observation()["reconciliation_mismatch_age_seconds"] >= 0
 
 
 def test_real_agent_graph_paper_fixture_routes_one_trade_through_order_manager(tmp_path) -> None:

@@ -262,6 +262,7 @@ class PnlLossGuard:
         self._peak_equity: Decimal | None = None
         self._baseline_day: str | None = None
         self._baseline_week: str | None = None
+        self._daily_loss_pct: Decimal | None = None
 
     def _load_or_store_baseline(self, equity: Decimal) -> tuple[Decimal, Decimal]:
         now = self.clock().astimezone(UTC)
@@ -344,12 +345,23 @@ class PnlLossGuard:
                 raise RuntimeError(f"{name} P&L is unavailable")
             if max(Decimal(0), -pnl) / baseline * 100 >= limit:
                 breached.append(name)
+        self._daily_loss_pct = max(Decimal(0), -daily_pnl) / day_baseline * 100
         if breached:
             if self.control_writer is not None:
                 self.control_writer.set(ControlMode.PAUSE)
             reason = "pnl_limit_" + "_and_".join(breached)
             self.alert(reason)
             raise RuntimeError(reason)
+
+    def soak_observation(self) -> Mapping[str, object]:
+        """Expose the last real account loss calculation to the soak feed."""
+
+        if self._daily_loss_pct is None:
+            return {}
+        return {
+            "daily_loss_pct": str(self._daily_loss_pct),
+            "daily_loss_limit_pct": str(self.max_daily_loss_pct),
+        }
 
 
 class ProtectivePositionManager:
@@ -361,8 +373,10 @@ class ProtectivePositionManager:
         self.broker = broker
         self.control_writer = control_writer
         self.alert = alert
+        self._missing_stop: bool | None = None
 
     def __call__(self, positions: Sequence[Position]) -> None:
+        self._missing_stop = any(position.stop_level is None for position in positions)
         for position in positions:
             if position.stop_level is not None:
                 continue
@@ -370,6 +384,11 @@ class ProtectivePositionManager:
                 self.control_writer.set(ControlMode.PAUSE)
             self.alert("position_without_server_stop")
             raise RuntimeError("position_without_server_stop")
+
+    def soak_observation(self) -> Mapping[str, object]:
+        if self._missing_stop is None:
+            return {}
+        return {"open_position_without_broker_stop": self._missing_stop}
 
 
 class RuntimeReconciler:
@@ -382,13 +401,17 @@ class RuntimeReconciler:
         *,
         alert: Callable[[str], None],
         soak_monitor: Any | None = None,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self.journal = journal
         self.broker = broker
         self.alert = alert
         self.soak_monitor = soak_monitor
+        self._clock = clock
+        self._mismatch_since: datetime | None = None
 
     def reconcile(self) -> bool:
+        now = self._clock().astimezone(UTC)
         try:
             positions = tuple(self.broker.get_positions())
             records = tuple(self.journal.records())
@@ -400,11 +423,21 @@ class RuntimeReconciler:
         except Exception:
             valid = False
         if not valid:
+            if self._mismatch_since is None:
+                self._mismatch_since = now
             record = getattr(self.soak_monitor, "record_reconciliation_mismatch", None)
             if callable(record):
                 record()
             self.alert("broker_journal_mismatch")
+        else:
+            self._mismatch_since = None
         return valid
+
+    def soak_observation(self) -> Mapping[str, object]:
+        if self._mismatch_since is None:
+            return {"reconciliation_mismatch_age_seconds": 0.0}
+        age = max(0.0, (self._clock().astimezone(UTC) - self._mismatch_since).total_seconds())
+        return {"reconciliation_mismatch_age_seconds": age}
 
     def reconcile_pnl(
         self,

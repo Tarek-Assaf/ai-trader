@@ -136,3 +136,7 @@ def test_redis_writer_never_downgrades_kill_to_pause():
     writer.set(ControlMode.KILL)
     writer.set(ControlMode.PAUSE)
     assert writer.read() is ControlMode.KILL
+    assert writer.soak_observation() == {
+        "control_requested": "pause",
+        "control_honored": False,
+    }
