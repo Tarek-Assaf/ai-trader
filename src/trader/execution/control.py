@@ -5,7 +5,7 @@ from __future__ import annotations
 import hmac
 import os
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from pathlib import Path
 from typing import Any, Protocol
@@ -57,6 +57,8 @@ class RedisControlSource:
             raise ValueError("control key must not be empty")
         self._client = client
         self._key = key
+        self._last_requested: ControlMode | None = None
+        self._last_honored: bool | None = None
 
     def _auth_key(self, suffix: str) -> str:
         return f"{self._key}:auth:{suffix}"
@@ -121,15 +123,27 @@ class RedisControlSource:
             raise ControlUnavailable("Redis control value is invalid") from None
 
     def set(self, mode: ControlMode) -> None:
+        self._last_requested = mode
         try:
             if mode is ControlMode.PAUSE and self.read() is ControlMode.KILL:
+                self._last_honored = False
                 return
             if mode is ControlMode.RUN:
                 self._client.delete(self._key)  # type: ignore[attr-defined]
             else:
                 self._client.set(self._key, mode.value)  # type: ignore[attr-defined]
+            self._last_honored = self.read() is mode
         except Exception:
+            self._last_honored = False
             raise ControlUnavailable("Redis control key could not be updated") from None
+
+    def soak_observation(self) -> Mapping[str, object]:
+        if self._last_requested not in {ControlMode.KILL, ControlMode.PAUSE}:
+            return {}
+        return {
+            "control_requested": self._last_requested.value,
+            "control_honored": bool(self._last_honored),
+        }
 
 
 class CompositeControlSource:
@@ -157,6 +171,24 @@ class CompositeControlSource:
         if errors:
             raise ControlUnavailable("one or more control sources are unavailable") from None
         return ControlMode.RUN
+
+    def soak_observation(self) -> Mapping[str, object]:
+        result: dict[str, object] = {}
+        for source in self._sources:
+            provider = getattr(source, "soak_observation", None)
+            if callable(provider):
+                value = provider()
+                if isinstance(value, Mapping):
+                    result.update(value)
+        if result:
+            return result
+        mode = self.read()
+        value = getattr(mode, "value", mode)
+        return (
+            {"control_requested": str(value), "control_honored": True}
+            if value in {"kill", "pause"}
+            else {}
+        )
 
 
 def build_control_sources(

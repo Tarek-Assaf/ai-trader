@@ -37,6 +37,7 @@ from trader.runtime.factory import (
 )
 from trader.runtime.feeds import RuntimeFeedAdapters
 from trader.runtime.services import build_runtime_services
+from trader.runtime.soak import RuntimeSoakFeed
 from trader.scaling.runtime import CoreAutoscaler, build_core_autoscaler
 
 __all__ = [
@@ -71,4 +72,5 @@ __all__ = [
     "runtime_enabled",
     "CoreAutoscaler",
     "build_core_autoscaler",
+    "RuntimeSoakFeed",
 ]

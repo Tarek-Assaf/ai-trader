@@ -268,6 +268,8 @@ def build_runtime_services(
             def context_provider(*_args: Any) -> None:
                 return None
 
+    pnl_guard: Any = provided.get("pnl_guard")
+    position_manager: Any = provided.get("position_manager")
     if order_manager is None:
         from trader.execution.manager import OrderManager
 
@@ -385,6 +387,8 @@ def build_runtime_services(
         "journal": journal,
         "agent_graph": graph,
         "guardian_context_provider": context_provider,
+        "pnl_guard": pnl_guard,
+        "position_manager": position_manager,
     }
     for optional in (
         "recorder",
@@ -398,6 +402,7 @@ def build_runtime_services(
         "report_owner_chat_ids",
         "llm_usage_summary",
         "soak_monitor",
+        "log_scanner",
     ):
         if optional in provided:
             result[optional] = provided[optional]

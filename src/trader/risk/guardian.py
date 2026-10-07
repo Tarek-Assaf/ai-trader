@@ -589,6 +589,7 @@ class RiskGuardian:
         self._limits = limits
         self._audit_writer = audit_writer
         self._canonical_symbols = frozenset(normalized_symbols)
+        self._last_risk_pct: Decimal | None = None
 
     def evaluate(
         self,
@@ -616,6 +617,8 @@ class RiskGuardian:
             canonical_symbols=self._canonical_symbols,
             now=now,
         )
+        if sizing is not None and account.equity > 0:
+            self._last_risk_pct = sizing.risk_amount / account.equity * 100
         checked: list[str] = []
         failures: list[str] = []
         for name, rule in _RULES:
@@ -663,6 +666,16 @@ class RiskGuardian:
                 audit_written=False,
             )
         return decision
+
+    def soak_observation(self) -> Mapping[str, object]:
+        """Expose the last sizing risk calculation to the soak feed."""
+
+        if self._last_risk_pct is None:
+            return {}
+        return {
+            "risk_per_trade_pct": str(self._last_risk_pct),
+            "risk_per_trade_limit_pct": str(self._limits.risk_per_trade_pct),
+        }
 
 
 def risk_rule_names() -> tuple[str, ...]:
