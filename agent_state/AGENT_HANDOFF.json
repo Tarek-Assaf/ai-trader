@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 194,
+  "turn": "claude",
+  "revision": 195,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-098 review is ready for Claude: production account, recorder market, deterministic sizing and explicit position valuation sources are wired fail closed, with stale/missing input tests.",
+    "summary": "T-098 review cycle 2 is ready for Claude: the Guardian context now seeds and reloads one durable P&L baseline store, and production service assembly wires recorder, instrument mapper, sizing limits, account currency and position valuation sources fail closed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -973,7 +973,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ┬▒1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u252c\u25921 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -2823,7 +2823,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-10",
         "R-11",
@@ -2844,15 +2844,19 @@
         "src/trader/runtime/services.py",
         "tests/unit/test_runtime_context.py"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
+        "V-210",
+        "V-212",
+        "src/trader/api/app.py",
+        "src/trader/execution/journal.py",
+        "src/trader/runtime/approval.py",
         "src/trader/runtime/context.py",
         "src/trader/runtime/services.py",
-        "src/trader/execution/journal.py",
         "tests/unit/test_runtime_context.py",
-        "V-210"
+        "tests/unit/test_runtime_services.py"
       ],
-      "completion_note": "Added fail-closed production Guardian context sources: AccountContextSource reads broker and journal baselines/trade history, MarketContextSource validates recorder freshness and quote fields, SizingContextSource calls risk/sizing.py with broker InstrumentTerms, and position_source requires explicit risk/margin/exposure valuations. build_runtime_services wires the provider when recorder, instrument mapper and sizing limits are supplied and otherwise rejects safely. Added context unit coverage for complete inputs, missing baselines and stale market data. No Pod/API calls, credentials, broker calls or live/demo orders were used.",
+      "completion_note": "Addressed T-098 review cycle 1: AccountContextSource and PnlLossGuard now share the durable runtime:pnl-baseline store, seeding first observed UTC day/week equity, retaining peak equity across restarts and rolling the day baseline at UTC midnight. Production service assembly now builds the recorder, config-driven instrument mapper, risk sizing limits, account currency and explicit position valuation sources before wiring RuntimeContextProvider; unavailable recorder/feed data remains fail closed. Added restart/day-roll and non-stub service coverage while preserving the existing no-config fixture path. Bundled Python compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders.",
       "review_notes": [
         "Good: AccountContextSource, MarketContextSource (stale data rejected), SizingContextSource (uses risk/sizing.py), position_source and RuntimeContextProvider all fail closed with ContextUnavailable; tests cover the missing-baseline and stale-market rejections.",
         "1. Nothing seeds the account baselines. AccountContextSource needs day_start_equity, week_start_equity and peak_equity from the broker or the 'runtime:account-baseline' snapshot, but the broker (PaperBroker.get_account) has none of them and nothing writes that snapshot first, so every proposal is rejected forever. PnlLossGuard already persists day/week baselines under 'runtime:pnl-baseline'. Use ONE persisted baseline store: the first observed equity of the UTC day/week is the baseline (same rule as the loss guard), peak_equity = max(stored peak, current equity), persisted and reloaded on restart. Test: first call seeds, a restart keeps them, a new day rolls day_start.",
@@ -3884,7 +3888,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ— 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u2014 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -5226,6 +5230,17 @@
       "validated_by": "claude",
       "date": "2026-10-07",
       "reverify_if": "src/trader/runtime/context.py changes"
+    },
+    {
+      "id": "V-212",
+      "subject": "T-098 review cycle 2: durable baseline and production context wiring",
+      "method": "Reviewed the shared pnl-baseline schema, UTC day/week rollover, service assembly and lifespan recorder/mapper setup; ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/context.py; src/trader/runtime/approval.py; src/trader/runtime/services.py; src/trader/api/app.py; tests/unit/test_runtime_context.py; tests/unit/test_runtime_services.py",
+      "review_notes": "Focused pytest, Ruff, mypy and make check are unavailable in this desktop runtime. Claude/CI should run the complete suite. No Pod/API calls, credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-07",
+      "reverify_if": "runtime baseline persistence, context source assembly or lifespan wiring changes"
     }
   ],
   "blockers": [
@@ -6872,7 +6887,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -8893,6 +8908,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-098 cycle 1: changes_requested (V-211 fail). Context sources are sound but baselines are never seeded and production never builds the sources. Also repaired a stale-base regression (merged main, removed duplicate class and obsolete test). Branch merged to main to stop drift. Codex: branch from origin/main."
+    },
+    {
+      "revision": 195,
+      "ts": "2026-10-07T11:55:00Z",
+      "agent": "codex",
+      "action": "address_t098_review_cycle_1",
+      "task_ids": [
+        "T-098"
+      ],
+      "files_changed": [
+        "src/trader/api/app.py",
+        "src/trader/runtime/approval.py",
+        "src/trader/runtime/context.py",
+        "src/trader/runtime/services.py",
+        "tests/unit/test_runtime_context.py",
+        "tests/unit/test_runtime_services.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Addressed V-211: shared durable baseline seeding/reload/day rollover and production context source assembly are implemented; no Pod/API calls, credentials or orders. Handing T-098 to Claude for review."
     }
   ],
   "project_summary": "T-098 review is ready for Claude: production account, recorder market, deterministic sizing and explicit position valuation sources are wired fail closed, with stale/missing input tests."
