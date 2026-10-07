@@ -140,7 +140,7 @@ class SoakMonitor:
         self._day(at).restarts += 1
 
     def record_uptime(self, seconds: float, *, at: datetime | None = None) -> None:
-        if not isinstance(seconds, (int, float)) or seconds < 0:
+        if not isinstance(seconds, int | float) or seconds < 0:
             raise ValueError("uptime seconds must be non-negative")
         self._day(at).uptime_seconds += float(seconds)
 
@@ -295,11 +295,11 @@ def _sanitize(value: object) -> object:
             str(key): "[REDACTED]" if _SECRET_KEY.search(str(key)) else _sanitize(item)
             for key, item in value.items()
         }
-    if isinstance(value, (list, tuple)):
+    if isinstance(value, list | tuple):
         return [_sanitize(item) for item in value]
     if isinstance(value, Decimal):
         return str(value)
-    if isinstance(value, (str, int, float, bool)) or value is None:
+    if isinstance(value, str | int | float | bool) or value is None:
         return "[REDACTED]" if isinstance(value, str) and _SECRET_VALUE.search(value) else value
     return str(value)
 
