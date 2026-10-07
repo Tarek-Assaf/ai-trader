@@ -196,8 +196,9 @@ def build_runtime_services(
             # MockLLM has no scripted output by default, so an unattended pod
             # fails closed.  Tests/deployments may supply a scripted provider
             # or a graph builder without bypassing the approval/executor gate.
+            llm: Any = provided.get("llm") or MockLLM(())
             graph = AgentGraph(
-                llm=provided.get("llm") or MockLLM(()),
+                llm=llm,
                 audit=audit,
                 guardian=approval_adapter or RuntimeApproval(guardian),
                 executor=RuntimeExecutor(order_manager),

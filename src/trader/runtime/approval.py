@@ -203,7 +203,7 @@ class RuntimeApproval:
 class RuntimeExecutor:
     """Graph executor that can only submit through the OrderManager."""
 
-    def __init__(self, order_manager: object) -> None:
+    def __init__(self, order_manager: Any) -> None:
         self.order_manager = order_manager
 
     async def execute(
@@ -232,11 +232,11 @@ class PnlLossGuard:
 
     def __init__(
         self,
-        broker: object,
+        broker: Any,
         *,
         max_daily_loss_pct: Decimal,
         max_weekly_loss_pct: Decimal,
-        control_writer: object | None,
+        control_writer: Any | None,
         alert: Callable[[str], None],
     ) -> None:
         self.broker = broker
@@ -287,7 +287,7 @@ class ProtectivePositionManager:
     """Keep every broker position protected; never creates a new entry."""
 
     def __init__(
-        self, broker: object, *, control_writer: object | None, alert: Callable[[str], None]
+        self, broker: Any, *, control_writer: Any | None, alert: Callable[[str], None]
     ) -> None:
         self.broker = broker
         self.control_writer = control_writer
@@ -306,7 +306,7 @@ class ProtectivePositionManager:
 class RuntimeReconciler:
     """Small read-model reconciler used alongside OrderManager's hard gate."""
 
-    def __init__(self, journal: object, broker: object, *, alert: Callable[[str], None]) -> None:
+    def __init__(self, journal: Any, broker: Any, *, alert: Callable[[str], None]) -> None:
         self.journal = journal
         self.broker = broker
         self.alert = alert
@@ -328,11 +328,11 @@ class RuntimeReconciler:
 
     def reconcile_pnl(
         self,
-        trades: Sequence[object],
+        trades: Sequence[Any],
         *,
         starting_balance: Decimal,
         currency: str,
-        broker: object | None = None,
+        broker: Any | None = None,
         tolerance: Decimal = Decimal("0.01"),
     ) -> object:
         """Delegate P&L math while keeping this reconciler's journal attached."""

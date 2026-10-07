@@ -43,6 +43,7 @@ class OrderManagerDecisionLoop:
             # Legacy fixture graphs accepted an executor keyword, while the
             # real AgentGraph owns its Guardian and executor adapters.  Keep
             # both contracts without swallowing errors from the graph itself.
+            parameters: Any
             try:
                 parameters = inspect.signature(runner).parameters
             except (TypeError, ValueError):
