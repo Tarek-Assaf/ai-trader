@@ -214,11 +214,16 @@ class SoakMonitor:
         if values.get("restart") is True:
             self.record_restart(at=at)
         if values.get("uptime_seconds") is not None:
-            self.record_uptime(float(values["uptime_seconds"]), at=at)
+            self.record_uptime(float(str(values["uptime_seconds"])), at=at)
         if values.get("llm_spend") is not None:
-            self.record_llm_spend(values["llm_spend"], at=at)
+            self.record_llm_spend(str(values["llm_spend"]), at=at)
         if values.get("equity") is not None:
-            self.record_equity(values["equity"], drawdown_pct=values.get("drawdown_pct"), at=at)
+            drawdown = values.get("drawdown_pct")
+            self.record_equity(
+                str(values["equity"]),
+                drawdown_pct=None if drawdown is None else str(drawdown),
+                at=at,
+            )
         return self.evaluate(values)
 
     def evaluate(self, observation: Mapping[str, object]) -> tuple[Incident, ...]:
