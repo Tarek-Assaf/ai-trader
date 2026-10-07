@@ -1,10 +1,11 @@
+# ruff: noqa: E501
 """Approval and execution adapters keep the agent graph fail closed."""
 
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
 from dataclasses import replace
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from trader.agents.graph import GuardianDecision
@@ -257,9 +258,9 @@ def test_position_manager_and_reconciler_alert_on_safety_mismatch() -> None:
 
     writer, alerts = Writer(), []
     manager = ProtectivePositionManager(object(), control_writer=writer, alert=alerts.append)
-    from trader.execution.brokers.base import Position
-
     import pytest
+
+    from trader.execution.brokers.base import Position
 
     position = Position("deal", "NAS100", Direction.BUY, Decimal("1"), Decimal("100"), None, None)
     with pytest.raises(RuntimeError, match="position_without_server_stop"):
@@ -293,9 +294,9 @@ def test_real_agent_graph_paper_fixture_routes_one_trade_through_order_manager(t
     from trader.core.audit import AuditEvent
     from trader.core.db import tables
     from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
+    from trader.execution.control import ControlMode, ControlUnavailable
     from trader.execution.journal import ExecutionJournal
     from trader.execution.manager import OrderManager
-    from trader.execution.control import ControlMode, ControlUnavailable
     from trader.risk.guardian import RiskGuardian, RiskLimits
     from trader.runtime.approval import PnlLossGuard, ProtectivePositionManager
 
@@ -387,24 +388,79 @@ def test_real_agent_graph_paper_fixture_routes_one_trade_through_order_manager(t
 
     responses = [
         reply({"items": [], "flags": []}),
-        reply({"bias": "long", "confidence": 0.9, "regime": "trend", "timeframe_agreement": "aligned", "key_levels": [], "risks": [], "flags": []}),
-        reply({"event_risk": "none", "upcoming_events": [], "backdrop": [], "claims": [], "flags": []}),
-        reply({"action": "TRADE", "intent": {"instrument": "NAS100", "direction": "BUY", "entry_type": "market", "entry_level": "100", "stop_level": "99", "target_levels": ["102"], "time_horizon": "intraday", "thesis": "fixture", "confidence": 0.9}, "thesis": "fixture", "confidence": 0.9, "no_trade_reason": None}),
+        reply(
+            {
+                "bias": "long",
+                "confidence": 0.9,
+                "regime": "trend",
+                "timeframe_agreement": "aligned",
+                "key_levels": [],
+                "risks": [],
+                "flags": [],
+            }
+        ),
+        reply(
+            {"event_risk": "none", "upcoming_events": [], "backdrop": [], "claims": [], "flags": []}
+        ),
+        reply(
+            {
+                "action": "TRADE",
+                "intent": {
+                    "instrument": "NAS100",
+                    "direction": "BUY",
+                    "entry_type": "market",
+                    "entry_level": "100",
+                    "stop_level": "99",
+                    "target_levels": ["102"],
+                    "time_horizon": "intraday",
+                    "thesis": "fixture",
+                    "confidence": 0.9,
+                },
+                "thesis": "fixture",
+                "confidence": 0.9,
+                "no_trade_reason": None,
+            }
+        ),
         reply({"verdict": "approve", "objections": [], "strongest_reason": "", "flags": []}),
     ]
     llm = MockLLM(responses)
     llm_config = {
-            "tiers": {"cheap": {"provider": "cheap", "model": "cheap", "max_input_tokens": 1000, "max_output_tokens": 1000, "input_usd_per_million": 1, "output_usd_per_million": 1}},
-            "roles": {role: "cheap" for role in ("data_summarizer", "technical_analyst", "news_macro_analyst", "strategist", "critic")},
-            "fallback": {},
-            "health_probe": {"interval_minutes": 15, "timeout_seconds": 1, "failures_to_open": 3, "cooldown_minutes": 5},
-        }
+        "tiers": {
+            "cheap": {
+                "provider": "cheap",
+                "model": "cheap",
+                "max_input_tokens": 1000,
+                "max_output_tokens": 1000,
+                "input_usd_per_million": 1,
+                "output_usd_per_million": 1,
+            }
+        },
+        "roles": {
+            role: "cheap"
+            for role in (
+                "data_summarizer",
+                "technical_analyst",
+                "news_macro_analyst",
+                "strategist",
+                "critic",
+            )
+        },
+        "fallback": {},
+        "health_probe": {
+            "interval_minutes": 15,
+            "timeout_seconds": 1,
+            "failures_to_open": 3,
+            "cooldown_minutes": 5,
+        },
+    }
     client = LLMClient(
         config=llm_config,
         providers={"cheap": llm},
         ledger=SqlUsageLedger(engine, daily_cap_usd=Decimal("4"), monthly_cap_usd=Decimal("80")),
     )
-    graph = AgentGraph(llm=client, audit=audit, guardian=approval, executor=RuntimeExecutor(manager))
+    graph = AgentGraph(
+        llm=client, audit=audit, guardian=approval, executor=RuntimeExecutor(manager)
+    )
     result = asyncio.run(
         graph.run(
             CycleInput(

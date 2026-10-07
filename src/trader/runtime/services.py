@@ -141,9 +141,7 @@ def build_runtime_services(
             weekly_loss = Decimal(str(risk_values["max_weekly_loss_pct"]))
         except (KeyError, TypeError, ValueError):
             raise RuntimeDependencyUnavailable("runtime service unavailable: pnl guard") from None
-        approval = approval_adapter or RuntimeApproval(
-            guardian, context_provider=context_provider
-        )
+        approval = approval_adapter or RuntimeApproval(guardian, context_provider=context_provider)
         approval_adapter = approval
         pnl_guard = PnlLossGuard(
             broker,
