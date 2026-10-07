@@ -14,7 +14,7 @@ def test_lifespan_keeps_telegram_startup_alive_when_runtime_services_fail(monkey
     """A broker 429 must leave the API degraded, not crash on missing state."""
 
     class _Settings:
-        role = "worker"
+        role = "core"
         redis_url = None
         capital_api_key = None
         capital_identifier = None
