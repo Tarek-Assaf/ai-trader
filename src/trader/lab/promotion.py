@@ -100,6 +100,11 @@ class PromotionGate:
             return ["stage_transition_must_be_adjacent"]
         if target in {"micro_live", "live"} and not self._live_enabled:
             return ["live_trading_disabled"]
+        # A live-stage transition must be durably recorded.  Without an
+        # audit writer there is no evidence that the gate was earned, so the
+        # transition fails closed even when the environment flag is enabled.
+        if target in {"micro_live", "live"} and self._audit is None:
+            return ["stage_gate_not_recorded"]
         gate_name = {
             "paper": "gate1_backtest_to_paper",
             "micro_live": "gate2_paper_to_micro_live",

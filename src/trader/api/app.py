@@ -87,6 +87,8 @@ def _start_runtime_if_configured(
         components = factory(settings, configs)
         if not isinstance(components, RuntimeComponents):
             raise TypeError("runtime component factory returned an invalid composition")
+        if components.soak_monitor is None:
+            components.soak_monitor = getattr(app.state, "soak_monitor", None)
         missing = components.missing_required()
         if missing:
             raise RuntimeError(f"runtime composition is incomplete: {', '.join(missing)}")
@@ -253,7 +255,7 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime_service_overrides = None
     _app.state.command_data_service = None
     _app.state.soak_monitor = SoakMonitor(
-        Path(os.getenv("SOAK_EVIDENCE_DIR", "docs/evidence/soak"))
+        Path(os.getenv("SOAK_EVIDENCE_DIR", "/workspace/state/soak"))
     )
     _app.state.runtime_eligible = runtime_enabled(settings)
     if _app.state.runtime_eligible:
@@ -340,6 +342,7 @@ async def lifespan(_app: FastAPI) -> Any:
                 "recorder": recorder,
                 "instrument_mapper": _app.state.instrument_mapper,
                 "market_details_client": capital_client,
+                "soak_monitor": _app.state.soak_monitor,
                 **(getattr(_app.state, "runtime_service_overrides", None) or {}),
             },
         )

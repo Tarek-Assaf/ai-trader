@@ -375,10 +375,18 @@ class ProtectivePositionManager:
 class RuntimeReconciler:
     """Small read-model reconciler used alongside OrderManager's hard gate."""
 
-    def __init__(self, journal: Any, broker: Any, *, alert: Callable[[str], None]) -> None:
+    def __init__(
+        self,
+        journal: Any,
+        broker: Any,
+        *,
+        alert: Callable[[str], None],
+        soak_monitor: Any | None = None,
+    ) -> None:
         self.journal = journal
         self.broker = broker
         self.alert = alert
+        self.soak_monitor = soak_monitor
 
     def reconcile(self) -> bool:
         try:
@@ -392,6 +400,9 @@ class RuntimeReconciler:
         except Exception:
             valid = False
         if not valid:
+            record = getattr(self.soak_monitor, "record_reconciliation_mismatch", None)
+            if callable(record):
+                record()
             self.alert("broker_journal_mismatch")
         return valid
 
