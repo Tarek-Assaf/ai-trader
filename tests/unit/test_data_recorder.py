@@ -194,3 +194,43 @@ def test_recorder_health_counts_received_ticks(tmp_path: Path) -> None:
 
     assert value["ticks_received"] == 1
     assert value["last_tick_at"] == current.isoformat()
+
+
+def test_bad_spread_is_quarantined_without_stopping_recorder(tmp_path: Path) -> None:
+    current = datetime(2026, 10, 3, 12, 3, tzinfo=UTC)
+    recorder = CapitalDataRecorder(
+        ParquetCandleStore(tmp_path / "lake"),
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+        clock=lambda: current,
+    )
+    minute = current - timedelta(minutes=2)
+
+    store = ParquetCandleStore(tmp_path / "lake")
+    store.upsert_many(
+        [
+            ("NAS100", _update(minute, "bid", source="capital_rest", close=100.0)),
+            ("NAS100", _update(minute, "ask", source="capital_rest", close=99.0)),
+            (
+                "NAS100",
+                _update(minute + timedelta(minutes=1), "bid", source="capital_rest", close=101.0),
+            ),
+            (
+                "NAS100",
+                _update(minute + timedelta(minutes=1), "ask", source="capital_rest", close=102.0),
+            ),
+        ],
+        on_reject=recorder._record_rejection,
+    )
+    recorder._write_status()
+
+    output = tmp_path / "lake" / "NAS100" / "1m_capital" / "2026" / "10.parquet"
+    rows = pq.read_table(output).to_pylist()
+    assert {(row["ts_utc"], row["side"]) for row in rows} == {
+        (minute, "bid"),
+        (minute + timedelta(minutes=1), "bid"),
+        (minute + timedelta(minutes=1), "ask"),
+    }
+    status = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert status["rejected_candles"] == 1
+    assert status["last_reject_reason"] == "ask_close_below_bid_close"

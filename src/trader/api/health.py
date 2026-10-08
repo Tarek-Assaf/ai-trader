@@ -114,10 +114,16 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
     stale_epics = value.get("stale_epics")
     ticks_received = value.get("ticks_received")
     last_tick_at = value.get("last_tick_at")
+    rejected_candles = value.get("rejected_candles")
+    last_reject_reason = value.get("last_reject_reason")
     if not isinstance(ticks_received, int) or ticks_received < 0:
         ticks_received = 0
     if not isinstance(reconnect_count, int) or reconnect_count < 0:
         reconnect_count = 0
+    if not isinstance(rejected_candles, int) or rejected_candles < 0:
+        rejected_candles = 0
+    else:
+        rejected_candles = min(rejected_candles, 1_000_000)
     if not isinstance(stale_epics, list):
         stale_epics = []
     stale_epics = [epic for epic in stale_epics[:10] if isinstance(epic, str) and len(epic) <= 32]
@@ -146,6 +152,12 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
         "stale_epics": stale_epics,
         "ticks_received": ticks_received,
         "last_tick_at": last_tick_at if isinstance(last_tick_at, str) else None,
+        "rejected_candles": rejected_candles,
+        "last_reject_reason": (
+            last_reject_reason
+            if isinstance(last_reject_reason, str) and len(last_reject_reason) <= 80
+            else None
+        ),
         "reconnect_count": reconnect_count,
         "last_reconnect_reason": (
             value.get("last_reconnect_reason")

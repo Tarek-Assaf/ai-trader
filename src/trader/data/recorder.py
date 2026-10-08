@@ -7,6 +7,7 @@ import os
 import tempfile
 import threading
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +33,11 @@ _SCHEMA = pa.schema(
     ]
 )
 _SOURCE_RANK = {"capital_ws": 1, "capital_rest": 2}
+_MAX_REJECTED_CANDLES = 1_000_000
+_REJECT_ASK_BELOW_BID = "ask_close_below_bid_close"
+_REJECT_TIMESTAMP = "timestamp_not_timezone_aware"
+_REJECT_SIDE = "invalid_side"
+_REJECT_SOURCE = "invalid_source"
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,15 +84,29 @@ class ParquetCandleStore:
                         latest[key] = stamp
         return latest
 
-    def upsert_many(self, items: list[tuple[str, OhlcUpdate]]) -> int:
+    def upsert_many(
+        self,
+        items: list[tuple[str, OhlcUpdate]],
+        *,
+        on_reject: Callable[[str], None] | None = None,
+    ) -> int:
         """Merge a closed update batch and atomically replace affected month files."""
         grouped: dict[Path, list[tuple[str, OhlcUpdate]]] = defaultdict(list)
         for symbol, update in items:
-            minute = self._minute(update.timestamp)
+            try:
+                minute = self._minute(update.timestamp)
+            except ValueError:
+                if callable(on_reject):
+                    on_reject(_REJECT_TIMESTAMP)
+                continue
             if update.price_type not in {"bid", "ask"}:
-                raise ValueError("recorder side must be bid or ask")
+                if callable(on_reject):
+                    on_reject(_REJECT_SIDE)
+                continue
             if update.source not in _SOURCE_RANK:
-                raise ValueError("unsupported recorder source")
+                if callable(on_reject):
+                    on_reject(_REJECT_SOURCE)
+                continue
             grouped[self._path(symbol, minute)].append((symbol, update))
         written = 0
         with self._lock:
@@ -97,13 +117,19 @@ class ParquetCandleStore:
                     key = (row["epic"], row["ts_utc"], row["side"])
                     rows[key] = row
                 changed_keys: set[tuple[str, datetime, str]] = set()
-                for _symbol, update in batch:
+                for _symbol, update in sorted(
+                    batch,
+                    key=lambda item: (
+                        self._minute(item[1].timestamp),
+                        0 if item[1].price_type == "bid" else 1,
+                    ),
+                ):
                     minute = self._minute(update.timestamp)
                     key = (update.epic, minute, update.price_type)
                     old = rows.get(key)
                     if old and _SOURCE_RANK[old["source"]] > _SOURCE_RANK[update.source]:
                         continue
-                    rows[key] = {
+                    candidate: dict[str, Any] = {
                         "epic": update.epic,
                         "ts_utc": minute,
                         "side": update.price_type,
@@ -115,13 +141,35 @@ class ParquetCandleStore:
                         "source": update.source,
                         "lineage_tag": "capital_com_1m_recorder_v1",
                     }
+                    other_side = "bid" if update.price_type == "ask" else "ask"
+                    other = rows.get((update.epic, minute, other_side))
+                    spread = (
+                        candidate["close"] - other["close"]
+                        if update.price_type == "ask" and other
+                        else other["close"] - candidate["close"]
+                        if update.price_type == "bid" and other
+                        else None
+                    )
+                    if spread is not None and spread < 0:
+                        if callable(on_reject):
+                            on_reject(_REJECT_ASK_BELOW_BID)
+                        continue
+                    rows[key] = candidate
                     changed_keys.add(key)
+                pair_keys = {(epic, minute) for epic, minute, _side in rows}
+                for epic, minute in pair_keys:
+                    bid = rows.get((epic, minute, "bid"))
+                    ask = rows.get((epic, minute, "ask"))
+                    if bid and ask and ask["close"] < bid["close"]:
+                        rows.pop((epic, minute, "ask"), None)
+                        if callable(on_reject):
+                            on_reject(_REJECT_ASK_BELOW_BID)
                 for epic, minute, _side in changed_keys:
                     bid = rows.get((epic, minute, "bid"))
                     ask = rows.get((epic, minute, "ask"))
                     spread = ask["close"] - bid["close"] if bid and ask else None
                     if spread is not None and spread < 0:
-                        raise ValueError("recorder ask close is below bid close")
+                        continue
                     if bid:
                         bid["spread_close"] = spread
                     if ask:
@@ -184,6 +232,8 @@ class CapitalDataRecorder:
             "last_update_at": None,
             "last_closed_bar_at": None,
             "last_liveness_at": None,
+            "rejected_candles": 0,
+            "last_reject_reason": None,
         }
         self._write_status()
 
@@ -210,13 +260,34 @@ class CapitalDataRecorder:
             update.price_type,
         )
 
+    @staticmethod
+    def _reject_reason(update: OhlcUpdate) -> str | None:
+        if update.timestamp.tzinfo is None or update.timestamp.utcoffset() is None:
+            return _REJECT_TIMESTAMP
+        if update.price_type not in {"bid", "ask"}:
+            return _REJECT_SIDE
+        if update.source not in _SOURCE_RANK:
+            return _REJECT_SOURCE
+        return None
+
     def _commit(self, updates: list[_BufferedUpdate]) -> None:
         if not updates:
             return
-        self._store.upsert_many([(item.symbol, item.update) for item in updates])
+        accepted: list[_BufferedUpdate] = []
+        for item in updates:
+            reason = self._reject_reason(item.update)
+            if reason is None:
+                accepted.append(item)
+            else:
+                self._record_rejection(reason)
+        if not accepted:
+            return
+        self._store.upsert_many(
+            [(item.symbol, item.update) for item in accepted], on_reject=self._record_rejection
+        )
         self._status["last_closed_bar_at"] = max(
             item.update.timestamp.astimezone(UTC).replace(second=0, microsecond=0)
-            for item in updates
+            for item in accepted
         ).isoformat()
         adapter = self._feed_adapters
         derived_callback = getattr(adapter, "on_closed_bar", None)
@@ -224,13 +295,22 @@ class CapitalDataRecorder:
         if not callable(callback):
             callback = getattr(adapter, "on_bar_close", None)
         if callable(callback):
-            for item in updates:
+            for item in accepted:
                 stamp = item.update.timestamp.astimezone(UTC).replace(second=0, microsecond=0)
                 bar_id = f"{item.update.epic}:{stamp.isoformat()}"
                 if callable(derived_callback):
                     callback(bar_id, stamp)
                 else:
                     callback("1M", bar_id, stamp)
+
+    def _record_rejection(self, reason: str) -> None:
+        """Record a bounded, secret-free data-quality rejection."""
+        with self._lock:
+            self._status["rejected_candles"] = min(
+                int(self._status.get("rejected_candles", 0)) + 1,
+                _MAX_REJECTED_CANDLES,
+            )
+            self._status["last_reject_reason"] = reason[:80]
 
     def register_feed_adapters(self, adapters: Any | None) -> None:
         """Attach the shared runtime trigger adapter after construction."""
@@ -241,6 +321,11 @@ class CapitalDataRecorder:
         """Keep partial values in memory until their minute closes or REST confirms it."""
         symbol = self._symbols.get(update.epic)
         if symbol is None:
+            return
+        reason = self._reject_reason(update)
+        if reason is not None:
+            self._record_rejection(reason)
+            self._write_status()
             return
         minute = self._key(update)[1]
         current_minute = self._clock().astimezone(UTC).replace(second=0, microsecond=0)

@@ -422,7 +422,7 @@ def test_missing_or_non_ok_ping_reply_reconnects(reply: Any) -> None:
     assert any(json.loads(message)["destination"] == "ping" for message in socket.sent)
 
 
-def test_stream_propagates_consumer_exception() -> None:
+def test_stream_propagates_consumer_exception_and_logs_fixed_value_error(caplog) -> None:
     rest = FakeRest()
     socket = FakeSocket([subscribe_reply(), ping_reply(), event(1791021600000)])
     client = CapitalComStreamClient(
@@ -434,6 +434,8 @@ def test_stream_propagates_consumer_exception() -> None:
 
     with pytest.raises(ValueError, match="consumer failed"):
         client.run_forever(threading.Event())
+    assert "consumer failed" in caplog.text
+    assert "Capital.com stream consumer failed (ValueError)" in caplog.text
 
 
 def test_websockets_debug_logging_is_disabled() -> None:

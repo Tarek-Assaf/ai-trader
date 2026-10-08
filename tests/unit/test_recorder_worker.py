@@ -7,7 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from trader.workers.recorder import _combined_market_status, _market_status, _session_settings
+from trader.workers.recorder import (
+    _combined_market_status,
+    _market_status,
+    _next_stream_restart,
+    _session_settings,
+)
 
 
 @pytest.mark.parametrize(
@@ -67,3 +72,20 @@ def test_session_settings_loads_verified_date_overrides_and_stale_limit(tmp_path
     assert result["US100"]["holidays"] == (date(2026, 11, 26),)
     assert result["US100"]["early_closes"] == {date(2026, 11, 27): time(13, 0)}
     assert result["US100"]["stale_after_seconds"] == 120.0
+
+
+def test_stream_restart_backoff_doubles_caps_and_resets_after_health() -> None:
+    def no_jitter(_low: float, _high: float) -> float:
+        return 0.0
+
+    jitter = no_jitter
+    wait, backoff = _next_stream_restart(3.0, 0.0, jitter=jitter)
+    assert (wait, backoff) == (3.0, 6.0)
+    wait, backoff = _next_stream_restart(backoff, 0.0, jitter=jitter)
+    assert (wait, backoff) == (6.0, 12.0)
+    wait, backoff = _next_stream_restart(192.0, 0.0, jitter=jitter)
+    assert (wait, backoff) == (192.0, 300.0)
+    wait, backoff = _next_stream_restart(backoff, 0.0, jitter=jitter)
+    assert (wait, backoff) == (300.0, 300.0)
+    wait, backoff = _next_stream_restart(backoff, 300.0, jitter=jitter)
+    assert (wait, backoff) == (3.0, 6.0)
