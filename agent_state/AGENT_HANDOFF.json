@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 255,
+  "turn": "claude",
+  "revision": 256,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -3565,7 +3565,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -3581,14 +3581,25 @@
         "Holdout still read only via validator.open_sealed_reader"
       ],
       "deliverables": [
+        "config/strategy_lab.yaml",
         "src/trader/lab/runner.py",
+        "src/trader/lab/engine.py",
+        "src/trader/lab/backtest.py",
+        "src/trader/lab/pipeline.py",
         "scripts/lab_run.py",
-        "scripts/lab_data_check.py",
         "tests/unit/test_lab_runner.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "tests/unit/test_lab_runner.py: 20 passed",
+        "tests/unit/test_lab_pipeline.py -k 'not real_config_noise and not real_config_promotes': 9 passed, 2 deselected",
+        "ruff check . and ruff format --check .: passed",
+        "mypy src/trader/lab scripts/lab_run.py scripts/lab_data_check.py: passed",
+        "python -m compileall -q src scripts tests: passed",
+        "git diff --check: passed"
+      ],
+      "completion_note": "Implemented T-114 memory-safe columnar loading, read-only numeric arrays, cgroup worker caps, cross-process run locking, peak RSS progress evidence, timestamped phase counts, cache invalidation, bounded years, and indicator reuse. No Pod, broker, credentials or orders were used; Pod timing targets remain owner validation.",
+      "review_notes": "Ready for Claude review from docs/specs/t114_lab_speed.md."
     }
   ],
   "decisions": [
@@ -6527,6 +6538,17 @@
       "validated_by": "claude",
       "date": "2026-10-09",
       "reverify_if": "runner or lab scripts change"
+    },
+    {
+      "id": "V-265",
+      "subject": "T-114 memory-safe Strategy Lab loading and visibility",
+      "method": "Ran focused runner and pipeline tests plus Ruff, formatting, mypy, compileall and diff checks against docs/specs/t114_lab_speed.md.",
+      "result": "pass",
+      "evidence": "tests/unit/test_lab_runner.py: 20 passed; tests/unit/test_lab_pipeline.py: 9 passed, 2 deselected; ruff, mypy, compileall and diff checks passed.",
+      "review_notes": "Pod timing targets and peak RSS on the real HistData lake remain owner validation; no Pod or broker calls were made by Codex.",
+      "validated_by": "codex",
+      "date": "2026-10-09",
+      "reverify_if": "runner, pipeline or lab scripts change"
     }
   ],
   "blockers": [
@@ -11207,7 +11229,24 @@
         "docs/specs/t114_lab_speed.md"
       ],
       "summary": "Owner returned the turn. Added T-114 (lab speed, 16 GB memory limit, progress). Spec merged in PR #112 and #113. Turn to codex."
+    },
+    {
+      "revision": 256,
+      "ts": "2026-10-09T03:15:00Z",
+      "agent": "codex",
+      "action": "complete_t114_lab_speed_visibility",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_run.py",
+        "src/trader/lab/runner.py",
+        "src/trader/lab/pipeline.py",
+        "tests/unit/test_lab_runner.py"
+      ],
+      "summary": "Completed T-114 memory-safe columnar loading, cgroup worker caps, single-run locking, peak RSS progress evidence and focused tests. No Pod, broker, credentials or orders were used. Handing turn to Claude for review."
     }
   ],
-  "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence is recorded. T-112 is merged with a 3-month holdout. T-113 runner-level tests and config-driven holdout wiring are complete and awaiting Claude review; owner Pod lab validation remains required. T-017/T-044 still wait on recorder data."
+  "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence is recorded. T-112 and T-113 are merged with a 3-month holdout. T-114 memory-safe Strategy Lab speed and visibility is complete on the Codex branch and handed to Claude for review. T-017/T-044 still wait on recorder data."
 }

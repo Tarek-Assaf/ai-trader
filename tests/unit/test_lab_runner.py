@@ -16,9 +16,13 @@ from trader.lab.runner import (
     LabJobManager,
     LabRunner,
     LabRunResult,
+    RunFileLock,
+    cap_worker_count,
     coverage_report,
     load_histdata_candles,
+    load_histdata_columns,
     prepare_holdout,
+    read_memory_limit,
     strategy_lab_holdout_months,
     strategy_lab_max_training_years,
     tune_variants,
@@ -46,6 +50,44 @@ def test_histdata_coverage_and_resampling(tmp_path) -> None:
     assert report.months == 1
     assert report.first_bar is not None and report.last_bar is not None
     assert len(load_histdata_candles(tmp_path, "NSXUSD", 3)) == 6
+
+
+def test_columnar_loader_returns_read_only_numeric_arrays(tmp_path) -> None:
+    _write_bars(tmp_path)
+    series = load_histdata_columns(tmp_path, "NSXUSD")
+    assert len(series) == 20
+    assert not isinstance(series.opens[0], Candle)
+    assert tuple(series.to_candles()) == load_histdata_candles(tmp_path, "NSXUSD")
+    if hasattr(series.opens, "flags"):
+        assert not series.opens.flags.writeable
+
+
+def test_worker_cap_respects_small_fake_memory_limit() -> None:
+    assert cap_worker_count(8, cpu_count=8, memory_limit_bytes=1024**3) == 1
+    assert cap_worker_count(2, cpu_count=8, memory_limit_bytes=16 * 1024**3) == 2
+
+
+def test_run_file_lock_refuses_second_owner(tmp_path) -> None:
+    path = tmp_path / "run.lock"
+    first = RunFileLock(path)
+    first.acquire()
+    try:
+        try:
+            RunFileLock(path).acquire()
+        except RuntimeError as exc:
+            assert "already in progress" in str(exc)
+        else:
+            raise AssertionError("second owner must be refused")
+    finally:
+        first.release()
+
+
+def test_read_memory_limit_parses_cgroup_values(tmp_path) -> None:
+    path = tmp_path / "memory.max"
+    path.write_text("12345\n", encoding="ascii")
+    assert read_memory_limit(path) == 12345
+    path.write_text("max\n", encoding="ascii")
+    assert read_memory_limit(path) is None
 
 
 def test_histdata_coverage_reports_missing_month(tmp_path) -> None:
@@ -314,6 +356,8 @@ def test_progress_records_phases_and_counts(tmp_path, monkeypatch) -> None:
     assert payload["phase"] == "done"
     assert {"loading", "done"}.issubset(payload["phase_timings_seconds"])
     assert payload["ideas_done"] == payload["ideas_total"] == 0
+    assert "peak_rss_bytes" in payload
+    assert payload["workers"] >= 1
 
 
 def test_max_training_years_is_configured(tmp_path) -> None:

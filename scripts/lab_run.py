@@ -37,6 +37,7 @@ def main() -> int:
     parser.add_argument("--years", help="training history in years, or 'all'")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--stop-file", type=Path)
+    parser.add_argument("--lock-file", type=Path, default=Path("/workspace/state/lab/run.lock"))
     parser.add_argument("--progress", type=Path)
     parser.add_argument("--prepare-holdout", action="store_true")
     parser.add_argument(
@@ -78,6 +79,7 @@ def main() -> int:
         holdout_root=args.holdout,
         config_path=args.config,
         max_training_years=max_training_years,
+        lock_path=args.lock_file,
     )
     try:
         result = runner.run(
@@ -100,10 +102,6 @@ def main() -> int:
     args.results.parent.mkdir(parents=True, exist_ok=True)
     args.results.write_text(json.dumps(result.payload(), indent=2), encoding="utf-8")
     print(LabRunner.format_results(result))
-    if args.progress:
-        args.progress.write_text(
-            json.dumps({"status": "completed", "run_id": result.run_id}), encoding="utf-8"
-        )
     return 0
 
 

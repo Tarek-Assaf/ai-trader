@@ -366,7 +366,9 @@ class ValidationPipeline:
             try:
                 with ProcessPoolExecutor(
                     max_workers=worker_count,
-                    mp_context=multiprocessing.get_context("spawn"),
+                    # Fork preserves the parent's read-only candle snapshot on
+                    # Linux/RunPod; Windows keeps spawn for portability.
+                    mp_context=multiprocessing.get_context("fork" if os.name != "nt" else "spawn"),
                     initializer=_init_worker,
                     initargs=(
                         tuple(candles),
