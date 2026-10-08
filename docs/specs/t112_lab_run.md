@@ -7,7 +7,7 @@ Goal: one runnable job that takes HistData (NSXUSD, XAUUSD) through idea generat
 ## Parts
 1. **Data check** `scripts/lab_data_check.py`: lists lake coverage per instrument (first/last bar, months, gaps, QA flags) and exits non-zero when fewer than 24 months of M1 exist. Output is JSON plus a short text table.
 2. **Run job** `scripts/lab_run.py` and `trader.lab.runner`:
-   - Inputs: instruments (default both), timeframes 1m/3m/5m, idea sources (see Idea sources), `--max-ideas`, `--workers N` (default: CPU count minus 1, capped at 8).
+   - Inputs: instruments (default both), timeframes 1m/3m/5m, idea sources (see Idea sources), `--max-ideas`, `--workers N` (default: CPU count minus 2, so the live services keep at least 2 cores; run workers at low priority with `nice 10`; on the 8-core demo Pod this is 6 workers).
    - Parallel by `multiprocessing` across (idea, instrument, timeframe). Deterministic seeds. A crashed worker marks its idea `error` and never aborts the run.
    - Costs: spread/slippage from the calibrated model if present, otherwise the pessimistic default in `config/strategy_lab.yaml` (add `cost_defaults` with a clear comment that T-017 replaces it). Gate 1 cost stress +50% always applies.
    - Pipeline: tune on in-sample windows, evaluate walk-forward out-of-sample, apply Gate 1 via `ValidationPipeline` including the multiple-testing correction over ALL ideas tried in the run, then read the sealed holdout once per surviving idea through the existing holdout reader.
