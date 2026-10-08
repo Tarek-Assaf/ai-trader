@@ -35,7 +35,9 @@ def main() -> int:
             f"{report.instrument} {report.first_bar or '-'} {report.last_bar or '-'} "
             f"{report.months} {report.gaps} {','.join(report.qa_flags) or '-'}"
         )
-    return 0 if all(report.months >= args.min_months for report in reports) else 1
+    return (
+        0 if all(report.months >= args.min_months and report.gaps == 0 for report in reports) else 1
+    )
 
 
 if __name__ == "__main__":

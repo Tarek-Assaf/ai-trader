@@ -32,7 +32,7 @@ from trader.lab.miner import PatternMiner
 from trader.lab.pipeline import ValidationPipeline
 from trader.lab.seeds import seed_specs
 from trader.lab.spec import StrategySpec
-from trader.lab.validator import strategy_hash
+from trader.lab.validator import open_sealed_reader, strategy_hash
 from trader.viz import strategy_comparison
 
 LOGGER = logging.getLogger(__name__)
@@ -190,13 +190,32 @@ def prepare_holdout(
     if months < 1:
         raise ValueError("holdout months must be positive")
     source_root, destination_root = Path(lake_root), Path(holdout_root)
-    copied: list[Path] = []
     manifest: dict[str, list[str]] = {}
+    selected_by_instrument: dict[str, set[tuple[int, int]]] = {}
     for instrument in instruments:
         files = _parquet_files(source_root, instrument)
         keyed = [(key, path) for path in files if (key := _path_month(path)) is not None]
-        selected_months = sorted({key for key, _ in keyed})[-months:]
-        manifest[instrument] = [f"{year:04d}-{month:02d}" for year, month in selected_months]
+        selected_months = set(sorted({key for key, _ in keyed})[-months:])
+        selected_by_instrument[instrument] = selected_months
+        manifest[instrument] = [
+            f"{year:04d}-{month:02d}" for year, month in sorted(selected_months)
+        ]
+
+    manifest_path = destination_root / "manifest.json"
+    if manifest_path.is_file():
+        try:
+            existing = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, TypeError, ValueError) as exc:
+            raise ValueError("existing holdout manifest is unreadable") from exc
+        if existing.get("months") != months or existing.get("instruments") != manifest:
+            raise ValueError("holdout is already prepared with a different month set")
+        return tuple(sorted(destination_root.glob("**/*.parquet")))
+
+    copied: list[Path] = []
+    for instrument in instruments:
+        files = _parquet_files(source_root, instrument)
+        keyed = [(key, path) for path in files if (key := _path_month(path)) is not None]
+        selected_months = selected_by_instrument[instrument]
         for key, path in keyed:
             if key not in selected_months:
                 continue
@@ -281,7 +300,8 @@ def coverage_report(root: str | Path, instrument: str) -> Coverage:
         if first is None or last is None
         else (last.year - first.year) * 12 + last.month - first.month + 1
     )
-    gaps = max(0, len(files) - months) if files and months else 0
+    month_keys = {month for path in files if (month := _path_month(path)) is not None}
+    gaps = max(0, months - len(month_keys)) if files and months else 0
     return Coverage(instrument, first, last, months, gaps, tuple(sorted(qa_flags)))
 
 
@@ -420,6 +440,7 @@ class LabRunner:
         run_id: str | None = None,
         stop_event: Any | None = None,
         stop_file: str | Path | None = None,
+        progress_path: str | Path | None = None,
     ) -> LabRunResult:
         started = datetime.now(UTC)
         run_name = run_id or started.strftime("%Y%m%dT%H%M%SZ")
@@ -439,6 +460,12 @@ class LabRunner:
                 or (stop_file is not None and Path(stop_file).exists())
             )
 
+        class StopSignal:
+            def is_set(self) -> bool:
+                return stopped()
+
+        pipeline_stop = StopSignal()
+
         def record_attempt(digest: str, source: str, metrics: Mapping[str, Any]) -> None:
             now = datetime.now(UTC)
             self.ledger.append(
@@ -452,9 +479,18 @@ class LabRunner:
                 )
             )
 
+        groups: list[
+            tuple[
+                str,
+                int,
+                tuple[Candle, ...],
+                tuple[Candle, ...],
+                list[tuple[str, Any]],
+                list[StrategySpec],
+                Path,
+            ]
+        ] = []
         for instrument, timeframe in ((i, t) for i in instruments for t in timeframes):
-            if stopped():
-                break
             candles = load_histdata_candles(
                 self.lake_root,
                 instrument,
@@ -484,26 +520,58 @@ class LabRunner:
                 ),
                 holdout_files[0],
             )
-            from trader.lab import validator as _validator
-
-            reader_type = getattr(_validator, "Holdout" + "Reader")
-            reader = reader_type(self.holdout_root, ledger=self.ledger)
-            pipeline = ValidationPipeline(
-                ledger=self.ledger, cost_model=pessimistic_cost_model(self.config_path)
-            )
             specs = [
                 spec
                 for source, spec in candidates
                 if force
                 or self.ledger.count_for_strategy(strategy_hash(spec.model_dump(mode="json"))) == 0
             ]
-            candidates = [
-                (source, spec)
-                for source, spec in candidates
-                if force
-                or strategy_hash(spec.model_dump(mode="json"))
-                in {strategy_hash(item.model_dump(mode="json")) for item in specs}
-            ]
+            groups.append(
+                (instrument, timeframe, tuple(train), tuple(test), candidates, specs, holdout)
+            )
+
+        existing_hashes = {
+            item.strategy_hash
+            for item in self.ledger.records()
+            if item.parameters.get("pipeline")
+            not in {"neighbor", "gate1_screen", "gate1_final", "worker"}
+        }
+        current_hashes = {
+            strategy_hash(spec.model_dump(mode="json"))
+            for _, _, _, _, candidates, _, _ in groups
+            for _, spec in candidates
+        }
+        trial_count = max(1, len(existing_hashes | current_hashes))
+        total_ideas = sum(len(group[4]) for group in groups)
+        completed_ideas = 0
+
+        def write_progress(status: str = "running") -> None:
+            if progress_path is None:
+                return
+            target = Path(progress_path)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(
+                json.dumps(
+                    {
+                        "status": status,
+                        "run_id": run_name,
+                        "ideas_done": completed_ideas,
+                        "ideas_total": total_ideas,
+                        "survivors": sum(item.verdict == "pass" for item in attempts),
+                    },
+                    sort_keys=True,
+                ),
+                encoding="utf-8",
+            )
+
+        write_progress()
+        for instrument, timeframe, train, test, candidates, specs, holdout in groups:
+            if stopped():
+                break
+            reader = open_sealed_reader(self.holdout_root, self.ledger)
+            pipeline = ValidationPipeline(
+                ledger=self.ledger, cost_model=pessimistic_cost_model(self.config_path)
+            )
             try:
                 decisions = pipeline.run(
                     specs,
@@ -521,7 +589,8 @@ class LabRunner:
                     test_bars=max(1, len(train) // 5),
                     step_bars=max(1, len(train) // 5),
                     workers=workers,
-                    stop_event=stop_event,
+                    stop_event=pipeline_stop,
+                    trials=trial_count,
                 )
             except Exception as exc:  # noqa: BLE001
                 for source, spec in candidates:
@@ -534,6 +603,8 @@ class LabRunner:
                             digest, instrument, timeframe, source, "error", type(exc).__name__
                         )
                     )
+                completed_ideas += len(candidates)
+                write_progress()
                 continue
             decision_hashes = {decision.strategy_hash: decision for decision in decisions}
             for source, spec in candidates:
@@ -579,8 +650,11 @@ class LabRunner:
                         digest, instrument, timeframe, source, verdict, reason, decision.metrics
                     )
                 )
+            completed_ideas += len(candidates)
+            write_progress()
         finished = datetime.now(UTC)
         survivors = tuple(item for item in attempts if item.verdict == "pass")
+        write_progress("completed")
         return LabRunResult(run_name, started, finished, tuple(attempts), survivors, coverage)
 
     @staticmethod
@@ -623,6 +697,7 @@ class LabJobManager:
         self._lock = threading.Lock()
         self._thread: threading.Thread | None = None
         self._process: subprocess.Popen[str] | None = None
+        self._log_handle: Any | None = None
         self._stop = threading.Event()
         self._result: LabRunResult | None = None
         self._error: str | None = None
@@ -647,28 +722,35 @@ class LabJobManager:
                 if isinstance(self.runner, LabRunner):
                     self.state_root.mkdir(parents=True, exist_ok=True)
                     script = Path(__file__).resolve().parents[3] / "scripts" / "lab_run.py"
-                    self._process = subprocess.Popen(
-                        [
-                            sys.executable,
-                            str(script),
-                            "--lake",
-                            str(self.runner.lake_root),
-                            "--holdout",
-                            str(self.runner.holdout_root),
-                            "--results",
-                            str(self.results_path),
-                            "--progress",
-                            str(self.progress_path),
-                            "--stop-file",
-                            str(self.stop_path),
-                            "--instruments",
-                            *instruments,
-                        ],
-                        stdin=subprocess.DEVNULL,
-                        stdout=subprocess.DEVNULL,
-                        stderr=subprocess.DEVNULL,
-                        text=True,
-                    )
+                    log_path = self.state_root / "run.log"
+                    self._log_handle = log_path.open("a", encoding="utf-8")
+                    try:
+                        self._process = subprocess.Popen(
+                            [
+                                sys.executable,
+                                str(script),
+                                "--lake",
+                                str(self.runner.lake_root),
+                                "--holdout",
+                                str(self.runner.holdout_root),
+                                "--results",
+                                str(self.results_path),
+                                "--progress",
+                                str(self.progress_path),
+                                "--stop-file",
+                                str(self.stop_path),
+                                "--instruments",
+                                *instruments,
+                            ],
+                            stdin=subprocess.DEVNULL,
+                            stdout=self._log_handle,
+                            stderr=subprocess.STDOUT,
+                            text=True,
+                        )
+                    except Exception:
+                        self._log_handle.close()
+                        self._log_handle = None
+                        raise
                 else:
                     self._thread = threading.Thread(
                         target=self._run, args=(instruments,), daemon=True, name="strategy-lab-test"
@@ -680,6 +762,9 @@ class LabJobManager:
                 if self._process.poll() is None:
                     return self._progress_summary()
                 self._process = None
+                if self._log_handle is not None:
+                    self._log_handle.close()
+                    self._log_handle = None
                 return self._summary()
             return (
                 "Strategy Lab: run in progress."
@@ -711,7 +796,11 @@ class LabJobManager:
     def _progress_summary(self) -> str:
         try:
             payload = json.loads(self.progress_path.read_text(encoding="utf-8"))
-            return f"Strategy Lab: {str(payload.get('status', 'running'))[:40]}."
+            status = str(payload.get("status", "running"))[:20]
+            done = int(payload.get("ideas_done", 0))
+            total = int(payload.get("ideas_total", 0))
+            survivors = int(payload.get("survivors", 0))
+            return f"Strategy Lab: {status} ({done}/{total} ideas, {survivors} survivors)."
         except (OSError, ValueError, TypeError):
             return "Strategy Lab: run in progress."
 

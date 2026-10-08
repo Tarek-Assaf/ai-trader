@@ -70,9 +70,8 @@ class _CandidateEvaluation:
     profitable_regimes: int
 
 
-def _evaluate_candidate(
-    item: tuple[
-        StrategySpec,
+_WORKER_CONTEXT: (
+    tuple[
         Sequence[Candle],
         Sequence[Candle],
         CostModel | None,
@@ -80,15 +79,45 @@ def _evaluate_candidate(
         int | None,
         int | None,
         int | None,
-    ],
-) -> tuple[str, _CandidateEvaluation]:
-    """Run the expensive deterministic backtests in a spawned worker."""
-    spec, candles, evaluation, cost_model, stress_pct, train_bars, test_bars, step_bars = item
+    ]
+    | None
+) = None
+
+
+def _init_worker(
+    candles: Sequence[Candle],
+    evaluation: Sequence[Candle],
+    cost_model: CostModel | None,
+    stress_pct: float,
+    train_bars: int | None,
+    test_bars: int | None,
+    step_bars: int | None,
+) -> None:
+    """Install one immutable data context per spawned worker."""
+    global _WORKER_CONTEXT
+    _WORKER_CONTEXT = (
+        tuple(candles),
+        tuple(evaluation),
+        cost_model,
+        stress_pct,
+        train_bars,
+        test_bars,
+        step_bars,
+    )
     if hasattr(os, "nice"):
         try:
             os.nice(10)
         except (OSError, PermissionError):
             pass
+
+
+def _evaluate_candidate(
+    spec: StrategySpec,
+) -> tuple[str, _CandidateEvaluation]:
+    """Run the expensive deterministic backtests in a spawned worker."""
+    if _WORKER_CONTEXT is None:
+        raise RuntimeError("pipeline worker context is not initialized")
+    candles, evaluation, cost_model, stress_pct, train_bars, test_bars, step_bars = _WORKER_CONTEXT
     result = run_backtest(
         spec,
         candles,
@@ -278,6 +307,7 @@ class ValidationPipeline:
         current_stage: str = "backtest",
         workers: int = 1,
         stop_event: Any | None = None,
+        trials: int | None = None,
     ) -> tuple[PipelineDecision, ...]:
         """Validate candidates; the holdout is read only after cheap gates pass."""
         if not candles:
@@ -298,32 +328,26 @@ class ValidationPipeline:
         )
         if not items:
             return ()
-        trial_count = len(items)
+        trial_count = max(1, trials if trials is not None else len(items))
         evaluations: dict[str, _CandidateEvaluation | str] = {}
-        payloads = [
-            (
-                spec,
-                tuple(candles),
-                evaluation,
-                self.cost_model,
-                self.cost_stress_pct,
-                train_bars,
-                test_bars,
-                step_bars,
-            )
-            for spec in items
-        ]
         worker_count = max(1, workers)
-        if worker_count > 1 and len(payloads) > 1:
+        if worker_count > 1 and len(items) > 1:
             try:
                 with ProcessPoolExecutor(
                     max_workers=worker_count,
                     mp_context=multiprocessing.get_context("spawn"),
+                    initializer=_init_worker,
+                    initargs=(
+                        tuple(candles),
+                        evaluation,
+                        self.cost_model,
+                        self.cost_stress_pct,
+                        train_bars,
+                        test_bars,
+                        step_bars,
+                    ),
                 ) as pool:
-                    futures = {
-                        pool.submit(_evaluate_candidate, payload): payload[0]
-                        for payload in payloads
-                    }
+                    futures = {pool.submit(_evaluate_candidate, spec): spec for spec in items}
                     for future in as_completed(futures):
                         spec = futures[future]
                         spec_hash = strategy_hash(spec.model_dump(mode="json"))
@@ -338,11 +362,19 @@ class ValidationPipeline:
                         f"worker_{type(exc).__name__}"
                     )
         else:
-            for payload in payloads:
-                spec = payload[0]
+            _init_worker(
+                tuple(candles),
+                evaluation,
+                self.cost_model,
+                self.cost_stress_pct,
+                train_bars,
+                test_bars,
+                step_bars,
+            )
+            for spec in items:
                 spec_hash = strategy_hash(spec.model_dump(mode="json"))
                 try:
-                    _, worker_eval = _evaluate_candidate(payload)
+                    _, worker_eval = _evaluate_candidate(spec)
                     evaluations[spec_hash] = worker_eval
                 except Exception as exc:  # noqa: BLE001
                     evaluations[spec_hash] = f"worker_{type(exc).__name__}"

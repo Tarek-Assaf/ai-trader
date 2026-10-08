@@ -45,15 +45,24 @@ def main() -> int:
         args.progress.parent.mkdir(parents=True, exist_ok=True)
         args.progress.write_text(json.dumps({"status": "running"}), encoding="utf-8")
     runner = LabRunner(lake_root=args.lake, holdout_root=args.holdout)
-    result = runner.run(
-        instruments=args.instruments,
-        timeframes=args.timeframes,
-        idea_sources=args.idea_sources,
-        max_ideas=max(1, args.max_ideas),
-        workers=args.workers,
-        force=args.force,
-        stop_file=args.stop_file,
-    )
+    try:
+        result = runner.run(
+            instruments=args.instruments,
+            timeframes=args.timeframes,
+            idea_sources=args.idea_sources,
+            max_ideas=max(1, args.max_ideas),
+            workers=args.workers,
+            force=args.force,
+            stop_file=args.stop_file,
+            progress_path=args.progress,
+        )
+    except Exception as exc:
+        if args.progress:
+            args.progress.write_text(
+                json.dumps({"status": "failed", "reason": type(exc).__name__}),
+                encoding="utf-8",
+            )
+        raise
     args.results.parent.mkdir(parents=True, exist_ok=True)
     args.results.write_text(json.dumps(result.payload(), indent=2), encoding="utf-8")
     print(LabRunner.format_results(result))

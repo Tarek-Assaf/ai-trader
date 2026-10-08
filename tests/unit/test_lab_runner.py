@@ -41,6 +41,28 @@ def test_histdata_coverage_and_resampling(tmp_path) -> None:
     assert len(load_histdata_candles(tmp_path, "NSXUSD", 3)) == 6
 
 
+def test_histdata_coverage_reports_missing_month(tmp_path) -> None:
+    for month in (1, 3):
+        path = tmp_path / "NSXUSD" / "1m" / "2024" / f"{month:02}.parquet"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        pq.write_table(
+            pa.Table.from_pylist(
+                [
+                    {
+                        "ts_utc": datetime(2024, month, 1, tzinfo=UTC),
+                        "open": 1.0,
+                        "high": 2.0,
+                        "low": 0.0,
+                        "close": 1.0,
+                        "volume": 1.0,
+                    }
+                ]
+            ),
+            path,
+        )
+    assert coverage_report(tmp_path, "NSXUSD").gaps == 1
+
+
 def test_seed_library_and_tuning_are_bounded_and_deterministic() -> None:
     seed, spec = seed_specs("XAUUSD", 5)[0]
     assert seed.source == "textbook"
@@ -90,6 +112,13 @@ def test_prepare_holdout_copies_latest_months_and_runner_can_exclude_them(tmp_pa
     copied = prepare_holdout(lake, holdout, instruments=("XAUUSD",), months=2)
     assert len(copied) == 2
     assert len(load_histdata_candles(lake, "XAUUSD", exclude_months={(2024, 2), (2024, 3)})) == 1
+    assert set(prepare_holdout(lake, holdout, instruments=("XAUUSD",), months=2)) == set(copied)
+    try:
+        prepare_holdout(lake, holdout, instruments=("XAUUSD",), months=1)
+    except ValueError as exc:
+        assert "different month set" in str(exc)
+    else:
+        raise AssertionError("a second request must not shrink the sealed holdout")
 
 
 class _SlowRunner:
