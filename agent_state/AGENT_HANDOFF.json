@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 248,
+  "turn": "codex",
+  "revision": 249,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -3466,7 +3466,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03",
         "R-04",
@@ -3491,7 +3491,7 @@
         "src/trader/channels/telegram.py",
         "config/strategy_lab.yaml"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "ruff check and format",
         "mypy runner and seeds",
@@ -3501,7 +3501,7 @@
         "tests/unit/test_lab_runner.py"
       ],
       "completion_note": "Implemented the offline Strategy Lab runner from docs/specs/t112_lab_run.md: HistData coverage and 1m/3m/5m loading, deterministic seed/tuning library, pessimistic costs with Gate 1 pipeline and sealed holdout reader, spawn-safe worker boundary, append-only attempt records, bounded results/charts, Pod scripts, and a one-run-at-a-time /lab Telegram facade. No broker or promotion path is called.",
-      "review_notes": "Claude should review the runner contract and run the Pod coverage/lab commands with the real lake. The existing ValidationPipeline remains the sole holdout reader."
+      "review_notes": "Cycle 1 changes requested. (1) Seeds are not real strategies: the spec DSL only compares one indicator to a constant, so ema>0, close>0, close<100, session_vwap>param etc. are always-true or never-true. Extend the spec/backtest evaluator so a condition can compare an indicator to another indicator plus an optional ATR-multiple offset (e.g. close < ema(21) - k*atr(14); sma(20) rolling band; prior N-bar high/low for Donchian; prior-bar high for inside-bar), keep it declarative and bounded, add tests, then rebuild all seven seeds so each can fire on real data (add a test that every seed produces trades on a synthetic trending/ranging series). (2) Parallelism is cosmetic: _worker_prepare only hashes. The expensive tune/walk-forward/OOS backtests run serially inside pipeline.run. Fan out the backtest evaluation of each (idea, instrument, timeframe) across the process pool (workers default cpu-2, nice 10 in workers), and feed results to Gate 1 and the multiple-testing correction counting ALL trials. A crashing worker marks only that idea error; add a test that injects a crash. (3) Leakage: train/test is a 80/20 split of everything in the lake, which includes the most recent 2 months that must be sealed. Add a step (in lab_data_check or lab_run --prepare-holdout) that moves/copies the most recent 2 months into /workspace/data/holdout, and make the runner exclude those months from lake data used for tuning/OOS; fail closed (clear message) if the holdout is absent rather than failing every idea with holdout_missing. (4) Tuning must run on in-sample windows only and use more than 3 points per parameter (min/value/max), still counting every trial. (5) /lab stop is a no-op (the stop event is never checked); check it between work units and return partial results. Run the job as a subprocess (scripts/lab_run.py under nice 10, results.json) rather than a thread inside the live API process, so a heavy run cannot starve trading; /lab status/results read the results file and a progress file. Make /lab chart <id> work on the results file after a restart. (6) max_ideas truncates candidates so seeds starve patterns; apply it per source. (7) Tests missing from the spec: noise fails, planted edge passes, repeated hash skipped, holdout read at most once per strategy, worker crash, results message length, lab_data_check gap fixture. Branch now contains origin/main; keep the T-060 files intact."
     }
   ],
   "decisions": [
@@ -10955,6 +10955,19 @@
         "tests/unit/test_lab_runner.py"
       ],
       "summary": "Implemented the Strategy Lab run job, coverage/import check scripts, declarative seed library and deterministic tuning, pessimistic cost fallback, Gate 1/holdout orchestration, attempt ledger records, bounded results/charts and /lab Telegram command. Added offline runner coverage, seed/tuning and concurrent-command tests. Focused static, compile and lab/API tests pass. Handed to Claude for review and owner Pod run."
+    },
+    {
+      "revision": 249,
+      "ts": "2026-10-08T18:44:44Z",
+      "agent": "claude",
+      "action": "review_t112_changes_requested_cycle1",
+      "task_ids": [
+        "T-112"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-112 review cycle 1: changes requested (seeds not real strategies under the current DSL, parallelism cosmetic, holdout leakage, /lab stop no-op, job in API process, missing tests). Details in review_notes. Turn to Codex."
     }
   ],
   "project_summary": "T-060 backup upload and scratch-only restore are implemented; cycle-2 review fixes are complete and awaiting Claude review plus owner-run Pod upload/restore evidence. T-112 is specified and queued next; T-017/T-044 still wait on recorder data."
