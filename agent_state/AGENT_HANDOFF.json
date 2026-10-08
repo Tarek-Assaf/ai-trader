@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 240,
+  "revision": 242,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-111 chat answers and demo LLM caps are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data.",
+    "summary": "T-060 restore drill is complete and awaiting Claude review plus the owner-run fresh Pod output. T-017/T-044 still wait on recorder calibration and data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -82,7 +82,8 @@
         "T-052",
         "T-054",
         "T-084",
-        "T-093"
+        "T-093",
+        "T-112"
       ]
     },
     {
@@ -94,7 +95,8 @@
         "T-053",
         "T-054",
         "T-084",
-        "T-093"
+        "T-093",
+        "T-112"
       ]
     },
     {
@@ -112,7 +114,8 @@
         "T-082",
         "T-083",
         "T-100",
-        "T-109"
+        "T-109",
+        "T-112"
       ]
     },
     {
@@ -1798,7 +1801,7 @@
       "phase": 6,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "changes_requested",
       "requirements": [
         "R-14"
       ],
@@ -1809,10 +1812,24 @@
         "fresh pod restored from backups",
         "push aborts on planted secret"
       ],
-      "deliverables": [],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Deferred because the acceptance criteria require a fresh Pod restored from backups and a planted-secret push-abort drill. No Pod access was used in this turn."
+      "deliverables": [
+        "scripts/restore_drill",
+        "docker/Dockerfile",
+        "tests/unit/test_restore_drill.py",
+        "docs/runbooks/restore_drill.md"
+      ],
+      "review_cycles": 1,
+      "evidence": [
+        "docs/specs/phase6_7.md",
+        "docs/specs/pod_test_outputs.md (section 3)",
+        "scripts/restore_drill",
+        "tests/unit/test_restore_drill.py",
+        "docker/Dockerfile",
+        "docs/runbooks/restore_drill.md",
+        "git diff --check"
+      ],
+      "completion_note": "Added a single owner-run restore drill that accepts GITHUB_TOKEN or GITHUB_BACKUP_TOKEN, HF_TOKEN and BACKUP_ENCRYPTION_KEY from Pod Secrets without printing credentials. It refuses live lake/database targets, restores only into a timestamped scratch directory and scratch PostgreSQL database, verifies the audit chain and lake manifest hashes, runs the planted-secret push-abort check with redacted output, and ends with a clear PASS/FAIL summary. The owner still needs to run the drill on a fresh Pod and paste its redacted output for the acceptance evidence.",
+      "review_notes": "Claude: the restore drill script is sound (scratch-only, refuses live targets, redacted output, planted-secret check, PASS/FAIL). It is merged as part of this review. T-060 is NOT complete: the upload side does not exist, so the drill has nothing to restore. Owner scoped the message to the drill only, so this is a gap in my instruction, not a Codex fault. Still to build per docs/specs/phase6_7.md T-060: (1) GitHub push of generated state to branch backup/state only, never main; (2) HuggingFace incremental upload by file hash (lake, backtest results, experiment ledger, model artifacts); (3) encrypt DB dumps with BACKUP_ENCRYPTION_KEY before upload (openssl, matching the drill's decrypt); (4) secret scan (scripts/secret_scan.py) before every push, abort and Telegram alert on a hit, nothing uploaded; (5) nightly 02:00 UTC schedule and on strategy stage change, wired into the existing scheduler; (6) hourly/daily Postgres snapshot retention (24 hourly, 14 daily); (7) tokens never in logs or exceptions, with a log-capture test; (8) tests with a fake HF client for incremental upload and abort on planted secret. Then owner runs: backup once, then the drill, and pastes PASS output."
     },
     {
       "id": "T-070",
@@ -3427,6 +3444,36 @@
       ],
       "completion_note": "Natural-language LLM intents now invoke deterministic read-only handlers for status, positions, P&L, risk and reports; unknown topics use status, chart requests use the existing Telegram chart path, and fixed replies cover trade questions, settings changes and small talk. Missing or failing handlers return bounded unavailable text and the LLM never receives account data. Demo caps are 2.0 USD daily and 10.0 USD monthly. Added focused router coverage and updated the T-111 spec. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders used. Handing T-111 to Claude for review.",
       "review_notes": "Claude: intents map to read-only handlers, control words stay off the LLM, LLM never sees account data, unknown topic falls back to status, caps 2/10 USD. CI is the quality gate."
+    },
+    {
+      "id": "T-112",
+      "title": "Strategy Lab run job: data check, parallel run, seed library, tuning, /lab command",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-060"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t112_lab_run.md (merged with this change).",
+        "Gates in config/strategy_lab.yaml unchanged; sealed holdout read at most once per strategy.",
+        "Parallel run across idea/instrument/timeframe; worker crash never aborts a run.",
+        "/lab run, status, results, chart, stop in Telegram; one run at a time.",
+        "Tests: noise fails, planted edge passes, repeated hash skipped."
+      ],
+      "deliverables": [
+        "docs/specs/t112_lab_run.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "review_notes": ""
     }
   ],
   "decisions": [
@@ -6255,6 +6302,28 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "chat routing intents or LLM budget configuration changes"
+    },
+    {
+      "id": "V-254",
+      "subject": "T-060 restore drill implementation",
+      "method": "Read docs/specs/phase6_7.md and docs/specs/pod_test_outputs.md section 3; traced target validation, credential handling, secret-scan abort, database/lake verification, and bounded PASS/FAIL output.",
+      "result": "pass",
+      "evidence": "scripts/restore_drill; tests/unit/test_restore_drill.py; docker/Dockerfile; docs/runbooks/restore_drill.md; git diff --check",
+      "review_notes": "Desktop Python/pytest/Ruff/mypy are unavailable. Owner must run the script on a fresh Pod and paste redacted output to complete the fresh restore acceptance evidence.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "restore target safety, backup artifact layout or Pod drill procedure changes"
+    },
+    {
+      "id": "V-255",
+      "subject": "T-060 restore drill review (Claude)",
+      "method": "Read scripts/restore_drill, its runbook, Dockerfile change and tests; checked target validation, secret handling and PASS/FAIL flow. CI is the test authority.",
+      "result": "pass",
+      "evidence": "scripts/restore_drill; tests/unit/test_restore_drill.py; docs/runbooks/restore_drill.md",
+      "review_notes": "Scope: restore drill only. Drill passes review. Upload/encryption/schedule/secret-scan-before-push are not implemented, so T-060 returns to Codex.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "restore drill or backup job changes"
     }
   ],
   "blockers": [
@@ -6284,9 +6353,11 @@
     },
     {
       "id": "B-005",
-      "text": "T-060 is blocked on owner-provided Pod access for the fresh restore drill and planted-secret push-abort verification.",
+      "text": "Resolved by owner assignment: T-060 now has a single scratch-only restore drill; the owner will run it on the Pod for fresh backup evidence.",
       "raised_by": "codex",
-      "status": "active"
+      "status": "resolved",
+      "resolved_by": "owner",
+      "resolved_at": "2026-10-08"
     },
     {
       "id": "B-006",
@@ -10678,7 +10749,38 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-111 passed review with no code changes. Plain-English messages now run read-only handlers; LLM caps are 2/10 USD. Turn to Codex."
+    },
+    {
+      "revision": 241,
+      "ts": "2026-10-08T16:45:00Z",
+      "agent": "codex",
+      "action": "complete_t060_restore_drill",
+      "task_ids": [
+        "T-060"
+      ],
+      "files_changed": [
+        "scripts/restore_drill",
+        "tests/unit/test_restore_drill.py",
+        "docker/Dockerfile",
+        "docs/runbooks/restore_drill.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented the scratch-only T-060 restore drill from the phase 6/7 and Pod output specs. It accepts either GitHub token name, keeps secrets out of output, abort-checks planted secrets, verifies database audit chain and lake hashes, and emits PASS/FAIL. Owner Pod run remains required for fresh restore evidence; handoff to Claude."
+    },
+    {
+      "revision": 242,
+      "ts": "2026-10-08T17:30:00Z",
+      "agent": "claude",
+      "action": "review_t060_changes_requested",
+      "task_ids": [
+        "T-060",
+        "T-112"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-060 drill accepted but the backup upload job is missing; changes requested with an exact list (my earlier message to the owner scoped Codex to the drill only). Added T-112 (Strategy Lab run job, spec docs/specs/t112_lab_run.md) queued after T-060. Turn to Codex."
     }
   ],
-  "project_summary": "T-111 chat answers and demo LLM caps are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."
+  "project_summary": "T-060 restore drill is complete and awaiting Claude review plus the owner-run fresh Pod output. T-017/T-044 still wait on recorder calibration and data."
 }

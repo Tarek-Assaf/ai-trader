@@ -1,0 +1,580 @@
+#!/usr/bin/env python3
+"""Run a non-destructive backup restore drill against scratch targets only.
+
+The drill deliberately has no live-target mode.  It creates a new PostgreSQL
+database, copies the restored lake into a new directory, verifies the audit
+chain and manifest hashes, and prints only redacted status.  Credentials are
+read from the environment and are never included in command output.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+import urllib.parse
+import urllib.request
+from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SECRET_NAMES = ("GITHUB_TOKEN", "GITHUB_BACKUP_TOKEN", "HF_TOKEN", "BACKUP_ENCRYPTION_KEY")
+SAFE_DB_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{0,62}$")
+LIVE_LAKE_PATHS = {
+    Path("/workspace/data/lake").resolve(),
+    Path("/workspace/pgdata").resolve(),
+    Path("/var/lib/ai-trader/pgdata").resolve(),
+}
+
+
+class DrillFailure(RuntimeError):
+    """A bounded, user-facing drill failure without a secret-bearing message."""
+
+
+@dataclass(frozen=True)
+class DrillOptions:
+    scratch_dir: Path
+    scratch_db: str
+    pg_host: str
+    pg_port: str
+    pg_user: str
+    admin_db: str
+    backup_dir: Path
+    lake_source: Path | None
+    lake_manifest: Path | None
+    dump: Path | None
+    github_repo: str
+    github_ref: str
+    hf_repo: str
+    skip_remote: bool
+    keep_scratch: bool
+
+
+def _env(name: str, *fallbacks: str, default: str = "") -> str:
+    for key in (name, *fallbacks):
+        value = os.environ.get(key)
+        if value:
+            return value
+    return default
+
+
+def _run(
+    command: Sequence[str], *, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    """Run a command while keeping stdout/stderr out of the report by default."""
+    try:
+        return subprocess.run(
+            list(command),
+            check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    except OSError as exc:
+        raise DrillFailure(f"required command unavailable: {command[0]}") from exc
+
+
+def _require_ok(result: subprocess.CompletedProcess[str], label: str) -> str:
+    if result.returncode != 0:
+        raise DrillFailure(f"{label} failed (exit {result.returncode})")
+    return result.stdout
+
+
+def _is_inside(path: Path, parent: Path) -> bool:
+    try:
+        path.relative_to(parent)
+    except ValueError:
+        return False
+    return True
+
+
+def validate_targets(options: DrillOptions) -> None:
+    """Fail closed when a caller points either restore target at live data."""
+    scratch = options.scratch_dir.resolve()
+    if scratch in {Path("/"), Path.home().resolve()}:
+        raise DrillFailure("safety refusal: scratch directory is not isolated")
+    if not ("scratch" in scratch.name.lower() or "restore" in scratch.name.lower()):
+        raise DrillFailure("safety refusal: scratch directory name must contain scratch or restore")
+    for live_path in LIVE_LAKE_PATHS:
+        if scratch == live_path or _is_inside(scratch, live_path):
+            raise DrillFailure("safety refusal: scratch directory is a live data path")
+
+    live_db = _env("POSTGRES_DB", "PGDATABASE", default="trader")
+    if not SAFE_DB_NAME.fullmatch(options.scratch_db):
+        raise DrillFailure("safety refusal: invalid scratch database name")
+    if options.scratch_db.lower() in {"trader", live_db.lower(), "postgres", "template1"}:
+        raise DrillFailure("safety refusal: target database is live or reserved")
+    if not SAFE_DB_NAME.fullmatch(options.admin_db):
+        raise DrillFailure("safety refusal: invalid administrative database name")
+    if options.admin_db.lower() in {"trader", live_db.lower()}:
+        raise DrillFailure("safety refusal: admin database points at the live database")
+    if options.admin_db.lower() in {"template0", "template1"}:
+        raise DrillFailure("safety refusal: administrative database is reserved")
+
+
+def _github_token() -> str:
+    return _env("GITHUB_TOKEN", "GITHUB_BACKUP_TOKEN")
+
+
+def _hf_token() -> str:
+    return _env("HF_TOKEN")
+
+
+def _download(url: str, destination: Path, token: str) -> None:
+    request = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response, destination.open("wb") as out:
+            shutil.copyfileobj(response, out)
+    except (OSError, ValueError) as exc:
+        raise DrillFailure("HuggingFace backup download failed") from exc
+
+
+def fetch_remote_backups(options: DrillOptions) -> tuple[Path, Path]:
+    """Fetch GitHub state and selected HuggingFace artifacts into scratch."""
+    if options.skip_remote:
+        return options.scratch_dir / "github-state", options.scratch_dir / "hf-data"
+    github_token = _github_token()
+    hf_token = _hf_token()
+    if not github_token or not hf_token:
+        raise DrillFailure("remote restore requires configured GitHub and HuggingFace tokens")
+
+    github_dir = options.scratch_dir / "github-state"
+    github_url = f"https://github.com/{options.github_repo}.git"
+    clone_env = os.environ.copy()
+    clone_env.update(
+        {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "http.extraHeader",
+            "GIT_CONFIG_VALUE_0": f"Authorization: Bearer {github_token}",
+        }
+    )
+    result = _run(
+        (
+            "git",
+            "clone",
+            "--depth",
+            "1",
+            "--branch",
+            options.github_ref,
+            github_url,
+            str(github_dir),
+        ),
+        env=clone_env,
+    )
+    _require_ok(result, "GitHub state restore")
+
+    hf_dir = options.scratch_dir / "hf-data"
+    hf_dir.mkdir(parents=True, exist_ok=True)
+    encoded_repo = urllib.parse.quote(options.hf_repo, safe="/")
+    tree_url = (
+        f"https://huggingface.co/api/datasets/{encoded_repo}/tree/main?recursive=true&expand=false"
+    )
+    request = urllib.request.Request(tree_url, headers={"Authorization": f"Bearer {hf_token}"})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            entries = json.load(response)
+    except (OSError, ValueError) as exc:
+        raise DrillFailure("HuggingFace backup manifest lookup failed") from exc
+    if not isinstance(entries, list):
+        raise DrillFailure("HuggingFace backup manifest has an invalid shape")
+    candidates: list[str] = []
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("type") != "file":
+            continue
+        path = entry.get("path")
+        if not isinstance(path, str):
+            continue
+        lowered = path.lower()
+        if (
+            lowered.endswith((".dump", ".dump.enc", ".enc", ".gpg"))
+            or "manifest" in lowered
+            or lowered.startswith("data/lake/")
+        ):
+            candidates.append(path)
+    if not candidates:
+        raise DrillFailure("HuggingFace backup contains no restore artifacts")
+    for relative in sorted(candidates):
+        destination = (hf_dir / relative).resolve()
+        if not _is_inside(destination, hf_dir.resolve()):
+            raise DrillFailure("HuggingFace artifact path escaped the scratch directory")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        file_url = f"https://huggingface.co/datasets/{encoded_repo}/resolve/main/{urllib.parse.quote(relative)}"
+        _download(file_url, destination, hf_token)
+    return github_dir, hf_dir
+
+
+def run_secret_abort_check() -> None:
+    """Prove a staged planted secret aborts before a push, without printing it."""
+    scanner = REPO_ROOT / "scripts" / "secret_scan.py"
+    if not scanner.is_file():
+        raise DrillFailure("secret scanner is missing")
+    with tempfile.TemporaryDirectory(prefix="restore-drill-secret-") as temporary:
+        root = Path(temporary)
+        _require_ok(_run(("git", "init", "--quiet", str(root))), "secret-check repository init")
+        planted = "github_pat_" + ("A" * 40)
+        (root / "staged.txt").write_text(f"backup_token={planted}\n", encoding="utf-8")
+        _require_ok(_run(("git", "-C", str(root), "add", "staged.txt")), "secret-check staging")
+        result = _run((sys.executable, str(scanner), "--root", str(root)))
+        if result.returncode == 0:
+            raise DrillFailure("secret scan failed to reject the planted secret")
+        if planted in result.stdout or planted in result.stderr:
+            raise DrillFailure("secret scan output contained the planted secret")
+    print("PASS secret-scan push-abort: planted finding blocked before push (value redacted)")
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _manifest_entries(manifest: Any) -> dict[str, str]:
+    if isinstance(manifest, dict):
+        raw = manifest.get("files", manifest.get("entries", manifest))
+    else:
+        raw = manifest
+    entries: dict[str, str] = {}
+    if isinstance(raw, list):
+        for item in raw:
+            if (
+                isinstance(item, dict)
+                and isinstance(item.get("path"), str)
+                and isinstance(item.get("sha256"), str)
+            ):
+                entries[item["path"]] = item["sha256"].lower()
+    elif isinstance(raw, dict):
+        for path, value in raw.items():
+            if isinstance(path, str) and isinstance(value, str):
+                entries[path] = value.lower()
+            elif (
+                isinstance(path, str)
+                and isinstance(value, dict)
+                and isinstance(value.get("sha256"), str)
+            ):
+                entries[path] = value["sha256"].lower()
+    return entries
+
+
+def restore_lake(
+    source: Path, manifest_path: Path | None, destination: Path
+) -> tuple[int, list[str]]:
+    if not source.is_dir():
+        raise DrillFailure("lake source is unavailable")
+    manifest = manifest_path
+    if manifest is None:
+        candidates = [
+            source / "sha256-manifest.json",
+            source / "manifest.json",
+            *sorted(source.rglob("*manifest*.json")),
+        ]
+        for candidate in candidates:
+            if candidate.is_file():
+                manifest = candidate
+                break
+    if manifest is None or not manifest.is_file():
+        raise DrillFailure("lake checksum manifest is unavailable")
+    try:
+        entries = _manifest_entries(json.loads(manifest.read_text(encoding="utf-8")))
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise DrillFailure("lake checksum manifest is unreadable") from exc
+    if not entries:
+        raise DrillFailure("lake checksum manifest has no file entries")
+    destination.mkdir(parents=True, exist_ok=True)
+    samples: list[str] = []
+    for relative, expected in sorted(entries.items()):
+        source_file = (source / relative).resolve()
+        if not source_file.is_file() and relative.startswith("data/lake/"):
+            source_file = (source / relative.removeprefix("data/lake/")).resolve()
+        target_file = (destination / relative).resolve()
+        if not _is_inside(source_file, source.resolve()) or not _is_inside(
+            target_file, destination.resolve()
+        ):
+            raise DrillFailure("lake manifest path escaped the scratch directory")
+        if not source_file.is_file() or _sha256(source_file) != expected:
+            raise DrillFailure("lake checksum verification failed")
+        target_file.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source_file, target_file)
+        if len(samples) < 5:
+            samples.append(f"sha256={expected}")
+    return len(entries), samples
+
+
+def _latest_dump(directory: Path) -> Path:
+    candidates = sorted(
+        (
+            path
+            for path in directory.rglob("*")
+            if path.is_file() and path.name.startswith("trader-")
+        ),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    if not candidates:
+        raise DrillFailure("no PostgreSQL backup dump was found")
+    return candidates[0]
+
+
+def _decrypt_dump(source: Path, scratch: Path) -> Path:
+    if source.suffix.lower() not in {".enc", ".gpg"}:
+        return source
+    key_name = "BACKUP_ENCRYPTION_KEY"
+    if not _env(key_name):
+        raise DrillFailure("encrypted dump requires BACKUP_ENCRYPTION_KEY")
+    target = scratch / "restored-trader.dump"
+    result = _run(
+        (
+            "openssl",
+            "enc",
+            "-d",
+            "-aes-256-cbc",
+            "-pbkdf2",
+            "-in",
+            str(source),
+            "-out",
+            str(target),
+            "-pass",
+            "env:BACKUP_ENCRYPTION_KEY",
+        ),
+        env=os.environ.copy(),
+    )
+    _require_ok(result, "encrypted dump restore")
+    return target
+
+
+def _psql(options: DrillOptions, database: str, sql: str) -> str:
+    result = _run(
+        (
+            "psql",
+            "--host",
+            options.pg_host,
+            "--port",
+            options.pg_port,
+            "--username",
+            options.pg_user,
+            "--dbname",
+            database,
+            "--tuples-only",
+            "--no-align",
+            "--command",
+            sql,
+        ),
+        env=os.environ.copy(),
+    )
+    return _require_ok(result, "PostgreSQL verification")
+
+
+def restore_database(options: DrillOptions, dump: Path) -> tuple[int, bool]:
+    if (
+        shutil.which("createdb") is None
+        or shutil.which("pg_restore") is None
+        or shutil.which("psql") is None
+    ):
+        raise DrillFailure("PostgreSQL client tools are unavailable")
+    exists = _psql(
+        options,
+        options.admin_db,
+        f"SELECT 1 FROM pg_database WHERE datname = '{options.scratch_db}';",
+    ).strip()
+    if exists:
+        raise DrillFailure("safety refusal: scratch database already exists")
+    created = False
+    try:
+        _require_ok(
+            _run(
+                (
+                    "createdb",
+                    "--host",
+                    options.pg_host,
+                    "--port",
+                    options.pg_port,
+                    "--username",
+                    options.pg_user,
+                    options.scratch_db,
+                ),
+                env=os.environ.copy(),
+            ),
+            "scratch database creation",
+        )
+        created = True
+        _require_ok(
+            _run(
+                (
+                    "pg_restore",
+                    "--exit-on-error",
+                    "--single-transaction",
+                    "--no-owner",
+                    "--no-privileges",
+                    "--host",
+                    options.pg_host,
+                    "--port",
+                    options.pg_port,
+                    "--username",
+                    options.pg_user,
+                    "--dbname",
+                    options.scratch_db,
+                    str(dump),
+                ),
+                env=os.environ.copy(),
+            ),
+            "scratch database restore",
+        )
+        audit = _psql(options, options.scratch_db, "SELECT verify_audit_log();").strip().lower()
+        if audit not in {"t", "true"}:
+            raise DrillFailure("audit hash chain verification failed")
+        tables = _psql(
+            options,
+            options.scratch_db,
+            "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;",
+        ).splitlines()
+        counts = 0
+        for table in (line.strip() for line in tables):
+            if not table or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", table):
+                continue
+            count = _psql(options, options.scratch_db, f'SELECT count(*) FROM "{table}";').strip()
+            print(f"PASS database table verified: before=0 after={count}")
+            counts += 1
+        return counts, True
+    finally:
+        if created:
+            _run(
+                (
+                    "dropdb",
+                    "--host",
+                    options.pg_host,
+                    "--port",
+                    options.pg_port,
+                    "--username",
+                    options.pg_user,
+                    "--if-exists",
+                    options.scratch_db,
+                ),
+                env=os.environ.copy(),
+            )
+
+
+def parse_args(argv: Sequence[str] | None = None) -> DrillOptions:
+    parser = argparse.ArgumentParser(description=__doc__)
+    stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
+    parser.add_argument(
+        "--scratch-dir", type=Path, default=Path("/workspace") / f"restore-drill-{stamp}"
+    )
+    parser.add_argument("--scratch-db", default="trader_restore_drill")
+    parser.add_argument("--pg-host", default=_env("PGHOST", default="127.0.0.1"))
+    parser.add_argument("--pg-port", default=_env("PGPORT", default="5432"))
+    parser.add_argument("--pg-user", default=_env("PGUSER", default="trader"))
+    parser.add_argument("--admin-db", default="postgres")
+    parser.add_argument(
+        "--backup-dir", type=Path, default=Path(_env("BACKUP_DIR", default="/workspace/backups"))
+    )
+    parser.add_argument("--lake-source", type=Path)
+    parser.add_argument("--lake-manifest", type=Path)
+    parser.add_argument("--dump", type=Path)
+    parser.add_argument(
+        "--github-repo", default=_env("BACKUP_GITHUB_REPO", default="Tarek-Assaf/ai-trader")
+    )
+    parser.add_argument("--github-ref", default="backup/state")
+    parser.add_argument(
+        "--hf-repo", default=_env("BACKUP_HF_REPO", default="Tarek-Assaf/ai-trader-data")
+    )
+    parser.add_argument(
+        "--skip-remote", action="store_true", help="use local fixtures instead of remote backups"
+    )
+    parser.add_argument(
+        "--cleanup", action="store_true", help="remove the scratch directory after the drill"
+    )
+    args = parser.parse_args(argv)
+    return DrillOptions(
+        scratch_dir=args.scratch_dir,
+        scratch_db=args.scratch_db,
+        pg_host=args.pg_host,
+        pg_port=args.pg_port,
+        pg_user=args.pg_user,
+        admin_db=args.admin_db,
+        backup_dir=args.backup_dir,
+        lake_source=args.lake_source,
+        lake_manifest=args.lake_manifest,
+        dump=args.dump,
+        github_repo=args.github_repo,
+        github_ref=args.github_ref,
+        hf_repo=args.hf_repo,
+        skip_remote=args.skip_remote,
+        keep_scratch=not args.cleanup,
+    )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    options: DrillOptions | None = None
+    scratch_created = False
+    failures: list[str] = []
+    try:
+        options = parse_args(argv)
+        validate_targets(options)
+        options.scratch_dir.mkdir(parents=True, exist_ok=False)
+        scratch_created = True
+        print("Restore drill started: scratch target isolated (path redacted)")
+
+        run_secret_abort_check()
+        github_dir, hf_dir = fetch_remote_backups(options)
+        if options.skip_remote:
+            github_dir = options.scratch_dir / "github-state"
+            hf_dir = options.scratch_dir / "hf-data"
+        for directory in (github_dir, hf_dir):
+            directory.mkdir(parents=True, exist_ok=True)
+
+        dump = options.dump.resolve() if options.dump else None
+        if dump is None:
+            for candidate_dir in (options.backup_dir, hf_dir):
+                try:
+                    dump = _latest_dump(candidate_dir)
+                    break
+                except DrillFailure:
+                    continue
+        if dump is None:
+            raise DrillFailure("no PostgreSQL backup dump was found")
+        if not dump.is_file():
+            raise DrillFailure("PostgreSQL dump is unavailable")
+        dump = _decrypt_dump(dump, options.scratch_dir)
+        table_count, _ = restore_database(options, dump)
+        print(
+            f"PASS database restore: {table_count} scratch tables verified; audit hash chain valid"
+        )
+
+        lake_source = options.lake_source or (hf_dir / "data" / "lake")
+        manifest = options.lake_manifest
+        lake_count, samples = restore_lake(
+            lake_source, manifest, options.scratch_dir / "data" / "lake"
+        )
+        print(f"PASS lake restore: {lake_count} files verified against manifest")
+        for sample in samples:
+            print(f"  sample {sample}")
+    except DrillFailure as exc:
+        failures.append(str(exc).splitlines()[0][:160])
+        print(f"FAIL: {failures[-1]}")
+    except (OSError, ValueError):
+        failures.append("restore drill encountered an invalid or unavailable input")
+        print(f"FAIL: {failures[-1]}")
+    finally:
+        if options is not None and options.keep_scratch and scratch_created:
+            print("Scratch evidence retained (path redacted)")
+        elif options is not None and scratch_created:
+            shutil.rmtree(options.scratch_dir, ignore_errors=True)
+    if failures:
+        print("FAIL SUMMARY: restore drill did not pass")
+        return 1
+    print("PASS SUMMARY: restore drill passed; all targets were scratch-only")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
