@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 237,
+  "turn": "codex",
+  "revision": 238,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -993,7 +993,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ظـزظــظ¤ش╪شظـزظ¤جظـزظــظ¤£ظـùظ¤ء┘ْ1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u0634\u256a\u0634\u0638\u0640\u0632\u0638\u00a4\u062c\u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u00a3\u0638\u0640\u00f9\u0638\u00a4\u0621\u2518\u06521 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -3352,7 +3352,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-18",
         "R-20",
@@ -3377,7 +3377,8 @@
         "git diff --check",
         "Pod /health read-only check (version 91243a2, healthy, Redis reachable)"
       ],
-      "completion_note": "Extended the existing report scheduler with recorder health digests, JSONL evidence, bounded Telegram alerts and recovery notifications. The digest uses the recorder start time, GIT_SHA and the fixed data_recorder allowlist; no Pod URL, token or arbitrary status text is emitted. Handoff to Claude for review."
+      "completion_note": "Extended the existing report scheduler with recorder health digests, JSONL evidence, bounded Telegram alerts and recovery notifications. The digest uses the recorder start time, GIT_SHA and the fixed data_recorder allowlist; no Pod URL, token or arbitrary status text is emitted. Handoff to Claude for review.",
+      "review_notes": "Claude: digest at 2h/24h/repeat, evidence JSONL, degraded alert and recovery via shared Alert path, config in schedule.yaml. Review fix applied by Claude: _recorder_health_mapping dropped expected_open, so the degraded alert could never fire from the status file; it is now carried through (not part of the digest fields). CI is the quality gate."
     }
   ],
   "decisions": [
@@ -4402,7 +4403,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ╪ثظ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u256a\u062b\u0638\u0080\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -6173,6 +6174,17 @@
       "validated_by": "codex",
       "date": "2026-10-08",
       "reverify_if": "report scheduler delivery or recorder health status changes"
+    },
+    {
+      "id": "V-251",
+      "subject": "T-110 review",
+      "method": "Read diff against the acceptance criteria and traced the degraded-alert path from the status file; found expected_open was filtered out of the mapping and fixed it.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/services.py; tests/unit/test_runtime_services.py; config/schedule.yaml",
+      "review_notes": "Digest text and evidence line are redacted and bounded. Confirm the 2h digest arrives on Telegram after the next redeploy.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "recorder status fields or the health digest scheduler change"
     }
   ],
   "blockers": [
@@ -7819,7 +7831,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -10548,6 +10560,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Added scheduled recorder health digests at configured uptime thresholds with 24h repeats, bounded Telegram Alert/AlertLimiter delivery, JSONL evidence under /workspace/state/evidence, and sustained degraded/recovery alerts. Tests cover fake-clock thresholds, alert recovery, redaction and valid JSON evidence. Bundled compileall, diff-check and Pod /health read-only validation pass; handing T-110 to Claude for review."
+    },
+    {
+      "revision": 238,
+      "ts": "2026-10-08T13:45:00Z",
+      "agent": "claude",
+      "action": "review_t110_pass",
+      "task_ids": [
+        "T-110"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/runtime/services.py"
+      ],
+      "summary": "T-110 passed with a one-line review fix (expected_open carried into the recorder health mapping so the degraded alert can fire). Owner redeploys; digest arrives at 2h and 24h of uptime. Turn to Codex."
     }
   ],
   "project_summary": "T-110 recorder health digests and sustained degradation alerts are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."

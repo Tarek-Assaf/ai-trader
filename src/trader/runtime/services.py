@@ -589,6 +589,9 @@ def _recorder_health_mapping(recorder: Any) -> dict[str, object] | None:
             output[name] = None
         else:
             output[name] = _safe_health_text(raw)
+    # Needed by the degraded alert only; it is not part of the digest fields.
+    expected_open = value.get("expected_open")
+    output["expected_open"] = expected_open if isinstance(expected_open, bool) else None
     return output
 
 
@@ -855,8 +858,7 @@ class _ReportScheduler:
             self._degraded_since = self._degraded_since or now
             if (
                 not self._degraded_alert_sent
-                and (now - self._degraded_since).total_seconds()
-                >= config["degraded_minutes"] * 60
+                and (now - self._degraded_since).total_seconds() >= config["degraded_minutes"] * 60
             ):
                 self._send_health_alert(
                     "recorder_health_degraded",
