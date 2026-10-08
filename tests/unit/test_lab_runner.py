@@ -122,8 +122,8 @@ def test_prepare_holdout_copies_latest_months_and_runner_can_exclude_them(tmp_pa
 
 
 class _SlowRunner:
-    def run(self, *, instruments):
-        del instruments
+    def run(self, *, instruments, stop_event=None):
+        del instruments, stop_event
         time.sleep(0.15)
         now = datetime.now(UTC)
         return LabRunResult("test", now, now, (), (), ())
