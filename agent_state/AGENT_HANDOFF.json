@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 246,
+  "revision": 252,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-060 backup upload and scratch-only restore are implemented; cycle-2 review fixes are complete and awaiting Claude review plus owner-run Pod upload/restore evidence. T-112 is specified and queued next; T-017/T-044 still wait on recorder data.",
+    "summary": "T-060 done with Pod evidence (backup and restore drill PASS). T-112 Strategy Lab run job accepted; owner runs holdout prep, a small run and a full run on the Pod next. T-113 follow-up tests queued. Holdout is 3 months. T-017/T-044 still wait on recorder data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -83,7 +83,8 @@
         "T-054",
         "T-084",
         "T-093",
-        "T-112"
+        "T-112",
+        "T-113"
       ]
     },
     {
@@ -96,7 +97,8 @@
         "T-054",
         "T-084",
         "T-093",
-        "T-112"
+        "T-112",
+        "T-113"
       ]
     },
     {
@@ -115,7 +117,8 @@
         "T-083",
         "T-100",
         "T-109",
-        "T-112"
+        "T-112",
+        "T-113"
       ]
     },
     {
@@ -999,7 +1002,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ظـزظــظ¤ش╪شظـزظ¤جظـزظــظ¤£ظـùظ¤ء┘ْ1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u0634\u256a\u0634\u0638\u0640\u0632\u0638\u00a4\u062c\u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u00a3\u0638\u0640\u00f9\u0638\u00a4\u0621\u2518\u06521 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -1844,7 +1847,7 @@
         "secret scan"
       ],
       "completion_note": "Completed the cycle-2 backup uploader fixes: the image includes git and executable upload tooling; Hugging Face uses pinned huggingface_hub API commits with changed-file batching and a manifest; GitHub uses Basic x-access-token authentication; scheduled uploads run in the background under flock with timeout; only changed state and the newest/hourly/daily dumps are staged and scanned before either push. Focused tests, Ruff, mypy and secret scan pass. The owner must run the upload and scratch-only restore drill on the Pod and paste redacted PASS output.",
-      "review_notes": "Claude cycle 2 verified all six fixes in code: git installed and upload script executable; HuggingFace via pinned huggingface_hub create_commit in sub-GB batches with sha256 manifest; GitHub Basic x-access-token header; upload runs in the background under flock with a 30-minute timeout and the nightly marker is written only on success; only changed files are staged and scanned; tests added. Owner must still run on the Pod: python scripts/backup_upload.py, then scripts/restore_drill, and paste the PASS output. The HF dataset repo Tarek-Assaf/ai-trader-data must already exist (private); the uploader does not create it."
+      "review_notes": "Claude cycle 2 verified all six fixes in code: git installed and upload script executable; HuggingFace via pinned huggingface_hub create_commit in sub-GB batches with sha256 manifest; GitHub Basic x-access-token header; upload runs in the background under flock with a 30-minute timeout and the nightly marker is written only on success; only changed files are staged and scanned; tests added. Owner must still run on the Pod: python scripts/backup_upload.py, then scripts/restore_drill, and paste the PASS output. The HF dataset repo Tarek-Assaf/ai-trader-data must already exist (private); the uploader does not create it. Pod evidence received 2026-10-08: backup_upload PASS; restore_drill PASS (18 DB tables, 404 lake files verified, scratch-only). Fixes found by the drill merged in PR #107 and #108."
     },
     {
       "id": "T-070",
@@ -3466,7 +3469,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -3483,12 +3486,65 @@
         "Tests: noise fails, planted edge passes, repeated hash skipped."
       ],
       "deliverables": [
-        "docs/specs/t112_lab_run.md"
+        "src/trader/lab/runner.py",
+        "src/trader/lab/seeds.py",
+        "scripts/lab_run.py",
+        "scripts/lab_data_check.py",
+        "src/trader/api/app.py",
+        "src/trader/channels/telegram.py",
+        "config/strategy_lab.yaml"
+      ],
+      "review_cycles": 2,
+      "evidence": [
+        "ruff check and format",
+        "mypy runner and seeds",
+        "compileall",
+        "tests/unit/test_api_startup.py",
+        "tests/unit/test_lab_pipeline.py",
+        "tests/unit/test_lab_runner.py",
+        "tests/unit/test_lab_pipeline.py (focused)",
+        "tests/unit/test_strategy_lab.py (focused)",
+        "git diff --check",
+        "tests/unit/test_strategy_lab.py (trial-count guard)",
+        "tests/unit/test_lab_pipeline.py (worker isolation and spawned pool)",
+        "tests/unit/test_lab_runner.py (idempotent holdout and gap coverage)",
+        "mypy lab and scripts"
+      ],
+      "completion_note": "Completed final T-112 review cycle: Gate 1 now uses the run-wide distinct hypothesis count and rejects under-counts; the sealed reader is exposed via an explicit validator factory; workers initialize shared candle context once; duplicate hashes are ledger-skipped; holdout preparation is idempotent; progress and diagnostic run logs are persisted; stop files propagate between work units; and HistData gap checks fail closed.",
+      "review_notes": "Accepted after 2 change cycles. Remaining: owner Pod run (prepare holdout, small run, full run) and runner-level tests tracked as T-113. Holdout is 3 months (owner decision); scripts default to 3."
+    },
+    {
+      "id": "T-113",
+      "title": "Strategy Lab runner-level tests and config-driven holdout months",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-112"
+      ],
+      "acceptance_criteria": [
+        "Runner-level test: a repeated strategy hash is skipped and logged",
+        "Runner-level test: stop file stops a run between groups and partial results are written",
+        "Runner-level test: results message stays under 4000 chars with 200 attempts",
+        "Runner-level test: pure-noise ideas all fail Gate 1 and a planted edge passes (tiny Gate1Config, synthetic data)",
+        "lab_run and lab_data_check read holdout_months from config/strategy_lab.yaml instead of a hard-coded default",
+        "Gates in config/strategy_lab.yaml unchanged"
+      ],
+      "deliverables": [
+        "tests/unit/test_lab_runner.py",
+        "scripts/lab_run.py",
+        "scripts/lab_data_check.py"
       ],
       "review_cycles": 0,
       "evidence": [],
       "completion_note": "",
-      "review_notes": ""
+      "review_notes": "Follow-up from T-112 review. Do not start before the owner's first Pod lab run results unless the turn is otherwise idle."
     }
   ],
   "decisions": [
@@ -4513,7 +4569,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ╪ثظ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u256a\u062b\u0638\u0080\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -6383,6 +6439,39 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "backup uploader or restore drill changes"
+    },
+    {
+      "id": "V-261",
+      "subject": "T-112 Strategy Lab runner implementation",
+      "method": "Read docs/specs/t112_lab_run.md and existing lab pipeline/validator/Telegram wiring; ran ruff check and format, mypy on runner and seeds, compileall, and focused startup plus lab pipeline tests; smoke-checked seed generation, tuning bounds, coverage loading and /lab one-run rejection.",
+      "result": "pass",
+      "evidence": "src/trader/lab/runner.py; src/trader/lab/seeds.py; scripts/lab_run.py; scripts/lab_data_check.py; config/strategy_lab.yaml; tests/unit/test_api_startup.py; tests/unit/test_lab_pipeline.py; Ruff; mypy; compileall; tests/unit/test_lab_runner.py",
+      "review_notes": "Pod run with the real HistData lake and review of Gate 1 result ranking remain for Claude/owner. No order, broker call or stage promotion is performed.",
+      "validated_by": "codex",
+      "date": "2026-10-08T18:35:00Z",
+      "reverify_if": "T-112 review changes"
+    },
+    {
+      "id": "V-262",
+      "subject": "T-112 Strategy Lab review (Claude), cycles 1 and 2",
+      "method": "Read runner, pipeline, engine, spec, seeds, validator diffs against docs/specs/t112_lab_run.md; checked trial counting across the whole run and ledger, sealed reader factory and guard test, worker initializer, holdout idempotence, stop file and log; CI is the test authority.",
+      "result": "pass",
+      "evidence": "src/trader/lab/runner.py; pipeline.py; validator.py; engine.py; spec.py; seeds.py; scripts/lab_run.py; scripts/lab_data_check.py; tests/unit/test_lab_runner.py; test_lab_pipeline.py; test_strategy_lab.py",
+      "review_notes": "Accepted. Runner-level tests (duplicate skip, stop, message length, noise/planted edge) moved to T-113. Pod run with the real lake still owed. Watch worker memory on 1m data (each worker holds the series); start with 3m/5m if the Pod is short on RAM.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "runner, pipeline or validator changes"
+    },
+    {
+      "id": "V-263",
+      "subject": "T-060 Pod evidence: backup upload and restore drill (owner run)",
+      "method": "Owner ran scripts/backup_upload.py then scripts/restore_drill on the Pod (image 6abd614) and pasted redacted output.",
+      "result": "pass",
+      "evidence": "backup upload PASS hf_files=7; restore drill PASS: secret-scan abort, 18 scratch DB tables, audit hash chain valid, 404 lake files verified against manifest, scratch-only.",
+      "review_notes": "Drill found two defects (dataset-root manifest lookup, recorder file hashed before upload) fixed in PR #107 and #108.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "backup uploader or restore drill changes"
     }
   ],
   "blockers": [
@@ -8031,7 +8120,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -10909,7 +10998,117 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-060 passed review: all six fixes verified. Owner runs the upload and the scratch restore drill on the Pod next. T-112 (Strategy Lab run job) is next for Codex. Turn to Codex."
+    },
+    {
+      "revision": 247,
+      "ts": "2026-10-08T18:35:00Z",
+      "agent": "codex",
+      "action": "complete_t112_lab_run",
+      "task_ids": [
+        "T-112"
+      ],
+      "files_changed": [
+        "config/strategy_lab.yaml",
+        "src/trader/lab/runner.py",
+        "src/trader/lab/seeds.py",
+        "src/trader/lab/__init__.py",
+        "scripts/lab_run.py",
+        "scripts/lab_data_check.py",
+        "src/trader/api/app.py",
+        "src/trader/channels/telegram.py",
+        "agent_state/AGENT_HANDOFF.json",
+        "tests/unit/test_lab_runner.py"
+      ],
+      "summary": "Implemented the Strategy Lab run job, coverage/import check scripts, declarative seed library and deterministic tuning, pessimistic cost fallback, Gate 1/holdout orchestration, attempt ledger records, bounded results/charts and /lab Telegram command. Added offline runner coverage, seed/tuning and concurrent-command tests. Focused static, compile and lab/API tests pass. Handed to Claude for review and owner Pod run."
+    },
+    {
+      "revision": 248,
+      "ts": "2026-10-08T18:44:44Z",
+      "agent": "claude",
+      "action": "review_t112_changes_requested_cycle1",
+      "task_ids": [
+        "T-112"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-112 review cycle 1: changes requested (seeds not real strategies under the current DSL, parallelism cosmetic, holdout leakage, /lab stop no-op, job in API process, missing tests). Details in review_notes. Turn to Codex."
+    },
+    {
+      "revision": 249,
+      "ts": "2026-10-08T19:10:00Z",
+      "agent": "codex",
+      "action": "complete_t112_lab_run_cycle2",
+      "task_ids": [
+        "T-112"
+      ],
+      "files_changed": [
+        "src/trader/lab/spec.py",
+        "src/trader/lab/engine.py",
+        "src/trader/lab/seeds.py",
+        "src/trader/lab/pipeline.py",
+        "src/trader/lab/runner.py",
+        "src/trader/lab/validator.py",
+        "scripts/lab_run.py",
+        "scripts/lab_data_check.py",
+        "src/trader/lab/__init__.py",
+        "tests/unit/test_lab_runner.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Applied all T-112 cycle-1 review fixes, including real indicator-relative seeds, spawned parallel evaluation with worker isolation, sealed holdout preparation/exclusion, subprocess /lab lifecycle, per-source caps, and focused acceptance coverage. Turn to Claude."
+    },
+    {
+      "revision": 250,
+      "ts": "2026-10-08T20:16:47Z",
+      "agent": "claude",
+      "action": "review_t112_changes_requested_cycle2",
+      "task_ids": [
+        "T-112"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-112 review cycle 2: mostly good; changes requested on weakened multiple-testing correction, holdout-reader guard evasion, pool payload size, missing acceptance tests, minor status/log items. Final cycle. Turn to Codex."
+    },
+    {
+      "revision": 251,
+      "ts": "2026-10-08T20:45:00Z",
+      "agent": "codex",
+      "action": "complete_t112_final_review_cycle",
+      "task_ids": [
+        "T-112"
+      ],
+      "files_changed": [
+        "src/trader/lab/pipeline.py",
+        "src/trader/lab/runner.py",
+        "src/trader/lab/validator.py",
+        "scripts/lab_run.py",
+        "scripts/lab_data_check.py",
+        "tests/unit/test_lab_pipeline.py",
+        "tests/unit/test_lab_runner.py",
+        "tests/unit/test_strategy_lab.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Applied final T-112 review fixes: run-wide multiple-testing count and guard, explicit sealed-reader factory, per-worker data initialization, idempotent holdout, progress/log persistence, stop-file propagation, duplicate skip accounting, and gap detection. Turn to Claude."
+    },
+    {
+      "revision": 252,
+      "ts": "2026-10-08T20:33:59Z",
+      "agent": "claude",
+      "action": "review_t112_pass_merge",
+      "task_ids": [
+        "T-112",
+        "T-113",
+        "T-060"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "config/strategy_lab.yaml",
+        "scripts/lab_run.py",
+        "scripts/lab_data_check.py"
+      ],
+      "summary": "T-112 accepted and merged after 2 cycles; holdout set to 3 months (owner decision) and script defaults aligned; T-060 Pod evidence recorded; T-113 follow-up tests added. Turn to Codex."
     }
   ],
-  "project_summary": "T-060 backup upload and scratch-only restore are implemented; cycle-2 review fixes are complete and awaiting Claude review plus owner-run Pod upload/restore evidence. T-112 is specified and queued next; T-017/T-044 still wait on recorder data."
+  "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence remains pending. T-112 final review-cycle fixes are complete and handed to Claude for review plus owner Pod validation. T-017/T-044 still wait on recorder data."
 }

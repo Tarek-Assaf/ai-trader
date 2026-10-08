@@ -11,6 +11,11 @@ data:
   confirmation_source: capital_demo
   timeframes: [1m, 3m, 5m]         # 3m is built from 1m
 
+cost_defaults:
+  # Deliberately pessimistic until T-017 calibration replaces this section.
+  spread_points: {NSXUSD: 2.0, XAUUSD: 0.8}
+  slippage_points: {NSXUSD: 1.0, XAUUSD: 0.4}
+
 complexity_limits:
   max_conditions_per_strategy: 5
   max_tunable_parameters: 4
