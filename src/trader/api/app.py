@@ -96,8 +96,9 @@ def _command_renderer(command_handlers: dict[str, Any]) -> Callable[[str, str], 
             value = handler(full_command)
         except Exception as exc:  # noqa: BLE001 - command failures stay bounded
             _LOG.warning(
-                "telegram command handler failed",
-                extra={"command": command, "error": type(exc).__name__},
+                "telegram command handler failed command=%s (%s)",
+                command[:32],
+                type(exc).__name__,
             )
             return unavailable
         return value if isinstance(value, str) else unavailable
