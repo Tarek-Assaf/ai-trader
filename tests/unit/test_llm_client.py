@@ -56,7 +56,7 @@ def config() -> dict[str, Any]:
         },
         "roles": {"planner": "cheap"},
         "fallback": {"cheap": "mid", "mid": "cheap"},
-        "budget": {"daily_usd_cap": 4.0, "monthly_usd_cap": 80.0},
+        "budget": {"daily_usd_cap": 2.0, "monthly_usd_cap": 10.0},
         "health_probe": {
             "interval_minutes": 15,
             "timeout_seconds": 0.05,
@@ -66,7 +66,7 @@ def config() -> dict[str, Any]:
     }
 
 
-def ledger(engine: Any, *, daily: str = "4", monthly: str = "80") -> SqlUsageLedger:
+def ledger(engine: Any, *, daily: str = "2", monthly: str = "10") -> SqlUsageLedger:
     return SqlUsageLedger(
         engine,
         daily_cap_usd=Decimal(daily),
@@ -108,8 +108,8 @@ def test_factory_loads_approved_caps_without_hosted_keys(monkeypatch: pytest.Mon
 
     client = LLMClient.from_environment(config=settings, engine=engine)
 
-    assert client.ledger.daily_cap_usd == Decimal("4.0")
-    assert client.ledger.monthly_cap_usd == Decimal("80.0")
+    assert client.ledger.daily_cap_usd == Decimal("2.0")
+    assert client.ledger.monthly_cap_usd == Decimal("10.0")
     assert client.providers == {}
 
 
