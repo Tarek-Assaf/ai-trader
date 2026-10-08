@@ -162,8 +162,13 @@ def test_runtime_dependency_message_is_logged_and_exposed(monkeypatch, caplog) -
         attempts.append(1)
         raise app_module.RuntimeDependencyUnavailable("runtime service unavailable: redis")
 
-    async def sleep(_seconds: float) -> None:
-        raise asyncio.CancelledError
+    sleeps: list[float] = []
+
+    async def sleep(seconds: float) -> None:
+        # Let the first attempt run, then stop the loop on the next wait.
+        sleeps.append(seconds)
+        if len(sleeps) > 1:
+            raise asyncio.CancelledError
 
     monkeypatch.setattr(app_module, "_install_runtime_services", install)
     monkeypatch.setattr(app_module, "_start_runtime_if_configured", lambda *_args: None)
