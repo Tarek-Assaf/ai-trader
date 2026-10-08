@@ -70,7 +70,7 @@ def build_runtime_services(
     audit: Any = provided.get("audit_writer") or SqlAuditWriter(engine)
     broker: Any = provided.get("broker")
     if broker is None:
-        paper = configs.get("paper_execution")
+        paper = _dump_mapping(configs.get("paper_execution"))
         if not isinstance(paper, Mapping):
             raise RuntimeDependencyUnavailable("runtime service unavailable: paper broker")
         try:
@@ -420,7 +420,7 @@ def _log_alert(message: str) -> None:
     LOGGER.error("runtime alert: %s", message)
 
 
-def _dump_mapping(value: object) -> dict[str, object]:
+def _dump_mapping(value: object) -> dict[str, Any]:
     method = getattr(value, "model_dump", None)
     raw = method() if callable(method) else value
     return dict(raw) if isinstance(raw, Mapping) else {}
