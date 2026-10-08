@@ -156,6 +156,7 @@ class TelegramChannel:
         "/risk",
         "/report",
         "/soak",
+        "/lab",
         "/chart",
         "/help",
     }
@@ -270,7 +271,9 @@ class TelegramChannel:
         if command == "/help":
             self._send(chat_id, "Supported commands: " + ", ".join(sorted(self.COMMANDS)))
             return
-        if command == "/chart" and self._render_chart is not None:
+        if (
+            command == "/chart" or (command == "/lab" and argument.lower().startswith("chart"))
+        ) and self._render_chart is not None:
             self._send_chart(chat_id, argument)
             return
         if command is None and self._router is not None:

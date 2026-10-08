@@ -11,7 +11,22 @@ from pydantic import BaseModel, ConfigDict, Field, StrictFloat, ValidationError,
 
 FiniteFloat = Annotated[StrictFloat, Field(allow_inf_nan=False)]
 PositiveFiniteFloat = Annotated[StrictFloat, Field(gt=0, allow_inf_nan=False)]
-IndicatorName = Literal["close", "sma", "ema", "rsi", "atr", "adx", "session_vwap"]
+IndicatorName = Literal[
+    "open",
+    "high",
+    "low",
+    "close",
+    "sma",
+    "ema",
+    "rsi",
+    "atr",
+    "adx",
+    "session_vwap",
+    "bollinger_upper",
+    "bollinger_lower",
+    "rolling_high",
+    "rolling_low",
+]
 Comparison = Literal["gt", "gte", "lt", "lte", "eq", "ne"]
 SessionName = Literal["asia", "london", "new_york", "closed"]
 RegimeName = Literal[
@@ -41,12 +56,47 @@ class IndicatorCondition(StrictModel):
     period: int | None = Field(default=None, ge=1, le=10_000)
     operator: Comparison
     threshold: FiniteFloat | ParameterReference
+    # When set, compare the left indicator with this second indicator instead
+    # of a fixed number.  This keeps strategy ideas declarative while allowing
+    # EMA crossovers, bands, and prior-bar/channel breakouts.
+    threshold_indicator: IndicatorName | None = None
+    threshold_period: int | None = Field(default=None, ge=1, le=10_000)
+    threshold_lookback: int = Field(default=0, ge=0, le=10_000)
+    threshold_offset: FiniteFloat | ParameterReference = 0.0
+    threshold_atr_multiple: FiniteFloat | ParameterReference = 0.0
+    threshold_atr_period: int = Field(default=14, ge=1, le=10_000)
 
     @model_validator(mode="after")
     def validate_indicator_parameters(self) -> IndicatorCondition:
-        needs_period = self.indicator in {"sma", "ema", "rsi", "atr", "adx"}
+        needs_period = self.indicator in {
+            "sma",
+            "ema",
+            "rsi",
+            "atr",
+            "adx",
+            "bollinger_upper",
+            "bollinger_lower",
+            "rolling_high",
+            "rolling_low",
+        }
         if needs_period != (self.period is not None):
             raise ValueError("indicator period must be supplied only for period-based indicators")
+        reference_needs_period = self.threshold_indicator in {
+            "sma",
+            "ema",
+            "rsi",
+            "atr",
+            "adx",
+            "bollinger_upper",
+            "bollinger_lower",
+            "rolling_high",
+            "rolling_low",
+        }
+        if self.threshold_indicator is None:
+            if self.threshold_lookback or self.threshold_period is not None:
+                raise ValueError("threshold reference fields require threshold_indicator")
+        elif reference_needs_period != (self.threshold_period is not None):
+            raise ValueError("threshold indicator period is invalid")
         return self
 
 
@@ -110,8 +160,13 @@ class StrategySpec(StrictModel):
             raise ValueError("tunable parameter names must be unique")
         known = set(names)
         for condition in self.entry_conditions:
-            if isinstance(condition.threshold, ParameterReference):
-                if condition.threshold.parameter not in known:
+            references = (
+                condition.threshold,
+                condition.threshold_offset,
+                condition.threshold_atr_multiple,
+            )
+            for reference in references:
+                if isinstance(reference, ParameterReference) and reference.parameter not in known:
                     raise ValueError("condition references an unknown tunable parameter")
         if not any(rule.kind == "stop" for rule in self.exit_rules):
             raise ValueError("every strategy must define a stop exit")

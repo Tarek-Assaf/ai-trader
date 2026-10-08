@@ -84,6 +84,25 @@ def test_multiple_testing_gate_rejects_inadequate_random_result():
     assert "adjusted_significance_failed" in result.reasons
 
 
+def test_multiple_testing_gate_rejects_an_understated_trial_count():
+    stamp = datetime(2026, 1, 1, tzinfo=UTC)
+    ledger = ExperimentLedger(
+        [
+            ExperimentRecord(f"hash-{index}", {}, stamp, stamp, {}, holdout_accessed=True)
+            for index in range(2)
+        ]
+    )
+    config = Gate1Config(0, 0, 0, 0, 0, 0, 0, 50, False, False, 0, 1, 1_000)
+    with pytest.raises(ValueError, match="distinct ledger hypothesis"):
+        validate_gate1(
+            {"p_value": 0.01},
+            holdout_spec_hash="hash-0",
+            trials=1,
+            ledger=ledger,
+            config=config,
+        )
+
+
 def test_holdout_reader_rejects_path_escape(tmp_path):
     root = tmp_path / "sealed"
     root.mkdir()

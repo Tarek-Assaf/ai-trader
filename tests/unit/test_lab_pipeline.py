@@ -13,6 +13,7 @@ from trader.agents.llm.providers import MockLLM
 from trader.agents.llm.types import ProviderReply
 from trader.core.config import load_config_file
 from trader.data.resample import Candle
+from trader.lab import pipeline as pipeline_module
 from trader.lab.ledger import ExperimentLedger
 from trader.lab.miner import PatternMiner
 from trader.lab.pipeline import IdeaGenerator, ValidationPipeline
@@ -132,6 +133,7 @@ def test_pipeline_reads_holdout_once_and_calls_validator_after_metrics(tmp_path:
         train_bars=60,
         test_bars=20,
         validator=reject,
+        workers=2,
     )
 
     assert len(result) == 1
@@ -168,6 +170,43 @@ def test_pipeline_repeated_spec_hash_fails_closed_on_second_holdout_read(tmp_pat
     assert not decisions[1].validation.passed
     assert decisions[1].validation.reasons == ("holdout_read_failed",)
     assert sum(item.holdout_accessed for item in ledger.records()) == 1
+
+
+def test_pipeline_worker_failure_isolated_from_other_ideas(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    candles = _trend(120)
+    out_of_sample = _trend(30, start_minute=len(candles))
+    holdout_path = tmp_path / "sealed.bin"
+    holdout_path.write_bytes(b"sealed")
+    base = dict(
+        schema_version=1,
+        instrument="NAS100",
+        timeframe_minutes=1,
+        entry_conditions=(IndicatorCondition(indicator="close", operator="gt", threshold=0.0),),
+        exit_rules=(StopExit(kind="stop", distance=1.0), TargetExit(kind="target", distance=0.2)),
+    )
+    good = StrategySpec(direction="long", **base)
+    crashing = StrategySpec(direction="short", **base)
+    original = pipeline_module._evaluate_candidate
+
+    def fail_short(spec: StrategySpec):
+        if spec.direction == "short":
+            raise RuntimeError("injected worker crash")
+        return original(spec)
+
+    monkeypatch.setattr(pipeline_module, "_evaluate_candidate", fail_short)
+    decisions = ValidationPipeline(config=_permissive_gate_config()).run(
+        [good, crashing],
+        candles,
+        holdout_reader=HoldoutReader(tmp_path, ledger=ExperimentLedger()),
+        holdout_path=holdout_path,
+        holdout_loader=lambda raw: out_of_sample,
+        out_of_sample=out_of_sample,
+        workers=1,
+    )
+    assert len(decisions) == 2
+    assert decisions[1].metrics["verdict"] == "error"
 
 
 def test_real_config_noise_never_promotes_across_random_variants(tmp_path: Path) -> None:

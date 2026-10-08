@@ -24,29 +24,86 @@ class EntrySignal:
     close: float
 
 
-def _indicator_values(condition: IndicatorCondition, bars: list[Candle]) -> IndicatorSeries:
+def _shift(values: IndicatorSeries, lookback: int) -> IndicatorSeries:
+    if lookback <= 0:
+        return values
+    return tuple(
+        None if index < lookback else values[index - lookback] for index in range(len(values))
+    )
+
+
+def _rolling(values: list[float], period: int, reducer: str) -> IndicatorSeries:
+    result: list[float | None] = []
+    for index in range(len(values)):
+        window = values[max(0, index - period + 1) : index + 1]
+        if len(window) < period:
+            result.append(None)
+        elif reducer == "max":
+            result.append(max(window))
+        else:
+            result.append(min(window))
+    return tuple(result)
+
+
+def _indicator_series(
+    indicator: str, period: int | None, bars: list[Candle], lookback: int = 0
+) -> IndicatorSeries:
     closes = [bar.close for bar in bars]
-    period = condition.period
-    if condition.indicator == "close":
-        return tuple(closes)
-    if condition.indicator == "sma":
+    values: IndicatorSeries
+    if indicator == "open":
+        values = tuple(bar.open for bar in bars)
+    elif indicator == "high":
+        values = tuple(bar.high for bar in bars)
+    elif indicator == "low":
+        values = tuple(bar.low for bar in bars)
+    elif indicator == "close":
+        values = tuple(closes)
+    elif indicator == "sma":
         assert period is not None
-        return indicators.sma(closes, period)
-    if condition.indicator == "ema":
+        values = indicators.sma(closes, period)
+    elif indicator == "ema":
         assert period is not None
-        return indicators.ema(closes, period)
-    if condition.indicator == "rsi":
+        values = indicators.ema(closes, period)
+    elif indicator == "rsi":
         assert period is not None
-        return indicators.rsi(closes, period)
-    if condition.indicator == "atr":
+        values = indicators.rsi(closes, period)
+    elif indicator == "atr":
         assert period is not None
-        return indicators.atr(bars, period)
-    if condition.indicator == "adx":
+        values = indicators.atr(bars, period)
+    elif indicator == "adx":
         assert period is not None
-        return indicators.adx(bars, period)
-    if condition.indicator == "session_vwap":
-        return indicators.session_vwap(bars)
-    raise ValueError("unsupported indicator")
+        values = indicators.adx(bars, period)
+    elif indicator == "session_vwap":
+        values = indicators.session_vwap(bars)
+    elif indicator in {"rolling_high", "rolling_low"}:
+        assert period is not None
+        values = _rolling(
+            [bar.high if indicator == "rolling_high" else bar.low for bar in bars],
+            period,
+            "max" if indicator == "rolling_high" else "min",
+        )
+    elif indicator in {"bollinger_upper", "bollinger_lower"}:
+        assert period is not None
+        mean = indicators.sma(closes, period)
+        band: list[float | None] = []
+        for index, average in enumerate(mean):
+            window = closes[max(0, index - period + 1) : index + 1]
+            if average is None or len(window) < period:
+                band.append(None)
+                continue
+            variance = sum((value - average) ** 2 for value in window) / period
+            deviation = math.sqrt(max(0.0, variance)) * 2.0
+            band.append(
+                average + deviation if indicator == "bollinger_upper" else average - deviation
+            )
+        values = tuple(band)
+    else:
+        raise ValueError("unsupported indicator")
+    return _shift(values, lookback)
+
+
+def _indicator_values(condition: IndicatorCondition, bars: list[Candle]) -> IndicatorSeries:
+    return _indicator_series(condition.indicator, condition.period, bars)
 
 
 def _volatility_regimes(values: IndicatorSeries) -> tuple[str | None, ...]:
@@ -123,14 +180,28 @@ def evaluate_entries(
     if not all(math.isfinite(bar.close) for bar in bars):
         raise ValueError("candle values must be finite")
 
-    cache: dict[tuple[str, int | None], IndicatorSeries] = {}
+    cache: dict[tuple[str, int | None, int], IndicatorSeries] = {}
     for condition in spec.entry_conditions:
-        key = (condition.indicator, condition.period)
+        key = (condition.indicator, condition.period, 0)
         if key not in cache:
             cache[key] = _indicator_values(condition, bars)
+        if condition.threshold_indicator is not None:
+            reference_key = (
+                condition.threshold_indicator,
+                condition.threshold_period,
+                condition.threshold_lookback,
+            )
+            if reference_key not in cache:
+                cache[reference_key] = _indicator_series(
+                    condition.threshold_indicator,
+                    condition.threshold_period,
+                    bars,
+                    condition.threshold_lookback,
+                )
 
     volatility = _volatility_regimes(indicators.atr(bars, 14))
     trend = _trend_regimes(bars)
+    atr_cache: dict[int, IndicatorSeries] = {}
     parameter_values = {parameter.name: parameter.value for parameter in spec.tunable_parameters}
     allowed_sessions = set(spec.session_filters)
     allowed_regimes = set(spec.regime_filters)
@@ -149,7 +220,35 @@ def evaluate_entries(
                 if isinstance(raw_threshold, ParameterReference)
                 else raw_threshold
             )
-            values = cache[(condition.indicator, condition.period)]
+            values = cache[(condition.indicator, condition.period, 0)]
+            if condition.threshold_indicator is not None:
+                reference = cache[
+                    (
+                        condition.threshold_indicator,
+                        condition.threshold_period,
+                        condition.threshold_lookback,
+                    )
+                ][index]
+                offset = condition.threshold_offset
+                atr_multiple = condition.threshold_atr_multiple
+                offset_value = (
+                    parameter_values[offset.parameter]
+                    if isinstance(offset, ParameterReference)
+                    else float(offset)
+                )
+                atr_values = atr_cache.setdefault(
+                    condition.threshold_atr_period,
+                    indicators.atr(bars, condition.threshold_atr_period),
+                )
+                atr_value = atr_values[index]
+                atr_multiple_value = (
+                    parameter_values[atr_multiple.parameter]
+                    if isinstance(atr_multiple, ParameterReference)
+                    else float(atr_multiple)
+                )
+                if reference is None or atr_value is None:
+                    break
+                threshold = reference + offset_value + atr_multiple_value * atr_value
             if not _matches(values[index], condition.operator, threshold):
                 break
         else:

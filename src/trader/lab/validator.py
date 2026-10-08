@@ -64,6 +64,11 @@ class HoldoutReader:
         return content
 
 
+def open_sealed_reader(root: str | Path, ledger: Any) -> HoldoutReader:
+    """Return the sole reader implementation for the sealed holdout."""
+    return HoldoutReader(root, ledger=ledger)
+
+
 def strategy_hash(spec: Mapping[str, Any]) -> str:
     payload = json.dumps(dict(spec), sort_keys=True, separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -161,10 +166,20 @@ def validate_gate1(
     if not holdout_spec_hash.strip():
         raise ValueError("holdout_spec_hash is required")
     configured = config or Gate1Config.from_config()
-    ledger_count = ledger.count() if ledger is not None else 0
-    if trials is not None and trials < ledger_count:
-        raise ValueError("trials cannot be below the ledger count")
-    count = max(1, trials if trials is not None else ledger_count)
+    ledger_hashes = {
+        item.strategy_hash
+        for item in (ledger.records() if ledger is not None else ())
+        if item.parameters.get("pipeline")
+        not in {
+            "neighbor",
+            "gate1_screen",
+            "gate1_final",
+            "worker",
+        }
+    }
+    if trials is not None and trials < len(ledger_hashes):
+        raise ValueError("trials cannot be below the distinct ledger hypothesis count")
+    count = max(1, trials if trials is not None else len(ledger_hashes))
     adjusted = bonferroni_alpha(configured.alpha, count)
     required = {
         "trades": (configured.min_trades, "too_few_trades"),
@@ -257,6 +272,7 @@ __all__ = [
     "StrategyValidator",
     "ValidationResult",
     "bonferroni_alpha",
+    "open_sealed_reader",
     "strategy_hash",
     "validate",
     "validate_gate1",
