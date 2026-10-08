@@ -3,7 +3,13 @@
 Author: Claude. For: Codex. Read `src/trader/lab/runner.py`, `pipeline.py`, `engine.py`, `miner.py`, `scripts/lab_run.py`, `scripts/lab_data_check.py`.
 
 ## Problem (measured on the Pod)
-The lake holds about 16 years of M1 bars per instrument (NSXUSD from 2010-11, XAUUSD from 2009-03, about 5.5 million bars each). `scripts/lab_run.py --max-ideas 20 --timeframes 5` ran for over 30 minutes at 100% of one core with no output and no worker processes, so the time is spent before the process pool starts. `lab_data_check.py` also needed minutes just to print coverage. The Pod has 8 cores and 754 GB of RAM, so memory is not the constraint; single-threaded Python is.
+The lake holds about 16 years of M1 bars per instrument (NSXUSD from 2010-11, XAUUSD from 2009-03, about 5.5 million bars each). `scripts/lab_run.py --max-ideas 20 --timeframes 5` ran for over 30 minutes at 100% of one core with no output and no worker processes, so the time is spent before the process pool starts. `lab_data_check.py` also needed minutes just to print coverage. The Pod has 8 cores and 754 GB of RAM, but the Pod container is limited to 16 GB (cgroup `memory.max`), and the live services need part of it. A second lab process was OOM-killed while the first held about 8.7 GB, with six workers at about 700 MB each. Memory is therefore a hard constraint as well as speed.
+
+## Memory rules (hard)
+- Total lab footprint (parent plus all workers) stays under 8 GB on the full 16-year data. Load columnar (Arrow/NumPy arrays), never per-bar Python objects; share one read-only copy across workers (memory-mapped or shared memory) instead of one copy per worker.
+- Read the container limit from `/sys/fs/cgroup/memory.max` and cap the worker count so workers times per-worker RSS fits within 50% of it.
+- Refuse to start a second lab process while one is running (lock file), and log peak RSS in `progress.json`.
+- Test: a fixture asserts the loader returns arrays, not objects, and the worker-cap function respects a small fake limit.
 
 ## Goals and acceptance targets (8-core Pod, same data)
 1. `lab_data_check.py` coverage in under 30 seconds.
