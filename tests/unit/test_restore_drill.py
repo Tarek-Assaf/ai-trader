@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import importlib.machinery
 import importlib.util
+import json
 import sys
 from pathlib import Path
 from typing import Any
@@ -81,3 +82,20 @@ def test_github_header_uses_basic_auth_without_plain_token() -> None:
     header = restore_drill._github_auth_header(token)
     assert header.startswith("Authorization: Basic ")
     assert token not in header
+
+
+def test_restore_lake_ignores_non_lake_manifest_entries(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    (source / "NSXUSD").mkdir(parents=True)
+    payload = b"bars\n"
+    (source / "NSXUSD" / "01.parquet").write_bytes(payload)
+    digest = hashlib.sha256(payload).hexdigest()
+    manifest = tmp_path / "sha256-manifest.json"
+    manifest.write_text(
+        json.dumps({"files": {"data/lake/NSXUSD/01.parquet": digest, "state/other.json": "00"}}),
+        encoding="utf-8",
+    )
+
+    count, _ = restore_drill.restore_lake(source, manifest, tmp_path / "restore-drill-lake")
+
+    assert count == 1
