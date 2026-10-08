@@ -70,7 +70,7 @@ def build_runtime_services(
     audit: Any = provided.get("audit_writer") or SqlAuditWriter(engine)
     broker: Any = provided.get("broker")
     if broker is None:
-        paper = configs.get("paper_execution")
+        paper = _dump_mapping(configs.get("paper_execution"))
         if not isinstance(paper, Mapping):
             raise RuntimeDependencyUnavailable("runtime service unavailable: paper broker")
         try:

@@ -3,16 +3,22 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
+from trader.core.config import load_all_configs
 from trader.runtime import RuntimeFactories, RuntimeFeedAdapters, ScheduleCycleSource
 from trader.runtime.factory import (
     OrderManagerDecisionLoop,
     build_default_factories,
     build_runtime_components,
 )
+
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class FakeRedis:
@@ -110,17 +116,12 @@ def test_default_factories_build_paper_broker_and_audit_cycle() -> None:
         "redis_client": lambda _settings: FakeRedis(),
         "audit_writer": SimpleNamespace(append=audit_rows.append),
     }
-    configured = {
-        "paper_execution": {
-            "starting_cash": "10000",
-            "currency": "USD",
-            "spread_points": {"NAS100": "1"},
-            "slippage_points": {"NAS100": "0.5"},
-        }
-    }
+    configured = load_all_configs(ROOT / "config")
     built = build_default_factories(settings(), configured, services=services)
     components = build_runtime_components(settings(), configured, SimpleNamespace(), built)
     assert components.missing_required() == ()
+    assert components.broker.get_account()["balance"] == Decimal("10000")
+    assert components.broker.get_market_details("US100")["spread_points"] == Decimal("2.0")
     loop = OrderManagerDecisionLoop(object(), audit_writer=services["audit_writer"])
     cycle = SimpleNamespace(event_id="cycle-1")
     result = loop.run(cycle)

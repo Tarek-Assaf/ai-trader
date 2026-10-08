@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 224,
+  "turn": "claude",
+  "revision": 225,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-103 diagnostics are implemented and ready for Claude review. Runtime detail, Telegram failure metadata/backoff and recorder tick liveness are covered; Pod redeploy remains needed to verify the redacted /health fields. T-017/T-044 still wait on recorder data.",
+    "summary": "T-104 paper execution defaults and model-backed config loading are ready for Claude review. Costs remain provisional until T-017 calibration; T-017/T-044 still wait on recorder data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -201,7 +201,8 @@
         "T-099",
         "T-101",
         "T-102",
-        "T-103"
+        "T-103",
+        "T-104"
       ]
     },
     {
@@ -3111,6 +3112,41 @@
         "git diff --check"
       ],
       "completion_note": "Added secret-free runtime diagnostics: RuntimeDependencyUnavailable messages are included in retry warnings and /health runtime_detail, while other exceptions expose only their type. Telegram request failures now log only HTTP status and integer Telegram error code; poll failures use bounded exponential backoff and warning logs without traceback formatting. Recorder status now persists ticks_received and last_tick_at, and /health requires a recent tick while an instrument is expected open. Added focused unit coverage for runtime details, Telegram failure metadata/backoff, tick counters and open-market liveness. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders were used."
+    },
+    {
+      "id": "T-104",
+      "title": "Paper execution defaults and model-backed config compatibility",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-11"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Checked-in paper_execution.yaml defines the provisional USD 10,000 paper defaults and instrument costs.",
+        "Runtime services and factory accept paper_execution mappings and Pydantic models from load_all_configs.",
+        "A regression test loads the checked-in config directory and builds a PaperBroker from it."
+      ],
+      "deliverables": [
+        "config/paper_execution.yaml",
+        "src/trader/runtime/services.py",
+        "src/trader/runtime/factory.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_runtime_factory.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "config/paper_execution.yaml",
+        "src/trader/runtime/services.py",
+        "src/trader/runtime/factory.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_runtime_factory.py",
+        "bundled Python compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Added provisional paper execution defaults, converted Pydantic paper_execution models with model_dump in both runtime composition paths, and changed regression coverage to load the checked-in config directory before building PaperBroker. Full pytest, Ruff, mypy and make check are unavailable in this desktop runtime; compileall and git diff --check pass. T-017 remains the source of calibrated costs; no values are treated as final."
     }
   ],
   "decisions": [
@@ -5763,6 +5799,17 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "recorder liveness rules, health payload fields or Telegram transport error handling change"
+    },
+    {
+      "id": "V-238",
+      "subject": "T-104 paper execution config and model compatibility",
+      "method": "Read the checked-in YAML defaults, verified both runtime PaperBroker paths call model_dump for Pydantic configs, and added tests that load config/ with load_all_configs before building the broker. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "config/paper_execution.yaml; src/trader/runtime/services.py; src/trader/runtime/factory.py; tests/unit/test_runtime_services.py; tests/unit/test_runtime_factory.py; bundled Python compileall; git diff --check",
+      "review_notes": "Paper execution costs are explicitly provisional until T-017 calibration produces recorder overlap evidence. Full pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "paper execution config schema or runtime broker construction changes"
     }
   ],
   "blockers": [
@@ -9931,7 +9978,25 @@
         "tests/unit/test_telegram_channel.py"
       ],
       "summary": "T-103 reviewed and passed (V-237); fixed ruff line length and import order. CI quality gates merge. Turn to Codex; owner redeploys the Pod to read runtime_detail and recorder tick counters."
+    },
+    {
+      "revision": 225,
+      "ts": "2026-10-08T08:10:00Z",
+      "agent": "codex",
+      "action": "complete_t104_paper_execution_config",
+      "task_ids": [
+        "T-104"
+      ],
+      "files_changed": [
+        "config/paper_execution.yaml",
+        "src/trader/runtime/services.py",
+        "src/trader/runtime/factory.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_runtime_factory.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Added provisional paper execution defaults, accepted Pydantic paper_execution models in both runtime broker builders, and covered checked-in config loading with PaperBroker regression tests. Validation passed with bundled compileall and git diff --check; handing T-104 to Claude for review."
     }
   ],
-  "project_summary": "T-103 diagnostics are ready for Claude review after T-102. Runtime retry detail, Telegram failure logging/backoff and recorder tick liveness are covered. Pod redeploy remains needed for /health verification; T-017/T-044 remain blocked on recorder data."
+  "project_summary": "T-104 paper execution defaults and model-backed config loading are ready for Claude review. Costs remain provisional until T-017 calibration; T-017/T-044 still wait on recorder data."
 }

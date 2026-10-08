@@ -282,7 +282,7 @@ def build_default_factories(
         if "broker" in supplied:
             value = supplied["broker"]
             return value(current_settings, current_configs) if callable(value) else value
-        paper = current_configs.get("paper_execution")
+        paper = dump(current_configs.get("paper_execution"))
         if not isinstance(paper, Mapping):
             raise RuntimeDependencyUnavailable("runtime service unavailable: broker")
         try:
