@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeGuard
 
 from trader.core.audit import AuditEvent
 from trader.core.settings import EnvironmentSettings
@@ -73,6 +73,20 @@ class OrderManagerDecisionLoop:
 
 class RuntimeFactoryFn(Protocol):
     def __call__(self, *args: Any, **kwargs: Any) -> Any: ...
+
+
+def _is_explicit_factory(value: object) -> TypeGuard[RuntimeFactoryFn]:
+    """Return whether a supplied value is a function intended as a factory.
+
+    Runtime services such as ``PnlLossGuard`` and
+    ``ProtectivePositionManager`` are callable instances because they are
+    invoked during execution. Treating every callable as a constructor
+    invokes those instances during startup with factory arguments. Only
+    routines supplied as overrides are explicit factories; all other objects
+    are constants.
+    """
+
+    return inspect.isroutine(value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -220,6 +234,13 @@ def build_default_factories(
         supplied.update(services)
 
     def service(name: str) -> RuntimeFactoryFn:
+        """Adapt an injected service instance to the factory contract.
+
+        A service object may itself be callable during normal runtime
+        operation. Only a function or method is an explicit constructor
+        override; injected objects are returned unchanged by the adapter.
+        """
+
         value = supplied.get(name)
         if value is None:
 
@@ -227,7 +248,7 @@ def build_default_factories(
                 raise RuntimeDependencyUnavailable(f"runtime service unavailable: {name}")
 
             return missing
-        if callable(value):
+        if _is_explicit_factory(value):
             return value
         return lambda *_args, _value=value, **_kwargs: _value
 
@@ -241,7 +262,9 @@ def build_default_factories(
     ) -> Any:
         if "guardian" in supplied:
             value = supplied["guardian"]
-            return value(current_settings, current_configs) if callable(value) else value
+            return (
+                value(current_settings, current_configs) if _is_explicit_factory(value) else value
+            )
         audit: Any = supplied.get("audit_writer")
         risk_values = dump(current_configs.get("risk"))
         instruments = dump(current_configs.get("instruments"))
@@ -268,7 +291,7 @@ def build_default_factories(
     def redis_client(current_settings: EnvironmentSettings) -> Any:
         if "redis_client" in supplied:
             value = supplied["redis_client"]
-            return value(current_settings) if callable(value) else value
+            return value(current_settings) if _is_explicit_factory(value) else value
         url = current_settings.redis_url
         if url is None or not url.get_secret_value():
             raise RuntimeDependencyUnavailable("runtime service unavailable: redis_client")
@@ -281,7 +304,9 @@ def build_default_factories(
     def broker(current_settings: EnvironmentSettings, current_configs: Mapping[str, object]) -> Any:
         if "broker" in supplied:
             value = supplied["broker"]
-            return value(current_settings, current_configs) if callable(value) else value
+            return (
+                value(current_settings, current_configs) if _is_explicit_factory(value) else value
+            )
         paper = dump(current_configs.get("paper_execution"))
         if not isinstance(paper, Mapping):
             raise RuntimeDependencyUnavailable("runtime service unavailable: broker")
@@ -314,7 +339,7 @@ def build_default_factories(
         reconciler: Any,
     ) -> Any:
         custom = supplied.get("decision_loop")
-        if callable(custom):
+        if _is_explicit_factory(custom):
             return custom(current_settings, current_configs, order_manager, guardian, reconciler)
         return OrderManagerDecisionLoop(
             order_manager,

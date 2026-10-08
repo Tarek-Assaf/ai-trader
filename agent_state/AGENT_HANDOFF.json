@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 226,
+  "revision": 228,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -202,7 +202,8 @@
         "T-101",
         "T-102",
         "T-103",
-        "T-104"
+        "T-104",
+        "T-105"
       ]
     },
     {
@@ -3147,6 +3148,43 @@
         "git diff --check"
       ],
       "completion_note": "Added provisional paper execution defaults, converted Pydantic paper_execution models with model_dump in both runtime composition paths, and changed regression coverage to load the checked-in config directory before building PaperBroker. Full pytest, Ruff, mypy and make check are unavailable in this desktop runtime; compileall and git diff --check pass. T-017 remains the source of calibrated costs; no values are treated as final."
+    },
+    {
+      "id": "T-105",
+      "title": "Runtime factory constants and startup diagnostics",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-11"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Callable instances returned by build_runtime_services are treated as constants by build_default_factories; only explicit factory routines are invoked.",
+        "A regression test composes the real build_runtime_services output with checked-in config, fake Redis and SQLite DB through build_default_factories and build_runtime_components.",
+        "Runtime startup and retry failures log full redacted tracebacks; /health runtime_detail contains only the exception type and innermost file:function, with the fixed dependency message allowed only for RuntimeDependencyUnavailable."
+      ],
+      "deliverables": [
+        "src/trader/runtime/factory.py",
+        "src/trader/api/app.py",
+        "src/trader/core/logging.py",
+        "tests/unit/test_runtime_factory.py",
+        "tests/unit/test_api_startup.py",
+        "tests/unit/test_secret_redaction.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "src/trader/runtime/factory.py",
+        "src/trader/api/app.py",
+        "src/trader/core/logging.py",
+        "tests/unit/test_runtime_factory.py",
+        "tests/unit/test_api_startup.py",
+        "tests/unit/test_secret_redaction.py",
+        "bundled Python compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Callable service instances are now wrapped as constants; explicit routine overrides remain factories. Real build_runtime_services output is composed through the default factories in regression coverage. Runtime startup/retry logs retain full redacted tracebacks, while /health runtime_detail reports only safe type/location diagnostics plus fixed dependency messages. Bundled Python compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders were used. Handing T-105 to Claude for review."
     }
   ],
   "decisions": [
@@ -5821,6 +5859,28 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "paper_execution values, config loader or runtime service construction changes"
+    },
+    {
+      "id": "V-240",
+      "subject": "T-105 runtime factory constants and startup diagnostics",
+      "method": "Inspected factory callability handling, real service composition regression, traceback redaction, and health detail formatting. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/factory.py; src/trader/api/app.py; src/trader/core/logging.py; tests/unit/test_runtime_factory.py; tests/unit/test_api_startup.py; tests/unit/test_secret_redaction.py; bundled Python compileall; git diff --check",
+      "review_notes": "Dependency-backed pytest, Ruff, mypy and make check are unavailable in this desktop runtime; Claude/CI should run full quality gates. No credentials, broker calls or orders used.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "runtime factory callability, startup diagnostics or traceback redaction changes"
+    },
+    {
+      "id": "V-241",
+      "subject": "T-105 independent review (Claude)",
+      "method": "Read diff against the Pod TypeError. Confirmed callable service instances (PnlLossGuard, ProtectivePositionManager) were being called as factories; only functions and methods (inspect.isroutine) are factories now, instances are constants. New test composes the real build_runtime_services output with the checked-in config. Tracebacks are logged with secret redaction applied to the formatted traceback; /health runtime_detail shows only the type, a fixed dependency message and the innermost file:function, trimmed to 200 characters (added). CI quality required before merge.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/factory.py; src/trader/api/app.py; src/trader/core/logging.py; tests/unit/test_runtime_factory.py; tests/unit/test_secret_redaction.py; tests/unit/test_api_startup.py",
+      "review_notes": "Passes. Class objects supplied as factories are no longer treated as factories; use a function or lambda. Further runtime gaps may appear on the Pod and are now visible in /health runtime_detail and the log traceback.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "runtime factory wiring, service callables or log redaction changes"
     }
   ],
   "blockers": [
@@ -10022,7 +10082,41 @@
         "tests/unit/test_runtime_factory.py"
       ],
       "summary": "T-104 reviewed and passed: paper_execution config added and read from loaded config models; tests use the real checked-in config. CI quality gates merge. Turn to Codex; owner redeploys the Pod and reports /health runtime_detail."
+    },
+    {
+      "revision": 227,
+      "ts": "2026-10-08T08:35:00Z",
+      "agent": "codex",
+      "action": "complete_t105_runtime_factory_diagnostics",
+      "task_ids": [
+        "T-105"
+      ],
+      "files_changed": [
+        "src/trader/runtime/factory.py",
+        "src/trader/api/app.py",
+        "src/trader/core/logging.py",
+        "tests/unit/test_runtime_factory.py",
+        "tests/unit/test_api_startup.py",
+        "tests/unit/test_secret_redaction.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-105: callable runtime service instances are preserved as constants, explicit routine overrides remain factories, real service composition has regression coverage, and startup/retry tracebacks plus safe health diagnostics are implemented. Bundled compileall and git diff --check pass; handing T-105 to Claude for review."
+    },
+    {
+      "revision": 228,
+      "ts": "2026-10-08T09:00:00Z",
+      "agent": "claude",
+      "action": "review_t105_pass",
+      "task_ids": [
+        "T-105"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/api/app.py",
+        "src/trader/runtime/factory.py"
+      ],
+      "summary": "T-105 reviewed and passed: callable service instances are no longer invoked as factories; real service bundle composes in tests; tracebacks logged with redaction and health detail bounded. CI quality gates merge. Turn to Codex; owner redeploys the Pod and reports /health."
     }
   ],
-  "project_summary": "T-104 paper execution defaults and model-backed config loading are ready for Claude review. Costs remain provisional until T-017 calibration; T-017/T-044 still wait on recorder data."
+  "project_summary": "T-105 runtime factory constants and startup diagnostics are ready for Claude review. T-017/T-044 still wait on recorder data; T-060 remains blocked on T-005."
 }

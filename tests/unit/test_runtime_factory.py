@@ -6,16 +6,22 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 from types import SimpleNamespace
+from typing import cast
 
 import pytest
+from pydantic import SecretStr
+from sqlalchemy import create_engine
 
 from trader.core.config import load_all_configs
+from trader.core.settings import EnvironmentSettings
+from trader.execution.control import ControlSource
 from trader.runtime import RuntimeFactories, RuntimeFeedAdapters, ScheduleCycleSource
 from trader.runtime.factory import (
     OrderManagerDecisionLoop,
     build_default_factories,
     build_runtime_components,
 )
+from trader.runtime.services import build_runtime_services
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -112,7 +118,7 @@ def test_default_factories_build_paper_broker_and_audit_cycle() -> None:
         "reconciler": object(),
         "report_scheduler": object(),
         "settings_service": object(),
-        "redis_client": lambda _settings: FakeRedis(),
+        "redis_client": FakeRedis(),
         "audit_writer": SimpleNamespace(append=audit_rows.append),
     }
     configured = load_all_configs(ROOT / "config")
@@ -126,3 +132,42 @@ def test_default_factories_build_paper_broker_and_audit_cycle() -> None:
     result = loop.run(cycle)
     assert result.action == "NO_TRADE"
     assert audit_rows[0].cycle_id == "cycle-1"
+
+
+def test_real_runtime_services_compose_without_invoking_callable_instances() -> None:
+    """The production service bundle must pass through the default factories."""
+    configured = load_all_configs(ROOT / "config")
+    settings_value = EnvironmentSettings(
+        role="core",
+        trading_mode="paper",
+        broker_env="demo",
+        live_trading_enabled=False,
+        redis_url=SecretStr("redis://unused"),
+        database_url=SecretStr("sqlite://"),
+    )
+    runtime_services = build_runtime_services(
+        settings_value,
+        configured,
+        overrides={
+            "engine": create_engine("sqlite://"),
+            "redis_client": FakeRedis(),
+            "control_source": SimpleNamespace(read=lambda: "run"),
+            "control_writer": SimpleNamespace(set=lambda *_args: None),
+        },
+    )
+
+    factories = build_default_factories(settings_value, configured, services=runtime_services)
+    components = build_runtime_components(
+        settings_value,
+        configured,
+        cast(ControlSource, runtime_services["control_source"]),
+        factories,
+    )
+
+    assert components.missing_required() == ()
+    assert components.order_manager is runtime_services["order_manager"]
+    assert components.reconciler is runtime_services["reconciler"]
+    assert components.report_scheduler is runtime_services["report_scheduler"]
+    assert components.settings_service is runtime_services["settings_service"]
+    assert components.pnl_guard is runtime_services["pnl_guard"]
+    assert components.position_manager is runtime_services["position_manager"]

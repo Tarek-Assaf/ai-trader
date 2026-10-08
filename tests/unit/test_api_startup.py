@@ -149,7 +149,7 @@ def test_runtime_retry_loop_keeps_degraded_health_on_persistent_failure(monkeypa
     assert attempts == [1]
     assert delays == [30.0, 60.0]
     assert health_module._RUNTIME_HEALTH_REASON == "runtime_unavailable"
-    assert health_module._RUNTIME_HEALTH_DETAIL == "RuntimeError"
+    assert health_module._RUNTIME_HEALTH_DETAIL == "RuntimeError (test_api_startup.py:install)"
     app_module.set_runtime_health(None)
 
 
@@ -191,5 +191,8 @@ def test_runtime_dependency_message_is_logged_and_exposed(monkeypatch, caplog) -
 
     assert attempts == [1]
     assert "runtime service unavailable: redis" in caplog.text
-    assert health_module._RUNTIME_HEALTH_DETAIL == "runtime service unavailable: redis"
+    assert health_module._RUNTIME_HEALTH_DETAIL == (
+        "RuntimeDependencyUnavailable: runtime service unavailable: redis "
+        "(test_api_startup.py:install)"
+    )
     health_module.set_runtime_health(None)
