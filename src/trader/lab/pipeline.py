@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import multiprocessing
+import os
 from collections.abc import Callable, Iterable, Mapping, Sequence
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -55,6 +58,78 @@ class PipelineDecision:
     @property
     def promoted(self) -> bool:
         return self.validation.passed and (self.promotion is None or self.promotion.approved)
+
+
+@dataclass(frozen=True, slots=True)
+class _CandidateEvaluation:
+    result: BacktestResult
+    oos_result: BacktestResult
+    stress_result: BacktestResult
+    neighbor_specs: tuple[StrategySpec, ...]
+    neighbor_results: tuple[BacktestResult, ...]
+    profitable_regimes: int
+
+
+def _evaluate_candidate(
+    item: tuple[
+        StrategySpec,
+        Sequence[Candle],
+        Sequence[Candle],
+        CostModel | None,
+        float,
+        int | None,
+        int | None,
+        int | None,
+    ],
+) -> tuple[str, _CandidateEvaluation]:
+    """Run the expensive deterministic backtests in a spawned worker."""
+    spec, candles, evaluation, cost_model, stress_pct, train_bars, test_bars, step_bars = item
+    if hasattr(os, "nice"):
+        try:
+            os.nice(10)
+        except (OSError, PermissionError):
+            pass
+    result = run_backtest(
+        spec,
+        candles,
+        cost_model=cost_model,
+        train_bars=train_bars,
+        test_bars=test_bars,
+        step_bars=step_bars,
+    )
+    oos_result = run_backtest(spec, evaluation, cost_model=cost_model)
+    stress_result = run_backtest(spec, candles, cost_model=cost_model, cost_stress_pct=stress_pct)
+    neighbor_specs = tuple(
+        _perturb(spec, threshold_factor, exit_factor)
+        for threshold_factor, exit_factor in (
+            (0.95, 0.8),
+            (0.95, 1.2),
+            (1.05, 0.8),
+            (1.05, 1.2),
+        )
+    )
+    neighbor_results = tuple(
+        run_backtest(
+            neighbor,
+            candles,
+            cost_model=cost_model,
+            train_bars=train_bars,
+            test_bars=test_bars,
+            step_bars=step_bars,
+        )
+        for neighbor in neighbor_specs
+    )
+    return (
+        strategy_hash(spec.model_dump(mode="json")),
+        _CandidateEvaluation(
+            result,
+            oos_result,
+            stress_result,
+            neighbor_specs,
+            neighbor_results,
+            _profitable_regimes(result),
+        ),
+    )
 
 
 class IdeaGenerator:
@@ -201,6 +276,8 @@ class ValidationPipeline:
         step_bars: int | None = None,
         promotion_gate: PromotionGate | None = None,
         current_stage: str = "backtest",
+        workers: int = 1,
+        stop_event: Any | None = None,
     ) -> tuple[PipelineDecision, ...]:
         """Validate candidates; the holdout is read only after cheap gates pass."""
         if not candles:
@@ -216,47 +293,100 @@ class ValidationPipeline:
         if min(candle.ts_utc for candle in evaluation) <= max(candle.ts_utc for candle in candles):
             raise ValueError("out_of_sample must be a later time range")
         configured = self.config or Gate1Config.from_config()
+        items = tuple(
+            item.strategy if isinstance(item, PatternCandidate) else item for item in candidates
+        )
+        if not items:
+            return ()
+        trial_count = len(items)
+        evaluations: dict[str, _CandidateEvaluation | str] = {}
+        payloads = [
+            (
+                spec,
+                tuple(candles),
+                evaluation,
+                self.cost_model,
+                self.cost_stress_pct,
+                train_bars,
+                test_bars,
+                step_bars,
+            )
+            for spec in items
+        ]
+        worker_count = max(1, workers)
+        if worker_count > 1 and len(payloads) > 1:
+            try:
+                with ProcessPoolExecutor(
+                    max_workers=worker_count,
+                    mp_context=multiprocessing.get_context("spawn"),
+                ) as pool:
+                    futures = {
+                        pool.submit(_evaluate_candidate, payload): payload[0]
+                        for payload in payloads
+                    }
+                    for future in as_completed(futures):
+                        spec = futures[future]
+                        spec_hash = strategy_hash(spec.model_dump(mode="json"))
+                        try:
+                            _, worker_eval = future.result()
+                            evaluations[spec_hash] = worker_eval
+                        except Exception as exc:  # noqa: BLE001 - isolate one bad idea
+                            evaluations[spec_hash] = f"worker_{type(exc).__name__}"
+            except Exception as exc:  # noqa: BLE001 - a pool failure is per-idea
+                for spec in items:
+                    evaluations[strategy_hash(spec.model_dump(mode="json"))] = (
+                        f"worker_{type(exc).__name__}"
+                    )
+        else:
+            for payload in payloads:
+                spec = payload[0]
+                spec_hash = strategy_hash(spec.model_dump(mode="json"))
+                try:
+                    _, worker_eval = _evaluate_candidate(payload)
+                    evaluations[spec_hash] = worker_eval
+                except Exception as exc:  # noqa: BLE001
+                    evaluations[spec_hash] = f"worker_{type(exc).__name__}"
+
         decisions: list[PipelineDecision] = []
-        for item in candidates:
-            spec = item.strategy if isinstance(item, PatternCandidate) else item
+        for spec in items:
+            if stop_event is not None and stop_event.is_set():
+                break
             spec_hash = strategy_hash(spec.model_dump(mode="json"))
-            result = run_backtest(
-                spec,
-                candles,
-                cost_model=self.cost_model,
-                train_bars=train_bars,
-                test_bars=test_bars,
-                step_bars=step_bars,
-            )
-            oos_result = run_backtest(spec, evaluation, cost_model=self.cost_model)
-            stress_result = run_backtest(
-                spec,
-                candles,
-                cost_model=self.cost_model,
-                cost_stress_pct=self.cost_stress_pct,
-            )
-            neighbor_specs = tuple(
-                _perturb(spec, threshold_factor, exit_factor)
-                for threshold_factor, exit_factor in (
-                    (0.95, 0.8),
-                    (0.95, 1.2),
-                    (1.05, 0.8),
-                    (1.05, 1.2),
+            evaluation_result = evaluations.get(spec_hash)
+            if not isinstance(evaluation_result, _CandidateEvaluation):
+                reason = evaluation_result or "worker_failed"
+                metrics = {"verdict": "error", "reason": reason}
+                self.ledger.append(
+                    ExperimentRecord(
+                        strategy_hash=spec_hash,
+                        parameters={"pipeline": "worker"},
+                        data_start=candles[0].ts_utc,
+                        data_end=candles[-1].ts_utc,
+                        metrics=metrics,
+                        proposer="pipeline_worker",
+                    )
                 )
-            )
-            neighbor_results = tuple(
-                run_backtest(
-                    neighbor,
-                    candles,
-                    cost_model=self.cost_model,
-                    train_bars=train_bars,
-                    test_bars=test_bars,
-                    step_bars=step_bars,
+                decisions.append(
+                    PipelineDecision(
+                        spec,
+                        spec_hash,
+                        metrics,
+                        self._failed_validation(
+                            spec_hash, metrics, [str(reason)], configured, trial_count
+                        ),
+                        _empty_result(spec),
+                        _empty_result(spec),
+                    )
                 )
-                for neighbor in neighbor_specs
-            )
+                continue
+            candidate_eval = evaluation_result
+            result = candidate_eval.result
+            oos_result = candidate_eval.oos_result
+            stress_result = candidate_eval.stress_result
+            neighbor_specs = candidate_eval.neighbor_specs
+            neighbor_results = candidate_eval.neighbor_results
             neighbor_changed = any(neighbor != spec for neighbor in neighbor_specs)
-            profitable_regimes = _profitable_regimes(result)
+            profitable_regimes = candidate_eval.profitable_regimes
             preliminary = gate1_metrics(
                 result,
                 out_of_sample=oos_result,
@@ -285,16 +415,16 @@ class ValidationPipeline:
                     proposer="pipeline",
                 )
             )
-            cheap_reasons = self._cheap_reasons(
-                preliminary, configured, max(1, self.ledger.count())
-            )
+            cheap_reasons = self._cheap_reasons(preliminary, configured, trial_count)
             if cheap_reasons:
                 decisions.append(
                     PipelineDecision(
                         spec,
                         spec_hash,
                         preliminary,
-                        self._failed_validation(spec_hash, preliminary, cheap_reasons, configured),
+                        self._failed_validation(
+                            spec_hash, preliminary, cheap_reasons, configured, trial_count
+                        ),
                         result,
                         _empty_result(spec),
                     )
@@ -312,7 +442,11 @@ class ValidationPipeline:
                         spec_hash,
                         preliminary,
                         self._failed_validation(
-                            spec_hash, preliminary, ["holdout_read_failed"], configured
+                            spec_hash,
+                            preliminary,
+                            ["holdout_read_failed"],
+                            configured,
+                            trial_count,
                         ),
                         result,
                         _empty_result(spec),
@@ -343,6 +477,7 @@ class ValidationPipeline:
                     holdout_spec_hash=holdout_spec_hash,
                     ledger=self.ledger,
                     config=configured,
+                    trials=trial_count,
                 )
             )
             validation = gate(metrics, holdout_spec_hash=spec_hash)
@@ -364,13 +499,14 @@ class ValidationPipeline:
         metrics: Mapping[str, Any],
         reasons: Sequence[str],
         config: Gate1Config,
+        trials: int | None = None,
     ) -> ValidationResult:
-        trials = max(1, self.ledger.count())
+        trial_count = max(1, trials if trials is not None else self.ledger.count())
         return ValidationResult(
             False,
             tuple(reasons),
-            bonferroni_alpha(config.alpha, trials),
-            trials,
+            bonferroni_alpha(config.alpha, trial_count),
+            trial_count,
             spec_hash,
             False,
             metrics,

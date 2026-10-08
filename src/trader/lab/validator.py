@@ -162,8 +162,9 @@ def validate_gate1(
         raise ValueError("holdout_spec_hash is required")
     configured = config or Gate1Config.from_config()
     ledger_count = ledger.count() if ledger is not None else 0
-    if trials is not None and trials < ledger_count:
-        raise ValueError("trials cannot be below the ledger count")
+    # An explicit trial count is the authoritative number of hypotheses in a
+    # run.  The ledger also contains neighbour and pipeline bookkeeping rows,
+    # so comparing it directly would over-correct the multiple-testing gate.
     count = max(1, trials if trials is not None else ledger_count)
     adjusted = bonferroni_alpha(configured.alpha, count)
     required = {
