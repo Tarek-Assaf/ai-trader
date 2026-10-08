@@ -16,6 +16,37 @@ from trader.lab.spec import IndicatorCondition, ParameterReference, StrategySpec
 type IndicatorSeries = tuple[float | None, ...]
 
 
+class IndicatorCache:
+    """Reusable indicator and regime series for one immutable candle frame."""
+
+    def __init__(self, bars: Iterable[Candle]) -> None:
+        self.bars = tuple(bars)
+        self._values: dict[tuple[str, int | None, int], IndicatorSeries] = {}
+        self._volatility: tuple[str | None, ...] | None = None
+        self._trend: tuple[str | None, ...] | None = None
+
+    @classmethod
+    def from_candles(cls, candles: Iterable[Candle], timeframe_minutes: int) -> IndicatorCache:
+        bars = tuple(bar for bar in resample_ohlc(candles, timeframe_minutes) if bar.complete)
+        return cls(bars)
+
+    def get(self, indicator: str, period: int | None, lookback: int = 0) -> IndicatorSeries:
+        key = (indicator, period, lookback)
+        if key not in self._values:
+            self._values[key] = _indicator_series(indicator, period, list(self.bars), lookback)
+        return self._values[key]
+
+    def volatility(self) -> tuple[str | None, ...]:
+        if self._volatility is None:
+            self._volatility = _volatility_regimes(indicators.atr(list(self.bars), 14))
+        return self._volatility
+
+    def trend(self) -> tuple[str | None, ...]:
+        if self._trend is None:
+            self._trend = _trend_regimes(list(self.bars))
+        return self._trend
+
+
 @dataclass(frozen=True, slots=True)
 class EntrySignal:
     instrument: str
@@ -166,7 +197,10 @@ def _matches(value: float | None, operator: str, threshold: float) -> bool:
 
 
 def evaluate_entries(
-    spec: StrategySpec, minute_candles: Iterable[Candle]
+    spec: StrategySpec,
+    minute_candles: Iterable[Candle],
+    *,
+    indicator_cache: IndicatorCache | None = None,
 ) -> tuple[EntrySignal, ...]:
     """Evaluate conditions on complete bars; performs no network, file, or broker I/O."""
     source = list(minute_candles)
@@ -180,27 +214,20 @@ def evaluate_entries(
     if not all(math.isfinite(bar.close) for bar in bars):
         raise ValueError("candle values must be finite")
 
-    cache: dict[tuple[str, int | None, int], IndicatorSeries] = {}
+    cache = indicator_cache or IndicatorCache(bars)
+    if indicator_cache is not None and indicator_cache.bars != tuple(bars):
+        raise ValueError("indicator cache does not match the candle frame")
     for condition in spec.entry_conditions:
-        key = (condition.indicator, condition.period, 0)
-        if key not in cache:
-            cache[key] = _indicator_values(condition, bars)
+        cache.get(condition.indicator, condition.period)
         if condition.threshold_indicator is not None:
-            reference_key = (
+            cache.get(
                 condition.threshold_indicator,
                 condition.threshold_period,
                 condition.threshold_lookback,
             )
-            if reference_key not in cache:
-                cache[reference_key] = _indicator_series(
-                    condition.threshold_indicator,
-                    condition.threshold_period,
-                    bars,
-                    condition.threshold_lookback,
-                )
 
-    volatility = _volatility_regimes(indicators.atr(bars, 14))
-    trend = _trend_regimes(bars)
+    volatility = cache.volatility()
+    trend = cache.trend()
     atr_cache: dict[int, IndicatorSeries] = {}
     parameter_values = {parameter.name: parameter.value for parameter in spec.tunable_parameters}
     allowed_sessions = set(spec.session_filters)
@@ -220,15 +247,13 @@ def evaluate_entries(
                 if isinstance(raw_threshold, ParameterReference)
                 else raw_threshold
             )
-            values = cache[(condition.indicator, condition.period, 0)]
+            values = cache.get(condition.indicator, condition.period)
             if condition.threshold_indicator is not None:
-                reference = cache[
-                    (
-                        condition.threshold_indicator,
-                        condition.threshold_period,
-                        condition.threshold_lookback,
-                    )
-                ][index]
+                reference = cache.get(
+                    condition.threshold_indicator,
+                    condition.threshold_period,
+                    condition.threshold_lookback,
+                )[index]
                 offset = condition.threshold_offset
                 atr_multiple = condition.threshold_atr_multiple
                 offset_value = (
@@ -238,7 +263,7 @@ def evaluate_entries(
                 )
                 atr_values = atr_cache.setdefault(
                     condition.threshold_atr_period,
-                    indicators.atr(bars, condition.threshold_atr_period),
+                    cache.get("atr", condition.threshold_atr_period),
                 )
                 atr_value = atr_values[index]
                 atr_multiple_value = (

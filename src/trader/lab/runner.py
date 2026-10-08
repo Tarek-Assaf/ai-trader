@@ -9,6 +9,7 @@ services and never promotes a strategy.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import io
 import json
 import logging
@@ -18,7 +19,9 @@ import shutil
 import subprocess
 import sys
 import threading
-from collections.abc import Mapping, Sequence
+import time
+from array import array
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from functools import partial
@@ -39,6 +42,213 @@ LOGGER = logging.getLogger(__name__)
 INSTRUMENTS = ("NSXUSD", "XAUUSD")
 TIMEFRAMES = (1, 3, 5)
 Timeframe = Literal[1, 3, 5]
+
+
+@dataclass(frozen=True, slots=True)
+class ColumnarSeries:
+    """Read-only columnar bars with lazy Candle compatibility.
+
+    Numeric columns are compact arrays and are marked read-only before they
+    cross a worker boundary.  Existing indicator code can still iterate the
+    series, but the loader itself does not retain one Python object per bar.
+    """
+
+    timestamps: tuple[datetime, ...]
+    opens: Any
+    highs: Any
+    lows: Any
+    closes: Any
+    volumes: Any
+    instrument: str
+    timeframe: int = 1
+
+    @property
+    def open(self) -> Any:
+        return self.opens
+
+    @property
+    def high(self) -> Any:
+        return self.highs
+
+    @property
+    def low(self) -> Any:
+        return self.lows
+
+    @property
+    def close(self) -> Any:
+        return self.closes
+
+    @property
+    def volume(self) -> Any:
+        return self.volumes
+
+    @property
+    def ts_utc(self) -> tuple[datetime, ...]:
+        return self.timestamps
+
+    def __len__(self) -> int:
+        return len(self.timestamps)
+
+    def __iter__(self) -> Iterator[Candle]:
+        return iter(self.to_candles())
+
+    def __getitem__(self, index: int | slice) -> Candle | tuple[Candle, ...]:
+        if isinstance(index, slice):
+            return self.to_candles()[index]
+        return self.to_candles()[index]
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, ColumnarSeries):
+            return self.to_candles() == other.to_candles()
+        if isinstance(other, tuple | list):
+            return self.to_candles() == tuple(other)
+        return NotImplemented
+
+    def to_candles(self) -> tuple[Candle, ...]:
+        return tuple(
+            Candle(
+                ts_utc=stamp,
+                open=float(opening),
+                high=float(high),
+                low=float(low),
+                close=float(close),
+                volume=float(volume),
+                series_key=(self.instrument, "histdata"),
+                n_minutes=self.timeframe,
+            )
+            for stamp, opening, high, low, close, volume in zip(
+                self.timestamps,
+                self.opens,
+                self.highs,
+                self.lows,
+                self.closes,
+                self.volumes,
+                strict=True,
+            )
+        )
+
+
+def _readonly_numeric(values: Sequence[float]) -> Any:
+    """Return a compact immutable numeric array without requiring NumPy."""
+    try:
+        import numpy as np
+
+        result = np.asarray(values, dtype="float64")
+        result.setflags(write=False)
+        return result
+    except ImportError:  # pragma: no cover - pyarrow environments normally have NumPy
+        return array("d", (float(value) for value in values))
+
+
+def _columnar_series(
+    timestamps: Sequence[datetime],
+    opens: Sequence[float],
+    highs: Sequence[float],
+    lows: Sequence[float],
+    closes: Sequence[float],
+    volumes: Sequence[float],
+    instrument: str,
+    timeframe: int,
+) -> ColumnarSeries:
+    return ColumnarSeries(
+        tuple(timestamps),
+        _readonly_numeric(opens),
+        _readonly_numeric(highs),
+        _readonly_numeric(lows),
+        _readonly_numeric(closes),
+        _readonly_numeric(volumes),
+        instrument,
+        timeframe,
+    )
+
+
+def read_memory_limit(path: str | Path = "/sys/fs/cgroup/memory.max") -> int | None:
+    """Read the cgroup memory limit; ``None`` means unlimited/unavailable."""
+    try:
+        value = Path(path).read_text(encoding="ascii").strip()
+    except (OSError, UnicodeError):
+        return None
+    if not value or value == "max":
+        return None
+    try:
+        limit = int(value)
+    except ValueError:
+        return None
+    return limit if limit > 0 else None
+
+
+def worker_cap(
+    *,
+    cpu_count: int | None = None,
+    memory_limit_bytes: int | None = None,
+    per_worker_bytes: int = 700 * 1024**2,
+    memory_fraction: float = 0.5,
+) -> int:
+    """Bound workers to CPU-2 and half the cgroup memory budget.
+
+    ``per_worker_bytes`` is intentionally conservative: it is a sizing limit,
+    not a measurement or a promise that a worker may exceed the cgroup cap.
+    """
+    cpus = cpu_count if cpu_count is not None else (os.cpu_count() or 1)
+    cpu_limit = max(1, cpus - 2)
+    if memory_limit_bytes is None:
+        return cpu_limit
+    if per_worker_bytes <= 0 or not 0 < memory_fraction <= 1:
+        raise ValueError("worker memory parameters must be positive")
+    memory_limit = int(memory_limit_bytes * memory_fraction // per_worker_bytes)
+    return max(1, min(cpu_limit, memory_limit))
+
+
+def cap_worker_count(requested: int | None = None, **kwargs: Any) -> int:
+    """Compatibility wrapper used by scripts and tests."""
+    cap = worker_cap(**kwargs)
+    return max(1, min(cap, requested)) if requested is not None else cap
+
+
+def process_rss_bytes() -> int:
+    """Return current process RSS where the host exposes it, else zero."""
+    try:
+        import resource
+
+        getrusage = getattr(resource, "getrusage", None)
+        if getrusage is None:
+            return 0
+        usage = getrusage(getattr(resource, "RUSAGE_SELF", 0)).ru_maxrss
+        return int(usage * (1024 if sys.platform != "darwin" else 1))
+    except (ImportError, AttributeError, OSError):
+        return 0
+
+
+class RunFileLock:
+    """Small cross-process lock implemented with atomic file creation."""
+
+    def __init__(self, path: str | Path) -> None:
+        self.path = Path(path)
+        self._owned = False
+
+    def acquire(self) -> None:
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError as exc:
+            raise RuntimeError("a Strategy Lab run is already in progress") from exc
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            handle.write(
+                json.dumps({"pid": os.getpid(), "started_at": datetime.now(UTC).isoformat()})
+            )
+        self._owned = True
+
+    def release(self) -> None:
+        if self._owned:
+            self.path.unlink(missing_ok=True)
+            self._owned = False
+
+    def __enter__(self) -> RunFileLock:
+        self.acquire()
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.release()
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,55 +442,226 @@ def prepare_holdout(
     return tuple(copied)
 
 
-def load_histdata_candles(
+def load_histdata_columns(
     root: str | Path,
     instrument: str,
     timeframe: int = 1,
     *,
     exclude_months: set[tuple[int, int]] | None = None,
-) -> tuple[Candle, ...]:
-    """Read HistData M1 bars and optionally build complete 3m/5m bars."""
+    cache_root: str | Path | None = None,
+) -> ColumnarSeries:
+    """Load HistData into compact read-only columns.
+
+    Parquet columns are materialized in bulk.  The compatibility Candle view
+    is created only when downstream indicator code explicitly iterates it.
+    """
     if timeframe not in TIMEFRAMES:
         raise ValueError("timeframe must be one of 1, 3 or 5 minutes")
     try:
         import pyarrow.parquet as pq  # type: ignore[import-untyped]
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError("pyarrow is required for Strategy Lab data") from exc
-    rows: list[Candle] = []
-    for path in _parquet_files(Path(root), instrument):
-        for row in pq.read_table(path).to_pylist():
-            try:
-                candle = Candle(
-                    ts_utc=_as_utc(row["ts_utc"]),
-                    open=float(row["open"]),
-                    high=float(row["high"]),
-                    low=float(row["low"]),
-                    close=float(row["close"]),
-                    volume=float(row.get("volume", 0.0) or 0.0),
-                    series_key=(instrument, "histdata"),
-                )
-            except (KeyError, TypeError, ValueError, OverflowError):
+    files = _parquet_files(Path(root), instrument)
+    excluded = exclude_months or set()
+    cache_path = _cache_path(files, excluded, instrument, timeframe, cache_root)
+    if cache_path is not None and cache_path.is_file():
+        try:
+            return _read_columnar_cache(cache_path, instrument, timeframe=timeframe)
+        except (OSError, KeyError, TypeError, ValueError, OverflowError):
+            cache_path.unlink(missing_ok=True)
+
+    timestamps: list[datetime] = []
+    columns: dict[str, list[float]] = {
+        name: [] for name in ("open", "high", "low", "close", "volume")
+    }
+    for path in files:
+        try:
+            available = set(pq.ParquetFile(path).schema.names)
+            required = ["ts_utc", "open", "high", "low", "close"]
+            if not set(required).issubset(available):
                 continue
-            if all(
-                math.isfinite(value)
-                for value in (candle.open, candle.high, candle.low, candle.close)
-            ):
-                if (
-                    exclude_months is None
-                    or (candle.ts_utc.year, candle.ts_utc.month) not in exclude_months
-                ):
-                    rows.append(candle)
-    rows.sort(key=lambda item: item.ts_utc)
-    unique = {item.ts_utc: item for item in rows}
-    minute = tuple(unique.values())
-    if timeframe == 1:
-        return minute
-    return tuple(item for item in resample_ohlc(minute, timeframe) if item.complete)
+            names = required + (["volume"] if "volume" in available else [])
+            table = pq.read_table(path, columns=names)
+            stamps = [_as_utc(value) for value in table["ts_utc"].to_pylist()]
+            values = {
+                name: table[name].to_pylist() if name in table.column_names else [0.0] * len(stamps)
+                for name in ("open", "high", "low", "close", "volume")
+            }
+            for index, stamp in enumerate(stamps):
+                if (stamp.year, stamp.month) in excluded:
+                    continue
+                numeric = tuple(float(values[name][index] or 0.0) for name in columns)
+                if not all(math.isfinite(value) for value in numeric[:4]):
+                    continue
+                timestamps.append(stamp)
+                for name, value in zip(columns, numeric, strict=True):
+                    columns[name].append(value)
+        except (OSError, KeyError, ValueError, TypeError, OverflowError):
+            continue
+
+    order = sorted(range(len(timestamps)), key=timestamps.__getitem__)
+    unique_indices: list[int] = []
+    previous: datetime | None = None
+    for index in order:
+        stamp = timestamps[index]
+        if stamp != previous:
+            unique_indices.append(index)
+            previous = stamp
+    series = _columnar_series(
+        [timestamps[index] for index in unique_indices],
+        [columns["open"][index] for index in unique_indices],
+        [columns["high"][index] for index in unique_indices],
+        [columns["low"][index] for index in unique_indices],
+        [columns["close"][index] for index in unique_indices],
+        [columns["volume"][index] for index in unique_indices],
+        instrument,
+        1,
+    )
+    if timeframe != 1:
+        resampled = tuple(
+            item for item in resample_ohlc(series.to_candles(), timeframe) if item.complete
+        )
+        series = _columnar_series(
+            [item.ts_utc for item in resampled],
+            [item.open for item in resampled],
+            [item.high for item in resampled],
+            [item.low for item in resampled],
+            [item.close for item in resampled],
+            [item.volume for item in resampled],
+            instrument,
+            timeframe,
+        )
+    if cache_path is not None:
+        try:
+            _write_candle_cache(cache_path, series)
+        except (OSError, ValueError, TypeError):
+            LOGGER.warning("lab series cache write failed (%s)", type(cache_path).__name__)
+    return series
+
+
+def load_histdata_arrays(
+    root: str | Path,
+    instrument: str,
+    timeframe: int = 1,
+    *,
+    exclude_months: set[tuple[int, int]] | None = None,
+    cache_root: str | Path | None = None,
+) -> ColumnarSeries:
+    """Alias with an explicit name for callers that require array output."""
+    return load_histdata_columns(
+        root,
+        instrument,
+        timeframe,
+        exclude_months=exclude_months,
+        cache_root=cache_root,
+    )
+
+
+def load_histdata_candles(
+    root: str | Path,
+    instrument: str,
+    timeframe: int = 1,
+    *,
+    exclude_months: set[tuple[int, int]] | None = None,
+    cache_root: str | Path | None = None,
+) -> tuple[Candle, ...]:
+    """Read HistData as the backwards-compatible lazy Candle view."""
+    return load_histdata_columns(
+        root,
+        instrument,
+        timeframe,
+        exclude_months=exclude_months,
+        cache_root=cache_root,
+    ).to_candles()
+
+
+def _cache_path(
+    files: Sequence[Path],
+    excluded: set[tuple[int, int]],
+    instrument: str,
+    timeframe: int,
+    cache_root: str | Path | None,
+) -> Path | None:
+    if cache_root is None:
+        return None
+    signature = {
+        "files": [
+            {
+                "path": str(path),
+                "size": path.stat().st_size,
+                "mtime_ns": path.stat().st_mtime_ns,
+            }
+            for path in files
+        ],
+        "exclude_months": sorted(f"{year:04d}-{month:02d}" for year, month in excluded),
+        "instrument": instrument,
+        "timeframe": timeframe,
+    }
+    digest = hashlib.sha256(
+        json.dumps(signature, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()[:32]
+    return Path(cache_root) / f"{instrument.lower()}-{timeframe}m-{digest}.parquet"
+
+
+def _read_candle_columns(path: Path, instrument: str, *, timeframe: int) -> tuple[Candle, ...]:
+    return _read_columnar_cache(path, instrument, timeframe=timeframe).to_candles()
+
+
+def _read_columnar_cache(path: Path, instrument: str, *, timeframe: int) -> ColumnarSeries:
+    import pyarrow.parquet as pq
+
+    table = pq.read_table(path, columns=["ts_utc", "open", "high", "low", "close", "volume"])
+    columns = {name: table[name].to_pylist() for name in table.column_names}
+    return _columnar_series(
+        [_as_utc(stamp) for stamp in columns["ts_utc"]],
+        [float(value) for value in columns["open"]],
+        [float(value) for value in columns["high"]],
+        [float(value) for value in columns["low"]],
+        [float(value) for value in columns["close"]],
+        [float(value or 0.0) for value in columns.get("volume", [])],
+        instrument,
+        timeframe,
+    )
+
+
+def _write_candle_cache(path: Path, candles: Sequence[Candle] | ColumnarSeries) -> None:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    series = (
+        candles
+        if isinstance(candles, ColumnarSeries)
+        else _columnar_series(
+            [item.ts_utc for item in candles],
+            [item.open for item in candles],
+            [item.high for item in candles],
+            [item.low for item in candles],
+            [item.close for item in candles],
+            [item.volume for item in candles],
+            "cache",
+            1,
+        )
+    )
+    table = pa.table(
+        {
+            "ts_utc": list(series.timestamps),
+            "open": series.opens,
+            "high": series.highs,
+            "low": series.lows,
+            "close": series.closes,
+            "volume": series.volumes,
+        }
+    )
+    temporary = path.with_suffix(".tmp.parquet")
+    pq.write_table(table, temporary)
+    temporary.replace(path)
 
 
 def coverage_report(root: str | Path, instrument: str) -> Coverage:
     """Summarize lake coverage and QA sidecars without opening broker state."""
-    candles = load_histdata_candles(root, instrument)
+    import pyarrow.parquet as pq
+
     files = _parquet_files(Path(root), instrument)
     qa_flags: set[str] = set()
     lineage = Path(root).parent.parent / "data_lineage"
@@ -293,8 +674,29 @@ def coverage_report(root: str | Path, instrument: str) -> Coverage:
                 qa_flags.add("gaps")
         except (OSError, ValueError, TypeError):
             qa_flags.add("qa_unreadable")
-    first = candles[0].ts_utc if candles else None
-    last = candles[-1].ts_utc if candles else None
+    first: datetime | None = None
+    last: datetime | None = None
+    row_count = 0
+    for path in files:
+        try:
+            metadata = pq.ParquetFile(path).metadata
+            row_count += metadata.num_rows
+            for index in range(metadata.num_row_groups):
+                group = metadata.row_group(index)
+                for column_index in range(group.num_columns):
+                    column = group.column(column_index)
+                    if column.path_in_schema != "ts_utc" or column.statistics is None:
+                        continue
+                    lower = _as_utc(column.statistics.min)
+                    upper = _as_utc(column.statistics.max)
+                    first = lower if first is None else min(first, lower)
+                    last = upper if last is None else max(last, upper)
+        except (OSError, KeyError, TypeError, ValueError, OverflowError):
+            continue
+    if row_count and (first is None or last is None):
+        timestamps = load_histdata_candles(root, instrument)
+        first = timestamps[0].ts_utc if timestamps else None
+        last = timestamps[-1].ts_utc if timestamps else None
     months = (
         0
         if first is None or last is None
@@ -337,6 +739,26 @@ def strategy_lab_holdout_months(config_path: str | Path = "config/strategy_lab.y
         raise ValueError("strategy_lab.yaml data.holdout_months is invalid") from exc
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise ValueError("strategy_lab.yaml data.holdout_months must be a positive integer")
+    return cast(int, value)
+
+
+def strategy_lab_max_training_years(
+    config_path: str | Path = "config/strategy_lab.yaml",
+) -> int | None:
+    """Read the bounded training window; ``all`` disables the bound."""
+    import yaml
+
+    try:
+        payload = yaml.safe_load(Path(config_path).read_text(encoding="utf-8")) or {}
+        value = payload["data"]["max_training_years"]
+    except (KeyError, TypeError, OSError, ValueError, yaml.YAMLError) as exc:
+        raise ValueError("strategy_lab.yaml data.max_training_years is invalid") from exc
+    if value == "all":
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(
+            "strategy_lab.yaml data.max_training_years must be a positive integer or all"
+        )
     return cast(int, value)
 
 
@@ -413,12 +835,18 @@ class LabRunner:
         ledger: ExperimentLedger | None = None,
         config_path: str | Path = "config/strategy_lab.yaml",
         idea_generator: Any | None = None,
+        cache_root: str | Path = "/workspace/state/lab/cache",
+        max_training_years: int | None = 6,
+        lock_path: str | Path | None = None,
     ) -> None:
         self.lake_root = Path(lake_root)
         self.holdout_root = Path(holdout_root).resolve()
         self.ledger = ledger or ExperimentLedger()
         self.config_path = Path(config_path)
         self.idea_generator = idea_generator
+        self.cache_root = Path(cache_root)
+        self.max_training_years = max_training_years
+        self.lock_path = Path(lock_path) if lock_path is not None else None
 
     def _candidates(
         self, instrument: str, timeframe: int, sources: Sequence[str], candles: Sequence[Candle]
@@ -448,7 +876,18 @@ class LabRunner:
                 LOGGER.warning("idea generator failed (%s)", type(exc).__name__)
         return result
 
-    def run(
+    def run(self, *args: Any, **kwargs: Any) -> LabRunResult:
+        """Run a job while refusing concurrent processes sharing a lock file."""
+        lock_path = self.lock_path
+        progress_path = kwargs.get("progress_path")
+        if lock_path is None and progress_path is not None:
+            lock_path = Path(progress_path).parent / "run.lock"
+        if lock_path is None:
+            return self._run_unlocked(*args, **kwargs)
+        with RunFileLock(lock_path):
+            return self._run_unlocked(*args, **kwargs)
+
+    def _run_unlocked(
         self,
         *,
         instruments: Sequence[str] = INSTRUMENTS,
@@ -463,8 +902,28 @@ class LabRunner:
         progress_path: str | Path | None = None,
     ) -> LabRunResult:
         started = datetime.now(UTC)
+        phase_started = time.monotonic()
+        phase_timings: dict[str, float] = {}
+        current_phase = "loading"
+
+        def mark_phase(name: str) -> None:
+            nonlocal current_phase, phase_started
+            now = time.monotonic()
+            phase_timings[current_phase] = phase_timings.get(current_phase, 0.0) + (
+                now - phase_started
+            )
+            current_phase = name
+            phase_started = now
+            print(f"[{datetime.now(UTC).isoformat()}] {name}", flush=True)
+
         run_name = run_id or started.strftime("%Y%m%dT%H%M%SZ")
-        workers = max(1, workers if workers is not None else (os.cpu_count() or 2) - 2)
+        memory_limit = read_memory_limit()
+        workers = cap_worker_count(
+            workers,
+            cpu_count=os.cpu_count(),
+            memory_limit_bytes=memory_limit,
+        )
+        peak_rss = process_rss_bytes()
         coverage = tuple(coverage_report(self.lake_root, instrument) for instrument in instruments)
         attempts: list[LabAttempt] = []
         holdout_files = tuple(self.holdout_root.glob("**/*.parquet"))
@@ -516,7 +975,17 @@ class LabRunner:
                 instrument,
                 timeframe,
                 exclude_months=sealed_months,
+                cache_root=self.cache_root,
             )
+            if self.max_training_years is not None and sealed_months:
+                first_holdout = min(sealed_months)
+                cutoff = datetime(
+                    first_holdout[0] - self.max_training_years,
+                    first_holdout[1],
+                    1,
+                    tzinfo=UTC,
+                )
+                candles = tuple(item for item in candles if item.ts_utc >= cutoff)
             if len(candles) < 10:
                 continue
             split = max(1, int(len(candles) * 0.8))
@@ -566,8 +1035,10 @@ class LabRunner:
         completed_ideas = 0
 
         def write_progress(status: str = "running") -> None:
+            nonlocal peak_rss
             if progress_path is None:
                 return
+            peak_rss = max(peak_rss, process_rss_bytes())
             target = Path(progress_path)
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(
@@ -578,6 +1049,11 @@ class LabRunner:
                         "ideas_done": completed_ideas,
                         "ideas_total": total_ideas,
                         "survivors": sum(item.verdict == "pass" for item in attempts),
+                        "phase": current_phase,
+                        "phase_timings_seconds": dict(phase_timings),
+                        "peak_rss_bytes": peak_rss,
+                        "memory_limit_bytes": memory_limit,
+                        "workers": workers,
                     },
                     sort_keys=True,
                 ),
@@ -588,10 +1064,14 @@ class LabRunner:
         for instrument, timeframe, train, test, candidates, specs, holdout in groups:
             if stopped():
                 break
+            mark_phase(f"mining:{instrument}:{timeframe}m")
+            write_progress()
             reader = open_sealed_reader(self.holdout_root, self.ledger)
             pipeline = ValidationPipeline(
                 ledger=self.ledger, cost_model=pessimistic_cost_model(self.config_path)
             )
+            mark_phase(f"evaluating:0/{len(candidates)}:{instrument}:{timeframe}m")
+            write_progress()
             try:
                 decisions = pipeline.run(
                     specs,
@@ -624,6 +1104,9 @@ class LabRunner:
                         )
                     )
                 completed_ideas += len(candidates)
+                mark_phase(
+                    f"evaluating:{len(candidates)}/{len(candidates)}:{instrument}:{timeframe}m"
+                )
                 write_progress()
                 continue
             decision_hashes = {decision.strategy_hash: decision for decision in decisions}
@@ -671,8 +1154,12 @@ class LabRunner:
                     )
                 )
             completed_ideas += len(candidates)
+            mark_phase(f"evaluating:{len(candidates)}/{len(candidates)}:{instrument}:{timeframe}m")
+            mark_phase(f"holdout:{instrument}:{timeframe}m")
             write_progress()
         finished = datetime.now(UTC)
+        mark_phase("done")
+        phase_timings.setdefault("done", 0.0)
         survivors = tuple(item for item in attempts if item.verdict == "pass")
         write_progress("completed")
         return LabRunResult(run_name, started, finished, tuple(attempts), survivors, coverage)
@@ -759,6 +1246,8 @@ class LabJobManager:
                                 str(self.progress_path),
                                 "--stop-file",
                                 str(self.stop_path),
+                                "--lock-file",
+                                str(self.state_root / "run.lock"),
                                 "--instruments",
                                 *instruments,
                             ],
@@ -877,16 +1366,23 @@ class LabJobManager:
 
 
 __all__ = [
+    "ColumnarSeries",
     "Coverage",
     "LabAttempt",
     "LabJobManager",
     "LabRunResult",
     "LabRunner",
     "coverage_report",
+    "cap_worker_count",
     "holdout_months",
+    "load_histdata_arrays",
     "load_histdata_candles",
+    "load_histdata_columns",
     "prepare_holdout",
     "pessimistic_cost_model",
+    "read_memory_limit",
+    "RunFileLock",
     "strategy_lab_holdout_months",
+    "strategy_lab_max_training_years",
     "tune_variants",
 ]

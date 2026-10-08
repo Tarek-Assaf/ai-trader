@@ -7,6 +7,7 @@ stages: [idea, backtest, paper, micro_live, live, retired]
 
 data:
   holdout_months: 3                # most recent months sealed away; only the validator may read them
+  max_training_years: 6            # bounded walk-forward history; use all only for an explicit full-history run
   hypothesis_source: histdata      # ideas come from HistData and the own data lake
   confirmation_source: capital_demo
   timeframes: [1m, 3m, 5m]         # 3m is built from 1m
