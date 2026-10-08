@@ -396,11 +396,42 @@ def _hf_manifest(api: Any, repo_id: str, token: str, temporary: Path) -> dict[st
         raise BackupFailure("Hugging Face manifest lookup failed") from exc
 
 
+ACTIVE_FILE_SECONDS = 900.0
+
+
+def _snapshot_active_files(
+    files: Mapping[str, Path], snapshot_dir: Path, *, now: float | None = None
+) -> dict[str, Path]:
+    """Copy recently modified files so the hash and the upload see the same bytes.
+
+    The live recorder keeps appending to the current month's Parquet file while a long
+    upload runs; hashing the original and uploading it later makes the manifest wrong.
+    """
+    import time
+
+    current = time.time() if now is None else now
+    result: dict[str, Path] = {}
+    for name, source in files.items():
+        try:
+            recent = current - source.stat().st_mtime < ACTIVE_FILE_SECONDS
+        except OSError:
+            recent = False
+        if not recent:
+            result[name] = source
+            continue
+        target = snapshot_dir / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+        result[name] = target
+    return result
+
+
 def _prepare_huggingface(
     options: BackupOptions, files: Mapping[str, Path], token: str, temporary: Path
 ) -> _HfPush:
     api = _hf_api(token)
     remote_manifest = _hf_manifest(api, options.hf_repo, token, temporary)
+    files = _snapshot_active_files(files, temporary / "snapshot")
     manifest = {name: sha256(source) for name, source in sorted(files.items())}
     manifest_path = temporary / "sha256-manifest.json"
     manifest_path.write_text(
