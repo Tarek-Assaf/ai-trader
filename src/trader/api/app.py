@@ -83,6 +83,28 @@ def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
     return configured or TelegramBotTransport(token)
 
 
+def _command_renderer(command_handlers: dict[str, Any]) -> Callable[[str, str], str]:
+    """Render read-only Telegram commands through their data-service handlers."""
+
+    def render(command: str, argument: str) -> str:
+        unavailable = f"{command[:32]} is unavailable right now."
+        handler = command_handlers.get(command)
+        if not callable(handler):
+            return unavailable
+        full_command = f"{command} {argument}".strip()
+        try:
+            value = handler(full_command)
+        except Exception as exc:  # noqa: BLE001 - command failures stay bounded
+            _LOG.warning(
+                "telegram command handler failed",
+                extra={"command": command, "error": type(exc).__name__},
+            )
+            return unavailable
+        return value if isinstance(value, str) else unavailable
+
+    return render
+
+
 def _start_runtime_if_configured(
     app: FastAPI,
     settings: EnvironmentSettings,
@@ -624,6 +646,7 @@ async def lifespan(_app: FastAPI) -> Any:
                 control_writer=writer,
                 current_mode=current_mode,
                 router=router,
+                render=_command_renderer(command_handlers),
                 render_chart=(
                     command_service.chart
                     if isinstance(command_service, CommandDataService)

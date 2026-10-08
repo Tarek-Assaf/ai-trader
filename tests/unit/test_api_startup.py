@@ -9,6 +9,95 @@ from pydantic import SecretStr
 
 from trader.api import app as app_module
 from trader.api import health as health_module
+from trader.channels.telegram import TelegramChannel
+from trader.reports.commands import CommandDataService
+
+
+class _CommandTransport:
+    def __init__(self) -> None:
+        self.messages: list[tuple[str, str]] = []
+
+    def get_updates(self, _offset: int | None, _timeout: int) -> list[dict[str, object]]:
+        return []
+
+    def send_message(self, chat_id: str, text: str, *, reply_markup=None) -> None:
+        del reply_markup
+        self.messages.append((chat_id, text))
+
+    def send_photo(self, _chat_id: str, _photo: bytes, *, caption: str = "") -> None:
+        del caption
+
+    def answer_callback(self, _callback_id: str, _text: str = "") -> None:
+        return None
+
+
+class _CommandWriter:
+    def set(self, _mode) -> None:
+        return None
+
+
+class _PaperBroker:
+    def get_account(self) -> dict[str, str]:
+        return {"balance": "10000", "equity": "10000", "currency": "USD"}
+
+    def get_positions(self) -> tuple[object, ...]:
+        return ()
+
+
+def test_app_command_renderer_uses_real_command_service_and_paper_broker() -> None:
+    """The real channel wiring renders /status from the paper account."""
+    transport = _CommandTransport()
+    service = CommandDataService(_PaperBroker())
+    channel = TelegramChannel(
+        transport,
+        ["owner"],
+        control_writer=_CommandWriter(),
+        render=app_module._command_renderer(service.handlers()),
+    )
+
+    channel.handle_message("owner", "/status")
+
+    assert transport.messages[-1][1].startswith(
+        "Status: account USD; balance 10000; equity 10000."
+    )
+    assert transport.messages[-1][1] != "/status:"
+
+    channel.handle_message("owner", "/soak")
+    assert transport.messages[-1][1] == "Soak status is unavailable right now."
+
+
+def test_app_command_renderer_reports_bounded_unavailable_without_broker() -> None:
+    """A missing broker uses the bounded response instead of the echo placeholder."""
+    transport = _CommandTransport()
+    service = CommandDataService(None)
+    channel = TelegramChannel(
+        transport,
+        ["owner"],
+        control_writer=_CommandWriter(),
+        render=app_module._command_renderer(service.handlers()),
+    )
+
+    channel.handle_message("owner", "/status")
+
+    assert transport.messages[-1][1] == "Trading status is unavailable right now."
+    assert "/status:" not in transport.messages[-1][1]
+
+
+def test_app_command_renderer_passes_full_command_and_bounds_failures(caplog) -> None:
+    seen: list[str] = []
+
+    def fail(command: str) -> str:
+        seen.append(command)
+        raise RuntimeError("secret handler detail")
+
+    rendered = app_module._command_renderer({"/report": fail})
+
+    with caplog.at_level("WARNING"):
+        assert rendered("/report", "weekly") == "/report is unavailable right now."
+
+    assert seen == ["/report weekly"]
+    assert "RuntimeError" in caplog.text
+    assert "secret handler detail" not in caplog.text
 
 
 def test_lifespan_keeps_telegram_startup_alive_when_runtime_services_fail(monkeypatch) -> None:
