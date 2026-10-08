@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import os
 import sys
 import types
 from pathlib import Path
@@ -176,3 +177,19 @@ def test_failure_output_does_not_capture_tokens(
     output = capsys.readouterr().out
     assert github_token not in output
     assert hf_token not in output
+
+
+def test_active_files_are_snapshotted_before_hashing(tmp_path: Path) -> None:
+    live = tmp_path / "live.parquet"
+    live.write_bytes(b"v1")
+    old = tmp_path / "old.parquet"
+    old.write_bytes(b"old")
+    os.utime(old, (1.0, 1.0))
+    mapping = {"data/lake/live.parquet": live, "data/lake/old.parquet": old}
+
+    snap = backup._snapshot_active_files(mapping, tmp_path / "snap")  # noqa: SLF001
+    live.write_bytes(b"v2-appended")
+
+    assert snap["data/lake/old.parquet"] == old
+    assert snap["data/lake/live.parquet"] != live
+    assert snap["data/lake/live.parquet"].read_bytes() == b"v1"
