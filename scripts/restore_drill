@@ -10,6 +10,7 @@ read from the environment and are never included in command output.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -125,6 +126,11 @@ def _github_token() -> str:
     return _env("GITHUB_TOKEN", "GITHUB_BACKUP_TOKEN")
 
 
+def _github_auth_header(token: str) -> str:
+    encoded = base64.b64encode(f"x-access-token:{token}".encode()).decode("ascii")
+    return f"Authorization: Basic {encoded}"
+
+
 def _hf_token() -> str:
     return _env("HF_TOKEN")
 
@@ -154,7 +160,7 @@ def fetch_remote_backups(options: DrillOptions) -> tuple[Path, Path]:
         {
             "GIT_CONFIG_COUNT": "1",
             "GIT_CONFIG_KEY_0": "http.extraHeader",
-            "GIT_CONFIG_VALUE_0": f"Authorization: Bearer {github_token}",
+            "GIT_CONFIG_VALUE_0": _github_auth_header(github_token),
         }
     )
     result = _run(
