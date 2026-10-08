@@ -522,7 +522,8 @@ class TelegramBotTransport:
             raise RuntimeError("Telegram API request failed") from None
         if not isinstance(body, Mapping):
             LOGGER.warning(
-                "telegram request failed method=%s status=%s telegram_error_code=%s (invalid_response)",
+                "telegram request failed method=%s status=%s "
+                "telegram_error_code=%s (invalid_response)",
                 method,
                 status,
                 None,

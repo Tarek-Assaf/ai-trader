@@ -5,7 +5,6 @@ import logging
 import pytest
 
 import trader.channels.telegram as telegram_module
-
 from trader.channels.telegram import (
     Alert,
     AlertLimiter,
