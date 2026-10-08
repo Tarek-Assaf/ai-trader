@@ -420,7 +420,7 @@ def _log_alert(message: str) -> None:
     LOGGER.error("runtime alert: %s", message)
 
 
-def _dump_mapping(value: object) -> dict[str, object]:
+def _dump_mapping(value: object) -> dict[str, Any]:
     method = getattr(value, "model_dump", None)
     raw = method() if callable(method) else value
     return dict(raw) if isinstance(raw, Mapping) else {}
