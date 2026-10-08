@@ -104,3 +104,13 @@ def test_live_stages_fail_closed_without_flag_or_recorded_gate() -> None:
         "s1", "micro_live", _metrics(_gate(_config(), "gate3_micro_to_live")), target_stage="live"
     )
     assert not decision.approved and decision.reasons == ("live_trading_disabled",)
+
+
+def test_promotion_marks_backup_stage_trigger(tmp_path, monkeypatch) -> None:
+    trigger = tmp_path / "backup-stage-trigger"
+    monkeypatch.setenv("BACKUP_STAGE_TRIGGER_FILE", str(trigger))
+    gate = PromotionGate(_config(), audit=_Audit([]))
+    metrics = _metrics(_gate(_config(), "gate1_backtest_to_paper"))
+    validation = ValidationResult(True, (), 0.05, 1, "s1", True)
+    gate.promote("s1", "backtest", metrics, target_stage="paper", validation=validation)
+    assert trigger.is_file()

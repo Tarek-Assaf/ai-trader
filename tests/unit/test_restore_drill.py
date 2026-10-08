@@ -74,3 +74,10 @@ def test_secret_abort_check_does_not_emit_planted_value() -> None:
     # The function asserts the scanner rejects the planted value and only emits
     # its fixed redacted PASS line.
     restore_drill.run_secret_abort_check()
+
+
+def test_github_header_uses_basic_auth_without_plain_token() -> None:
+    token = "github-secret-value"
+    header = restore_drill._github_auth_header(token)
+    assert header.startswith("Authorization: Basic ")
+    assert token not in header
