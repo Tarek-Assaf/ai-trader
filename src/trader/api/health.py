@@ -15,6 +15,7 @@ from trader.core.settings import EnvironmentSettings
 BACKUP_DIR = Path("/workspace/backups")
 BACKUP_MAX_AGE_SECONDS = 15 * 60
 RECORDER_MAX_LIVENESS_AGE_SECONDS = 30
+RECORDER_MAX_TICK_AGE_SECONDS = 180
 RECORDER_STATUS_PATH = Path(
     os.getenv("RECORDER_STATUS_PATH", "/workspace/data/recorder-status.json")
 )
@@ -195,7 +196,7 @@ def _recorder_liveness_ok(
             return False
         tick_age = (now or datetime.now(UTC)) - tick_stamp.astimezone(UTC)
         tick_age_seconds = tick_age.total_seconds()
-        if tick_age_seconds < 0 or tick_age_seconds > RECORDER_MAX_LIVENESS_AGE_SECONDS:
+        if tick_age_seconds < 0 or tick_age_seconds > RECORDER_MAX_TICK_AGE_SECONDS:
             return False
     last_liveness = recorder["last_liveness_at"]
     if not last_liveness:

@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 228,
+  "turn": "claude",
+  "revision": 229,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-104 paper execution defaults and model-backed config loading are ready for Claude review. Costs remain provisional until T-017 calibration; T-017/T-044 still wait on recorder data.",
+    "summary": "T-106 recorder health now tolerates normal 45-second price gaps with a separate 180-second tick-age limit while retaining 30-second protocol liveness. T-017/T-044 still wait on recorder data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -203,7 +203,8 @@
         "T-102",
         "T-103",
         "T-104",
-        "T-105"
+        "T-105",
+        "T-106"
       ]
     },
     {
@@ -3185,6 +3186,37 @@
         "git diff --check"
       ],
       "completion_note": "Callable service instances are now wrapped as constants; explicit routine overrides remain factories. Real build_runtime_services output is composed through the default factories in regression coverage. Runtime startup/retry logs retain full redacted tracebacks, while /health runtime_detail reports only safe type/location diagnostics plus fixed dependency messages. Bundled Python compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders were used. Handing T-105 to Claude for review."
+    },
+    {
+      "id": "T-106",
+      "title": "Recorder health tick-age tolerance",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-11"
+      ],
+      "depends_on": [
+        "T-103"
+      ],
+      "acceptance_criteria": [
+        "Use a separate 180-second tick-age limit for last_tick_at while expected_open; retain the 30-second liveness limit for last_liveness_at.",
+        "A healthy expected-open recorder with a 45-second-old tick remains healthy, while a 200-second-old tick is degraded.",
+        "A stale liveness timestamp remains degraded even when the tick is recent; no other health rule changes and detail strings remain bounded."
+      ],
+      "deliverables": [
+        "src/trader/api/health.py",
+        "tests/unit/test_health.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "src/trader/api/health.py",
+        "tests/unit/test_health.py",
+        "bundled Python compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Added RECORDER_MAX_TICK_AGE_SECONDS=180 for expected-open price ticks while retaining RECORDER_MAX_LIVENESS_AGE_SECONDS=30 for protocol liveness. Tests cover a 45-second tick gap, a 200-second stale tick, and stale liveness with a recent tick. Ruff, mypy, pytest and make are unavailable in this desktop runtime; compileall and git diff --check pass. No Pod/API calls, credentials, broker calls or orders used. Handing T-106 to Claude for review."
     }
   ],
   "decisions": [
@@ -5881,6 +5913,17 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "runtime factory wiring, service callables or log redaction changes"
+    },
+    {
+      "id": "V-242",
+      "subject": "T-106 recorder tick-age tolerance",
+      "method": "Inspected the separate tick and liveness thresholds and focused tests for 45-second, 200-second and stale-liveness cases. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/api/health.py; tests/unit/test_health.py; bundled Python compileall; git diff --check",
+      "review_notes": "Dependency-backed pytest, Ruff, mypy and make check are unavailable in this desktop runtime; Claude/CI should run full quality gates. No other health rule or detail bound changed.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "recorder health thresholds or liveness detail handling changes"
     }
   ],
   "blockers": [
@@ -10116,7 +10159,22 @@
         "src/trader/runtime/factory.py"
       ],
       "summary": "T-105 reviewed and passed: callable service instances are no longer invoked as factories; real service bundle composes in tests; tracebacks logged with redaction and health detail bounded. CI quality gates merge. Turn to Codex; owner redeploys the Pod and reports /health."
+    },
+    {
+      "revision": 229,
+      "ts": "2026-10-08T09:30:00Z",
+      "agent": "codex",
+      "action": "complete_t106_recorder_tick_age_tolerance",
+      "task_ids": [
+        "T-106"
+      ],
+      "files_changed": [
+        "src/trader/api/health.py",
+        "tests/unit/test_health.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Added a separate 180-second tick-age tolerance for expected-open recorder health while keeping the 30-second liveness window. Tests cover a 45-second tick gap, a 200-second stale tick and stale liveness with a recent tick. Compileall and diff-check pass; pytest/Ruff/mypy/make are unavailable. Handing T-106 to Claude for review."
     }
   ],
-  "project_summary": "T-105 runtime factory constants and startup diagnostics are ready for Claude review. T-017/T-044 still wait on recorder data; T-060 remains blocked on T-005."
+  "project_summary": "T-106 recorder health now tolerates normal 45-second price gaps with a separate 180-second tick-age limit while retaining 30-second protocol liveness. T-017/T-044 still wait on recorder data."
 }

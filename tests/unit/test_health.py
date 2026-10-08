@@ -78,7 +78,7 @@ def test_health_exposes_runtime_unavailable_reason(monkeypatch) -> None:
 
 
 def test_recorder_health_exposes_reconnect_reason_and_market_liveness(tmp_path: Path) -> None:
-    """Health uses ping and market status; a quiet but open price feed is not inspected."""
+    """Health exposes the bounded recorder status allowlist without secrets."""
     status_file = tmp_path / "recorder.json"
     status_file.write_text(
         json.dumps(
@@ -145,7 +145,7 @@ def test_recorder_health_requires_fresh_ping_and_market_status() -> None:
     assert health._recorder_liveness_ok({**status, "ping_reply_ok": False}, now=now) is False
 
 
-def test_recorder_health_requires_recent_tick_when_market_is_open() -> None:
+def test_recorder_health_allows_normal_tick_gap_when_market_is_open() -> None:
     now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
     status = {
         "configured": True,
@@ -156,8 +156,44 @@ def test_recorder_health_requires_recent_tick_when_market_is_open() -> None:
         "expected_open": True,
         "stale_epics": [],
         "ticks_received": 1,
-        "last_tick_at": (now - timedelta(seconds=31)).isoformat(),
+        "last_tick_at": (now - timedelta(seconds=45)).isoformat(),
         "last_liveness_at": now.isoformat(),
+    }
+
+    assert health._recorder_liveness_ok(status, now=now) is True
+
+
+def test_recorder_health_rejects_tick_older_than_tick_age_limit() -> None:
+    now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    status = {
+        "configured": True,
+        "status": "healthy",
+        "ping_reply_ok": True,
+        "market_status": "TRADEABLE",
+        "market_status_source": "broker",
+        "expected_open": True,
+        "stale_epics": [],
+        "ticks_received": 1,
+        "last_tick_at": (now - timedelta(seconds=200)).isoformat(),
+        "last_liveness_at": now.isoformat(),
+    }
+
+    assert health._recorder_liveness_ok(status, now=now) is False
+
+
+def test_recorder_health_rejects_stale_liveness_with_recent_tick() -> None:
+    now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    status = {
+        "configured": True,
+        "status": "healthy",
+        "ping_reply_ok": True,
+        "market_status": "TRADEABLE",
+        "market_status_source": "broker",
+        "expected_open": True,
+        "stale_epics": [],
+        "ticks_received": 1,
+        "last_tick_at": (now - timedelta(seconds=45)).isoformat(),
+        "last_liveness_at": (now - timedelta(seconds=31)).isoformat(),
     }
 
     assert health._recorder_liveness_ok(status, now=now) is False
