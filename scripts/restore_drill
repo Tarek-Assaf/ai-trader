@@ -298,6 +298,10 @@ def restore_lake(
         raise DrillFailure("lake checksum manifest has no file entries")
     destination.mkdir(parents=True, exist_ok=True)
     samples: list[str] = []
+    # A dataset-root manifest also lists dumps and state files; verify only the lake here.
+    lake_only = any(name.startswith("data/lake/") for name in entries)
+    if lake_only:
+        entries = {k: v for k, v in entries.items() if k.startswith("data/lake/")}
     for relative, expected in sorted(entries.items()):
         source_file = (source / relative).resolve()
         if not source_file.is_file() and relative.startswith("data/lake/"):
@@ -558,6 +562,11 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         lake_source = options.lake_source or (hf_dir / "data" / "lake")
         manifest = options.lake_manifest
+        if manifest is None:
+            # The uploader writes sha256-manifest.json at the dataset root, outside data/lake.
+            root_manifest = hf_dir / "sha256-manifest.json"
+            if root_manifest.is_file():
+                manifest = root_manifest
         lake_count, samples = restore_lake(
             lake_source, manifest, options.scratch_dir / "data" / "lake"
         )
