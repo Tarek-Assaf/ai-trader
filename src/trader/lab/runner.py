@@ -9,6 +9,7 @@ services and never promotes a strategy.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import io
 import json
 import logging
@@ -18,6 +19,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -238,6 +240,7 @@ def load_histdata_candles(
     timeframe: int = 1,
     *,
     exclude_months: set[tuple[int, int]] | None = None,
+    cache_root: str | Path | None = None,
 ) -> tuple[Candle, ...]:
     """Read HistData M1 bars and optionally build complete 3m/5m bars."""
     if timeframe not in TIMEFRAMES:
@@ -246,41 +249,153 @@ def load_histdata_candles(
         import pyarrow.parquet as pq  # type: ignore[import-untyped]
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError("pyarrow is required for Strategy Lab data") from exc
+    files = _parquet_files(Path(root), instrument)
+    excluded = exclude_months or set()
+    cache_path = _cache_path(files, excluded, instrument, timeframe, cache_root)
+    if cache_path is not None and cache_path.is_file():
+        try:
+            return _read_candle_columns(cache_path, instrument, timeframe=1)
+        except (OSError, KeyError, TypeError, ValueError, OverflowError):
+            cache_path.unlink(missing_ok=True)
+
     rows: list[Candle] = []
-    for path in _parquet_files(Path(root), instrument):
-        for row in pq.read_table(path).to_pylist():
+    for path in files:
+        try:
+            available = set(pq.ParquetFile(path).schema.names)
+            required = ["ts_utc", "open", "high", "low", "close"]
+            if not set(required).issubset(available):
+                continue
+            columns_to_read = required + (["volume"] if "volume" in available else [])
+            table = pq.read_table(path, columns=columns_to_read)
+            columns = {name: table[name].to_pylist() for name in table.column_names}
+        except (OSError, KeyError, ValueError, TypeError):
+            continue
+        volumes = columns.get("volume", [0.0] * len(columns.get("ts_utc", [])))
+        for stamp, opening, high, low, close, volume in zip(
+            columns.get("ts_utc", ()),
+            columns.get("open", ()),
+            columns.get("high", ()),
+            columns.get("low", ()),
+            columns.get("close", ()),
+            volumes,
+            strict=True,
+        ):
             try:
                 candle = Candle(
-                    ts_utc=_as_utc(row["ts_utc"]),
-                    open=float(row["open"]),
-                    high=float(row["high"]),
-                    low=float(row["low"]),
-                    close=float(row["close"]),
-                    volume=float(row.get("volume", 0.0) or 0.0),
+                    ts_utc=_as_utc(stamp),
+                    open=float(opening),
+                    high=float(high),
+                    low=float(low),
+                    close=float(close),
+                    volume=float(volume or 0.0),
                     series_key=(instrument, "histdata"),
                 )
-            except (KeyError, TypeError, ValueError, OverflowError):
+            except (TypeError, ValueError, OverflowError):
                 continue
-            if all(
-                math.isfinite(value)
-                for value in (candle.open, candle.high, candle.low, candle.close)
+            if (
+                all(
+                    math.isfinite(value)
+                    for value in (candle.open, candle.high, candle.low, candle.close)
+                )
+                and (candle.ts_utc.year, candle.ts_utc.month) not in excluded
             ):
-                if (
-                    exclude_months is None
-                    or (candle.ts_utc.year, candle.ts_utc.month) not in exclude_months
-                ):
-                    rows.append(candle)
+                rows.append(candle)
     rows.sort(key=lambda item: item.ts_utc)
     unique = {item.ts_utc: item for item in rows}
     minute = tuple(unique.values())
-    if timeframe == 1:
-        return minute
-    return tuple(item for item in resample_ohlc(minute, timeframe) if item.complete)
+    result = (
+        minute
+        if timeframe == 1
+        else tuple(item for item in resample_ohlc(minute, timeframe) if item.complete)
+    )
+    if cache_path is not None:
+        try:
+            _write_candle_cache(cache_path, result)
+        except (OSError, ValueError, TypeError):
+            LOGGER.warning("lab series cache write failed (%s)", type(cache_path).__name__)
+    return result
+
+
+def _cache_path(
+    files: Sequence[Path],
+    excluded: set[tuple[int, int]],
+    instrument: str,
+    timeframe: int,
+    cache_root: str | Path | None,
+) -> Path | None:
+    if cache_root is None:
+        return None
+    signature = {
+        "files": [
+            {
+                "path": str(path),
+                "size": path.stat().st_size,
+                "mtime_ns": path.stat().st_mtime_ns,
+            }
+            for path in files
+        ],
+        "exclude_months": sorted(f"{year:04d}-{month:02d}" for year, month in excluded),
+        "instrument": instrument,
+        "timeframe": timeframe,
+    }
+    digest = hashlib.sha256(
+        json.dumps(signature, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    ).hexdigest()[:32]
+    return Path(cache_root) / f"{instrument.lower()}-{timeframe}m-{digest}.parquet"
+
+
+def _read_candle_columns(path: Path, instrument: str, *, timeframe: int) -> tuple[Candle, ...]:
+    import pyarrow.parquet as pq
+
+    table = pq.read_table(path, columns=["ts_utc", "open", "high", "low", "close", "volume"])
+    columns = {name: table[name].to_pylist() for name in table.column_names}
+    return tuple(
+        Candle(
+            ts_utc=_as_utc(stamp),
+            open=float(opening),
+            high=float(high),
+            low=float(low),
+            close=float(close),
+            volume=float(volume or 0.0),
+            series_key=(instrument, "histdata"),
+            n_minutes=timeframe,
+        )
+        for stamp, opening, high, low, close, volume in zip(
+            columns["ts_utc"],
+            columns["open"],
+            columns["high"],
+            columns["low"],
+            columns["close"],
+            columns.get("volume", [0.0] * len(columns["ts_utc"])),
+            strict=True,
+        )
+    )
+
+
+def _write_candle_cache(path: Path, candles: Sequence[Candle]) -> None:
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    table = pa.table(
+        {
+            "ts_utc": [item.ts_utc for item in candles],
+            "open": [item.open for item in candles],
+            "high": [item.high for item in candles],
+            "low": [item.low for item in candles],
+            "close": [item.close for item in candles],
+            "volume": [item.volume for item in candles],
+        }
+    )
+    temporary = path.with_suffix(".tmp.parquet")
+    pq.write_table(table, temporary)
+    temporary.replace(path)
 
 
 def coverage_report(root: str | Path, instrument: str) -> Coverage:
     """Summarize lake coverage and QA sidecars without opening broker state."""
-    candles = load_histdata_candles(root, instrument)
+    import pyarrow.parquet as pq
+
     files = _parquet_files(Path(root), instrument)
     qa_flags: set[str] = set()
     lineage = Path(root).parent.parent / "data_lineage"
@@ -293,8 +408,29 @@ def coverage_report(root: str | Path, instrument: str) -> Coverage:
                 qa_flags.add("gaps")
         except (OSError, ValueError, TypeError):
             qa_flags.add("qa_unreadable")
-    first = candles[0].ts_utc if candles else None
-    last = candles[-1].ts_utc if candles else None
+    first: datetime | None = None
+    last: datetime | None = None
+    row_count = 0
+    for path in files:
+        try:
+            metadata = pq.ParquetFile(path).metadata
+            row_count += metadata.num_rows
+            for index in range(metadata.num_row_groups):
+                group = metadata.row_group(index)
+                for column_index in range(group.num_columns):
+                    column = group.column(column_index)
+                    if column.path_in_schema != "ts_utc" or column.statistics is None:
+                        continue
+                    lower = _as_utc(column.statistics.min)
+                    upper = _as_utc(column.statistics.max)
+                    first = lower if first is None else min(first, lower)
+                    last = upper if last is None else max(last, upper)
+        except (OSError, KeyError, TypeError, ValueError, OverflowError):
+            continue
+    if row_count and (first is None or last is None):
+        timestamps = load_histdata_candles(root, instrument)
+        first = timestamps[0].ts_utc if timestamps else None
+        last = timestamps[-1].ts_utc if timestamps else None
     months = (
         0
         if first is None or last is None
@@ -337,6 +473,26 @@ def strategy_lab_holdout_months(config_path: str | Path = "config/strategy_lab.y
         raise ValueError("strategy_lab.yaml data.holdout_months is invalid") from exc
     if isinstance(value, bool) or not isinstance(value, int) or value < 1:
         raise ValueError("strategy_lab.yaml data.holdout_months must be a positive integer")
+    return cast(int, value)
+
+
+def strategy_lab_max_training_years(
+    config_path: str | Path = "config/strategy_lab.yaml",
+) -> int | None:
+    """Read the bounded training window; ``all`` disables the bound."""
+    import yaml
+
+    try:
+        payload = yaml.safe_load(Path(config_path).read_text(encoding="utf-8")) or {}
+        value = payload["data"]["max_training_years"]
+    except (KeyError, TypeError, OSError, ValueError, yaml.YAMLError) as exc:
+        raise ValueError("strategy_lab.yaml data.max_training_years is invalid") from exc
+    if value == "all":
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError(
+            "strategy_lab.yaml data.max_training_years must be a positive integer or all"
+        )
     return cast(int, value)
 
 
@@ -413,12 +569,16 @@ class LabRunner:
         ledger: ExperimentLedger | None = None,
         config_path: str | Path = "config/strategy_lab.yaml",
         idea_generator: Any | None = None,
+        cache_root: str | Path = "/workspace/state/lab/cache",
+        max_training_years: int | None = 6,
     ) -> None:
         self.lake_root = Path(lake_root)
         self.holdout_root = Path(holdout_root).resolve()
         self.ledger = ledger or ExperimentLedger()
         self.config_path = Path(config_path)
         self.idea_generator = idea_generator
+        self.cache_root = Path(cache_root)
+        self.max_training_years = max_training_years
 
     def _candidates(
         self, instrument: str, timeframe: int, sources: Sequence[str], candles: Sequence[Candle]
@@ -463,6 +623,20 @@ class LabRunner:
         progress_path: str | Path | None = None,
     ) -> LabRunResult:
         started = datetime.now(UTC)
+        phase_started = time.monotonic()
+        phase_timings: dict[str, float] = {}
+        current_phase = "loading"
+
+        def mark_phase(name: str) -> None:
+            nonlocal current_phase, phase_started
+            now = time.monotonic()
+            phase_timings[current_phase] = phase_timings.get(current_phase, 0.0) + (
+                now - phase_started
+            )
+            current_phase = name
+            phase_started = now
+            print(f"[{datetime.now(UTC).isoformat()}] {name}", flush=True)
+
         run_name = run_id or started.strftime("%Y%m%dT%H%M%SZ")
         workers = max(1, workers if workers is not None else (os.cpu_count() or 2) - 2)
         coverage = tuple(coverage_report(self.lake_root, instrument) for instrument in instruments)
@@ -516,7 +690,17 @@ class LabRunner:
                 instrument,
                 timeframe,
                 exclude_months=sealed_months,
+                cache_root=self.cache_root,
             )
+            if self.max_training_years is not None and sealed_months:
+                first_holdout = min(sealed_months)
+                cutoff = datetime(
+                    first_holdout[0] - self.max_training_years,
+                    first_holdout[1],
+                    1,
+                    tzinfo=UTC,
+                )
+                candles = tuple(item for item in candles if item.ts_utc >= cutoff)
             if len(candles) < 10:
                 continue
             split = max(1, int(len(candles) * 0.8))
@@ -578,6 +762,8 @@ class LabRunner:
                         "ideas_done": completed_ideas,
                         "ideas_total": total_ideas,
                         "survivors": sum(item.verdict == "pass" for item in attempts),
+                        "phase": current_phase,
+                        "phase_timings_seconds": dict(phase_timings),
                     },
                     sort_keys=True,
                 ),
@@ -588,10 +774,14 @@ class LabRunner:
         for instrument, timeframe, train, test, candidates, specs, holdout in groups:
             if stopped():
                 break
+            mark_phase(f"mining:{instrument}:{timeframe}m")
+            write_progress()
             reader = open_sealed_reader(self.holdout_root, self.ledger)
             pipeline = ValidationPipeline(
                 ledger=self.ledger, cost_model=pessimistic_cost_model(self.config_path)
             )
+            mark_phase(f"evaluating:{instrument}:{timeframe}m")
+            write_progress()
             try:
                 decisions = pipeline.run(
                     specs,
@@ -671,8 +861,11 @@ class LabRunner:
                     )
                 )
             completed_ideas += len(candidates)
+            mark_phase(f"holdout:{instrument}:{timeframe}m")
             write_progress()
         finished = datetime.now(UTC)
+        mark_phase("done")
+        phase_timings.setdefault("done", 0.0)
         survivors = tuple(item for item in attempts if item.verdict == "pass")
         write_progress("completed")
         return LabRunResult(run_name, started, finished, tuple(attempts), survivors, coverage)
@@ -888,5 +1081,6 @@ __all__ = [
     "prepare_holdout",
     "pessimistic_cost_model",
     "strategy_lab_holdout_months",
+    "strategy_lab_max_training_years",
     "tune_variants",
 ]

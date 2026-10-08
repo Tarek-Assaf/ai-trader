@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from trader.data.resample import Candle
 from trader.lab.backtest import BacktestResult, CostModel, run_backtest
+from trader.lab.engine import IndicatorCache
 from trader.lab.ledger import ExperimentLedger, ExperimentLedgerProtocol, ExperimentRecord
 from trader.lab.metrics import gate1_metrics
 from trader.lab.miner import GateValidator, PatternCandidate
@@ -79,6 +80,7 @@ _WORKER_CONTEXT: (
         int | None,
         int | None,
         int | None,
+        dict[int, tuple[IndicatorCache, IndicatorCache]],
     ]
     | None
 ) = None
@@ -103,6 +105,7 @@ def _init_worker(
         train_bars,
         test_bars,
         step_bars,
+        {},
     )
     if hasattr(os, "nice"):
         try:
@@ -117,7 +120,22 @@ def _evaluate_candidate(
     """Run the expensive deterministic backtests in a spawned worker."""
     if _WORKER_CONTEXT is None:
         raise RuntimeError("pipeline worker context is not initialized")
-    candles, evaluation, cost_model, stress_pct, train_bars, test_bars, step_bars = _WORKER_CONTEXT
+    (
+        candles,
+        evaluation,
+        cost_model,
+        stress_pct,
+        train_bars,
+        test_bars,
+        step_bars,
+        indicator_caches,
+    ) = _WORKER_CONTEXT
+    if spec.timeframe_minutes not in indicator_caches:
+        indicator_caches[spec.timeframe_minutes] = (
+            IndicatorCache.from_candles(candles, spec.timeframe_minutes),
+            IndicatorCache.from_candles(evaluation, spec.timeframe_minutes),
+        )
+    candle_cache, evaluation_cache = indicator_caches[spec.timeframe_minutes]
     result = run_backtest(
         spec,
         candles,
@@ -125,9 +143,21 @@ def _evaluate_candidate(
         train_bars=train_bars,
         test_bars=test_bars,
         step_bars=step_bars,
+        indicator_cache=candle_cache,
     )
-    oos_result = run_backtest(spec, evaluation, cost_model=cost_model)
-    stress_result = run_backtest(spec, candles, cost_model=cost_model, cost_stress_pct=stress_pct)
+    oos_result = run_backtest(
+        spec,
+        evaluation,
+        cost_model=cost_model,
+        indicator_cache=evaluation_cache,
+    )
+    stress_result = run_backtest(
+        spec,
+        candles,
+        cost_model=cost_model,
+        cost_stress_pct=stress_pct,
+        indicator_cache=candle_cache,
+    )
     neighbor_specs = tuple(
         _perturb(spec, threshold_factor, exit_factor)
         for threshold_factor, exit_factor in (
@@ -145,6 +175,7 @@ def _evaluate_candidate(
             train_bars=train_bars,
             test_bars=test_bars,
             step_bars=step_bars,
+            indicator_cache=candle_cache,
         )
         for neighbor in neighbor_specs
     )
@@ -466,7 +497,14 @@ class ValidationPipeline:
                 # The injected reader is the only component allowed to open this path.
                 raw = holdout_reader.read(spec_hash, holdout_path)
                 holdout_candles = tuple(holdout_loader(raw))
-                holdout_result = run_backtest(spec, holdout_candles, cost_model=self.cost_model)
+                holdout_result = run_backtest(
+                    spec,
+                    holdout_candles,
+                    cost_model=self.cost_model,
+                    indicator_cache=IndicatorCache.from_candles(
+                        holdout_candles, spec.timeframe_minutes
+                    ),
+                )
             except Exception:
                 decisions.append(
                     PipelineDecision(

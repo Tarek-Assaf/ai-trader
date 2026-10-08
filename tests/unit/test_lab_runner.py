@@ -10,7 +10,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from trader.data.resample import Candle
-from trader.lab.engine import evaluate_entries
+from trader.lab.engine import IndicatorCache, evaluate_entries
 from trader.lab.ledger import ExperimentLedger, ExperimentRecord
 from trader.lab.runner import (
     LabJobManager,
@@ -20,6 +20,7 @@ from trader.lab.runner import (
     load_histdata_candles,
     prepare_holdout,
     strategy_lab_holdout_months,
+    strategy_lab_max_training_years,
     tune_variants,
 )
 from trader.lab.seeds import seed_specs
@@ -252,3 +253,89 @@ def test_holdout_months_are_read_from_strategy_lab_config(tmp_path) -> None:
     config = tmp_path / "strategy_lab.yaml"
     config.write_text("data:\n  holdout_months: 7\n", encoding="utf-8")
     assert strategy_lab_holdout_months(config) == 7
+
+
+def test_loader_columns_match_reference_row_loader(tmp_path) -> None:
+    _write_bars(tmp_path)
+    path = tmp_path / "NSXUSD" / "1m" / "2024" / "01.parquet"
+    table = pq.read_table(path)
+    expected = tuple(
+        Candle(
+            ts_utc=row["ts_utc"],
+            open=row["open"],
+            high=row["high"],
+            low=row["low"],
+            close=row["close"],
+            volume=row["volume"],
+            series_key=("NSXUSD", "histdata"),
+        )
+        for row in table.to_pylist()
+    )
+    assert load_histdata_candles(tmp_path, "NSXUSD") == expected
+
+
+def test_coverage_uses_parquet_metadata_and_matches_loaded_series(tmp_path) -> None:
+    _write_bars(tmp_path)
+    report = coverage_report(tmp_path, "NSXUSD")
+    candles = load_histdata_candles(tmp_path, "NSXUSD")
+    assert report.first_bar == candles[0].ts_utc
+    assert report.last_bar == candles[-1].ts_utc
+
+
+def test_series_cache_invalidates_for_lake_and_holdout_changes(tmp_path) -> None:
+    lake = tmp_path / "lake"
+    cache = tmp_path / "cache"
+    _write_bars(lake)
+    first = load_histdata_candles(lake, "NSXUSD", cache_root=cache)
+    assert list(cache.glob("*.parquet"))
+    path = lake / "NSXUSD" / "1m" / "2024" / "01.parquet"
+    rows = pq.read_table(path).to_pylist()
+    rows[0]["close"] = 99.0
+    pq.write_table(pa.Table.from_pylist(rows), path)
+    second = load_histdata_candles(lake, "NSXUSD", cache_root=cache)
+    excluded = load_histdata_candles(lake, "NSXUSD", exclude_months={(2024, 1)}, cache_root=cache)
+    assert first[0].close != second[0].close
+    assert excluded == ()
+    assert len(list(cache.glob("*.parquet"))) >= 3
+
+
+def test_progress_records_phases_and_counts(tmp_path, monkeypatch) -> None:
+    lake = tmp_path / "lake"
+    holdout = tmp_path / "holdout"
+    cache = tmp_path / "cache"
+    progress = tmp_path / "progress.json"
+    _write_bars(lake)
+    _write_holdout(holdout)
+    monkeypatch.setattr(LabRunner, "_candidates", lambda *args, **kwargs: [])
+    LabRunner(lake_root=lake, holdout_root=holdout, cache_root=cache).run(
+        instruments=("NSXUSD",), timeframes=(1,), progress_path=progress
+    )
+    payload = json.loads(progress.read_text(encoding="utf-8"))
+    assert payload["phase"] == "done"
+    assert {"loading", "done"}.issubset(payload["phase_timings_seconds"])
+    assert payload["ideas_done"] == payload["ideas_total"] == 0
+
+
+def test_max_training_years_is_configured(tmp_path) -> None:
+    config = tmp_path / "strategy_lab.yaml"
+    config.write_text("data:\n  max_training_years: all\n", encoding="utf-8")
+    assert strategy_lab_max_training_years(config) is None
+
+
+def test_indicator_cache_matches_direct_evaluation() -> None:
+    start = datetime(2024, 1, 1, tzinfo=UTC)
+    candles = tuple(
+        Candle(
+            start + timedelta(minutes=index),
+            100 + index * 0.1,
+            101 + index * 0.1,
+            99 + index * 0.1,
+            100 + index * 0.1,
+            1.0,
+            ("XAUUSD", "histdata"),
+        )
+        for index in range(60)
+    )
+    spec = _runner_spec("XAUUSD")
+    cache = IndicatorCache.from_candles(candles, spec.timeframe_minutes)
+    assert evaluate_entries(spec, candles) == evaluate_entries(spec, candles, indicator_cache=cache)

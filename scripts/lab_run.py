@@ -14,6 +14,7 @@ from trader.lab.runner import (
     LabRunner,
     prepare_holdout,
     strategy_lab_holdout_months,
+    strategy_lab_max_training_years,
 )
 
 
@@ -33,6 +34,7 @@ def main() -> int:
     parser.add_argument("--idea-sources", nargs="+", default=["seeds", "patterns"])
     parser.add_argument("--max-ideas", type=int, default=100)
     parser.add_argument("--workers", type=int)
+    parser.add_argument("--years", help="training history in years, or 'all'")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--stop-file", type=Path)
     parser.add_argument("--progress", type=Path)
@@ -48,6 +50,17 @@ def main() -> int:
         if args.holdout_months is not None
         else strategy_lab_holdout_months(args.config)
     )
+    if args.years is None:
+        max_training_years = strategy_lab_max_training_years(args.config)
+    elif args.years.lower() == "all":
+        max_training_years = None
+    else:
+        try:
+            max_training_years = int(args.years)
+        except ValueError as exc:
+            raise SystemExit("--years must be a positive integer or all") from exc
+        if max_training_years < 1:
+            raise SystemExit("--years must be a positive integer or all")
     if args.prepare_holdout:
         copied = prepare_holdout(
             args.lake,
@@ -64,6 +77,7 @@ def main() -> int:
         lake_root=args.lake,
         holdout_root=args.holdout,
         config_path=args.config,
+        max_training_years=max_training_years,
     )
     try:
         result = runner.run(
