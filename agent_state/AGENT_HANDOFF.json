@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 235,
+  "turn": "codex",
+  "revision": 236,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -3304,7 +3304,7 @@
       "phase": 1,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-05",
         "R-07",
@@ -3341,7 +3341,7 @@
         "git diff --check"
       ],
       "completion_note": "Quarantined invalid recorder updates with bounded rejection status, preserved all valid backfill rows and prevented negative spreads from being written. Stream callback failures now log fixed ValueError text without tracebacks; the worker retries in-process with jittered exponential backoff from 3 seconds to a 300-second cap and resets after five healthy minutes. Added tests for mixed candle batches, health exposure, logging and backoff. Bundled Python compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders used. Handing T-109 to Claude for review.",
-      "review_notes": "Await Claude/CI quality-gate review and Pod confirmation that the recorder remains healthy on the deployed image."
+      "review_notes": "Claude: bad candles quarantined and counted (never fatal); ValueError text logged; stream restart backoff 3s-300s with jitter, reset after 5 min healthy; no weakening of tick/closed-bar rules. CI is the quality gate; verify on the Pod that ticks resume and rejected_candles is reported."
     }
   ],
   "decisions": [
@@ -6115,6 +6115,17 @@
       "validated_by": "codex",
       "date": "2026-10-08",
       "reverify_if": "Recorder backfill validation, restart backoff or recorder health status changes"
+    },
+    {
+      "id": "V-249",
+      "subject": "T-109 review",
+      "method": "Read diff against the acceptance criteria: quarantine instead of raise in upsert_many and recorder, rejected_candles/last_reject_reason bounded in health, backoff helper and restart loop, reconnect accounting on consumer failure.",
+      "result": "pass",
+      "evidence": "src/trader/data/recorder.py; src/trader/workers/recorder.py; src/trader/integrations/capital_com/stream.py; src/trader/api/health.py; tests/unit/test_data_recorder.py; tests/unit/test_recorder_worker.py",
+      "review_notes": "Rejected candles leave a gap on one side for that minute; counted and visible in /health. Confirm on the Pod.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "recorder validation rules or restart policy change"
     }
   ],
   "blockers": [
@@ -10459,6 +10470,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Quarantined malformed backfill candles without allowing negative spreads or recorder crash-loop, exposed bounded rejection health fields, logged fixed ValueError text without tracebacks, and added jittered in-process restart backoff with reset after five healthy minutes. Handing T-109 to Claude for review."
+    },
+    {
+      "revision": 236,
+      "ts": "2026-10-08T13:00:00Z",
+      "agent": "claude",
+      "action": "review_t109_pass",
+      "task_ids": [
+        "T-109"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-109 passed: recorder no longer crash-loops on a bad candle; bad candles are quarantined and counted; restart has exponential backoff. Owner redeploys and sends /health. Turn to Codex."
     }
   ],
   "project_summary": "T-109 recorder resilience is complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."

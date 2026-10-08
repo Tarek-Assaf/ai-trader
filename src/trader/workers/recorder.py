@@ -39,9 +39,7 @@ def _next_stream_restart(
 ) -> tuple[float, float]:
     """Return a jittered restart wait and the next exponential backoff."""
     effective = (
-        _STREAM_RESTART_MIN_SECONDS
-        if healthy_seconds >= _STREAM_HEALTHY_RESET_SECONDS
-        else backoff
+        _STREAM_RESTART_MIN_SECONDS if healthy_seconds >= _STREAM_HEALTHY_RESET_SECONDS else backoff
     )
     effective = min(max(effective, _STREAM_RESTART_MIN_SECONDS), _STREAM_RESTART_MAX_SECONDS)
     jitter_fn = jitter or random.uniform
