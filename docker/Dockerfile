@@ -37,7 +37,7 @@ COPY --chown=root:root migrations /app/migrations
 COPY --chown=root:root alembic.ini /app/alembic.ini
 COPY --chown=root:root src /app/src
 RUN chmod 0444 /app/baked/risk_ceilings.yaml \
-    && chmod 0555 /app/docker/entrypoint.sh /app/scripts/start_postgres.sh /app/scripts/backup_postgres.sh /app/scripts/postgres_backup_loop.sh /app/scripts/restore_drill /app/scripts/start_redis.sh /app/scripts/start_api.sh \
+    && chmod 0555 /app/docker/entrypoint.sh /app/scripts/start_postgres.sh /app/scripts/backup_postgres.sh /app/scripts/postgres_backup_loop.sh /app/scripts/restore_drill /app/scripts/backup_upload.py /app/scripts/start_redis.sh /app/scripts/start_api.sh \
     && chown -R root:root /app
 
 EXPOSE 8000

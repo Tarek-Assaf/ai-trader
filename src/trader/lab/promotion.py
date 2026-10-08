@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import os
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from decimal import Decimal
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from trader.lab.validator import ValidationResult
@@ -204,6 +206,13 @@ class PromotionGate:
             )
         if self._alert is not None:
             self._alert(f"strategy_stage_changed:{decision.strategy_id}:{decision.stage}")
+        trigger = Path(os.getenv("BACKUP_STAGE_TRIGGER_FILE", "/workspace/state/.backup-stage-trigger"))
+        try:
+            trigger.parent.mkdir(parents=True, exist_ok=True)
+            trigger.touch()
+        except OSError:
+            # A read-only worker must not turn a valid promotion into a failure.
+            pass
 
 
 __all__ = ["PromotionDecision", "PromotionGate", "STAGES"]

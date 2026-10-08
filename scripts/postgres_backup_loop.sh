@@ -2,6 +2,36 @@
 set -eu
 
 SLEEP_PID=
+NIGHTLY_MARKER=/workspace/state/.backup-upload-nightly
+STAGE_TRIGGER=${BACKUP_STAGE_TRIGGER_FILE:-/workspace/state/.backup-stage-trigger}
+LAST_STAGE_MTIME=
+mkdir -p "$(dirname "$NIGHTLY_MARKER")"
+
+run_backup_upload() {
+    if [ -z "${HF_TOKEN:-}" ] || { [ -z "${GITHUB_BACKUP_TOKEN:-}" ] && [ -z "${GITHUB_TOKEN:-}" ]; }; then
+        return 0
+    fi
+    if ! /app/scripts/backup_upload.py; then
+        echo "Scheduled backup upload failed; inspect the redacted error above" >&2
+    fi
+}
+
+run_scheduled_upload() {
+    utc_day=$(date -u +%Y%m%d)
+    utc_hour=$(date -u +%H)
+    if [ "$utc_hour" = "02" ] && [ ! -f "$NIGHTLY_MARKER-$utc_day" ]; then
+        run_backup_upload
+        : > "$NIGHTLY_MARKER-$utc_day"
+    fi
+    if [ -f "$STAGE_TRIGGER" ]; then
+        stage_mtime=$(stat -c '%Y' "$STAGE_TRIGGER" 2>/dev/null || true)
+        if [ -n "$stage_mtime" ] && [ "$stage_mtime" != "$LAST_STAGE_MTIME" ]; then
+            run_backup_upload
+            LAST_STAGE_MTIME=$stage_mtime
+        fi
+    fi
+}
+
 shutdown() {
     trap - TERM INT
     if [ -n "$SLEEP_PID" ]; then
@@ -11,6 +41,7 @@ shutdown() {
     if ! /app/scripts/backup_postgres.sh; then
         echo "Final PostgreSQL backup failed; inspect the backup error above" >&2
     fi
+    run_scheduled_upload
     exit 0
 }
 trap shutdown TERM INT
@@ -18,6 +49,7 @@ trap shutdown TERM INT
 if ! /app/scripts/backup_postgres.sh; then
     echo "Initial PostgreSQL backup failed; inspect the backup error above" >&2
 fi
+run_scheduled_upload
 
 while :; do
     sleep 300 &
@@ -27,4 +59,5 @@ while :; do
     if ! /app/scripts/backup_postgres.sh; then
         echo "Scheduled PostgreSQL backup failed; inspect the backup error above" >&2
     fi
+    run_scheduled_upload
 done
