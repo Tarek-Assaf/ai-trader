@@ -5690,7 +5690,7 @@
       "method": "Read diff against acceptance criteria; re-applied Codex diff onto current main; ruff format/check clean; CI quality required before merge. Backoff 30s doubling to 300s with jitter, injected sleep/jitter; background task cancelled on shutdown; /health reports degraded with runtime_unavailable and clears on start; no LLM or broker authority touched.",
       "result": "pass",
       "evidence": "src/trader/api/app.py; src/trader/api/health.py; tests/unit/test_api_startup.py; tests/unit/test_health.py",
-      "review_notes": "Passes. Non-blocking follow-ups: a retry after a partial start could leave an earlier runtime object unstopped; retry path does not re-wire report scheduler/Telegram report transport.",
+      "review_notes": "Passes. Non-blocking follow-ups: a retry after a partial start could leave an earlier runtime object unstopped; retry path does not re-wire report scheduler/Telegram report transport. Review fix: degraded health and background retry now apply only when Capital.com credentials are configured; without them (CI smoke container) the runtime is intentionally not composed and /health stays healthy.",
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "api lifespan startup order, runtime retry loop or health reason handling changes"

@@ -400,6 +400,9 @@ async def lifespan(_app: FastAPI) -> Any:
             settings.capital_api_password,
         )
     )
+    # Without broker credentials the runtime is intentionally not composed, so
+    # that is not a degraded state and there is nothing to retry.
+    runtime_expected = bool(_app.state.runtime_eligible and has_capital_credentials)
     if settings.role in {"all", "core"} and has_capital_credentials:
         try:
             _app.state.capital_account_fields = capital_account_field_map_from_config(
@@ -453,8 +456,9 @@ async def lifespan(_app: FastAPI) -> Any:
         # Keep controls available while recording one clear fail-safe alert;
         # _start_runtime_if_configured will not compose a partial runtime.
         _LOG.error("runtime alert: dependencies unavailable (%s)", type(exc).__name__)
-        set_runtime_health("runtime_unavailable")
-        if _app.state.runtime_eligible:
+        if runtime_expected:
+            set_runtime_health("runtime_unavailable")
+        if runtime_expected:
             runtime_retry_task = asyncio.create_task(
                 _runtime_retry_loop(
                     _app,
@@ -503,7 +507,7 @@ async def lifespan(_app: FastAPI) -> Any:
         except Exception as exc:
             _LOG.error("runtime alert: startup unavailable (%s)", type(exc).__name__)
             set_runtime_health("runtime_unavailable")
-            if runtime_retry_task is None and _app.state.runtime_eligible:
+            if runtime_retry_task is None and runtime_expected:
                 runtime_retry_task = asyncio.create_task(
                     _runtime_retry_loop(
                         _app,
@@ -513,7 +517,7 @@ async def lifespan(_app: FastAPI) -> Any:
                         capital_client=capital_client,
                     )
                 )
-    elif _app.state.runtime_eligible and runtime_retry_task is None:
+    elif runtime_expected and runtime_retry_task is None:
         set_runtime_health("runtime_unavailable")
         runtime_retry_task = asyncio.create_task(
             _runtime_retry_loop(
