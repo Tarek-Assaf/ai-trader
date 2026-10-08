@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeGuard
 
 from trader.core.audit import AuditEvent
 from trader.core.settings import EnvironmentSettings
@@ -75,7 +75,7 @@ class RuntimeFactoryFn(Protocol):
     def __call__(self, *args: Any, **kwargs: Any) -> Any: ...
 
 
-def _is_explicit_factory(value: object) -> bool:
+def _is_explicit_factory(value: object) -> TypeGuard[RuntimeFactoryFn]:
     """Return whether a supplied value is a function intended as a factory.
 
     Runtime services such as ``PnlLossGuard`` and
