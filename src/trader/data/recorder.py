@@ -177,6 +177,8 @@ class CapitalDataRecorder:
             "market_status_source": "unknown",
             "expected_open": None,
             "stale_epics": [],
+            "ticks_received": 0,
+            "last_tick_at": None,
             "reconnect_count": 0,
             "last_reconnect_reason": None,
             "last_update_at": None,
@@ -245,6 +247,8 @@ class CapitalDataRecorder:
         with self._lock:
             updated_at = self._clock().astimezone(UTC)
             self._status["last_update_at"] = updated_at.isoformat()
+            self._status["ticks_received"] += 1
+            self._status["last_tick_at"] = updated_at.isoformat()
             self._last_tick_by_epic[update.epic] = updated_at
             closed: list[_BufferedUpdate] = []
             for key, buffered in list(self._pending.items()):

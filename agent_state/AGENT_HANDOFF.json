@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 222,
+  "turn": "claude",
+  "revision": 223,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Phase 8 build tasks T-090..T-102 are merged. Next: owner redeploys the Pod on the latest image and shares data_recorder health fields; T-017/T-044 wait on recorder data.",
+    "summary": "T-103 diagnostics are implemented and ready for Claude review. Runtime detail, Telegram failure metadata/backoff and recorder tick liveness are covered; Pod redeploy remains needed to verify the redacted /health fields. T-017/T-044 still wait on recorder data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -200,7 +200,8 @@
         "T-098",
         "T-099",
         "T-101",
-        "T-102"
+        "T-102",
+        "T-103"
       ]
     },
     {
@@ -277,7 +278,8 @@
         "T-087",
         "T-091",
         "T-092",
-        "T-099"
+        "T-099",
+        "T-103"
       ]
     },
     {
@@ -3064,6 +3066,51 @@
         "git diff --check"
       ],
       "completion_note": "Moved runtime recovery out of the API startup path: eligible deployments keep the API, /health and Telegram/control channel available while a background task retries composition and startup after dependency failures. Backoff starts at 30 seconds, doubles through 5 minutes, and adds bounded jitter; successful startup clears the secret-free runtime_unavailable health reason. Added recovery, persistent-failure cancellation/backoff, and degraded-health coverage. Full pytest/Ruff/mypy/make check are unavailable in this desktop runtime; bundled compileall and git diff --check pass. No credentials, broker calls or orders were used."
+    },
+    {
+      "id": "T-103",
+      "title": "Runtime, Telegram and recorder operational diagnostics",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-11",
+        "R-18"
+      ],
+      "depends_on": [
+        "T-102"
+      ],
+      "acceptance_criteria": [
+        "Runtime retry warnings and /health runtime_detail expose RuntimeDependencyUnavailable messages, while other exceptions expose only their type.",
+        "Telegram failures log HTTP status and Telegram error code without secrets, poll failures back off, and polling no longer emits a logging traceback error.",
+        "Recorder health includes ticks_received and last_tick_at and degrades when an open market has no recent prices.",
+        "Unit tests cover all diagnostics and retry behaviour."
+      ],
+      "deliverables": [
+        "src/trader/api/app.py",
+        "src/trader/api/health.py",
+        "src/trader/channels/telegram.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_api_startup.py",
+        "tests/unit/test_health.py",
+        "tests/unit/test_telegram_channel.py",
+        "tests/unit/test_data_recorder.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "src/trader/api/app.py",
+        "src/trader/api/health.py",
+        "src/trader/channels/telegram.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_api_startup.py",
+        "tests/unit/test_health.py",
+        "tests/unit/test_telegram_channel.py",
+        "tests/unit/test_data_recorder.py",
+        "bundled Python compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Added secret-free runtime diagnostics: RuntimeDependencyUnavailable messages are included in retry warnings and /health runtime_detail, while other exceptions expose only their type. Telegram request failures now log only HTTP status and integer Telegram error code; poll failures use bounded exponential backoff and warning logs without traceback formatting. Recorder status now persists ticks_received and last_tick_at, and /health requires a recent tick while an instrument is expected open. Added focused unit coverage for runtime details, Telegram failure metadata/backoff, tick counters and open-market liveness. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders were used."
     }
   ],
   "decisions": [
@@ -5694,6 +5741,17 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "api lifespan startup order, runtime retry loop or health reason handling changes"
+    },
+    {
+      "id": "V-236",
+      "subject": "T-103 runtime, Telegram and recorder diagnostics",
+      "method": "Reviewed runtime retry and health paths, Telegram transport/poll failure handling and recorder status/liveness fields; added focused tests for fixed dependency messages, exception type fallback, safe Telegram status/error-code logging, poll backoff, tick counters and open-market stale-feed degradation. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/api/app.py; src/trader/api/health.py; src/trader/channels/telegram.py; src/trader/data/recorder.py; tests/unit/test_api_startup.py; tests/unit/test_health.py; tests/unit/test_telegram_channel.py; tests/unit/test_data_recorder.py; bundled Python compileall; git diff --check",
+      "review_notes": "Full pytest, Ruff, mypy and make check are unavailable in this desktop runtime. Claude should run the full quality gate and inspect the redacted /health fields after the next Pod redeploy. No credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "runtime, Telegram transport or recorder health diagnostics change"
     }
   ],
   "blockers": [
@@ -9826,7 +9884,28 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-102 reviewed and passed (V-234). Re-applied Codex diff on current main, ruff clean, CI quality gates merge. Follow-ups noted, not blocking. Turn to Codex; waiting on owner for Pod redeploy and recorder health data (Q-022)."
+    },
+    {
+      "revision": 223,
+      "ts": "2026-10-08T06:41:16Z",
+      "agent": "codex",
+      "action": "complete_t103_runtime_telegram_recorder_diagnostics",
+      "task_ids": [
+        "T-103"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/api/app.py",
+        "src/trader/api/health.py",
+        "src/trader/channels/telegram.py",
+        "src/trader/data/recorder.py",
+        "tests/unit/test_api_startup.py",
+        "tests/unit/test_health.py",
+        "tests/unit/test_telegram_channel.py",
+        "tests/unit/test_data_recorder.py"
+      ],
+      "summary": "Added secret-free runtime diagnostics: RuntimeDependencyUnavailable messages are included in retry warnings and /health runtime_detail, while other exceptions expose only their type. Telegram request failures now log only HTTP status and integer Telegram error code; poll failures use bounded exponential backoff and warning logs without traceback formatting. Recorder status now persists ticks_received and last_tick_at, and /health requires a recent tick while an instrument is expected open. Added focused unit coverage for runtime details, Telegram failure metadata/backoff, tick counters and open-market liveness. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders were used. Handing T-103 to Claude for review."
     }
   ],
-  "project_summary": "T-100 passed Claude review and T-101 fixes the Pod API startup AttributeError after Capital.com HTTP 429; the API remains available for degraded health and control paths. T-101 is ready for Claude review."
+  "project_summary": "T-103 diagnostics are ready for Claude review after T-102. Runtime retry detail, Telegram failure logging/backoff and recorder tick liveness are covered. Pod redeploy remains needed for /health verification; T-017/T-044 remain blocked on recorder data."
 }

@@ -4,6 +4,8 @@ import logging
 
 import pytest
 
+import trader.channels.telegram as telegram_module
+
 from trader.channels.telegram import (
     Alert,
     AlertLimiter,
@@ -256,3 +258,47 @@ def test_transport_sanitizes_token_errors_and_logs(monkeypatch, caplog) -> None:
             transport.get_updates(None, 1)
     assert token not in str(exc_info.value)
     assert token not in caplog.text
+
+
+def test_transport_logs_status_and_telegram_error_code_without_url(monkeypatch, caplog) -> None:
+    token = "123:secret-token"
+
+    class Response:
+        status_code = 429
+
+        @staticmethod
+        def json():
+            return {"ok": False, "error_code": 429, "description": "Too Many Requests"}
+
+    import httpx
+
+    monkeypatch.setattr(httpx, "post", lambda *args, **kwargs: Response())
+    transport = TelegramBotTransport(token)
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(RuntimeError, match="Telegram API request failed"):
+            transport.get_updates(None, 1)
+
+    assert "status=429" in caplog.text
+    assert "telegram_error_code=429" in caplog.text
+    assert token not in caplog.text
+    assert "api.telegram.org" not in caplog.text
+
+
+def test_poll_failures_back_off_and_reset(monkeypatch) -> None:
+    channel, _ = make_channel(FakeTransport())
+    calls = [0]
+    delays: list[float] = []
+
+    def poll_once(*, timeout: int) -> int:
+        del timeout
+        calls[0] += 1
+        if calls[0] <= 3:
+            raise RuntimeError("poll failed")
+        return 0
+
+    monkeypatch.setattr(channel, "poll_once", poll_once)
+    monkeypatch.setattr(telegram_module.time, "sleep", delays.append)
+
+    channel.run(stop=lambda: calls[0] >= 4)
+
+    assert delays == [1.0, 2.0, 4.0]

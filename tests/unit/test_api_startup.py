@@ -149,4 +149,42 @@ def test_runtime_retry_loop_keeps_degraded_health_on_persistent_failure(monkeypa
     assert attempts == [1]
     assert delays == [30.0, 60.0]
     assert health_module._RUNTIME_HEALTH_REASON == "runtime_unavailable"
+    assert health_module._RUNTIME_HEALTH_DETAIL == "RuntimeError"
     app_module.set_runtime_health(None)
+
+
+def test_runtime_dependency_message_is_logged_and_exposed(monkeypatch, caplog) -> None:
+    """Known dependency failures expose their fixed, secret-free message."""
+    app = SimpleNamespace(state=SimpleNamespace(runtime=None))
+    attempts: list[int] = []
+
+    def install(*_args, **_kwargs) -> None:
+        attempts.append(1)
+        raise app_module.RuntimeDependencyUnavailable("runtime service unavailable: redis")
+
+    async def sleep(_seconds: float) -> None:
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(app_module, "_install_runtime_services", install)
+    monkeypatch.setattr(app_module, "_start_runtime_if_configured", lambda *_args: None)
+
+    with caplog.at_level("WARNING"):
+        try:
+            asyncio.run(
+                app_module._runtime_retry_loop(
+                    app,
+                    object(),
+                    {},
+                    recorder=None,
+                    capital_client=None,
+                    sleep=sleep,
+                    jitter=lambda _low, _high: 0.0,
+                )
+            )
+        except asyncio.CancelledError:
+            pass
+
+    assert attempts == [1]
+    assert "runtime service unavailable: redis" in caplog.text
+    assert health_module._RUNTIME_HEALTH_DETAIL == "runtime service unavailable: redis"
+    health_module.set_runtime_health(None)

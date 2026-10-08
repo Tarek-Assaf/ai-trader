@@ -220,12 +220,21 @@ class TelegramChannel:
     def run(self, *, stop: Callable[[], bool] | None = None, timeout: int = 30) -> None:
         """Run long-polling until ``stop`` returns true."""
         should_stop = stop or (lambda: False)
+        consecutive_failures = 0
         while not should_stop():
             try:
                 self.poll_once(timeout=timeout)
-            except Exception:
-                LOGGER.exception("telegram poll failed")
-                time.sleep(1.0)
+                consecutive_failures = 0
+            except Exception as exc:  # noqa: BLE001 - keep the channel alive
+                consecutive_failures = min(consecutive_failures + 1, 5)
+                delay = min(30.0, float(2 ** (consecutive_failures - 1)))
+                LOGGER.warning(
+                    "telegram poll failed (%s); backing off %.1fs",
+                    type(exc).__name__,
+                    delay,
+                )
+                if not should_stop():
+                    time.sleep(delay)
 
     def handle_update(self, update: Mapping[str, Any]) -> None:
         message = update.get("message")
@@ -482,13 +491,55 @@ class TelegramBotTransport:
                 json=dict(payload),
                 timeout=40.0,
             )
-            response.raise_for_status()
-            body = response.json()
-        except Exception:
+        except Exception as exc:  # noqa: BLE001 - never expose request details
+            LOGGER.warning(
+                "telegram request failed method=%s status=%s telegram_error_code=%s (%s)",
+                method,
+                None,
+                None,
+                type(exc).__name__,
+            )
             raise RuntimeError("Telegram API request failed") from None
+        body = self._decode_response(method, response)
         if not body.get("ok"):
             raise RuntimeError("Telegram API request failed")
         return body.get("result")
+
+    @staticmethod
+    def _decode_response(method: str, response: Any) -> Mapping[str, Any]:
+        """Decode a response and log only safe Telegram failure metadata."""
+        status = getattr(response, "status_code", None)
+        try:
+            body = response.json()
+        except Exception as exc:  # noqa: BLE001 - response body is untrusted
+            LOGGER.warning(
+                "telegram request failed method=%s status=%s telegram_error_code=%s (%s)",
+                method,
+                status,
+                None,
+                type(exc).__name__,
+            )
+            raise RuntimeError("Telegram API request failed") from None
+        if not isinstance(body, Mapping):
+            LOGGER.warning(
+                "telegram request failed method=%s status=%s telegram_error_code=%s (invalid_response)",
+                method,
+                status,
+                None,
+            )
+            raise RuntimeError("Telegram API request failed")
+        error_code = body.get("error_code")
+        if not body.get("ok") or not (isinstance(status, int) and 200 <= status < 300):
+            LOGGER.warning(
+                "telegram request failed method=%s status=%s telegram_error_code=%s",
+                method,
+                status if isinstance(status, int) else None,
+                error_code if isinstance(error_code, int) else None,
+            )
+            if not body.get("ok"):
+                return body
+            raise RuntimeError("Telegram API request failed")
+        return body
 
     def get_updates(self, offset: int | None, timeout: int) -> Sequence[Mapping[str, Any]]:
         payload: dict[str, Any] = {
@@ -523,10 +574,16 @@ class TelegramBotTransport:
                 files={"photo": ("chart.png", photo, "image/png")},
                 timeout=40.0,
             )
-            response.raise_for_status()
-            body = response.json()
-        except Exception:
+        except Exception as exc:  # noqa: BLE001 - never expose request details
+            LOGGER.warning(
+                "telegram request failed method=%s status=%s telegram_error_code=%s (%s)",
+                "sendPhoto",
+                None,
+                None,
+                type(exc).__name__,
+            )
             raise RuntimeError("Telegram API request failed") from None
+        body = self._decode_response("sendPhoto", response)
         if not body.get("ok"):
             raise RuntimeError("Telegram API request failed")
 
