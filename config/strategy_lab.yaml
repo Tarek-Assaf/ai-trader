@@ -6,7 +6,7 @@ version: 1
 stages: [idea, backtest, paper, micro_live, live, retired]
 
 data:
-  holdout_months: 2                # most recent months sealed away; only the validator may read them
+  holdout_months: 3                # most recent months sealed away; only the validator may read them
   hypothesis_source: histdata      # ideas come from HistData and the own data lake
   confirmation_source: capital_demo
   timeframes: [1m, 3m, 5m]         # 3m is built from 1m
