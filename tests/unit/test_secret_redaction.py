@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import sys
 from io import StringIO
 
 from pydantic import SecretStr
@@ -65,3 +66,21 @@ def test_structured_secret_value_is_redacted() -> None:
     record.credential = SecretStr("top-secret")
     assert SecretRedactionFilter(("top-secret",)).filter(record)
     assert record.credential == "[REDACTED]"
+
+
+def test_exception_traceback_is_redacted() -> None:
+    """Full exception tracebacks do not leak configured secret values."""
+    stream = StringIO()
+    handler = logging.StreamHandler(stream)
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    record = logging.LogRecord("test", logging.ERROR, "test.py", 1, "runtime failed", (), None)
+    try:
+        raise RuntimeError("top-secret")
+    except RuntimeError:
+        record.exc_info = sys.exc_info()
+
+    assert SecretRedactionFilter(("top-secret",)).filter(record)
+    handler.handle(record)
+    output = stream.getvalue()
+    assert "Traceback" in output
+    assert "top-secret" not in output

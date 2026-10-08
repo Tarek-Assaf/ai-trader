@@ -8,6 +8,7 @@ import logging
 import os
 import random
 import threading
+import traceback
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from decimal import Decimal
@@ -49,12 +50,24 @@ _LOG = logging.getLogger(__name__)
 
 
 def _runtime_failure_detail(exc: BaseException) -> str:
-    """Return a short, secret-free diagnostic for a runtime startup failure."""
+    """Return a short, secret-free diagnostic for a runtime startup failure.
+
+    Dependency failures have fixed, secret-free messages that are useful to an
+    operator. Arbitrary exceptions expose only their type and the innermost
+    source location; exception values and messages must never enter health.
+    """
+
+    frames = traceback.extract_tb(exc.__traceback__)
+    location = "unknown:unknown"
+    if frames:
+        frame = frames[-1]
+        location = f"{Path(frame.filename).name}:{frame.name}"
+    prefix = type(exc).__name__
     if isinstance(exc, RuntimeDependencyUnavailable):
         message = str(exc).strip()
         if message:
-            return message[:200]
-    return type(exc).__name__
+            return f"{prefix}: {message[:200]} ({location})"
+    return f"{prefix} ({location})"
 
 
 def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
@@ -98,7 +111,8 @@ def _start_runtime_if_configured(
             )
             app.state.runtime_factories = factories
         except Exception as exc:
-            _LOG.warning("runtime default composition unavailable (%s)", type(exc).__name__)
+            set_runtime_health("runtime_unavailable", _runtime_failure_detail(exc))
+            _LOG.exception("runtime default composition unavailable")
     if factory is None and isinstance(factories, RuntimeFactories):
 
         def factory(current_settings: EnvironmentSettings, current_configs: dict[str, Any]) -> Any:
@@ -157,7 +171,8 @@ def _start_runtime_if_configured(
         # this composition hook returns.
     except Exception as exc:
         app.state.runtime = None
-        _LOG.error("runtime composition unavailable (%s)", type(exc).__name__)
+        set_runtime_health("runtime_unavailable", _runtime_failure_detail(exc))
+        _LOG.exception("runtime composition unavailable")
 
 
 class _MemoryUsageLedger:
@@ -348,7 +363,7 @@ async def _runtime_retry_loop(
         except Exception as exc:  # noqa: BLE001 - keep API alive while retrying
             detail = _runtime_failure_detail(exc)
             set_runtime_health("runtime_unavailable", detail)
-            _LOG.warning("runtime retry unavailable (%s)", detail)
+            _LOG.exception("runtime retry unavailable")
             attempt = min(attempt + 1, 4)
 
 
