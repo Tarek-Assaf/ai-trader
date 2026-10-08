@@ -12,7 +12,6 @@ from pydantic import SecretStr
 from trader.core.config import load_all_configs
 from trader.runtime.services import build_runtime_services
 
-
 ROOT = Path(__file__).resolve().parents[2]
 
 
