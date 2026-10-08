@@ -116,7 +116,7 @@ class CommandDataService:
         except Exception as exc:
             self._log_provider_failure("risk", exc)
             return "Risk status is unavailable right now."
-        rendered = self._render_value(value, "Risk")
+        rendered = self._render_risk(value)
         return rendered or "Risk status is unavailable right now."
 
     def report(self, command: str = "/report") -> str:
@@ -198,6 +198,41 @@ class CommandDataService:
         if isinstance(value, str) and value.strip():
             return f"{label}: {value}"
         return None
+
+    @staticmethod
+    def _render_risk(value: object) -> str | None:
+        """Render configured risk limits as short, stable plain text."""
+        if not isinstance(value, Mapping):
+            return None
+        limits = value.get("limits")
+        if not isinstance(limits, Mapping):
+            limits = value
+
+        def scalar(*names: str) -> str:
+            for name in names:
+                item = limits.get(name)
+                if isinstance(item, str | int | float | Decimal) and not isinstance(item, bool):
+                    text = str(item).strip()
+                    if text:
+                        return text[:64]
+            return "unavailable"
+
+        mode = value.get("mode")
+        mode_text = (
+            str(mode).strip()[:32] if isinstance(mode, str) and mode.strip() else "unavailable"
+        )
+        return "\n".join(
+            (
+                "Risk:",
+                f"mode: {mode_text}",
+                f"daily_loss_limit: {scalar('max_daily_loss_pct')}%",
+                f"weekly_loss_limit: {scalar('max_weekly_loss_pct')}%",
+                f"drawdown_limit: {scalar('max_drawdown_pct')}%",
+                f"risk_per_trade: {scalar('risk_per_trade_pct')}%",
+                f"max_open_positions: {scalar('max_open_positions_total', 'max_open_positions')}",
+                f"orders_per_hour: {scalar('max_orders_per_hour')}",
+            )
+        ).rstrip()
 
     @staticmethod
     def _log_provider_failure(name: str, exc: Exception) -> None:

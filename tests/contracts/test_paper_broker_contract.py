@@ -60,7 +60,11 @@ def test_paper_broker_satisfies_adapter_contract_and_models_costs() -> None:
         "balance": Decimal("1000"),
         "equity": Decimal("1000"),
         "profit": Decimal("0"),
+        "profitLoss": Decimal("0"),
+        "unrealised": Decimal("0"),
         "currency": "USD",
+        "margin_used": Decimal("0"),
+        "notional_exposure": Decimal("0"),
         "financing": Decimal("0"),
         "financing_status": "placeholder_not_modeled",
     }
@@ -99,6 +103,17 @@ def test_paper_broker_satisfies_adapter_contract_and_models_costs() -> None:
     assert account["balance"] == Decimal("1004.0")
     assert account["equity"] == Decimal("1004.0")
     assert len(broker.get_activity(start, end)) == 4
+
+
+def test_account_reports_open_position_exposure_and_margin() -> None:
+    broker = make_broker()
+    receipt = broker.place_order(make_order(size=Decimal("2")))
+
+    account = broker.get_account()
+
+    assert account["notional_exposure"] == receipt.position.level * receipt.position.size
+    assert account["margin_used"] == account["notional_exposure"]
+    assert account["profitLoss"] == account["unrealised"] == account["profit"]
 
 
 @pytest.mark.parametrize(
