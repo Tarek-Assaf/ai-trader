@@ -57,9 +57,7 @@ def test_app_command_renderer_uses_real_command_service_and_paper_broker() -> No
 
     channel.handle_message("owner", "/status")
 
-    assert transport.messages[-1][1].startswith(
-        "Status: account USD; balance 10000; equity 10000."
-    )
+    assert transport.messages[-1][1].startswith("Status: account USD; balance 10000; equity 10000.")
     assert transport.messages[-1][1] != "/status:"
 
     channel.handle_message("owner", "/soak")
