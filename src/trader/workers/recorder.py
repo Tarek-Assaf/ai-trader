@@ -5,8 +5,10 @@ from __future__ import annotations
 import datetime
 import logging
 import os
+import random
 import signal
 import threading
+from collections.abc import Callable
 from pathlib import Path
 from time import monotonic
 from typing import Any
@@ -24,6 +26,25 @@ _LOG = logging.getLogger(__name__)
 _MARKET_POLL_SECONDS = 60
 _STATUS_POLL_SECONDS = 5
 _DEFAULT_STALE_AFTER_SECONDS = 180.0
+_STREAM_RESTART_MIN_SECONDS = 3.0
+_STREAM_RESTART_MAX_SECONDS = 300.0
+_STREAM_HEALTHY_RESET_SECONDS = 300.0
+
+
+def _next_stream_restart(
+    backoff: float,
+    healthy_seconds: float,
+    *,
+    jitter: Callable[[float, float], float] | None = None,
+) -> tuple[float, float]:
+    """Return a jittered restart wait and the next exponential backoff."""
+    effective = (
+        _STREAM_RESTART_MIN_SECONDS if healthy_seconds >= _STREAM_HEALTHY_RESET_SECONDS else backoff
+    )
+    effective = min(max(effective, _STREAM_RESTART_MIN_SECONDS), _STREAM_RESTART_MAX_SECONDS)
+    jitter_fn = jitter or random.uniform
+    wait = min(_STREAM_RESTART_MAX_SECONDS, effective + jitter_fn(0.0, effective * 0.25))
+    return wait, min(effective * 2, _STREAM_RESTART_MAX_SECONDS)
 
 
 def _config_path() -> Path:
@@ -169,11 +190,25 @@ def run_data_recorder() -> None:
             stream.seed_watermarks(recorder.watermarks())
 
             def run_stream() -> None:
-                try:
-                    stream.run_forever(stop)
-                except Exception as exc:  # Do not include third-party exception text.
-                    _LOG.error("Capital.com recorder stopped (%s)", type(exc).__name__)
-                    stop.set()
+                backoff = _STREAM_RESTART_MIN_SECONDS
+                while not stop.is_set():
+                    started = monotonic()
+                    try:
+                        stream.run_forever(stop)
+                        return
+                    except Exception as exc:
+                        healthy_seconds = monotonic() - started
+                        wait, backoff = _next_stream_restart(backoff, healthy_seconds)
+                        if isinstance(exc, ValueError):
+                            _LOG.error(
+                                "Capital.com recorder stopped (%s): %s",
+                                type(exc).__name__,
+                                str(exc)[:160],
+                            )
+                        else:
+                            _LOG.error("Capital.com recorder stopped (%s)", type(exc).__name__)
+                        if stop.wait(wait):
+                            return
 
             stream_thread = threading.Thread(
                 target=run_stream, name="capital-data-recorder", daemon=True

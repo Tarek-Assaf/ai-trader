@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 234,
+  "revision": 236,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-107 Telegram command handlers are wired through the real CommandDataService, with paper /status output and bounded failure fallbacks. T-017/T-044 still wait on recorder data.",
+    "summary": "T-109 recorder resilience now quarantines malformed backfill candles, keeps valid rows flowing and backs off stream restarts. T-017/T-044 still wait on recorder calibration and data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -110,7 +110,8 @@
         "T-080",
         "T-082",
         "T-083",
-        "T-100"
+        "T-100",
+        "T-109"
       ]
     },
     {
@@ -132,7 +133,8 @@
       "covered_by": [
         "C-003",
         "T-015",
-        "T-044"
+        "T-044",
+        "T-109"
       ]
     },
     {
@@ -362,7 +364,8 @@
         "T-018",
         "T-019",
         "T-081",
-        "T-094"
+        "T-094",
+        "T-109"
       ]
     },
     {
@@ -3294,6 +3297,51 @@
       ],
       "completion_note": "PaperBroker now returns explicit margin_used and notional_exposure from open entry notionals, plus profitLoss and unrealised aliases; the empty 10000 USD account reports zero values. CommandDataService renders P&L from the real paper broker and a bounded eight-line risk summary with named limits instead of dict repr. Added contract and real service tests. Handoff validation, bundled compileall, direct smoke test and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders used. Handing T-108 to Claude for review.",
       "review_notes": "Claude: paper account now reports margin_used/notional_exposure/profitLoss; /risk renders short plain text; provider stays fail-closed for brokers missing fields. CI is the quality gate; verify /pnl on the Pod after redeploy."
+    },
+    {
+      "id": "T-109",
+      "title": "Recorder resilience for malformed backfill candles and restart failures",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-05",
+        "R-07",
+        "R-23"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Malformed backfill candles are quarantined individually without stopping the recorder; valid rows continue to persist and negative spreads are never written.",
+        "Recorder status and /health expose bounded rejected_candles and fixed last_reject_reason fields.",
+        "Recorder stream failures log fixed ValueError text without tracebacks and restart with jittered 3-second exponential backoff capped at 300 seconds, resetting after five healthy minutes.",
+        "Tests cover mixed good and rejected backfill rows, rejection health fields and restart backoff/reset behavior without weakening tick or closed-bar quality rules."
+      ],
+      "deliverables": [
+        "src/trader/data/recorder.py",
+        "src/trader/api/health.py",
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_health.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_recorder_worker.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "src/trader/data/recorder.py",
+        "src/trader/api/health.py",
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_health.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_recorder_worker.py",
+        "bundled Python compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Quarantined invalid recorder updates with bounded rejection status, preserved all valid backfill rows and prevented negative spreads from being written. Stream callback failures now log fixed ValueError text without tracebacks; the worker retries in-process with jittered exponential backoff from 3 seconds to a 300-second cap and resets after five healthy minutes. Added tests for mixed candle batches, health exposure, logging and backoff. Bundled Python compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders used. Handing T-109 to Claude for review.",
+      "review_notes": "Claude: bad candles quarantined and counted (never fatal); ValueError text logged; stream restart backoff 3s-300s with jitter, reset after 5 min healthy; no weakening of tick/closed-bar rules. CI is the quality gate; verify on the Pod that ticks resume and rejected_candles is reported."
     }
   ],
   "decisions": [
@@ -6056,6 +6104,28 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "paper account fields or command rendering change"
+    },
+    {
+      "id": "V-248",
+      "subject": "T-109 recorder resilience",
+      "method": "Read diff against acceptance criteria; verified invalid candles are quarantined without negative spread writes, status/health fields are bounded, ValueError logging contains no traceback, and restart backoff helper doubles/caps/resets. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/data/recorder.py; src/trader/api/health.py; src/trader/integrations/capital_com/stream.py; src/trader/workers/recorder.py; tests/unit/test_data_recorder.py; tests/unit/test_health.py; tests/unit/test_capital_com_stream.py; tests/unit/test_recorder_worker.py; bundled Python compileall; git diff --check",
+      "review_notes": "pytest, Ruff, mypy and make check are unavailable in this desktop runtime; Claude/CI should run the full quality gate. No credentials, broker calls or orders were used.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "Recorder backfill validation, restart backoff or recorder health status changes"
+    },
+    {
+      "id": "V-249",
+      "subject": "T-109 review",
+      "method": "Read diff against the acceptance criteria: quarantine instead of raise in upsert_many and recorder, rejected_candles/last_reject_reason bounded in health, backoff helper and restart loop, reconnect accounting on consumer failure.",
+      "result": "pass",
+      "evidence": "src/trader/data/recorder.py; src/trader/workers/recorder.py; src/trader/integrations/capital_com/stream.py; src/trader/api/health.py; tests/unit/test_data_recorder.py; tests/unit/test_recorder_worker.py",
+      "review_notes": "Rejected candles leave a gap on one side for that minute; counted and visible in /health. Confirm on the Pod.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "recorder validation rules or restart policy change"
     }
   ],
   "blockers": [
@@ -10379,7 +10449,41 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-108 passed: /pnl works against the paper broker account and /risk is readable. Owner redeploys and checks /pnl and /risk. Turn to Codex."
+    },
+    {
+      "revision": 235,
+      "ts": "2026-10-08T12:47:25Z",
+      "agent": "codex",
+      "action": "complete_t109_recorder_resilience",
+      "task_ids": [
+        "T-109"
+      ],
+      "files_changed": [
+        "src/trader/data/recorder.py",
+        "src/trader/api/health.py",
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_health.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_recorder_worker.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Quarantined malformed backfill candles without allowing negative spreads or recorder crash-loop, exposed bounded rejection health fields, logged fixed ValueError text without tracebacks, and added jittered in-process restart backoff with reset after five healthy minutes. Handing T-109 to Claude for review."
+    },
+    {
+      "revision": 236,
+      "ts": "2026-10-08T13:00:00Z",
+      "agent": "claude",
+      "action": "review_t109_pass",
+      "task_ids": [
+        "T-109"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-109 passed: recorder no longer crash-loops on a bad candle; bad candles are quarantined and counted; restart has exponential backoff. Owner redeploys and sends /health. Turn to Codex."
     }
   ],
-  "project_summary": "T-108 paper broker account figures and readable Telegram P&L/risk output are complete and awaiting Claude review. T-017/T-044 still wait on recorder data."
+  "project_summary": "T-109 recorder resilience is complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."
 }

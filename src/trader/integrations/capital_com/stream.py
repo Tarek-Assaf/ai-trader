@@ -287,7 +287,14 @@ class CapitalComStreamClient:
         try:
             self._on_update(update)
         except Exception as exc:
-            _LOG.error("Capital.com stream consumer failed (%s)", type(exc).__name__)
+            if isinstance(exc, ValueError):
+                _LOG.error(
+                    "Capital.com stream consumer failed (%s): %s",
+                    type(exc).__name__,
+                    str(exc)[:160],
+                )
+            else:
+                _LOG.error("Capital.com stream consumer failed (%s)", type(exc).__name__)
             raise _ConsumerCallbackFailure(exc) from exc
 
     def _backfill(self) -> None:
@@ -375,6 +382,10 @@ class CapitalComStreamClient:
                             self._ping(socket)
                             last_ping = now
             except _ConsumerCallbackFailure as exc:
+                self._ping_reply_ok = False
+                self._reconnect_count += 1
+                if not stop_event.is_set() and self._on_reconnect is not None:
+                    self._on_reconnect(self._reconnect_count, type(exc.original).__name__)
                 raise exc.original from None
             except (ConnectionClosed, OSError, TimeoutError, StreamProtocolError) as exc:
                 self._ping_reply_ok = False
