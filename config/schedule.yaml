@@ -14,4 +14,9 @@ email:
 status_digest:
   telegram_every_hours: 6
 
+recorder_health:
+  digest_hours: [2, 24]       # once per boot at these recorder uptimes
+  repeat_hours: 24             # continue one digest every 24 hours
+  degraded_minutes: 5          # alert after sustained open-market degradation
+
 event_blackouts_source: economic_calendar   # see risk.yaml for the minutes before and after

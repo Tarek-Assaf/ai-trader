@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 236,
+  "revision": 238,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-109 recorder resilience now quarantines malformed backfill candles, keeps valid rows flowing and backs off stream restarts. T-017/T-044 still wait on recorder calibration and data.",
+    "summary": "T-110 recorder health digests and sustained degradation alerts are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -286,7 +286,8 @@
         "T-091",
         "T-092",
         "T-099",
-        "T-103"
+        "T-103",
+        "T-110"
       ]
     },
     {
@@ -312,7 +313,8 @@
       "status": "not_started",
       "covered_by": [
         "T-004",
-        "T-092"
+        "T-092",
+        "T-110"
       ]
     },
     {
@@ -365,7 +367,8 @@
         "T-019",
         "T-081",
         "T-094",
-        "T-109"
+        "T-109",
+        "T-110"
       ]
     },
     {
@@ -3342,6 +3345,40 @@
       ],
       "completion_note": "Quarantined invalid recorder updates with bounded rejection status, preserved all valid backfill rows and prevented negative spreads from being written. Stream callback failures now log fixed ValueError text without tracebacks; the worker retries in-process with jittered exponential backoff from 3 seconds to a 300-second cap and resets after five healthy minutes. Added tests for mixed candle batches, health exposure, logging and backoff. Bundled Python compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders used. Handing T-109 to Claude for review.",
       "review_notes": "Claude: bad candles quarantined and counted (never fatal); ValueError text logged; stream restart backoff 3s-300s with jitter, reset after 5 min healthy; no weakening of tick/closed-bar rules. CI is the quality gate; verify on the Pod that ticks resume and rejected_candles is reported."
+    },
+    {
+      "id": "T-110",
+      "title": "Scheduled recorder health digests and sustained degradation alerts",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-18",
+        "R-20",
+        "R-23"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Existing report scheduler emits 2h/24h/24h recorder digests once per boot and repeats every 24h.",
+        "Bounded redacted digest is delivered to Telegram and appended as JSONL evidence.",
+        "Open-market recorder degradation alerts after the configured sustained interval and sends one recovery alert.",
+        "Tests cover fake-clock thresholds, alerts, recovery, bounded text and valid JSON evidence."
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [
+        "config/schedule.yaml",
+        "docs/specs/pod_test_outputs.md",
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime_services.py",
+        "bundled Python compileall",
+        "git diff --check",
+        "Pod /health read-only check (version 91243a2, healthy, Redis reachable)"
+      ],
+      "completion_note": "Extended the existing report scheduler with recorder health digests, JSONL evidence, bounded Telegram alerts and recovery notifications. The digest uses the recorder start time, GIT_SHA and the fixed data_recorder allowlist; no Pod URL, token or arbitrary status text is emitted. Handoff to Claude for review.",
+      "review_notes": "Claude: digest at 2h/24h/repeat, evidence JSONL, degraded alert and recovery via shared Alert path, config in schedule.yaml. Review fix applied by Claude: _recorder_health_mapping dropped expected_open, so the degraded alert could never fire from the status file; it is now carried through (not part of the digest fields). CI is the quality gate."
     }
   ],
   "decisions": [
@@ -6126,6 +6163,28 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "recorder validation rules or restart policy change"
+    },
+    {
+      "id": "V-250",
+      "subject": "T-110 recorder health scheduler",
+      "method": "Added fake-clock coverage for 2h, 24h and 48h digest delivery, sustained degraded/recovery alerts, URL/token redaction and JSONL evidence. Ran bundled Python compileall and git diff --check; performed a read-only Pod /health check.",
+      "result": "pass",
+      "evidence": "config/schedule.yaml; src/trader/runtime/services.py; src/trader/api/app.py; tests/unit/test_runtime_services.py; bundled Python compileall; git diff --check; Pod health response",
+      "review_notes": "pytest, Ruff and mypy are unavailable in this desktop runtime; Claude/CI should run the full quality gate. No broker calls, orders, credentials or Pod terminal commands were used.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "report scheduler delivery or recorder health status changes"
+    },
+    {
+      "id": "V-251",
+      "subject": "T-110 review",
+      "method": "Read diff against the acceptance criteria and traced the degraded-alert path from the status file; found expected_open was filtered out of the mapping and fixed it.",
+      "result": "pass",
+      "evidence": "src/trader/runtime/services.py; tests/unit/test_runtime_services.py; config/schedule.yaml",
+      "review_notes": "Digest text and evidence line are redacted and bounded. Confirm the 2h digest arrives on Telegram after the next redeploy.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "recorder status fields or the health digest scheduler change"
     }
   ],
   "blockers": [
@@ -10483,7 +10542,39 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-109 passed: recorder no longer crash-loops on a bad candle; bad candles are quarantined and counted; restart has exponential backoff. Owner redeploys and sends /health. Turn to Codex."
+    },
+    {
+      "revision": 237,
+      "ts": "2026-10-08T13:35:00Z",
+      "agent": "codex",
+      "action": "complete_t110_recorder_health_digest",
+      "task_ids": [
+        "T-110"
+      ],
+      "files_changed": [
+        "config/schedule.yaml",
+        "docs/specs/pod_test_outputs.md",
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime_services.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Added scheduled recorder health digests at configured uptime thresholds with 24h repeats, bounded Telegram Alert/AlertLimiter delivery, JSONL evidence under /workspace/state/evidence, and sustained degraded/recovery alerts. Tests cover fake-clock thresholds, alert recovery, redaction and valid JSON evidence. Bundled compileall, diff-check and Pod /health read-only validation pass; handing T-110 to Claude for review."
+    },
+    {
+      "revision": 238,
+      "ts": "2026-10-08T13:45:00Z",
+      "agent": "claude",
+      "action": "review_t110_pass",
+      "task_ids": [
+        "T-110"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/runtime/services.py"
+      ],
+      "summary": "T-110 passed with a one-line review fix (expected_open carried into the recorder health mapping so the degraded alert can fire). Owner redeploys; digest arrives at 2h and 24h of uptime. Turn to Codex."
     }
   ],
-  "project_summary": "T-109 recorder resilience is complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."
+  "project_summary": "T-110 recorder health digests and sustained degradation alerts are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."
 }

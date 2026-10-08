@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
@@ -113,3 +114,90 @@ def test_report_scheduler_persists_each_period_once_per_scheduled_target() -> No
     assert len(calls) == 3
     assert scheduler.run_due(now) == ()
     assert len(calls) == 3
+
+
+def test_recorder_health_digest_runs_at_thresholds_and_repeats(tmp_path: Path) -> None:
+    from trader.runtime.services import _ReportScheduler
+
+    started = datetime(2026, 10, 8, 0, 0, tzinfo=UTC)
+    clock = [started]
+    status_path = tmp_path / "recorder.json"
+    status_path.write_text(
+        json.dumps(
+            {
+                "status": "healthy",
+                "ping_reply_ok": True,
+                "market_status": "OPEN",
+                "expected_open": True,
+                "ticks_received": 11,
+                "last_tick_at": started.isoformat(),
+                "last_closed_bar_at": started.isoformat(),
+                "reconnect_count": 0,
+                "last_reconnect_reason": None,
+                "rejected_candles": 0,
+                "last_reject_reason": None,
+                "stale_epics": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    recorder = SimpleNamespace(_started_at=started, _status_path=status_path)
+    sent: list[object] = []
+    evidence = tmp_path / "evidence" / "recorder_health.jsonl"
+    scheduler = _ReportScheduler(
+        {"recorder_health": {"digest_hours": [2, 24], "repeat_hours": 24}},
+        recorder=recorder,
+        evidence_path=evidence,
+        clock=lambda: clock[0],
+        alert=lambda value: sent.append(value) or True,
+    )
+
+    assert scheduler.run_due(started) == ()
+    clock[0] = started.replace(hour=2)
+    assert scheduler.run_due() == ("recorder_health_2h",)
+    clock[0] = started.replace(day=9)
+    assert scheduler.run_due() == ("recorder_health_24h",)
+    clock[0] = started.replace(day=10)
+    assert scheduler.run_due() == ("recorder_health_48h",)
+    lines = [json.loads(line) for line in evidence.read_text(encoding="utf-8").splitlines()]
+    assert [line["uptime_label"] for line in lines] == ["2h", "24h", "48h"]
+    assert all("token" not in line["message"].lower() for line in lines)
+    assert len(sent) == 3
+
+
+def test_recorder_health_alerts_after_degradation_and_recovers(tmp_path: Path) -> None:
+    from trader.runtime.services import _ReportScheduler
+
+    started = datetime(2026, 10, 8, 0, 0, tzinfo=UTC)
+    clock = [started]
+    status_path = tmp_path / "recorder.json"
+    status = {
+        "status": "degraded",
+        "ping_reply_ok": False,
+        "market_status": "OPEN",
+        "expected_open": True,
+        "last_reconnect_reason": "token=https://secret.example",
+    }
+    status_path.write_text(json.dumps(status), encoding="utf-8")
+    recorder = SimpleNamespace(_started_at=started, _status_path=status_path)
+    sent: list[object] = []
+    scheduler = _ReportScheduler(
+        {"recorder_health": {"digest_hours": [1000], "degraded_minutes": 5}},
+        recorder=recorder,
+        evidence_path=tmp_path / "evidence.jsonl",
+        clock=lambda: clock[0],
+        alert=lambda value: sent.append(value) or True,
+    )
+
+    scheduler.run_due(started)
+    clock[0] = started.replace(minute=5)
+    scheduler.run_due()
+    assert len(sent) == 1
+    assert "https://" not in str(getattr(sent[0], "text", ""))
+    status["status"] = "healthy"
+    status["ping_reply_ok"] = True
+    status_path.write_text(json.dumps(status), encoding="utf-8")
+    clock[0] = started.replace(minute=6)
+    scheduler.run_due()
+    assert len(sent) == 2
+    assert sent[1].alert_key == "recorder_health_recovered"
