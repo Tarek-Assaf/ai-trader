@@ -29,6 +29,7 @@ from trader.data.recorder import CapitalDataRecorder, ParquetCandleStore
 from trader.execution.control import ControlMode, build_control_sources
 from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
+from trader.lab.runner import LabJobManager, LabRunner
 from trader.reports.commands import CommandDataService
 from trader.runtime import (
     RuntimeComponents,
@@ -414,6 +415,7 @@ async def lifespan(_app: FastAPI) -> Any:
     # into an AttributeError while the Telegram channel starts.
     _app.state.report_telegram_transport = None
     _app.state.command_data_service = None
+    _app.state.lab_job_manager = None
     _app.state.soak_monitor = SoakMonitor(
         Path(os.getenv("SOAK_EVIDENCE_DIR", "/workspace/state/soak"))
     )
@@ -485,6 +487,10 @@ async def lifespan(_app: FastAPI) -> Any:
         }
         workspace = Path(os.getenv("WORKSPACE_DIR", "/workspace"))
         lake_root = Path(os.getenv("DATA_LAKE_DIR", str(workspace / "data" / "lake")))
+        holdout_root = Path(os.getenv("LAB_HOLDOUT_DIR", str(workspace / "data" / "holdout")))
+        _app.state.lab_job_manager = LabJobManager(
+            LabRunner(lake_root=lake_root, holdout_root=holdout_root)
+        )
         status_path = Path(
             os.getenv("RECORDER_STATUS_PATH", str(workspace / "state" / "recorder.json"))
         )
@@ -634,6 +640,19 @@ async def lifespan(_app: FastAPI) -> Any:
                 if isinstance(command_service, CommandDataService)
                 else {}
             )
+            lab_manager = getattr(_app.state, "lab_job_manager", None)
+            if isinstance(lab_manager, LabJobManager):
+                command_handlers["/lab"] = lab_manager.handle
+
+            def render_chart(command: str, argument: str) -> bytes:
+                if command == "/lab" and isinstance(lab_manager, LabJobManager):
+                    return lab_manager.chart(command, argument)
+                return (
+                    command_service.chart(command, argument)
+                    if isinstance(command_service, CommandDataService)
+                    else _chart_png(command, argument)
+                )
+
             router = _build_chat_router(
                 settings,
                 configs,
@@ -648,11 +667,7 @@ async def lifespan(_app: FastAPI) -> Any:
                 current_mode=current_mode,
                 router=router,
                 render=_command_renderer(command_handlers),
-                render_chart=(
-                    command_service.chart
-                    if isinstance(command_service, CommandDataService)
-                    else _chart_png
-                ),
+                render_chart=render_chart,
                 authorize_resume=lambda: settings.owner_totp_secret is None,
             )
             if report_scheduler is not None and hasattr(report_scheduler, "configure_alert"):
