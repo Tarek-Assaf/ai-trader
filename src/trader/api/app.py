@@ -38,10 +38,23 @@ from trader.runtime import (
     build_runtime_services,
     runtime_enabled,
 )
-from trader.runtime.factory import RuntimeFactories, build_runtime_components
+from trader.runtime.factory import (
+    RuntimeDependencyUnavailable,
+    RuntimeFactories,
+    build_runtime_components,
+)
 from trader.soak import SoakMonitor
 
 _LOG = logging.getLogger(__name__)
+
+
+def _runtime_failure_detail(exc: BaseException) -> str:
+    """Return a short, secret-free diagnostic for a runtime startup failure."""
+    if isinstance(exc, RuntimeDependencyUnavailable):
+        message = str(exc).strip()
+        if message:
+            return message[:200]
+    return type(exc).__name__
 
 
 def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
@@ -333,8 +346,9 @@ async def _runtime_retry_loop(
         except asyncio.CancelledError:
             raise
         except Exception as exc:  # noqa: BLE001 - keep API alive while retrying
-            set_runtime_health("runtime_unavailable")
-            _LOG.warning("runtime retry unavailable (%s)", type(exc).__name__)
+            detail = _runtime_failure_detail(exc)
+            set_runtime_health("runtime_unavailable", detail)
+            _LOG.warning("runtime retry unavailable (%s)", detail)
             attempt = min(attempt + 1, 4)
 
 
@@ -455,9 +469,10 @@ async def lifespan(_app: FastAPI) -> Any:
     except Exception as exc:
         # Keep controls available while recording one clear fail-safe alert;
         # _start_runtime_if_configured will not compose a partial runtime.
-        _LOG.error("runtime alert: dependencies unavailable (%s)", type(exc).__name__)
+        detail = _runtime_failure_detail(exc)
+        _LOG.error("runtime alert: dependencies unavailable (%s)", detail)
         if runtime_expected:
-            set_runtime_health("runtime_unavailable")
+            set_runtime_health("runtime_unavailable", detail)
         if runtime_expected:
             runtime_retry_task = asyncio.create_task(
                 _runtime_retry_loop(
@@ -505,8 +520,9 @@ async def lifespan(_app: FastAPI) -> Any:
             await runtime.start()
             set_runtime_health(None)
         except Exception as exc:
-            _LOG.error("runtime alert: startup unavailable (%s)", type(exc).__name__)
-            set_runtime_health("runtime_unavailable")
+            detail = _runtime_failure_detail(exc)
+            _LOG.error("runtime alert: startup unavailable (%s)", detail)
+            set_runtime_health("runtime_unavailable", detail)
             if runtime_retry_task is None and runtime_expected:
                 runtime_retry_task = asyncio.create_task(
                     _runtime_retry_loop(
@@ -518,7 +534,7 @@ async def lifespan(_app: FastAPI) -> Any:
                     )
                 )
     elif runtime_expected and runtime_retry_task is None:
-        set_runtime_health("runtime_unavailable")
+        set_runtime_health("runtime_unavailable", "runtime composition unavailable")
         runtime_retry_task = asyncio.create_task(
             _runtime_retry_loop(
                 _app,

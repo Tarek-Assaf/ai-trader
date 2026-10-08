@@ -67,12 +67,13 @@ def test_health_exposes_runtime_unavailable_reason(monkeypatch) -> None:
     monkeypatch.setattr(health, "_probe_database", lambda _url: True)
     monkeypatch.setattr(health, "_probe_redis", lambda _url: True)
     monkeypatch.setenv("ROLE", "worker")
-    health.set_runtime_health("runtime_unavailable")
+    health.set_runtime_health("runtime_unavailable", "runtime service unavailable: redis")
 
     payload = health.health_payload()
 
     assert payload["status"] == "degraded"
     assert payload["runtime_reason"] == "runtime_unavailable"
+    assert payload["runtime_detail"] == "runtime service unavailable: redis"
     health.set_runtime_health(None)
 
 
@@ -108,6 +109,8 @@ def test_recorder_health_exposes_reconnect_reason_and_market_liveness(tmp_path: 
         "market_status_source": "broker",
         "expected_open": True,
         "stale_epics": [],
+        "ticks_received": 0,
+        "last_tick_at": None,
         "reconnect_count": 3,
         "last_reconnect_reason": "ConnectionClosed",
         "last_update_at": None,
@@ -127,6 +130,8 @@ def test_recorder_health_requires_fresh_ping_and_market_status() -> None:
         "market_status_source": "broker",
         "expected_open": False,
         "stale_epics": [],
+        "ticks_received": 0,
+        "last_tick_at": None,
         "last_liveness_at": now.isoformat(),
     }
 
@@ -138,3 +143,21 @@ def test_recorder_health_requires_fresh_ping_and_market_status() -> None:
         is False
     )
     assert health._recorder_liveness_ok({**status, "ping_reply_ok": False}, now=now) is False
+
+
+def test_recorder_health_requires_recent_tick_when_market_is_open() -> None:
+    now = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    status = {
+        "configured": True,
+        "status": "healthy",
+        "ping_reply_ok": True,
+        "market_status": "TRADEABLE",
+        "market_status_source": "broker",
+        "expected_open": True,
+        "stale_epics": [],
+        "ticks_received": 1,
+        "last_tick_at": (now - timedelta(seconds=31)).isoformat(),
+        "last_liveness_at": now.isoformat(),
+    }
+
+    assert health._recorder_liveness_ok(status, now=now) is False

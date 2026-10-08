@@ -19,14 +19,18 @@ RECORDER_STATUS_PATH = Path(
     os.getenv("RECORDER_STATUS_PATH", "/workspace/data/recorder-status.json")
 )
 _RUNTIME_HEALTH_REASON: str | None = None
+_RUNTIME_HEALTH_DETAIL: str | None = None
 
 
-def set_runtime_health(reason: str | None) -> None:
+def set_runtime_health(reason: str | None, detail: str | None = None) -> None:
     """Set the short, secret-free runtime health reason exposed by /health."""
-    global _RUNTIME_HEALTH_REASON
+    global _RUNTIME_HEALTH_REASON, _RUNTIME_HEALTH_DETAIL
     if reason is not None and reason != "runtime_unavailable":
         raise ValueError("unsupported runtime health reason")
+    if detail is not None and (not isinstance(detail, str) or len(detail) > 200):
+        raise ValueError("runtime health detail must be a short string")
     _RUNTIME_HEALTH_REASON = reason
+    _RUNTIME_HEALTH_DETAIL = detail if reason is not None else None
 
 
 def _service_urls() -> tuple[str, str]:
@@ -107,6 +111,10 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
     reconnect_count = value.get("reconnect_count")
     expected_open = value.get("expected_open")
     stale_epics = value.get("stale_epics")
+    ticks_received = value.get("ticks_received")
+    last_tick_at = value.get("last_tick_at")
+    if not isinstance(ticks_received, int) or ticks_received < 0:
+        ticks_received = 0
     if not isinstance(reconnect_count, int) or reconnect_count < 0:
         reconnect_count = 0
     if not isinstance(stale_epics, list):
@@ -135,6 +143,8 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
         ),
         "expected_open": expected_open if isinstance(expected_open, bool) else None,
         "stale_epics": stale_epics,
+        "ticks_received": ticks_received,
+        "last_tick_at": last_tick_at if isinstance(last_tick_at, str) else None,
         "reconnect_count": reconnect_count,
         "last_reconnect_reason": (
             value.get("last_reconnect_reason")
@@ -173,6 +183,20 @@ def _recorder_liveness_ok(
         return False
     if recorder["market_status"] == "unknown":
         return False
+    if recorder.get("expected_open") is True:
+        last_tick = recorder.get("last_tick_at")
+        if not last_tick:
+            return False
+        try:
+            tick_stamp = datetime.fromisoformat(last_tick.replace("Z", "+00:00"))
+        except (AttributeError, ValueError):
+            return False
+        if tick_stamp.tzinfo is None:
+            return False
+        tick_age = (now or datetime.now(UTC)) - tick_stamp.astimezone(UTC)
+        tick_age_seconds = tick_age.total_seconds()
+        if tick_age_seconds < 0 or tick_age_seconds > RECORDER_MAX_LIVENESS_AGE_SECONDS:
+            return False
     last_liveness = recorder["last_liveness_at"]
     if not last_liveness:
         return False
@@ -207,6 +231,7 @@ def health_payload() -> dict[str, Any]:
         recorder, required=recorder_credentials
     )
     runtime_reason = _RUNTIME_HEALTH_REASON
+    runtime_detail = _RUNTIME_HEALTH_DETAIL
     return {
         "status": (
             "healthy"
@@ -214,6 +239,7 @@ def health_payload() -> dict[str, Any]:
             else "degraded"
         ),
         "runtime_reason": runtime_reason,
+        "runtime_detail": runtime_detail,
         "role": settings.role,
         "version": os.getenv("GIT_SHA", "unknown"),
         "last_backup_at": last_backup_at,

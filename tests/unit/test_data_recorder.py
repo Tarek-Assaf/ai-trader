@@ -102,6 +102,8 @@ def test_startup_watermarks_and_liveness_use_ping_and_market_status(tmp_path: Pa
     }
     assert value["ping_reply_ok"] is True
     assert value["market_status"] == "CLOSED"
+    assert value["ticks_received"] == 0
+    assert value["last_tick_at"] is None
     assert value["reconnect_count"] == 2
     assert value["last_reconnect_reason"] == "ConnectionClosed"
 
@@ -174,3 +176,21 @@ def test_tradeable_market_with_stale_ticks_degrades_recorder(tmp_path: Path) -> 
     value = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
     assert value["status"] == "degraded"
     assert value["stale_epics"] == ["US100"]
+    assert value["ticks_received"] == 0
+    assert value["last_tick_at"] is None
+
+
+def test_recorder_health_counts_received_ticks(tmp_path: Path) -> None:
+    current = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    recorder = CapitalDataRecorder(
+        ParquetCandleStore(tmp_path / "lake"),
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+        clock=lambda: current,
+    )
+
+    recorder.on_update(_update(current, "bid"))
+    value = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+
+    assert value["ticks_received"] == 1
+    assert value["last_tick_at"] == current.isoformat()
