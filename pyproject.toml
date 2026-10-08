@@ -10,6 +10,7 @@ requires-python = ">=3.12,<3.13"
 dependencies = [
   "alembic==1.14.1",
   "fastapi==0.115.8",
+  "huggingface_hub==0.35.3",
   "httpx==0.28.1",
   "jsonschema==4.23.0",
   "matplotlib==3.10.0",
