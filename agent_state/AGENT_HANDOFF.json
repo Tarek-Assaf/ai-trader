@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 228,
+  "revision": 230,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-104 paper execution defaults and model-backed config loading are ready for Claude review. Costs remain provisional until T-017 calibration; T-017/T-044 still wait on recorder data.",
+    "summary": "T-106 recorder health now tolerates normal 45-second price gaps with a separate 180-second tick-age limit while retaining 30-second protocol liveness. T-017/T-044 still wait on recorder data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -203,7 +203,9 @@
         "T-102",
         "T-103",
         "T-104",
-        "T-105"
+        "T-105",
+        "T-106",
+        "T-107"
       ]
     },
     {
@@ -984,7 +986,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ظـزظــظ¤ش╪شظـزظ¤جظـزظــظ¤£ظـùظ¤ء┘ْ1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u0634\u256a\u0634\u0638\u0640\u0632\u0638\u00a4\u062c\u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u00a3\u0638\u0640\u00f9\u0638\u00a4\u0621\u2518\u06521 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -3185,6 +3187,66 @@
         "git diff --check"
       ],
       "completion_note": "Callable service instances are now wrapped as constants; explicit routine overrides remain factories. Real build_runtime_services output is composed through the default factories in regression coverage. Runtime startup/retry logs retain full redacted tracebacks, while /health runtime_detail reports only safe type/location diagnostics plus fixed dependency messages. Bundled Python compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders were used. Handing T-105 to Claude for review."
+    },
+    {
+      "id": "T-106",
+      "title": "Recorder health tick-age tolerance",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-11"
+      ],
+      "depends_on": [
+        "T-103"
+      ],
+      "acceptance_criteria": [
+        "Use a separate 180-second tick-age limit for last_tick_at while expected_open; retain the 30-second liveness limit for last_liveness_at.",
+        "A healthy expected-open recorder with a 45-second-old tick remains healthy, while a 200-second-old tick is degraded.",
+        "A stale liveness timestamp remains degraded even when the tick is recent; no other health rule changes and detail strings remain bounded."
+      ],
+      "deliverables": [
+        "src/trader/api/health.py",
+        "tests/unit/test_health.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "src/trader/api/health.py",
+        "tests/unit/test_health.py",
+        "bundled Python compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Added RECORDER_MAX_TICK_AGE_SECONDS=180 for expected-open price ticks while retaining RECORDER_MAX_LIVENESS_AGE_SECONDS=30 for protocol liveness. Tests cover a 45-second tick gap, a 200-second stale tick, and stale liveness with a recent tick. Ruff, mypy, pytest and make are unavailable in this desktop runtime; compileall and git diff --check pass. No Pod/API calls, credentials, broker calls or orders used. Handing T-106 to Claude for review.",
+      "review_notes": "Claude: matches spec; 180s tick limit separate from 30s liveness; tests cover 45s, 200s, stale liveness. CI is the quality gate."
+    },
+    {
+      "id": "T-107",
+      "title": "Wire Telegram command handlers (/status etc.) into the channel",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-11"
+      ],
+      "depends_on": [
+        "T-106"
+      ],
+      "acceptance_criteria": [
+        "TelegramChannel in api/app.py is built with render= derived from CommandDataService.handlers(); /status, /positions, /pnl, /risk, /report, /soak return real handler text, never the placeholder '/status:'.",
+        "Handler is called with the full command text (command plus argument, e.g. '/report weekly'); a missing handler or one that raises returns a bounded '<command> is unavailable right now.' and logs only the exception type.",
+        "CommandDataService receives the paper broker so /status shows the paper account; /pause /stop /kill /resume routing and the LLM router are unchanged.",
+        "Tests use the real CommandDataService with a fake broker and the real channel construction path; a no-broker case returns bounded unavailable text."
+      ],
+      "deliverables": [
+        "src/trader/api/app.py",
+        "tests/unit/test_api_startup.py"
+      ],
+      "review_cycles": 0,
+      "notes": "Found on the live Pod 2026-10-08: the owner's /status reply was only '/status:' because TelegramChannel was constructed without render=, so the default echo lambda in channels/telegram.py was used. command_handlers is already computed near the channel construction.",
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -4209,7 +4271,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ╪ثظ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u256a\u062b\u0638\u0080\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -5881,6 +5943,28 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "runtime factory wiring, service callables or log redaction changes"
+    },
+    {
+      "id": "V-242",
+      "subject": "T-106 recorder tick-age tolerance",
+      "method": "Inspected the separate tick and liveness thresholds and focused tests for 45-second, 200-second and stale-liveness cases. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "src/trader/api/health.py; tests/unit/test_health.py; bundled Python compileall; git diff --check",
+      "review_notes": "Dependency-backed pytest, Ruff, mypy and make check are unavailable in this desktop runtime; Claude/CI should run full quality gates. No other health rule or detail bound changed.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "recorder health thresholds or liveness detail handling changes"
+    },
+    {
+      "id": "V-243",
+      "subject": "T-106 review",
+      "method": "Read diff against acceptance criteria; confirmed thresholds and 3 tests; CI quality job is the test authority (no local pytest).",
+      "result": "pass",
+      "evidence": "src/trader/api/health.py; tests/unit/test_health.py",
+      "review_notes": "Matches the live false-degraded observation (45s tick gap).",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "recorder health thresholds change"
     }
   ],
   "blockers": [
@@ -7527,7 +7611,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -10116,7 +10200,36 @@
         "src/trader/runtime/factory.py"
       ],
       "summary": "T-105 reviewed and passed: callable service instances are no longer invoked as factories; real service bundle composes in tests; tracebacks logged with redaction and health detail bounded. CI quality gates merge. Turn to Codex; owner redeploys the Pod and reports /health."
+    },
+    {
+      "revision": 229,
+      "ts": "2026-10-08T09:30:00Z",
+      "agent": "codex",
+      "action": "complete_t106_recorder_tick_age_tolerance",
+      "task_ids": [
+        "T-106"
+      ],
+      "files_changed": [
+        "src/trader/api/health.py",
+        "tests/unit/test_health.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Added a separate 180-second tick-age tolerance for expected-open recorder health while keeping the 30-second liveness window. Tests cover a 45-second tick gap, a 200-second stale tick and stale liveness with a recent tick. Compileall and diff-check pass; pytest/Ruff/mypy/make are unavailable. Handing T-106 to Claude for review."
+    },
+    {
+      "revision": 230,
+      "ts": "2026-10-08T09:35:00Z",
+      "agent": "claude",
+      "action": "review_t106_pass",
+      "task_ids": [
+        "T-106",
+        "T-107"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-106 passed. Added T-107: wire CommandDataService handlers into the Telegram channel (live /status returned only '/status:'). Owner chat id was a group id; fixed on the Pod. Turn to Codex."
     }
   ],
-  "project_summary": "T-105 runtime factory constants and startup diagnostics are ready for Claude review. T-017/T-044 still wait on recorder data; T-060 remains blocked on T-005."
+  "project_summary": "T-106 recorder health now tolerates normal 45-second price gaps with a separate 180-second tick-age limit while retaining 30-second protocol liveness. T-017/T-044 still wait on recorder data."
 }
