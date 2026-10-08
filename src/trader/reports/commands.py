@@ -211,7 +211,7 @@ class CommandDataService:
         def scalar(*names: str) -> str:
             for name in names:
                 item = limits.get(name)
-                if isinstance(item, (str, int, float, Decimal)) and not isinstance(item, bool):
+                if isinstance(item, str | int | float | Decimal) and not isinstance(item, bool):
                     text = str(item).strip()
                     if text:
                         return text[:64]
