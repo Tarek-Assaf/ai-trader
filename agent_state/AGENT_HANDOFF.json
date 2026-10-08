@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 238,
+  "revision": 240,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-110 recorder health digests and sustained degradation alerts are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data.",
+    "summary": "T-111 chat answers and demo LLM caps are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -57,7 +57,8 @@
         "T-030",
         "T-031",
         "T-087",
-        "T-091"
+        "T-091",
+        "T-111"
       ]
     },
     {
@@ -223,7 +224,8 @@
         "T-087",
         "T-090",
         "T-091",
-        "T-092"
+        "T-092",
+        "T-111"
       ]
     },
     {
@@ -233,7 +235,8 @@
       "status": "not_started",
       "covered_by": [
         "T-032",
-        "T-091"
+        "T-091",
+        "T-111"
       ]
     },
     {
@@ -993,7 +996,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u0634\u256a\u0634\u0638\u0640\u0632\u0638\u00a4\u062c\u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u00a3\u0638\u0640\u00f9\u0638\u00a4\u0621\u2518\u06521 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ظـزظــظ¤ش╪شظـزظ¤جظـزظــظ¤£ظـùظ¤ء┘ْ1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -3379,6 +3382,51 @@
       ],
       "completion_note": "Extended the existing report scheduler with recorder health digests, JSONL evidence, bounded Telegram alerts and recovery notifications. The digest uses the recorder start time, GIT_SHA and the fixed data_recorder allowlist; no Pod URL, token or arbitrary status text is emitted. Handoff to Claude for review.",
       "review_notes": "Claude: digest at 2h/24h/repeat, evidence JSONL, degraded alert and recovery via shared Alert path, config in schedule.yaml. Review fix applied by Claude: _recorder_health_mapping dropped expected_open, so the degraded alert could never fire from the status file; it is now carried through (not part of the digest fields). CI is the quality gate."
+    },
+    {
+      "id": "T-111",
+      "title": "Chat answers and demo LLM caps",
+      "phase": 4,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-01",
+        "R-12",
+        "R-13"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Natural-language query, report and chart intents use deterministic read-only command paths instead of classification labels.",
+        "Unknown query topics fall back to /status, missing or failing handlers return bounded unavailable text, and control/refusal paths never reach the LLM.",
+        "Trade questions, settings changes and small talk use fixed replies; settings changes point to the SettingsService flow and no broker access is added to the router.",
+        "The LLM budget is capped at 2.0 USD daily and 10.0 USD monthly in checked-in config, with fixture and documentation examples updated."
+      ],
+      "deliverables": [
+        "docs/specs/t111_chat_answers.md",
+        "config/llm.yaml",
+        "src/trader/channels/router.py",
+        "src/trader/channels/telegram.py",
+        "src/trader/agents/prompts/router_intent.md",
+        "tests/unit/test_chat_router.py",
+        "tests/unit/test_llm_client.py",
+        "docs/specs/phase4.md"
+      ],
+      "review_cycles": 0,
+      "notes": "Implemented from the owner-provided T-111 chat answer spec on origin/main rev238.",
+      "evidence": [
+        "docs/specs/t111_chat_answers.md",
+        "src/trader/channels/router.py",
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_chat_router.py",
+        "config/llm.yaml",
+        "tests/unit/test_llm_client.py",
+        "docs/specs/phase4.md",
+        "bundled Python compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Natural-language LLM intents now invoke deterministic read-only handlers for status, positions, P&L, risk and reports; unknown topics use status, chart requests use the existing Telegram chart path, and fixed replies cover trade questions, settings changes and small talk. Missing or failing handlers return bounded unavailable text and the LLM never receives account data. Demo caps are 2.0 USD daily and 10.0 USD monthly. Added focused router coverage and updated the T-111 spec. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders used. Handing T-111 to Claude for review.",
+      "review_notes": "Claude: intents map to read-only handlers, control words stay off the LLM, LLM never sees account data, unknown topic falls back to status, caps 2/10 USD. CI is the quality gate."
     }
   ],
   "decisions": [
@@ -4403,7 +4451,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u256a\u062b\u0638\u0080\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ╪ثظ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -6185,6 +6233,28 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "recorder status fields or the health digest scheduler change"
+    },
+    {
+      "id": "V-252",
+      "subject": "T-111 chat answers and caps",
+      "method": "Read the T-111 spec and diff; traced the router fast path, refusal path, deterministic handler dispatch, Telegram chart delivery and configured LLM budget. Ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "evidence": "docs/specs/t111_chat_answers.md; src/trader/channels/router.py; src/trader/channels/telegram.py; tests/unit/test_chat_router.py; config/llm.yaml; bundled Python compileall; git diff --check",
+      "review_notes": "pytest, Ruff and mypy are unavailable in this desktop runtime; Claude/CI should run the full quality gate.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "chat routing intents or LLM budget configuration changes"
+    },
+    {
+      "id": "V-253",
+      "subject": "T-111 review (Claude)",
+      "method": "Read the full diff against docs/specs/t111_chat_answers.md; checked dispatch, fallbacks, chart path, prompt and caps; ruff check/format run (only the known UP047 false alarm); CI is the test authority.",
+      "result": "pass",
+      "evidence": "src/trader/channels/router.py; src/trader/channels/telegram.py; tests/unit/test_chat_router.py; config/llm.yaml",
+      "review_notes": "No changes needed.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "chat routing intents or LLM budget configuration changes"
     }
   ],
   "blockers": [
@@ -7831,7 +7901,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -10574,7 +10644,41 @@
         "src/trader/runtime/services.py"
       ],
       "summary": "T-110 passed with a one-line review fix (expected_open carried into the recorder health mapping so the degraded alert can fire). Owner redeploys; digest arrives at 2h and 24h of uptime. Turn to Codex."
+    },
+    {
+      "revision": 239,
+      "ts": "2026-10-08T14:55:00Z",
+      "agent": "codex",
+      "action": "complete_t111_chat_answers_and_caps",
+      "task_ids": [
+        "T-111"
+      ],
+      "files_changed": [
+        "docs/specs/t111_chat_answers.md",
+        "config/llm.yaml",
+        "src/trader/channels/router.py",
+        "src/trader/channels/telegram.py",
+        "src/trader/agents/prompts/router_intent.md",
+        "tests/unit/test_chat_router.py",
+        "tests/unit/test_llm_client.py",
+        "docs/specs/phase4.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-111 from the chat answer spec: deterministic read-only answers replace classification labels, chart requests use the existing Telegram chart path, bounded unavailable replies and fixed non-data replies are covered, and demo LLM caps are lowered to 2 USD daily and 10 USD monthly. Bundled compileall and git diff --check pass; handing T-111 to Claude for review."
+    },
+    {
+      "revision": 240,
+      "ts": "2026-10-08T15:05:00Z",
+      "agent": "claude",
+      "action": "review_t111_pass",
+      "task_ids": [
+        "T-111"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-111 passed review with no code changes. Plain-English messages now run read-only handlers; LLM caps are 2/10 USD. Turn to Codex."
     }
   ],
-  "project_summary": "T-110 recorder health digests and sustained degradation alerts are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."
+  "project_summary": "T-111 chat answers and demo LLM caps are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."
 }

@@ -90,6 +90,96 @@ def test_llm_result_is_typed_and_cannot_be_a_control_action() -> None:
     assert llm.calls[0][0] == "router_intent"
 
 
+@pytest.mark.parametrize(
+    ("intent", "arguments", "command", "expected"),
+    (
+        ("query", {"topic": "status"}, "/status", "Status: paper"),
+        ("query", {"topic": "positions"}, "/positions", "Positions: none."),
+        ("query", {"topic": "pnl"}, "/pnl", "P&L: USD 0."),
+        ("query", {"topic": "risk"}, "/risk", "Risk: low"),
+        ("report_request", {"period": "weekly"}, "/report weekly", "Report: weekly"),
+    ),
+)
+def test_llm_intents_use_deterministic_read_only_handlers(
+    intent: str,
+    arguments: dict[str, str],
+    command: str,
+    expected: str,
+) -> None:
+    value = RoutedIntent(intent=intent, arguments=arguments, confidence=0.9)
+    calls: list[str] = []
+
+    def handler(full_command: str) -> str:
+        calls.append(full_command)
+        return expected
+
+    handlers = {command.split()[0]: handler}
+    router = ChatRouter(
+        llm=FakeLLM(value),
+        control_handler=lambda _command: "control",
+        command_handlers=handlers,
+    )
+
+    result = run(router.route("plain English request"))
+
+    assert result.reply == expected
+    assert calls == [command]
+
+
+def test_query_unknown_topic_falls_back_to_status() -> None:
+    value = RoutedIntent(intent="query", arguments={"topic": "account"}, confidence=0.9)
+    calls: list[str] = []
+    router = ChatRouter(
+        llm=FakeLLM(value),
+        control_handler=lambda _command: "control",
+        command_handlers={"/status": lambda command: calls.append(command) or "Status: paper"},
+    )
+
+    result = run(router.route("how is the account?"))
+
+    assert result.reply == "Status: paper"
+    assert calls == ["/status"]
+
+
+def test_missing_handler_is_bounded_and_chart_uses_existing_path() -> None:
+    value = RoutedIntent(intent="chart_request", arguments={"symbol": "US100"}, confidence=0.9)
+    router = ChatRouter(llm=FakeLLM(value), control_handler=lambda _command: "control")
+
+    result = run(router.route("show me the US100 chart"))
+
+    assert result.reply == "Chart: US100."
+    assert result.chart_argument == "US100"
+    missing = run(
+        ChatRouter(
+            llm=FakeLLM(RoutedIntent(intent="query", arguments={"topic": "risk"}, confidence=0.9)),
+            control_handler=lambda _command: "control",
+        ).route("what is the risk?"),
+    )
+    assert missing.reply == "/risk is unavailable right now."
+
+    chart_calls: list[str] = []
+    chart = ChatRouter(
+        llm=FakeLLM(value),
+        control_handler=lambda _command: "control",
+        command_handlers={"/chart": lambda command: chart_calls.append(command) or "Chart ready."},
+    )
+    assert run(chart.route("show me the US100 chart")).reply == "Chart ready."
+    assert chart_calls == ["/chart US100"]
+
+
+@pytest.mark.parametrize("intent", ("trade_question", "settings_change_request", "small_talk"))
+def test_non_data_intents_use_fixed_replies(intent: str) -> None:
+    result = run(
+        ChatRouter(
+            llm=FakeLLM(RoutedIntent(intent=intent, confidence=0.9)),
+            control_handler=lambda _command: "control",
+        ).route("plain English request")
+    )
+
+    assert "Request classified" not in result.reply
+    assert result.reply
+
+
 def test_llm_failure_keeps_control_path_available() -> None:
     commands: list[str] = []
     router = ChatRouter(
