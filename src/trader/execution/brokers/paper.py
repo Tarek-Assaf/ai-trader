@@ -112,11 +112,22 @@ class PaperBroker:
                 (self._unrealized(position) for position in self._positions.values()),
                 start=Decimal("0"),
             )
+            # Paper execution has no leverage or broker margin model.  Keep
+            # account figures explicit by reporting each open position's
+            # entry notional as both exposure and reserved margin.
+            notional_exposure = sum(
+                (abs(position.level * position.size) for position in self._positions.values()),
+                start=Decimal("0"),
+            )
             return {
                 "balance": self._cash,
                 "equity": self._cash + unrealized,
                 "profit": unrealized,
+                "profitLoss": unrealized,
+                "unrealised": unrealized,
                 "currency": self._currency,
+                "margin_used": notional_exposure,
+                "notional_exposure": notional_exposure,
                 "financing": Decimal("0"),
                 "financing_status": "placeholder_not_modeled",
             }
