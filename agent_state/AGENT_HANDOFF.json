@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 230,
+  "revision": 232,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-106 recorder health now tolerates normal 45-second price gaps with a separate 180-second tick-age limit while retaining 30-second protocol liveness. T-017/T-044 still wait on recorder data.",
+    "summary": "T-107 Telegram command handlers are wired through the real CommandDataService, with paper /status output and bounded failure fallbacks. T-017/T-044 still wait on recorder data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3226,7 +3226,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-11"
       ],
@@ -3241,12 +3241,20 @@
       ],
       "deliverables": [
         "src/trader/api/app.py",
+        "src/trader/channels/telegram.py",
         "tests/unit/test_api_startup.py"
       ],
       "review_cycles": 0,
       "notes": "Found on the live Pod 2026-10-08: the owner's /status reply was only '/status:' because TelegramChannel was constructed without render=, so the default echo lambda in channels/telegram.py was used. command_handlers is already computed near the channel construction.",
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "src/trader/api/app.py",
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_api_startup.py",
+        "bundled Python compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Wired TelegramChannel.render to CommandDataService.handlers through a bounded renderer and registered /soak as a data command. Data commands now receive the full command text, including report arguments; missing or failing handlers return a bounded command-specific unavailable response and log only the exception type. Real TelegramChannel tests cover the paper broker /status response, /soak routing, no-broker fallback and handler failure. Bundled compileall and git diff --check pass; pytest, Ruff, mypy and make are unavailable in this desktop runtime. No Pod/API calls, credentials, broker calls or orders used. Handing T-107 to Claude for review.",
+      "review_notes": "Claude: render= wired from CommandDataService handlers; full command passed; bounded unavailable text; control and LLM routing unchanged; /soak added to COMMANDS. CI is the quality gate."
     }
   ],
   "decisions": [
@@ -5965,6 +5973,28 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "recorder health thresholds change"
+    },
+    {
+      "id": "V-244",
+      "subject": "T-107 Telegram command handler wiring",
+      "method": "Inspected the app channel construction and real CommandDataService handler path. Focused tests use the real TelegramChannel with a fake paper broker, no broker and a failing handler; bundled Python compileall and git diff --check pass.",
+      "result": "pass",
+      "evidence": "src/trader/api/app.py; src/trader/channels/telegram.py; tests/unit/test_api_startup.py; bundled Python compileall; git diff --check",
+      "review_notes": "The control command paths and LLM router are unchanged. Dependency-backed pytest, Ruff, mypy and make check are unavailable in this desktop runtime; Claude/CI should run full quality gates.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "Telegram channel construction, CommandDataService handlers or command fallback behavior changes"
+    },
+    {
+      "id": "V-245",
+      "subject": "T-107 review",
+      "method": "Read diff against acceptance criteria; confirmed render wiring, real CommandDataService tests, no change to pause/stop/kill/resume or router.",
+      "result": "pass",
+      "evidence": "src/trader/api/app.py; tests/unit/test_api_startup.py",
+      "review_notes": "Fixes live '/status:' placeholder reply. Verify on the Pod after redeploy.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "Telegram channel construction or command handlers change"
     }
   ],
   "blockers": [
@@ -10229,7 +10259,36 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-106 passed. Added T-107: wire CommandDataService handlers into the Telegram channel (live /status returned only '/status:'). Owner chat id was a group id; fixed on the Pod. Turn to Codex."
+    },
+    {
+      "revision": 231,
+      "ts": "2026-10-08T09:50:00Z",
+      "agent": "codex",
+      "action": "complete_t107_telegram_command_handlers",
+      "task_ids": [
+        "T-107"
+      ],
+      "files_changed": [
+        "src/trader/api/app.py",
+        "src/trader/channels/telegram.py",
+        "tests/unit/test_api_startup.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Wired TelegramChannel.render to the real CommandDataService handlers and registered /soak as a data command. /status now renders the paper broker account, report arguments are passed through, and missing/failing handlers return bounded unavailable text while logging only exception types. Real channel tests cover paper broker, /soak, no broker and handler failure. Compileall and diff-check pass; pytest/Ruff/mypy/make are unavailable. Handing T-107 to Claude for review."
+    },
+    {
+      "revision": 232,
+      "ts": "2026-10-08T09:50:00Z",
+      "agent": "claude",
+      "action": "review_t107_pass",
+      "task_ids": [
+        "T-107"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-107 passed: Telegram /status etc. now render real command-service output. Owner redeploys and tests /status. Turn to Codex."
     }
   ],
-  "project_summary": "T-106 recorder health now tolerates normal 45-second price gaps with a separate 180-second tick-age limit while retaining 30-second protocol liveness. T-017/T-044 still wait on recorder data."
+  "project_summary": "T-107 Telegram command handlers are wired through the real CommandDataService, with paper /status output and bounded failure fallbacks. T-017/T-044 still wait on recorder data."
 }

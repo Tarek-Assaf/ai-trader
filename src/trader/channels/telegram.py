@@ -155,6 +155,7 @@ class TelegramChannel:
         "/kill",
         "/risk",
         "/report",
+        "/soak",
         "/chart",
         "/help",
     }
