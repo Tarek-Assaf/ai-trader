@@ -11,6 +11,7 @@ use a SHA-256 manifest to avoid re-uploading unchanged files.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -25,10 +26,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SECRET_NAMES = ("GITHUB_BACKUP_TOKEN", "GITHUB_TOKEN", "HF_TOKEN", "BACKUP_ENCRYPTION_KEY")
 MAX_GITHUB_FILE_BYTES = 50 * 1024 * 1024
+MAX_HF_BATCH_BYTES = 900 * 1024 * 1024
 EXCLUDED_PARTS = {".git", ".env", "pgdata", "secrets", "__pycache__"}
 
 
@@ -52,6 +53,23 @@ class BackupOptions:
     dry_run: bool
 
 
+@dataclass(frozen=True)
+class _GitPush:
+    repository: Path
+    remote_manifest: dict[str, str]
+    changed: dict[str, Path]
+    manifest: dict[str, str]
+
+
+@dataclass(frozen=True)
+class _HfPush:
+    api: Any
+    remote_manifest: dict[str, str]
+    changed: dict[str, Path]
+    manifest: dict[str, str]
+    manifest_path: Path
+
+
 def _env(name: str, *fallbacks: str, default: str = "") -> str:
     for key in (name, *fallbacks):
         value = os.environ.get(key)
@@ -60,7 +78,9 @@ def _env(name: str, *fallbacks: str, default: str = "") -> str:
     return default
 
 
-def _run(command: Sequence[str], *, cwd: Path | None = None, env: dict[str, str] | None = None) -> str:
+def _run(
+    command: Sequence[str], *, cwd: Path | None = None, env: dict[str, str] | None = None
+) -> str:
     try:
         result = subprocess.run(
             list(command),
@@ -87,7 +107,9 @@ def sha256(path: Path) -> str:
 
 def _excluded(relative: Path) -> bool:
     lowered = {part.lower() for part in relative.parts}
-    return bool(lowered & EXCLUDED_PARTS) or any(part.lower().endswith((".env", ".secret")) for part in relative.parts)
+    return bool(lowered & EXCLUDED_PARTS) or any(
+        part.lower().endswith((".env", ".secret")) for part in relative.parts
+    )
 
 
 def collect_files(root: Path, *, max_bytes: int | None = None) -> tuple[Path, ...]:
@@ -134,7 +156,9 @@ def load_manifest(path: Path) -> dict[str, str]:
 def write_manifest(path: Path, files: Mapping[str, Path]) -> dict[str, str]:
     manifest = {name: sha256(source) for name, source in sorted(files.items())}
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"files": manifest}, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps({"files": manifest}, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
     return manifest
 
 
@@ -162,7 +186,7 @@ def _git_env(token: str) -> dict[str, str]:
         {
             "GIT_CONFIG_COUNT": "1",
             "GIT_CONFIG_KEY_0": "http.extraHeader",
-            "GIT_CONFIG_VALUE_0": f"Authorization: Bearer {token}",
+            "GIT_CONFIG_VALUE_0": _github_auth_header(token),
             "GIT_TERMINAL_PROMPT": "0",
             "GIT_AUTHOR_NAME": "ai-trader backup",
             "GIT_AUTHOR_EMAIL": "backup@localhost",
@@ -171,6 +195,11 @@ def _git_env(token: str) -> dict[str, str]:
         }
     )
     return env
+
+
+def _github_auth_header(token: str) -> str:
+    encoded = base64.b64encode(f"x-access-token:{token}".encode()).decode("ascii")
+    return f"Authorization: Basic {encoded}"
 
 
 def _clone(url: str, destination: Path, token: str, branch: str | None = None) -> None:
@@ -198,7 +227,11 @@ def _push(repository: Path, branch: str, token: str, message: str) -> None:
     if changed.returncode == 0:
         return
     _run(["git", "commit", "--quiet", "-m", message], cwd=repository, env=_git_env(token))
-    _run(["git", "push", "--quiet", "origin", f"HEAD:{branch}"], cwd=repository, env=_git_env(token))
+    _run(
+        ["git", "push", "--quiet", "origin", f"HEAD:{branch}"],
+        cwd=repository,
+        env=_git_env(token),
+    )
 
 
 def _secret_scan(root: Path) -> None:
@@ -234,7 +267,13 @@ def _alert_owner(message: str) -> None:
 
 
 def _encrypted_dumps(backup_root: Path, key: str, destination: Path) -> dict[str, Path]:
-    dumps = sorted(backup_root.rglob("trader-*.dump")) if backup_root.is_dir() else []
+    if not backup_root.is_dir():
+        dumps: list[Path] = []
+    else:
+        root_dumps = sorted(backup_root.glob("trader-*.dump"), reverse=True)
+        hourly = sorted((backup_root / "hourly").glob("trader-*.dump"), reverse=True)
+        daily = sorted((backup_root / "daily").glob("trader-*.dump"), reverse=True)
+        dumps = root_dumps[:1] + hourly + daily
     if not dumps:
         return {}
     if not key:
@@ -278,48 +317,170 @@ def huggingface_files(options: BackupOptions, encrypted_dir: Path) -> dict[str, 
         _encrypted_dumps(
             options.backup_root,
             _env("BACKUP_ENCRYPTION_KEY"),
-            options.backup_root / ".encrypted",
+            encrypted_dir,
         )
     )
     return files
 
 
-def _copy_changed(files: Mapping[str, Path], remote: Path, manifest: Mapping[str, str]) -> tuple[dict[str, Path], int]:
-    changed: dict[str, Path] = {}
-    count = 0
-    for name, source in files.items():
-        destination = remote / name
-        if manifest.get(name) == sha256(source):
-            continue
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(source, destination)
-        changed[name] = destination
-        count += 1
-    return changed, count
+def _changed_files(
+    files: Mapping[str, Path], remote_manifest: Mapping[str, str]
+) -> dict[str, Path]:
+    return {
+        name: source
+        for name, source in files.items()
+        if remote_manifest.get(name) != sha256(source)
+    }
 
 
-def push_github_state(options: BackupOptions, files: Mapping[str, Path], token: str, temporary: Path) -> int:
+def _stage_changed(changes: Mapping[str, Path], staging: Path) -> None:
+    for name, source in changes.items():
+        target = staging / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, target)
+
+
+def _prepare_github(
+    options: BackupOptions, files: Mapping[str, Path], token: str, temporary: Path
+) -> _GitPush:
     repository = temporary / "github"
     _clone(f"https://github.com/{options.github_repo}.git", repository, token, options.github_ref)
     remote_manifest = load_manifest(repository / "manifest.json")
-    _copy_changed(files, repository, remote_manifest)
-    write_manifest(repository / "manifest.json", files)
-    _secret_scan(repository)
-    if not options.dry_run:
-        _push(repository, options.github_ref, token, "backup: update generated state")
-    return len(files)
+    manifest = {name: sha256(source) for name, source in sorted(files.items())}
+    return _GitPush(repository, remote_manifest, _changed_files(files, remote_manifest), manifest)
 
 
-def push_huggingface(options: BackupOptions, files: Mapping[str, Path], token: str, temporary: Path) -> int:
-    repository = temporary / "huggingface"
-    _clone(f"https://huggingface.co/datasets/{options.hf_repo}", repository, token)
-    remote_manifest = load_manifest(repository / "sha256-manifest.json")
-    _copy_changed(files, repository, remote_manifest)
-    write_manifest(repository / "sha256-manifest.json", files)
-    _secret_scan(repository)
+def _commit_github(options: BackupOptions, prepared: _GitPush, token: str) -> int:
+    for name, source in prepared.changed.items():
+        destination = prepared.repository / name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+    if not prepared.changed:
+        return 0
+    manifest_path = prepared.repository / "manifest.json"
+    manifest_path.write_text(
+        json.dumps({"files": prepared.manifest}, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
     if not options.dry_run:
-        _push(repository, "main", token, "backup: update data artifacts")
-    return len(files)
+        _push(prepared.repository, options.github_ref, token, "backup: update generated state")
+    return len(prepared.changed)
+
+
+def _hf_api(token: str) -> Any:
+    try:
+        from huggingface_hub import HfApi
+    except ImportError as exc:
+        raise BackupFailure("Hugging Face client is unavailable") from exc
+    return HfApi(token=token)
+
+
+def _hf_manifest(api: Any, repo_id: str, token: str, temporary: Path) -> dict[str, str]:
+    try:
+        files = api.list_repo_files(repo_id=repo_id, repo_type="dataset", token=token)
+        if "sha256-manifest.json" not in files:
+            return {}
+        from huggingface_hub import hf_hub_download
+
+        path = hf_hub_download(
+            repo_id=repo_id,
+            filename="sha256-manifest.json",
+            repo_type="dataset",
+            token=token,
+            cache_dir=str(temporary / "hf-cache"),
+        )
+        return load_manifest(Path(path))
+    except BackupFailure:
+        raise
+    except Exception as exc:
+        raise BackupFailure("Hugging Face manifest lookup failed") from exc
+
+
+def _prepare_huggingface(
+    options: BackupOptions, files: Mapping[str, Path], token: str, temporary: Path
+) -> _HfPush:
+    api = _hf_api(token)
+    remote_manifest = _hf_manifest(api, options.hf_repo, token, temporary)
+    manifest = {name: sha256(source) for name, source in sorted(files.items())}
+    manifest_path = temporary / "sha256-manifest.json"
+    manifest_path.write_text(
+        json.dumps({"files": manifest}, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    return _HfPush(
+        api,
+        remote_manifest,
+        _changed_files(files, remote_manifest),
+        manifest,
+        manifest_path,
+    )
+
+
+def upload_hf_incremental(
+    api: Any,
+    repo_id: str,
+    changed: Mapping[str, Path],
+    manifest_path: Path,
+    token: str,
+    *,
+    dry_run: bool = False,
+) -> int:
+    """Commit changed files through the HF API in sub-GB batches."""
+    if dry_run or not changed:
+        return len(changed)
+    try:
+        from huggingface_hub import CommitOperationAdd
+
+        batch: list[Any] = []
+        batch_bytes = 0
+        for name, source in sorted(changed.items()):
+            size = source.stat().st_size
+            if batch and batch_bytes + size > MAX_HF_BATCH_BYTES:
+                batch.append(
+                    CommitOperationAdd(
+                        path_in_repo="sha256-manifest.json",
+                        path_or_fileobj=str(manifest_path),
+                    )
+                )
+                api.create_commit(
+                    repo_id=repo_id,
+                    repo_type="dataset",
+                    operations=batch,
+                    commit_message="backup: update data artifacts",
+                    token=token,
+                )
+                batch = []
+                batch_bytes = 0
+            batch.append(CommitOperationAdd(path_in_repo=name, path_or_fileobj=str(source)))
+            batch_bytes += size
+        batch.append(
+            CommitOperationAdd(
+                path_in_repo="sha256-manifest.json",
+                path_or_fileobj=str(manifest_path),
+            )
+        )
+        api.create_commit(
+            repo_id=repo_id,
+            repo_type="dataset",
+            operations=batch,
+            commit_message="backup: update data artifacts",
+            token=token,
+        )
+    except BackupFailure:
+        raise
+    except Exception as exc:
+        raise BackupFailure("Hugging Face upload failed") from exc
+    return len(changed)
+
+
+def _commit_huggingface(options: BackupOptions, prepared: _HfPush, token: str) -> int:
+    return upload_hf_incremental(
+        prepared.api,
+        options.hf_repo,
+        prepared.changed,
+        prepared.manifest_path,
+        token,
+        dry_run=options.dry_run,
+    )
 
 
 def parse_args(argv: Sequence[str] | None = None) -> BackupOptions:
@@ -330,9 +491,13 @@ def parse_args(argv: Sequence[str] | None = None) -> BackupOptions:
     parser.add_argument("--ledger-root", type=Path, default=Path("/workspace/state/ledger"))
     parser.add_argument("--models-root", type=Path, default=Path("/workspace/models"))
     parser.add_argument("--backup-root", type=Path, default=Path("/workspace/backups"))
-    parser.add_argument("--github-repo", default=_env("BACKUP_GITHUB_REPO", default="Tarek-Assaf/ai-trader"))
+    parser.add_argument(
+        "--github-repo", default=_env("BACKUP_GITHUB_REPO", default="Tarek-Assaf/ai-trader")
+    )
     parser.add_argument("--github-ref", default="backup/state")
-    parser.add_argument("--hf-repo", default=_env("BACKUP_HF_REPO", default="Tarek-Assaf/ai-trader-data"))
+    parser.add_argument(
+        "--hf-repo", default=_env("BACKUP_HF_REPO", default="Tarek-Assaf/ai-trader-data")
+    )
     parser.add_argument("--keep-hourly", type=int, default=24)
     parser.add_argument("--keep-daily", type=int, default=14)
     parser.add_argument("--dry-run", action="store_true")
@@ -364,19 +529,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             temporary = Path(directory)
             github_files = github_state_files(options)
             hf_files = huggingface_files(options, temporary / "encrypted")
+            github = _prepare_github(options, github_files, github_token, temporary)
+            huggingface = _prepare_huggingface(options, hf_files, hf_token, temporary)
             staging = temporary / "staging"
-            for name, source in {**github_files, **hf_files}.items():
-                target = staging / name
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(source, target)
+            staging.mkdir(parents=True, exist_ok=True)
+            _stage_changed(github.changed, staging)
+            _stage_changed(huggingface.changed, staging)
             _secret_scan(staging)
-            github_count = push_github_state(options, github_files, github_token, temporary)
-            hf_count = push_huggingface(options, hf_files, hf_token, temporary)
-        print(f"PASS backup upload: github_files={github_count} hf_files={hf_count} changed files are hash-filtered")
+            github_count = _commit_github(options, github, github_token)
+            hf_count = _commit_huggingface(options, huggingface, hf_token)
+        print(
+            f"PASS backup upload: github_files={github_count} hf_files={hf_count} "
+            "changed files are hash-filtered"
+        )
         return 0
     except BackupFailure as exc:
-        if "secret scan" in str(exc):
-            _alert_owner("Backup upload aborted: secret scan rejected the payload (value redacted).")
+        _alert_owner("Backup upload failed: operation aborted (details redacted).")
         print(f"FAIL backup upload: {exc}")
         return 1
     except (OSError, ValueError):

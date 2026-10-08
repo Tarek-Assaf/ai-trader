@@ -19,7 +19,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     WORKSPACE_ROOT=/workspace
 
 RUN apt-get update \
-    && apt-get install --yes --no-install-recommends ca-certificates gosu postgresql redis-server supervisor \
+    && apt-get install --yes --no-install-recommends ca-certificates git gosu postgresql redis-server supervisor \
     && rm -rf /var/lib/apt/lists/* \
     && useradd --system --uid 10001 --create-home --shell /usr/sbin/nologin trader \
     && mkdir -p /workspace/redisdata /workspace/logs /workspace/backups /var/lib/ai-trader/pgdata /app/baked \

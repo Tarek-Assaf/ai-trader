@@ -111,5 +111,6 @@ def test_promotion_marks_backup_stage_trigger(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("BACKUP_STAGE_TRIGGER_FILE", str(trigger))
     gate = PromotionGate(_config(), audit=_Audit([]))
     metrics = _metrics(_gate(_config(), "gate1_backtest_to_paper"))
-    gate.promote("s1", "backtest", metrics, target_stage="paper")
+    validation = ValidationResult(True, (), 0.05, 1, "s1", True)
+    gate.promote("s1", "backtest", metrics, target_stage="paper", validation=validation)
     assert trigger.is_file()
