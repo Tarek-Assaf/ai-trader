@@ -263,9 +263,7 @@ def build_default_factories(
         if "guardian" in supplied:
             value = supplied["guardian"]
             return (
-                value(current_settings, current_configs)
-                if _is_explicit_factory(value)
-                else value
+                value(current_settings, current_configs) if _is_explicit_factory(value) else value
             )
         audit: Any = supplied.get("audit_writer")
         risk_values = dump(current_configs.get("risk"))
@@ -307,9 +305,7 @@ def build_default_factories(
         if "broker" in supplied:
             value = supplied["broker"]
             return (
-                value(current_settings, current_configs)
-                if _is_explicit_factory(value)
-                else value
+                value(current_settings, current_configs) if _is_explicit_factory(value) else value
             )
         paper = dump(current_configs.get("paper_execution"))
         if not isinstance(paper, Mapping):

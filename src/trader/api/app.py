@@ -66,8 +66,8 @@ def _runtime_failure_detail(exc: BaseException) -> str:
     if isinstance(exc, RuntimeDependencyUnavailable):
         message = str(exc).strip()
         if message:
-            return f"{prefix}: {message[:200]} ({location})"
-    return f"{prefix} ({location})"
+            return f"{prefix}: {message} ({location})"[:200]
+    return f"{prefix} ({location})"[:200]
 
 
 def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
