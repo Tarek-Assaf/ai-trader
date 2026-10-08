@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 257,
+  "turn": "codex",
+  "revision": 258,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -11270,6 +11270,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-114 accepted and merged. Owner runs the lab small run on the new image, then the full run. Turn to human."
+    },
+    {
+      "revision": 258,
+      "ts": "2026-10-08T23:16:56Z",
+      "agent": "claude",
+      "action": "handoff_to_codex_lab_run",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner asked Codex to run the Strategy Lab on the Pod with image c0993d2. Run one lab process only: scripts/lab_run.py --max-ideas 20 --timeframes 5 (default 6 years, never --years all). Record phase timings, peak_rss_bytes from /workspace/state/lab/progress.json and the results table in a handoff log entry or note, then hand the turn to Claude. No secrets or Pod URL in the repo. Turn to codex."
     }
   ],
   "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence is recorded. T-112 and T-113 are merged with a 3-month holdout. T-114 memory-safe Strategy Lab speed and visibility is complete on the Codex branch and handed to Claude for review. T-017/T-044 still wait on recorder data."
