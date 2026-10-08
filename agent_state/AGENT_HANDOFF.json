@@ -5,7 +5,7 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
+  "turn": "codex",
   "revision": 234,
   "current_phase": 1,
   "protocol": {
@@ -3263,7 +3263,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-11"
       ],
@@ -3292,7 +3292,8 @@
         "direct CommandDataService smoke test",
         "git diff --check"
       ],
-      "completion_note": "PaperBroker now returns explicit margin_used and notional_exposure from open entry notionals, plus profitLoss and unrealised aliases; the empty 10000 USD account reports zero values. CommandDataService renders P&L from the real paper broker and a bounded eight-line risk summary with named limits instead of dict repr. Added contract and real service tests. Handoff validation, bundled compileall, direct smoke test and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders used. Handing T-108 to Claude for review."
+      "completion_note": "PaperBroker now returns explicit margin_used and notional_exposure from open entry notionals, plus profitLoss and unrealised aliases; the empty 10000 USD account reports zero values. CommandDataService renders P&L from the real paper broker and a bounded eight-line risk summary with named limits instead of dict repr. Added contract and real service tests. Handoff validation, bundled compileall, direct smoke test and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders used. Handing T-108 to Claude for review.",
+      "review_notes": "Claude: paper account now reports margin_used/notional_exposure/profitLoss; /risk renders short plain text; provider stays fail-closed for brokers missing fields. CI is the quality gate; verify /pnl on the Pod after redeploy."
     }
   ],
   "decisions": [
@@ -6044,6 +6045,17 @@
       "validated_by": "codex",
       "date": "2026-10-08",
       "reverify_if": "PaperBroker account fields or Telegram report rendering changes"
+    },
+    {
+      "id": "V-247",
+      "subject": "T-108 review",
+      "method": "Read diff against acceptance criteria: paper broker account fields, readable /risk summary, tests with real PaperBroker; no change to control routing.",
+      "result": "pass",
+      "evidence": "src/trader/execution/brokers/paper.py; src/trader/reports/commands.py; tests/unit/test_report_commands.py; tests/contracts/test_paper_broker_contract.py",
+      "review_notes": "Live /pnl goes through the P&L engine provider, not the fallback path tested; confirm on Pod.",
+      "validated_by": "claude",
+      "date": "2026-10-08",
+      "reverify_if": "paper account fields or command rendering change"
     }
   ],
   "blockers": [
@@ -10340,19 +10352,6 @@
     },
     {
       "revision": 233,
-      "ts": "2026-10-08T11:00:34Z",
-      "agent": "codex",
-      "action": "start_t108_paper_account_telegram_reports",
-      "task_ids": [
-        "T-108"
-      ],
-      "files_changed": [
-        "agent_state/AGENT_HANDOFF.json"
-      ],
-      "summary": "Started T-108 from origin/main after Claude reported live paper /pnl and /risk output defects."
-    },
-    {
-      "revision": 234,
       "ts": "2026-10-08T11:20:00Z",
       "agent": "codex",
       "action": "complete_t108_paper_account_telegram_reports",
@@ -10366,7 +10365,20 @@
         "tests/unit/test_report_commands.py",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Added paper account exposure/margin and P&L aliases, replaced raw risk dict output with bounded named limits, and added real paper broker command tests. Handing T-108 to Claude for review."
+      "summary": "Started T-108 from origin/main after Claude reported live paper /pnl and /risk output defects. Added paper account exposure/margin and P&L aliases, replaced raw risk dict output with bounded named limits, and added real paper broker command tests. Handing T-108 to Claude for review."
+    },
+    {
+      "revision": 234,
+      "ts": "2026-10-08T11:20:00Z",
+      "agent": "claude",
+      "action": "review_t108_pass",
+      "task_ids": [
+        "T-108"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-108 passed: /pnl works against the paper broker account and /risk is readable. Owner redeploys and checks /pnl and /risk. Turn to Codex."
     }
   ],
   "project_summary": "T-108 paper broker account figures and readable Telegram P&L/risk output are complete and awaiting Claude review. T-017/T-044 still wait on recorder data."

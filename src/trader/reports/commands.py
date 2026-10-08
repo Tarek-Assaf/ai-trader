@@ -219,9 +219,7 @@ class CommandDataService:
 
         mode = value.get("mode")
         mode_text = (
-            str(mode).strip()[:32]
-            if isinstance(mode, str) and mode.strip()
-            else "unavailable"
+            str(mode).strip()[:32] if isinstance(mode, str) and mode.strip() else "unavailable"
         )
         return "\n".join(
             (
