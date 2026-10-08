@@ -8,7 +8,13 @@ import json
 import os
 from pathlib import Path
 
-from trader.lab.runner import INSTRUMENTS, TIMEFRAMES, LabRunner, prepare_holdout
+from trader.lab.runner import (
+    INSTRUMENTS,
+    TIMEFRAMES,
+    LabRunner,
+    prepare_holdout,
+    strategy_lab_holdout_months,
+)
 
 
 def main() -> int:
@@ -21,6 +27,7 @@ def main() -> int:
     parser.add_argument("--lake", type=Path, default=Path("/workspace/data/lake"))
     parser.add_argument("--holdout", type=Path, default=Path("/workspace/data/holdout"))
     parser.add_argument("--results", type=Path, default=Path("/workspace/state/lab/results.json"))
+    parser.add_argument("--config", type=Path, default=Path("config/strategy_lab.yaml"))
     parser.add_argument("--instruments", nargs="+", default=list(INSTRUMENTS))
     parser.add_argument("--timeframes", nargs="+", type=int, default=list(TIMEFRAMES))
     parser.add_argument("--idea-sources", nargs="+", default=["seeds", "patterns"])
@@ -30,21 +37,34 @@ def main() -> int:
     parser.add_argument("--stop-file", type=Path)
     parser.add_argument("--progress", type=Path)
     parser.add_argument("--prepare-holdout", action="store_true")
-    parser.add_argument("--holdout-months", type=int, default=3)
+    parser.add_argument(
+        "--holdout-months",
+        type=int,
+        help="override config data.holdout_months for an explicit preparation run",
+    )
     args = parser.parse_args()
+    holdout_months = (
+        args.holdout_months
+        if args.holdout_months is not None
+        else strategy_lab_holdout_months(args.config)
+    )
     if args.prepare_holdout:
         copied = prepare_holdout(
             args.lake,
             args.holdout,
             instruments=args.instruments,
-            months=args.holdout_months,
+            months=holdout_months,
         )
         print(f"prepared holdout files: {len(copied)}")
         return 0
     if args.progress:
         args.progress.parent.mkdir(parents=True, exist_ok=True)
         args.progress.write_text(json.dumps({"status": "running"}), encoding="utf-8")
-    runner = LabRunner(lake_root=args.lake, holdout_root=args.holdout)
+    runner = LabRunner(
+        lake_root=args.lake,
+        holdout_root=args.holdout,
+        config_path=args.config,
+    )
     try:
         result = runner.run(
             instruments=args.instruments,

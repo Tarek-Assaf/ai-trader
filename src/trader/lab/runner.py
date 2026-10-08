@@ -320,6 +320,26 @@ def pessimistic_cost_model(config_path: str | Path = "config/strategy_lab.yaml")
     )
 
 
+def strategy_lab_holdout_months(config_path: str | Path = "config/strategy_lab.yaml") -> int:
+    """Read the sealed-holdout window from the Strategy Lab configuration.
+
+    The scripts deliberately do not carry a second default for this safety
+    setting.  Keeping the value in ``strategy_lab.yaml`` means changing the
+    holdout policy is an explicit configuration change that is visible in
+    review and in the run evidence.
+    """
+    import yaml
+
+    try:
+        payload = yaml.safe_load(Path(config_path).read_text(encoding="utf-8")) or {}
+        value = payload["data"]["holdout_months"]
+    except (KeyError, TypeError, OSError, ValueError, yaml.YAMLError) as exc:
+        raise ValueError("strategy_lab.yaml data.holdout_months is invalid") from exc
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        raise ValueError("strategy_lab.yaml data.holdout_months must be a positive integer")
+    return cast(int, value)
+
+
 def _holdout_loader(
     _raw: bytes, *, root: Path, instrument: str, timeframe: int
 ) -> tuple[Candle, ...]:
@@ -867,5 +887,6 @@ __all__ = [
     "load_histdata_candles",
     "prepare_holdout",
     "pessimistic_cost_model",
+    "strategy_lab_holdout_months",
     "tune_variants",
 ]
