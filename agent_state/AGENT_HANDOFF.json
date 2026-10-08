@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 256,
+  "turn": "human",
+  "revision": 257,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -6549,6 +6549,17 @@
       "validated_by": "codex",
       "date": "2026-10-09",
       "reverify_if": "runner, pipeline or lab scripts change"
+    },
+    {
+      "id": "V-266",
+      "subject": "T-114 Claude review and CI",
+      "method": "Read the diff against docs/specs/t114_lab_speed.md: cgroup-aware worker cap, run lock, columnar arrays, indicator cache, bounded training years (6 default, --years all), progress with peak RSS; confirmed CI quality success on d17cf7c including the holdout-reader guard test.",
+      "result": "pass",
+      "evidence": "PR #115 CI quality success; gates in config/strategy_lab.yaml unchanged; holdout access unchanged.",
+      "review_notes": "Risk: fork shares Python candle objects copy-on-write, so per-worker memory can grow; default 6 years keeps it small, --years all is not advised on the 16 GB container. Pod peak_rss_bytes in progress.json is the real proof.",
+      "validated_by": "claude",
+      "date": "2026-10-09",
+      "reverify_if": "runner, pipeline or lab scripts change"
     }
   ],
   "blockers": [
@@ -11246,6 +11257,19 @@
         "tests/unit/test_lab_runner.py"
       ],
       "summary": "Completed T-114 memory-safe columnar loading, cgroup worker caps, single-run locking, peak RSS progress evidence and focused tests. No Pod, broker, credentials or orders were used. Handing turn to Claude for review."
+    },
+    {
+      "revision": 257,
+      "ts": "2026-10-08T22:55:06Z",
+      "agent": "claude",
+      "action": "review_t114_pass_merge",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-114 accepted and merged. Owner runs the lab small run on the new image, then the full run. Turn to human."
     }
   ],
   "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence is recorded. T-112 and T-113 are merged with a 3-month holdout. T-114 memory-safe Strategy Lab speed and visibility is complete on the Codex branch and handed to Claude for review. T-017/T-044 still wait on recorder data."
