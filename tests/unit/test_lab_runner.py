@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 from datetime import UTC, datetime, timedelta
 
@@ -10,15 +11,20 @@ import pyarrow.parquet as pq
 
 from trader.data.resample import Candle
 from trader.lab.engine import evaluate_entries
+from trader.lab.ledger import ExperimentLedger, ExperimentRecord
 from trader.lab.runner import (
     LabJobManager,
+    LabRunner,
     LabRunResult,
     coverage_report,
     load_histdata_candles,
     prepare_holdout,
+    strategy_lab_holdout_months,
     tune_variants,
 )
 from trader.lab.seeds import seed_specs
+from trader.lab.spec import IndicatorCondition, StopExit, StrategySpec, TargetExit
+from trader.lab.validator import strategy_hash
 
 
 def _write_bars(root, symbol: str = "NSXUSD") -> None:
@@ -134,3 +140,115 @@ def test_lab_job_manager_rejects_concurrent_run() -> None:
     assert manager.handle("/lab run gold") == "Strategy Lab run started."
     assert manager.handle("/lab run gold") == "Strategy Lab: a run is already in progress."
     manager._thread.join(timeout=2)  # noqa: SLF001 - deterministic fixture synchronization
+
+
+def _runner_spec(instrument: str = "NSXUSD") -> StrategySpec:
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction="long",
+        timeframe_minutes=1,
+        entry_conditions=(IndicatorCondition(indicator="close", operator="gt", threshold=0.0),),
+        exit_rules=(StopExit(kind="stop", distance=1.0), TargetExit(kind="target", distance=0.2)),
+    )
+
+
+def _write_holdout(root, instrument: str = "NSXUSD") -> None:
+    rows = [
+        {
+            "ts_utc": datetime(2024, 2, 1, tzinfo=UTC),
+            "open": 1.0,
+            "high": 2.0,
+            "low": 0.0,
+            "close": 1.0,
+            "volume": 1.0,
+        }
+    ]
+    path = root / instrument / "1m" / "2024" / "02.parquet"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pq.write_table(pa.Table.from_pylist(rows), path)
+
+
+def test_runner_skips_and_ledgers_repeated_strategy_hash(tmp_path, monkeypatch) -> None:
+    lake = tmp_path / "lake"
+    holdout = tmp_path / "holdout"
+    _write_bars(lake)
+    _write_holdout(holdout)
+    spec = _runner_spec()
+    digest = strategy_hash(spec.model_dump(mode="json"))
+    ledger = ExperimentLedger(
+        [
+            ExperimentRecord(
+                digest,
+                {"source": "previous"},
+                datetime(2024, 1, 1, tzinfo=UTC),
+                datetime(2024, 1, 1, tzinfo=UTC),
+                {"verdict": "fail"},
+            )
+        ]
+    )
+    monkeypatch.setattr(LabRunner, "_candidates", lambda *args, **kwargs: [("seed:test", spec)])
+
+    result = LabRunner(lake_root=lake, holdout_root=holdout, ledger=ledger).run(
+        instruments=("NSXUSD",), timeframes=(1,), workers=1
+    )
+
+    assert len(result.attempts) == 1
+    assert result.attempts[0].verdict == "skipped"
+    assert result.attempts[0].reason == "duplicate_strategy_hash"
+    assert any(
+        record.strategy_hash == digest and record.metrics.get("verdict") == "skipped"
+        for record in ledger.records()
+    )
+
+
+def test_runner_stop_file_preserves_partial_progress(tmp_path, monkeypatch) -> None:
+    lake = tmp_path / "lake"
+    holdout = tmp_path / "holdout"
+    for instrument in ("NSXUSD", "XAUUSD"):
+        _write_bars(lake, instrument)
+        _write_holdout(holdout, instrument)
+    stop_file = tmp_path / "stop"
+    progress = tmp_path / "progress.json"
+
+    def candidates(_runner, instrument, _timeframe, _sources, _candles):
+        return [("seed:test", _runner_spec(instrument))]
+
+    monkeypatch.setattr(LabRunner, "_candidates", candidates)
+
+    def stop_after_first(self, *args, **kwargs):
+        del self, args, kwargs
+        stop_file.write_text("stop\n", encoding="utf-8")
+        return ()
+
+    monkeypatch.setattr("trader.lab.runner.ValidationPipeline.run", stop_after_first)
+    result = LabRunner(lake_root=lake, holdout_root=holdout).run(
+        instruments=("NSXUSD", "XAUUSD"),
+        timeframes=(1,),
+        workers=1,
+        stop_file=stop_file,
+        progress_path=progress,
+    )
+
+    assert len(result.attempts) == 1
+    progress_payload = json.loads(progress.read_text(encoding="utf-8"))
+    assert progress_payload["ideas_done"] == 1
+    assert progress_payload["ideas_total"] == 2
+
+
+def test_runner_results_stay_within_telegram_limit() -> None:
+    now = datetime.now(UTC)
+    from trader.lab.runner import LabAttempt
+
+    rows = tuple(
+        LabAttempt(f"strategy-{index:03d}", "NSXUSD", 1, "seed", "fail", "validation_failed")
+        for index in range(200)
+    )
+    result = LabRunResult("run", now, now, rows, (), ())
+    assert len(LabRunner.format_results(result)) < 4000
+
+
+def test_holdout_months_are_read_from_strategy_lab_config(tmp_path) -> None:
+    config = tmp_path / "strategy_lab.yaml"
+    config.write_text("data:\n  holdout_months: 7\n", encoding="utf-8")
+    assert strategy_lab_holdout_months(config) == 7

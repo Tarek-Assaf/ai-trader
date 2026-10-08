@@ -7,7 +7,12 @@ import argparse
 import json
 from pathlib import Path
 
-from trader.lab.runner import INSTRUMENTS, coverage_report, prepare_holdout
+from trader.lab.runner import (
+    INSTRUMENTS,
+    coverage_report,
+    prepare_holdout,
+    strategy_lab_holdout_months,
+)
 
 
 def main() -> int:
@@ -16,15 +21,25 @@ def main() -> int:
     parser.add_argument("--instruments", nargs="+", default=list(INSTRUMENTS))
     parser.add_argument("--min-months", type=int, default=24)
     parser.add_argument("--holdout", type=Path, default=Path("data/holdout"))
+    parser.add_argument("--config", type=Path, default=Path("config/strategy_lab.yaml"))
     parser.add_argument("--prepare-holdout", action="store_true")
-    parser.add_argument("--holdout-months", type=int, default=3)
+    parser.add_argument(
+        "--holdout-months",
+        type=int,
+        help="override config data.holdout_months for an explicit preparation run",
+    )
     args = parser.parse_args()
+    holdout_months = (
+        args.holdout_months
+        if args.holdout_months is not None
+        else strategy_lab_holdout_months(args.config)
+    )
     if args.prepare_holdout:
         copied = prepare_holdout(
             args.lake,
             args.holdout,
             instruments=args.instruments,
-            months=args.holdout_months,
+            months=holdout_months,
         )
         print(f"prepared holdout files: {len(copied)}")
     reports = [coverage_report(args.lake, instrument) for instrument in args.instruments]

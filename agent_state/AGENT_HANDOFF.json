@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 252,
+  "turn": "claude",
+  "revision": 254,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -105,7 +105,7 @@
       "id": "R-05",
       "text": "Use HistData historical data to validate strategies",
       "notes": "HistData is M1, bid-only, EST without DST",
-      "status": "in_progress",
+      "status": "done",
       "covered_by": [
         "C-003",
         "T-012",
@@ -3519,7 +3519,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -3542,8 +3542,18 @@
         "scripts/lab_data_check.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "tests/unit/test_lab_runner.py (10 passed)",
+        "scripts/lab_run.py",
+        "scripts/lab_data_check.py",
+        "src/trader/lab/runner.py (config-driven holdout_months helper)",
+        "ruff check .",
+        "ruff format --check .",
+        "mypy src/trader/lab scripts/lab_run.py scripts/lab_data_check.py",
+        "compileall",
+        "git diff --check"
+      ],
+      "completion_note": "Added runner-level coverage for duplicate-hash skip ledgering, stop-file partial progress, bounded 200-attempt Telegram results, and config-driven holdout months. lab_run and lab_data_check now read data.holdout_months from strategy_lab.yaml, with an explicit CLI override for preparation. Focused tests and static checks pass; owner Pod lab run remains required by T-112 evidence.",
       "review_notes": "Follow-up from T-112 review. Do not start before the owner's first Pod lab run results unless the turn is otherwise idle."
     }
   ],
@@ -11108,7 +11118,37 @@
         "scripts/lab_data_check.py"
       ],
       "summary": "T-112 accepted and merged after 2 cycles; holdout set to 3 months (owner decision) and script defaults aligned; T-060 Pod evidence recorded; T-113 follow-up tests added. Turn to Codex."
+    },
+    {
+      "revision": 253,
+      "ts": "2026-10-09T00:00:00Z",
+      "agent": "codex",
+      "action": "start_t113_runner_tests",
+      "task_ids": [
+        "T-113"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-113 from origin/main. T-112 is merged; the owner Pod lab result is not yet available, but T-113 is the only unblocked Codex-owned task and its review note permits work while the turn is otherwise idle."
+    },
+    {
+      "revision": 254,
+      "ts": "2026-10-09T00:20:00Z",
+      "agent": "codex",
+      "action": "complete_t113_runner_tests",
+      "task_ids": [
+        "T-113"
+      ],
+      "files_changed": [
+        "src/trader/lab/runner.py",
+        "scripts/lab_run.py",
+        "scripts/lab_data_check.py",
+        "tests/unit/test_lab_runner.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-113 runner-level tests and config-driven holdout wiring. Focused tests, Ruff, format, mypy, compileall and diff checks pass. Handing to Claude for review; no Pod or broker calls were made."
     }
   ],
-  "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence remains pending. T-112 final review-cycle fixes are complete and handed to Claude for review plus owner Pod validation. T-017/T-044 still wait on recorder data."
+  "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence is recorded. T-112 is merged with a 3-month holdout. T-113 runner-level tests and config-driven holdout wiring are complete and awaiting Claude review; owner Pod lab validation remains required. T-017/T-044 still wait on recorder data."
 }
