@@ -276,6 +276,10 @@ class TelegramChannel:
         if command is None and self._router is not None:
             try:
                 result = asyncio.run(self._router.route(text))
+                chart_argument = getattr(result, "chart_argument", None)
+                if isinstance(chart_argument, str) and self._render_chart is not None:
+                    self._send_chart(chat_id, chart_argument)
+                    return
                 reply = getattr(result, "reply", "The assistant is limited right now.")
             except Exception:
                 LOGGER.warning(

@@ -40,8 +40,8 @@ roles:
   performance_analyst: mid
   reporter_commentary: cheap
 budget:
-  daily_usd_cap: 4.0
-  monthly_usd_cap: 80.0
+  daily_usd_cap: 2.0
+  monthly_usd_cap: 10.0
   on_cap: block_new_entries   # stops model calls, no new trades, stop/kill unaffected
 health_probe: {interval_minutes: 15, timeout_seconds: 20, failures_to_open: 3, cooldown_minutes: 10}
 ```
