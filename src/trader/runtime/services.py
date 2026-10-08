@@ -10,7 +10,8 @@ from __future__ import annotations
 import json
 import logging
 import os
-from collections.abc import Mapping
+import re
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -337,6 +338,8 @@ def build_runtime_services(
         usage_summary=provided.get("llm_usage_summary")
         or _build_llm_usage_summary(engine, configs),
         state_store=journal,
+        recorder=provided.get("recorder"),
+        version=os.getenv("GIT_SHA", "unknown"),
     )
     settings_service: Any = provided.get("settings_service")
     if settings_service is None:
@@ -514,6 +517,149 @@ def _recorder_health(recorder: Any) -> str:
     return "unavailable"
 
 
+_RECORDER_HEALTH_FIELDS = (
+    "status",
+    "ping_reply_ok",
+    "market_status",
+    "ticks_received",
+    "last_tick_at",
+    "last_closed_bar_at",
+    "reconnect_count",
+    "last_reconnect_reason",
+    "rejected_candles",
+    "last_reject_reason",
+    "stale_epics",
+)
+_SENSITIVE_HEALTH_TEXT = re.compile(
+    r"(?:https?://|wss?://|token|api[_-]?key|password|secret|authorization)", re.IGNORECASE
+)
+
+
+def _safe_health_text(value: object, limit: int = 80) -> str:
+    """Bound status text and remove values that could contain a credential or URL."""
+    text = " ".join(str(value).split())
+    if not text or _SENSITIVE_HEALTH_TEXT.search(text):
+        return "[REDACTED]" if text else "unknown"
+    return text[:limit]
+
+
+def _recorder_started_at(recorder: Any, fallback: datetime) -> datetime:
+    value = getattr(recorder, "_started_at", None)
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.astimezone(UTC)
+    return fallback.astimezone(UTC)
+
+
+def _recorder_health_mapping(recorder: Any) -> dict[str, object] | None:
+    """Read the recorder status through its safe object or status-file boundary."""
+    if recorder is None:
+        return None
+    getter = getattr(recorder, "health", None) or getattr(recorder, "status", None)
+    value: object = None
+    if callable(getter):
+        try:
+            value = getter()
+        except Exception:
+            return None
+    else:
+        path = getattr(recorder, "_status_path", None)
+        if path is None:
+            return None
+        try:
+            value = json.loads(Path(path).read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            return None
+    if not isinstance(value, Mapping):
+        return None
+    output: dict[str, object] = {}
+    for name in _RECORDER_HEALTH_FIELDS:
+        raw = value.get(name)
+        if name == "stale_epics":
+            if isinstance(raw, list | tuple):
+                output[name] = [
+                    _safe_health_text(item, 32) for item in raw[:10] if isinstance(item, str)
+                ]
+            else:
+                output[name] = []
+        elif name in {"ticks_received", "reconnect_count", "rejected_candles"}:
+            output[name] = max(0, int(raw)) if isinstance(raw, int | float) else 0
+        elif name == "ping_reply_ok":
+            output[name] = raw if isinstance(raw, bool) else None
+        elif raw is None:
+            output[name] = None
+        else:
+            output[name] = _safe_health_text(raw)
+    return output
+
+
+def _recorder_digest_fields(status: Mapping[str, object]) -> dict[str, object]:
+    return {name: status.get(name) for name in _RECORDER_HEALTH_FIELDS}
+
+
+def _recorder_digest_text(payload: Mapping[str, object]) -> str:
+    fields = payload.get("data_recorder")
+    values = fields if isinstance(fields, Mapping) else {}
+    lines = [
+        "Recorder health digest",
+        f"version: {_safe_health_text(payload.get('version'))}",
+        "window UTC: "
+        f"{_safe_health_text(payload.get('window_start'), 40)} -> "
+        f"{_safe_health_text(payload.get('window_end'), 40)}",
+    ]
+    for name in _RECORDER_HEALTH_FIELDS:
+        value = values.get(name)
+        if name == "stale_epics" and isinstance(value, list):
+            rendered = ",".join(value) or "none"
+        else:
+            rendered = "none" if value is None else _safe_health_text(value, 80)
+        lines.append(f"{name}: {rendered}")
+    return "\n".join(lines)[:1800]
+
+
+def _recorder_health_schedule(schedule: object) -> dict[str, Any]:
+    """Read recorder digest settings while preserving safe bounded defaults."""
+    raw = getattr(schedule, "model_dump", lambda: schedule)()
+    config = (
+        raw.get("recorder_health", raw.get("recorder_health_digest", {}))
+        if isinstance(raw, Mapping)
+        else {}
+    )
+    if not isinstance(config, Mapping):
+        config = {}
+    values = config.get("digest_hours", (2, 24))
+    hours: list[float] = []
+    if isinstance(values, list | tuple):
+        for item in values:
+            try:
+                number = float(item)
+            except (TypeError, ValueError):
+                continue
+            if number > 0 and number <= 24 * 365:
+                hours.append(number)
+    if not hours:
+        hours = [2.0, 24.0]
+    hours = sorted(set(hours))
+    try:
+        repeat_hours = float(config.get("repeat_hours", 24))
+    except (TypeError, ValueError):
+        repeat_hours = 24.0
+    try:
+        degraded_minutes = float(config.get("degraded_minutes", 5))
+    except (TypeError, ValueError):
+        degraded_minutes = 5.0
+    return {
+        "digest_hours": hours,
+        "repeat_hours": max(1.0, min(repeat_hours, 24 * 365)),
+        "degraded_minutes": max(1.0, min(degraded_minutes, 24 * 60)),
+    }
+
+
+def _health_alert_limiter() -> Any:
+    from trader.channels.telegram import AlertLimiter
+
+    return AlertLimiter(interval_seconds=300.0)
+
+
 def _build_report_snapshot_provider(
     *,
     broker: Any,
@@ -594,9 +740,27 @@ class _ReportScheduler:
         owner_chat_ids: object = (),
         usage_summary: Any = None,
         state_store: Any = None,
+        recorder: Any = None,
+        version: str | None = None,
+        evidence_path: str | Path | None = None,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+        alert: Callable[[Any], bool] | None = None,
     ) -> None:
         self.schedule = schedule
         self._state_store = state_store
+        self._recorder = recorder
+        self._clock = clock
+        self._version = _safe_health_text(version or os.getenv("GIT_SHA", "unknown"), 80)
+        workspace = Path(os.getenv("WORKSPACE_DIR", "/workspace"))
+        self._evidence_path = Path(
+            evidence_path or workspace / "state" / "evidence" / "recorder_health.jsonl"
+        )
+        self._alert_sender = alert
+        self._alert_limiter = _health_alert_limiter()
+        self._digest_sent: set[str] = set()
+        self._degraded_since: datetime | None = None
+        self._degraded_alert_sent = False
+        self._recorder_started_at = _recorder_started_at(recorder, self._clock())
         from trader.reports.commands import ScheduledReportRunner
         from trader.reports.core import ReportPeriod, ReportSnapshot
 
@@ -632,9 +796,13 @@ class _ReportScheduler:
             owner_chat_ids=owner_chat_ids if isinstance(owner_chat_ids, tuple | list) else (),
         )
 
+    def configure_alert(self, alert: Callable[[Any], bool] | None) -> None:
+        """Attach the shared Telegram channel alert path after startup wiring."""
+        self._alert_sender = alert
+
     def run_due(self, now: datetime | None = None) -> tuple[str, ...]:
         """Run each configured period once when its UTC schedule is due."""
-        current = (now or datetime.now(UTC)).astimezone(UTC)
+        current = (now or self._clock()).astimezone(UTC)
         ran: list[str] = []
         for period, target in self._targets(current):
             key = target.isoformat()
@@ -647,7 +815,105 @@ class _ReportScheduler:
             self._last_run[period] = key
             self._save_last_run()
             ran.append(period)
+        ran.extend(self._run_recorder_health(current))
         return tuple(ran)
+
+    def _run_recorder_health(self, now: datetime) -> list[str]:
+        """Emit configured recorder digests and liveness alerts."""
+        status = _recorder_health_mapping(self._recorder)
+        if status is None:
+            return []
+        self._update_recorder_alert(status, now)
+        uptime = max(0.0, (now - self._recorder_started_at).total_seconds())
+        digest_config = _recorder_health_schedule(self.schedule)
+        thresholds = digest_config["digest_hours"]
+        repeat_seconds = digest_config["repeat_hours"] * 3600.0
+        labels: list[str] = []
+        for threshold in thresholds:
+            label = f"{threshold:g}h"
+            if uptime >= threshold * 3600.0 and label not in self._digest_sent:
+                self._emit_recorder_digest(status, now, label)
+                self._digest_sent.add(label)
+                labels.append(f"recorder_health_{label}")
+        if thresholds and uptime >= thresholds[-1] * 3600.0:
+            last_threshold = thresholds[-1] * 3600.0
+            cycles = int((uptime - last_threshold) // repeat_seconds) if repeat_seconds else 0
+            for cycle in range(1, cycles + 1):
+                label = f"{thresholds[-1] + cycle * digest_config['repeat_hours']:g}h"
+                if label in self._digest_sent:
+                    continue
+                self._emit_recorder_digest(status, now, label)
+                self._digest_sent.add(label)
+                labels.append(f"recorder_health_{label}")
+        return labels
+
+    def _update_recorder_alert(self, status: Mapping[str, object], now: datetime) -> None:
+        """Alert once after a sustained open-market degradation and on recovery."""
+        config = _recorder_health_schedule(self.schedule)
+        degraded = status.get("status") == "degraded" and status.get("expected_open") is True
+        if degraded:
+            self._degraded_since = self._degraded_since or now
+            if (
+                not self._degraded_alert_sent
+                and (now - self._degraded_since).total_seconds()
+                >= config["degraded_minutes"] * 60
+            ):
+                self._send_health_alert(
+                    "recorder_health_degraded",
+                    "Recorder degraded while the market is expected open.",
+                )
+                self._degraded_alert_sent = True
+            return
+        if self._degraded_alert_sent and status.get("status") == "healthy":
+            self._send_health_alert("recorder_health_recovered", "Recorder health recovered.")
+            self._degraded_alert_sent = False
+        self._degraded_since = None
+
+    def _send_health_alert(self, key: str, text: str) -> None:
+        """Deliver through the shared Alert/AlertLimiter path when configured."""
+        from trader.channels.telegram import Alert
+
+        alert = Alert(key, text[:240])
+        if not self._alert_limiter.allow(key):
+            return
+        sender = self._alert_sender
+        if callable(sender):
+            try:
+                sender(alert)
+            except Exception:
+                LOGGER.warning("recorder health alert delivery failed", extra={"error": "send"})
+            return
+        transport = self._runner._telegram
+        if transport is None:
+            return
+        for chat_id in self._runner._owner_chat_ids:
+            try:
+                transport.send_message(chat_id, alert.text)
+            except Exception:
+                LOGGER.warning("recorder health alert delivery failed", extra={"error": "send"})
+
+    def _emit_recorder_digest(
+        self, status: Mapping[str, object], now: datetime, label: str
+    ) -> None:
+        """Write and deliver one bounded, secret-free recorder health digest."""
+        start = self._recorder_started_at
+        fields = _recorder_digest_fields(status)
+        payload = {
+            "version": self._version,
+            "window_start": start.isoformat(),
+            "window_end": now.isoformat(),
+            "uptime_label": label,
+            "data_recorder": fields,
+        }
+        text = _recorder_digest_text(payload)
+        payload["message"] = text
+        try:
+            self._evidence_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._evidence_path.open("a", encoding="utf-8") as evidence:
+                evidence.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")
+        except OSError:
+            LOGGER.warning("recorder health evidence unavailable", extra={"error": "write"})
+        self._send_health_alert(f"recorder_health_digest_{label}", text)
 
     def _targets(self, now: datetime) -> tuple[tuple[str, datetime], ...]:
         raw = getattr(self.schedule, "model_dump", lambda: self.schedule)()

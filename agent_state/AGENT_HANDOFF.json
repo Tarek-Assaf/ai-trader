@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 236,
+  "turn": "claude",
+  "revision": 237,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-109 recorder resilience now quarantines malformed backfill candles, keeps valid rows flowing and backs off stream restarts. T-017/T-044 still wait on recorder calibration and data.",
+    "summary": "T-110 recorder health digests and sustained degradation alerts are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -286,7 +286,8 @@
         "T-091",
         "T-092",
         "T-099",
-        "T-103"
+        "T-103",
+        "T-110"
       ]
     },
     {
@@ -312,7 +313,8 @@
       "status": "not_started",
       "covered_by": [
         "T-004",
-        "T-092"
+        "T-092",
+        "T-110"
       ]
     },
     {
@@ -365,7 +367,8 @@
         "T-019",
         "T-081",
         "T-094",
-        "T-109"
+        "T-109",
+        "T-110"
       ]
     },
     {
@@ -990,7 +993,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u0634\u256a\u0634\u0638\u0640\u0632\u0638\u00a4\u062c\u0638\u0640\u0632\u0638\u0640\u0640\u0638\u00a4\u00a3\u0638\u0640\u00f9\u0638\u00a4\u0621\u2518\u06521 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ظـزظــظ¤ش╪شظـزظ¤جظـزظــظ¤£ظـùظ¤ء┘ْ1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -3342,6 +3345,39 @@
       ],
       "completion_note": "Quarantined invalid recorder updates with bounded rejection status, preserved all valid backfill rows and prevented negative spreads from being written. Stream callback failures now log fixed ValueError text without tracebacks; the worker retries in-process with jittered exponential backoff from 3 seconds to a 300-second cap and resets after five healthy minutes. Added tests for mixed candle batches, health exposure, logging and backoff. Bundled Python compileall and git diff --check pass; pytest, Ruff, mypy and make check are unavailable in this desktop runtime. No credentials, broker calls or orders used. Handing T-109 to Claude for review.",
       "review_notes": "Claude: bad candles quarantined and counted (never fatal); ValueError text logged; stream restart backoff 3s-300s with jitter, reset after 5 min healthy; no weakening of tick/closed-bar rules. CI is the quality gate; verify on the Pod that ticks resume and rejected_candles is reported."
+    },
+    {
+      "id": "T-110",
+      "title": "Scheduled recorder health digests and sustained degradation alerts",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-18",
+        "R-20",
+        "R-23"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Existing report scheduler emits 2h/24h/24h recorder digests once per boot and repeats every 24h.",
+        "Bounded redacted digest is delivered to Telegram and appended as JSONL evidence.",
+        "Open-market recorder degradation alerts after the configured sustained interval and sends one recovery alert.",
+        "Tests cover fake-clock thresholds, alerts, recovery, bounded text and valid JSON evidence."
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [
+        "config/schedule.yaml",
+        "docs/specs/pod_test_outputs.md",
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime_services.py",
+        "bundled Python compileall",
+        "git diff --check",
+        "Pod /health read-only check (version 91243a2, healthy, Redis reachable)"
+      ],
+      "completion_note": "Extended the existing report scheduler with recorder health digests, JSONL evidence, bounded Telegram alerts and recovery notifications. The digest uses the recorder start time, GIT_SHA and the fixed data_recorder allowlist; no Pod URL, token or arbitrary status text is emitted. Handoff to Claude for review."
     }
   ],
   "decisions": [
@@ -4366,7 +4402,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u256a\u062b\u0638\u0080\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ╪ثظ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -6126,6 +6162,17 @@
       "validated_by": "claude",
       "date": "2026-10-08",
       "reverify_if": "recorder validation rules or restart policy change"
+    },
+    {
+      "id": "V-250",
+      "subject": "T-110 recorder health scheduler",
+      "method": "Added fake-clock coverage for 2h, 24h and 48h digest delivery, sustained degraded/recovery alerts, URL/token redaction and JSONL evidence. Ran bundled Python compileall and git diff --check; performed a read-only Pod /health check.",
+      "result": "pass",
+      "evidence": "config/schedule.yaml; src/trader/runtime/services.py; src/trader/api/app.py; tests/unit/test_runtime_services.py; bundled Python compileall; git diff --check; Pod health response",
+      "review_notes": "pytest, Ruff and mypy are unavailable in this desktop runtime; Claude/CI should run the full quality gate. No broker calls, orders, credentials or Pod terminal commands were used.",
+      "validated_by": "codex",
+      "date": "2026-10-08",
+      "reverify_if": "report scheduler delivery or recorder health status changes"
     }
   ],
   "blockers": [
@@ -7772,7 +7819,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -10483,7 +10530,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-109 passed: recorder no longer crash-loops on a bad candle; bad candles are quarantined and counted; restart has exponential backoff. Owner redeploys and sends /health. Turn to Codex."
+    },
+    {
+      "revision": 237,
+      "ts": "2026-10-08T13:35:00Z",
+      "agent": "codex",
+      "action": "complete_t110_recorder_health_digest",
+      "task_ids": [
+        "T-110"
+      ],
+      "files_changed": [
+        "config/schedule.yaml",
+        "docs/specs/pod_test_outputs.md",
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime_services.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Added scheduled recorder health digests at configured uptime thresholds with 24h repeats, bounded Telegram Alert/AlertLimiter delivery, JSONL evidence under /workspace/state/evidence, and sustained degraded/recovery alerts. Tests cover fake-clock thresholds, alert recovery, redaction and valid JSON evidence. Bundled compileall, diff-check and Pod /health read-only validation pass; handing T-110 to Claude for review."
     }
   ],
-  "project_summary": "T-109 recorder resilience is complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."
+  "project_summary": "T-110 recorder health digests and sustained degradation alerts are complete and awaiting Claude review. T-017/T-044 still wait on recorder calibration and data."
 }

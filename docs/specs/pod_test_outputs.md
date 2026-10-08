@@ -22,10 +22,14 @@ Do not wait for Claude to ask: run each test, commit its outputs, hand over.
   before/after figures that support it, and the margin/exposure source (Q-032).
 
 ## 2. Q-022 recorder soak
-- After at least 2 hours of recorder runtime: the redacted `/health`
-  `data_recorder` fields (configured, status, ping_reply_ok, market_status,
-  reconnect_count, last_reconnect_reason, last_closed_bar_at), the time window,
-  and `last_update_at`/`stale_epics` if present. Repeat once after 24 hours.
+- The running report scheduler sends a bounded recorder health digest at 2 hours,
+  at 24 hours, and every 24 hours thereafter. It includes the redacted
+  `data_recorder` fields (status, ping_reply_ok, market_status, ticks_received,
+  last_tick_at, last_closed_bar_at, reconnect_count, last_reconnect_reason,
+  rejected_candles, last_reject_reason, stale_epics), the version and UTC window.
+- The same digest is appended as a JSON line to
+  `/workspace/state/evidence/recorder_health.jsonl`, so the next evidence upload
+  contains the Pod-generated report without an owner being present.
 
 ## 3. T-060 backup restore drill
 - Fresh Pod start, restore from GitHub and HuggingFace backups, row counts per

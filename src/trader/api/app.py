@@ -655,6 +655,8 @@ async def lifespan(_app: FastAPI) -> Any:
                 ),
                 authorize_resume=lambda: settings.owner_totp_secret is None,
             )
+            if report_scheduler is not None and hasattr(report_scheduler, "configure_alert"):
+                report_scheduler.configure_alert(channel.send_alert)
             stop_event = threading.Event()
             thread = threading.Thread(
                 target=channel.run,
