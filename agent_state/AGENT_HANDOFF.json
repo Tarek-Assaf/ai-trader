@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 254,
+  "turn": "codex",
+  "revision": 255,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -84,7 +84,8 @@
         "T-084",
         "T-093",
         "T-112",
-        "T-113"
+        "T-113",
+        "T-114"
       ]
     },
     {
@@ -98,7 +99,8 @@
         "T-084",
         "T-093",
         "T-112",
-        "T-113"
+        "T-113",
+        "T-114"
       ]
     },
     {
@@ -118,7 +120,8 @@
         "T-100",
         "T-109",
         "T-112",
-        "T-113"
+        "T-113",
+        "T-114"
       ]
     },
     {
@@ -3555,6 +3558,37 @@
       ],
       "completion_note": "Added runner-level coverage for duplicate-hash skip ledgering, stop-file partial progress, bounded 200-attempt Telegram results, and config-driven holdout months. lab_run and lab_data_check now read data.holdout_months from strategy_lab.yaml, with an explicit CLI override for preparation. Focused tests and static checks pass; owner Pod lab run remains required by T-112 evidence.",
       "review_notes": "Accepted: runner-level tests for duplicate-hash skip, stop file with partial progress, Telegram length limit, config-driven holdout months. Noise/planted-edge coverage stays at pipeline level (tests/unit/test_lab_pipeline.py)."
+    },
+    {
+      "id": "T-114",
+      "title": "Strategy Lab speed, memory and progress visibility",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-112",
+        "T-113"
+      ],
+      "acceptance_criteria": [
+        "See docs/specs/t114_lab_speed.md: columnar loading, shared read-only data, total lab memory under 8 GB (container limit 16 GB), worker cap from cgroup memory.max, single-run lock, progress.json with peak RSS, targets on 8-core Pod",
+        "Gates in config/strategy_lab.yaml unchanged",
+        "Holdout still read only via validator.open_sealed_reader"
+      ],
+      "deliverables": [
+        "src/trader/lab/runner.py",
+        "scripts/lab_run.py",
+        "scripts/lab_data_check.py",
+        "tests/unit/test_lab_runner.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -11159,6 +11193,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-113 accepted and merged. Waiting on the owner's Pod Strategy Lab runs (small run, then full run); results come back to Claude for explanation. Turn to human."
+    },
+    {
+      "revision": 255,
+      "ts": "2026-10-08T22:16:12Z",
+      "agent": "claude",
+      "action": "add_t114",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t114_lab_speed.md"
+      ],
+      "summary": "Owner returned the turn. Added T-114 (lab speed, 16 GB memory limit, progress). Spec merged in PR #112 and #113. Turn to codex."
     }
   ],
   "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence is recorded. T-112 is merged with a 3-month holdout. T-113 runner-level tests and config-driven holdout wiring are complete and awaiting Claude review; owner Pod lab validation remains required. T-017/T-044 still wait on recorder data."
