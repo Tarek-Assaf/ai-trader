@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 273,
+  "turn": "human",
+  "revision": 275,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,11 +34,12 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced.",
+    "summary": "T-115 implementation is merged on origin/main. T-116 parallel mining and progress/lifecycle follow-ups are implemented on codex/t116-parallel-mining and ready for Claude review; focused validation passed, while the desktop runner suite was blocked by pytest temp-root ACLs.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
-      "The desktop runtime has no pytest, Ruff or mypy, so focused tests and make check could not run; bundled Python compileall, runtime smoke, handoff validation and git diff --check pass."
+      "The desktop runtime has no pytest, Ruff or mypy, so focused tests and make check could not run; bundled Python compileall, runtime smoke, handoff validation and git diff --check pass.",
+      "The desktop pytest runner suite cannot create its temp root under pytest-of-Tarek Assaf due to Windows ACLs; CI validation is required."
     ],
     "environment": {
       "runtime": "RunPod Docker",
@@ -3664,7 +3665,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -3692,8 +3693,18 @@
         "tests/unit/test_lab_runner.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "tests/unit/test_pattern_miner.py: 7 passed (serial/parallel deterministic ledger and mining progress callback)",
+        "ruff check on the four touched files: passed",
+        "ruff format --check on miner.py and runner.py: passed",
+        "mypy src/trader/lab scripts/lab_run.py: passed (15 source files)",
+        "python -m compileall -q src/trader/lab tests/unit/test_pattern_miner.py: passed",
+        "git diff --check: passed",
+        "tests/unit/test_lab_runner.py could not complete on this Windows desktop because pytest temp-root ACLs raise PermissionError under pytest-of-Tarek Assaf; 4 tests completed before KeyboardInterrupt; CI remains required",
+        "No Pod run was started for T-116; no broker, gate, secret, or holdout access occurred"
+      ],
+      "completion_note": "Merged in PR #133 (squash 5ab5138). CI quality green. Claude additions: shared warmed IndicatorCache built once before forking, warning log on parallel->serial fallback, fix for _sign_test_p_value OverflowError above 1023 trades (also crashed old main code on large samples), new tests/unit/test_lab_metrics_pvalue.py. Benchmark (Claude, 100k synthetic 5m bars, 2-core sandbox, not 400k, not the Pod): old 42.8s, T-116 serial 24.0s, with shared cache 18.3s (about 2.3x); 2 workers no extra gain on 2 cores. 8-core Pod gain unproven until measured.",
+      "review_notes": "Ready for Claude review. Verify CI pytest/Ruff/mypy and inspect the parallel worker behavior on the target runtime; no Pod rerun is requested by T-116."
     }
   ],
   "decisions": [
@@ -6731,6 +6742,28 @@
       "validated_by": "claude",
       "date": "2026-10-09",
       "reverify_if": "runner.py progress or RunFileLock code changes"
+    },
+    {
+      "id": "V-274",
+      "subject": "T-116 parallel mining, shared signals and lifecycle follow-ups",
+      "method": "Focused PatternMiner tests plus ruff, mypy, compileall and diff checks on the T-116 touched files; no Pod run.",
+      "result": "pass",
+      "evidence": "7 focused tests passed; ruff check/format, mypy (15 files), compileall and git diff --check passed. The runner suite was attempted but could not complete because the Windows pytest temp-root ACL denied access.",
+      "review_notes": "CI must run the full runner suite and exercise the fork-based pool on the target runtime before merge.",
+      "validated_by": "codex",
+      "date": "2026-10-09",
+      "reverify_if": "T-116 code changes or CI reports a worker, lifecycle, or progress regression"
+    },
+    {
+      "id": "V-275",
+      "subject": "T-116 review",
+      "method": "Code review against acceptance criteria, local benchmark on synthetic bars, CI quality on PR #133 head e09761d.",
+      "result": "pass",
+      "evidence": "CI quality success. Parallel==serial test and progress-counter test pass. Benchmark 42.8s old -> 24.0s serial -> 18.3s with shared cache (100k bars, 2 cores). Found and fixed p-value overflow bug.",
+      "review_notes": "Speed-up measured is about 2.3x, not the 10x first estimated; Pod timing still unknown. Possible T-117: return slim metrics from workers, vectorize ADX/true range, optional mining window.",
+      "validated_by": "claude",
+      "date": "2026-10-09",
+      "reverify_if": "miner.py, runner.py or metrics.py change, or the Pod run shows mining still stalls"
     }
   ],
   "blockers": [
@@ -6804,7 +6837,8 @@
       "id": "B-011",
       "text": "The owner-approved T-114 rerun (PID 12612) made no progress-file update for more than 10 minutes. Codex stopped only PID 12612 per the handoff; progress.json remains status=running and no new results.json was written, so phase timings, peak RSS and per-attempt results for this rerun are unavailable.",
       "raised_by": "codex",
-      "status": "active"
+      "status": "resolved",
+      "resolution": "Cause known (serial mining on one core, no progress inside the stage); fixed by T-115 and T-116 (merged). A new run needs the T-116 image deployed on the Pod."
     }
   ],
   "questions": [
@@ -11687,6 +11721,39 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Landed Codex rev 272 (repaired an encoding glitch in an old log entry so the log stays append-only). T-115 reviewed: pass (V-273), task done. The 3-hour rerun (PID 13555, stopped at the runtime limit) is inconclusive but the cause is now known: PatternMiner.scan does about 40 full walk-forward backtests per instrument/timeframe serially on one core, and these became real work once the double-resample bug was fixed. New task T-116 (acceptance criteria in the task): parallel mining, shared signals for the normal and stress backtests, mining progress counter, and the T-115 follow-ups. Codex: implement T-116 on a branch, run the local benchmark, push and hand the turn to claude. Do NOT start another Pod lab run: a new rerun needs fresh owner approval and a redeploy on the new image after T-116 merges (or an owner-approved seeds-only interim run). No gate changes, no secrets or Pod URL in the repo."
+    },
+    {
+      "revision": 274,
+      "ts": "2026-10-09T19:38:36Z",
+      "agent": "codex",
+      "action": "complete_t116_parallel_mining",
+      "task_ids": [
+        "T-116"
+      ],
+      "files_changed": [
+        "src/trader/lab/miner.py",
+        "src/trader/lab/backtest.py",
+        "src/trader/lab/runner.py",
+        "tests/unit/test_pattern_miner.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented parallel spec evaluation with deterministic results, shared normal/stress signals, mining progress counters, exception cleanup, atomic progress writes and race-safe stale-lock quarantine. Focused validation passed; runner-suite completion is blocked by desktop pytest temp-root ACLs. Handing turn to Claude for CI review."
+    },
+    {
+      "revision": 275,
+      "ts": "2026-10-09T19:59:11Z",
+      "agent": "claude",
+      "action": "review_merge_t116",
+      "task_ids": [
+        "T-116"
+      ],
+      "files_changed": [
+        "src/trader/lab/miner.py",
+        "src/trader/lab/metrics.py",
+        "tests/unit/test_lab_metrics_pvalue.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-116 reviewed and merged (PR #133, V-275 pass), B-011 resolved. Added shared indicator cache and fixed a p-value overflow for large trade counts. Measured speed-up about 2.3x locally. Waiting for the owner to redeploy the Pod on the new image and confirm the already-approved seeds-only run (--idea-sources seeds --max-ideas 20 --timeframes 5 --force, one detached process, memory under 8 GB). Codex should not start a run until the owner confirms the redeploy."
     }
   ],
   "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."
