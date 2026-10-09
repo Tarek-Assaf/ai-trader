@@ -42,8 +42,15 @@ def _sign_test_p_value(trades: Sequence[BacktestTrade]) -> float:
         return 1.0
     wins = sum(value > 0 for value in values)
     count = len(values)
-    tail = sum(math.comb(count, index) for index in range(wins, count + 1))
-    return min(1.0, tail / (2.0**count))
+    # Exact tail sum of C(count, k) for k >= wins, built term by term. Integer
+    # true division stays correct for any size; ``2.0**count`` overflowed once a
+    # test window held more than 1023 trades (routine on multi-year 5m data).
+    term = math.comb(count, wins)
+    tail = 0
+    for index in range(wins, count + 1):
+        tail += term
+        term = term * (count - index) // (index + 1)
+    return min(1.0, tail / (1 << count))
 
 
 def _walk_forward_metrics(

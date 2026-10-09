@@ -51,6 +51,7 @@ _MINING_CONTEXT: (
         int | None,
         int | None,
         int | None,
+        IndicatorCache | None,
     ]
     | None
 ) = None
@@ -63,6 +64,7 @@ def _init_mining_worker(
     train_bars: int | None,
     test_bars: int | None,
     step_bars: int | None,
+    cache: IndicatorCache | None = None,
 ) -> None:
     """Install an immutable mining context in each forked worker."""
     global _MINING_CONTEXT
@@ -73,6 +75,7 @@ def _init_mining_worker(
         train_bars,
         test_bars,
         step_bars,
+        cache,
     )
     if hasattr(os, "nice"):
         try:
@@ -89,9 +92,10 @@ def _mine_one(
     train_bars: int | None,
     test_bars: int | None,
     step_bars: int | None,
+    shared_cache: IndicatorCache | None = None,
 ) -> tuple[BacktestResult, BacktestResult, int]:
     """Run both deterministic cost variants while sharing indicators/signals."""
-    cache = IndicatorCache.from_candles(candles, spec.timeframe_minutes)
+    cache = shared_cache or IndicatorCache.from_candles(candles, spec.timeframe_minutes)
     signals = evaluate_entries(spec, cache.bars, indicator_cache=cache) if cache.bars else ()
     result = run_backtest(
         spec,
@@ -122,9 +126,9 @@ def _mine_one_worker(
 ) -> tuple[int, BacktestResult, BacktestResult, int]:
     if _MINING_CONTEXT is None:
         raise RuntimeError("mining worker context is not initialized")
-    candles, cost_model, cost_stress_pct, train_bars, test_bars, step_bars = _MINING_CONTEXT
+    candles, cost_model, cost_stress_pct, train_bars, test_bars, step_bars, cache = _MINING_CONTEXT
     result, stress, signals = _mine_one(
-        item[1], candles, cost_model, cost_stress_pct, train_bars, test_bars, step_bars
+        item[1], candles, cost_model, cost_stress_pct, train_bars, test_bars, step_bars, cache
     )
     return item[0], result, stress, signals
 
@@ -365,6 +369,24 @@ class PatternMiner:
             )
         work: dict[int, tuple[BacktestResult, BacktestResult, int]] = {}
 
+        # Regime and indicator series depend only on the bars, so compute them once
+        # here; forked workers then inherit them instead of rebuilding per spec.
+        shared_cache: IndicatorCache | None = None
+        if source and specs:
+            shared_cache = IndicatorCache.from_candles(source, specs[0][1].timeframe_minutes)
+            if shared_cache.bars:
+                shared_cache.volatility()
+                shared_cache.trend()
+                for _, spec, _ in specs:
+                    for condition in spec.entry_conditions:
+                        shared_cache.get(condition.indicator, condition.period)
+                        if condition.threshold_indicator is not None:
+                            shared_cache.get(
+                                condition.threshold_indicator,
+                                condition.threshold_period,
+                                condition.threshold_lookback,
+                            )
+
         def report(done: int) -> None:
             if callback is not None:
                 callback(done, len(specs))
@@ -382,6 +404,7 @@ class PatternMiner:
                         self.train_bars,
                         self.test_bars,
                         self.step_bars,
+                        shared_cache,
                     ),
                 ) as pool:
                     futures = {
@@ -416,6 +439,7 @@ class PatternMiner:
                     self.train_bars,
                     self.test_bars,
                     self.step_bars,
+                    shared_cache,
                 )
                 report(index + 1)
 
