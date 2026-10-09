@@ -435,3 +435,30 @@ def test_process_memory_diagnostics_returns_non_negative_integers() -> None:
         "memory_current_bytes",
     }
     assert all(isinstance(item, int) and item >= 0 for item in values.values())
+
+
+def test_walk_forward_sizes_fit_at_least_five_windows() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from trader.data.resample import Candle
+    from trader.lab.backtest import walk_forward_splits
+    from trader.lab.runner import walk_forward_sizes
+
+    start = datetime(2024, 1, 1, tzinfo=UTC)
+    for bars in (600, 5_000, 370_000):
+        train, test, step = walk_forward_sizes(bars)
+        candles = [
+            Candle(start + timedelta(minutes=5 * index), 1.0, 1.0, 1.0, 1.0, 1.0, ("X",), 5)
+            for index in range(min(bars, 5_000))
+        ]
+        if bars <= 5_000:
+            assert (
+                len(walk_forward_splits(candles, train_bars=train, test_bars=test, step_bars=step))
+                >= 5
+            )
+        else:
+            count, position = 0, 0
+            while position + train + test <= bars:
+                count += 1
+                position += step
+            assert count >= 5

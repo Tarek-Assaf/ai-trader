@@ -165,6 +165,17 @@ def _columnar_series(
     )
 
 
+def walk_forward_sizes(bars: int) -> tuple[int, int, int]:
+    """Return (train, test, step) bar counts that give eight walk-forward windows.
+
+    The previous sizes (half the frame to train, a fifth to test, a fifth to step)
+    can only fit two windows, but Gate 1 requires at least five, so no strategy
+    could ever pass. A third of the frame to train with a twelfth to test and
+    step fits eight windows (starts at 0, 1/12, ... 7/12 of the frame).
+    """
+    return max(1, bars // 3), max(1, bars // 12), max(1, bars // 12)
+
+
 def read_memory_limit(path: str | Path = "/sys/fs/cgroup/memory.max") -> int | None:
     """Read the cgroup memory limit; ``None`` means unlimited/unavailable."""
     try:
@@ -1333,9 +1344,9 @@ class LabRunner:
                         instrument=instrument,
                         timeframe=timeframe,
                     ),
-                    train_bars=max(1, len(train) // 2),
-                    test_bars=max(1, len(train) // 5),
-                    step_bars=max(1, len(train) // 5),
+                    train_bars=walk_forward_sizes(len(train))[0],
+                    test_bars=walk_forward_sizes(len(train))[1],
+                    step_bars=walk_forward_sizes(len(train))[2],
                     workers=workers,
                     stop_event=pipeline_stop,
                     trials=trial_count,
@@ -1627,6 +1638,7 @@ __all__ = [
     "LabRunner",
     "coverage_report",
     "cap_worker_count",
+    "walk_forward_sizes",
     "holdout_months",
     "load_histdata_arrays",
     "load_histdata_candles",
