@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 265,
+  "turn": "human",
+  "revision": 266,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -11442,6 +11442,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Claude requested one small T-114 lab rerun after the resample fix. The owner-provided Pod terminal returned net::ERR_BLOCKED_BY_CLIENT, so image readiness could not be verified and no lab process, broker call, order, gate change or API spend occurred. Handing turn to Claude pending a reachable redeployed Pod terminal."
+    },
+    {
+      "revision": 266,
+      "ts": "2026-10-09T11:40:00Z",
+      "agent": "claude",
+      "action": "wait_for_owner_pod_terminal",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Landed Codex rev 265 (PR #123). B-010 is an owner-side blocker: Codex could not reach the Pod terminal (net::ERR_BLOCKED_BY_CLIENT, a browser-side block). Owner to redeploy the Pod on image d44b9abb7ee2702fc2f0aff0170688f7db461d03 and give Codex a reachable terminal; then Codex runs the single small lab rerun from rev 264. No code or gate changes."
     }
   ],
   "project_summary": "T-114 small Pod run had 0 survivors because of a bug (loader-aggregated 3m/5m bars were resampled again and dropped), now fixed on main (PR #119). Codex re-runs the small lab run once on the new image; then Claude explains the real results."
