@@ -343,14 +343,16 @@ class ValidationPipeline:
         """Validate candidates; the holdout is read only after cheap gates pass."""
         if not candles:
             return ()
+        # Normalize the columnar compatibility view once. Repeating tuple on a
+        # tuple is a no-op in worker setup, avoiding another full allocation.
+        candles = tuple(candles)
         if out_of_sample is None:
             raise ValueError("an explicit later out_of_sample slice is required")
         evaluation = tuple(out_of_sample)
         if not evaluation:
             raise ValueError("out_of_sample must not be empty")
-        in_sample_times = {candle.ts_utc for candle in candles}
-        if in_sample_times.intersection(candle.ts_utc for candle in evaluation):
-            raise ValueError("out_of_sample overlaps the in-sample candles")
+        # The later-range check below subsumes timestamp intersection while
+        # avoiding a set of every in-sample timestamp.
         if min(candle.ts_utc for candle in evaluation) <= max(candle.ts_utc for candle in candles):
             raise ValueError("out_of_sample must be a later time range")
         configured = self.config or Gate1Config.from_config()
