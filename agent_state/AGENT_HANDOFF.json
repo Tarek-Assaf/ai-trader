@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 270,
+  "turn": "codex",
+  "revision": 271,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -85,7 +85,8 @@
         "T-093",
         "T-112",
         "T-113",
-        "T-114"
+        "T-114",
+        "T-115"
       ]
     },
     {
@@ -100,7 +101,8 @@
         "T-093",
         "T-112",
         "T-113",
-        "T-114"
+        "T-114",
+        "T-115"
       ]
     },
     {
@@ -121,7 +123,8 @@
         "T-109",
         "T-112",
         "T-113",
-        "T-114"
+        "T-114",
+        "T-115"
       ]
     },
     {
@@ -3616,6 +3619,37 @@
       ],
       "completion_note": "Implemented T-114 memory-safe columnar loading, read-only numeric arrays, cgroup worker caps, cross-process run locking, peak RSS progress evidence, timestamped phase counts, cache invalidation, bounded years, and indicator reuse. Fixed B-009 by making scripts/lab_run.py write progress.json by default for direct CLI runs. Focused tests pass and prior Pod evidence is recorded. The owner-approved single detached rerun was started after confirming no active process; progress.json remained status=running without an update for over 10 minutes, so only PID 12612 was stopped, confirmed dead and cleaned from run.lock. No new results were written, and no gate, broker or order action occurred.",
       "review_notes": "B-009 fix remains ready for Claude review. The authorized post-fix rerun did not produce a new result: progress stopped updating at launch, so the explicit ten-minute rule stopped PID 12612. No OOM events occurred, but phase timing, peak_rss_bytes and per-attempt results are unavailable. Existing results.json is pre-fix data and must not be used to claim the fix passed. No second process or gate change was made."
+    },
+    {
+      "id": "T-115",
+      "title": "Strategy Lab progress during loading and mining; reclaim dead-pid lock",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-114"
+      ],
+      "acceptance_criteria": [
+        "runner.py writes progress.json BEFORE and DURING data loading and candidate mining (phase names like loading:<instrument>:<tf>m and mining:<instrument>:<tf>m), not only after all groups are built; write_progress and its state are defined before the first load. Keep the lab_run.py placeholder only as a fallback.",
+        "A heartbeat (updated_at timestamp, ISO UTC) is written at least every 60 seconds while a long phase runs (a daemon thread or per-chunk call), so a silent stage cannot look like a hang; progress.json always includes pid, started_at and updated_at.",
+        "RunFileLock stores the pid; on acquire, if the lock exists and its pid is not alive (os.kill(pid, 0) fails), the lock is reclaimed with a logged note instead of refusing. A live pid still refuses. Unit tests cover live, dead and malformed lock files.",
+        "Unit tests: progress.json is written with a loading phase before candidates exist; heartbeat advances updated_at; gates in config/strategy_lab.yaml unchanged; holdout still read only via validator.open_sealed_reader.",
+        "ruff, mypy and pytest pass in CI; no secrets or Pod URL in the repo."
+      ],
+      "deliverables": [
+        "src/trader/lab/runner.py",
+        "scripts/lab_run.py",
+        "tests/unit/test_lab_runner.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -11546,6 +11580,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started exactly one detached owner-approved lab run with PID 12612 using python scripts/lab_run.py --max-ideas 20 --timeframes 5 --force. Progress remained status=running with no update for over 10 minutes, so Codex stopped only PID 12612, confirmed it was dead and removed its stale lock. RSS was 547,844 KB, cgroup memory about 942-945 MB, and all OOM counters stayed zero. No new results, gate change, broker call, order or secret use. Handing turn to Claude."
+    },
+    {
+      "revision": 271,
+      "ts": "2026-10-09T16:20:00Z",
+      "agent": "claude",
+      "action": "approve_rerun_45min_and_spec_t115",
+      "task_ids": [
+        "T-114",
+        "T-115"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Landed Codex rev 270 (PR #129). Finding: the 10-minute no-progress stop was too strict. lab_run.py writes a 21-byte placeholder; the runner writes real progress only after loading and mining for all groups (runner.py ~972-1063), which is silent for a long time (the first 19m33s run was mostly this stage). RSS 548 MB and cgroup ~0.94 GB with zero OOM events show the killed process was alive. OWNER APPROVED in chat (2026-10-09 19:13 Riyadh) BOTH items. (A) RERUN on the current Pod image, no code change needed: read /workspace/state/lab/run.lock first; if absent, proceed. Run exactly ONE detached scripts/lab_run.py --max-ideas 20 --timeframes 5 --force (default 6 years, never --years all, default lock and progress paths, output to a log under /workspace/state/lab). Liveness rule replacing the 10-minute rule: the process counts as alive while its cumulative CPU time (ps -o cputime or /proc/<pid>/stat) keeps increasing; allow up to 45 minutes before the first real progress.json write (it should gain run_id, phase and ideas_total); after that, stop only that pid if progress.json is unchanged for 15 minutes AND CPU time is flat, or if memory nears 8 GB, or total runtime passes 3 hours. Delete only that pid's run.lock after confirming the pid is dead. Report phase timings, peak_rss_bytes and the results table with per-attempt fail reasons and trade counts. (B) IMPLEMENT T-115 (new, spec in tasks) on a codex branch: progress during loading and mining, heartbeat, and dead-pid lock reclaim. Do not wait for the rerun to finish to start T-115, but do not change files on the Pod. Open nothing on the Pod beyond the one run. No gate changes, no secrets or Pod URL in the repo. When the rerun ends, or T-115 is ready for review, push and hand the turn to claude."
     }
   ],
   "project_summary": "T-114 resample fix is merged. Codex ran the single owner-approved detached lab command with the default six-year window. PID 12612 stayed at about 548 MB RSS and about 945 MB cgroup memory, while progress.json remained status=running for over 10 minutes; Codex stopped only that process, confirmed it was dead, and removed its lock. Existing results.json is still the old pre-fix run."
