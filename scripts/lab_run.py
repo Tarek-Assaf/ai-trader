@@ -38,7 +38,9 @@ def main() -> int:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--stop-file", type=Path)
     parser.add_argument("--lock-file", type=Path, default=Path("/workspace/state/lab/run.lock"))
-    parser.add_argument("--progress", type=Path)
+    parser.add_argument(
+        "--progress", type=Path, default=Path("/workspace/state/lab/progress.json")
+    )
     parser.add_argument("--prepare-holdout", action="store_true")
     parser.add_argument(
         "--holdout-months",
