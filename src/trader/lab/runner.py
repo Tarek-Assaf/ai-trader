@@ -20,6 +20,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 from array import array
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -229,34 +230,45 @@ class RunFileLock:
 
     def acquire(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as exc:
-            stale = False
+        descriptor: int | None = None
+        for _ in range(3):
             try:
-                payload = json.loads(self.path.read_text(encoding="utf-8"))
-                pid = int(payload["pid"])
-            except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError):
-                stale = True
-                LOGGER.warning("reclaiming malformed Strategy Lab lock %s", self.path)
-            else:
+                descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                break
+            except FileExistsError as exc:
+                stale = False
                 try:
-                    os.kill(pid, 0)
-                except ProcessLookupError:
+                    payload = json.loads(self.path.read_text(encoding="utf-8"))
+                    pid = int(payload["pid"])
+                except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError):
                     stale = True
-                    LOGGER.warning(
-                        "reclaiming dead Strategy Lab lock pid=%s path=%s", pid, self.path
-                    )
-                except PermissionError:
-                    # The process exists but belongs to another user; fail safe.
-                    pass
-            if not stale:
-                raise RuntimeError("a Strategy Lab run is already in progress") from exc
-            try:
-                self.path.unlink()
-            except FileNotFoundError:
-                pass
-            descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                    pid = None
+                    LOGGER.warning("reclaiming malformed Strategy Lab lock %s", self.path)
+                else:
+                    assert pid is not None
+                    try:
+                        os.kill(pid, 0)
+                    except ProcessLookupError:
+                        stale = True
+                        LOGGER.warning(
+                            "reclaiming dead Strategy Lab lock pid=%s path=%s", pid, self.path
+                        )
+                    except PermissionError:
+                        # The process exists but belongs to another user; fail safe.
+                        pass
+                if not stale:
+                    raise RuntimeError("a Strategy Lab run is already in progress") from exc
+                quarantine = self.path.with_name(
+                    f".{self.path.name}.stale.{os.getpid()}.{uuid.uuid4().hex}"
+                )
+                try:
+                    os.rename(self.path, quarantine)
+                except FileNotFoundError:
+                    continue
+                else:
+                    quarantine.unlink(missing_ok=True)
+        if descriptor is None:
+            raise RuntimeError("could not reclaim the Strategy Lab lock safely")
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             handle.write(
                 json.dumps({"pid": os.getpid(), "started_at": datetime.now(UTC).isoformat()})
@@ -872,9 +884,18 @@ class LabRunner:
         self.cache_root = Path(cache_root)
         self.max_training_years = max_training_years
         self.lock_path = Path(lock_path) if lock_path is not None else None
+        self._heartbeat_stop: threading.Event | None = None
+        self._heartbeat_thread: threading.Thread | None = None
 
     def _candidates(
-        self, instrument: str, timeframe: int, sources: Sequence[str], candles: Sequence[Candle]
+        self,
+        instrument: str,
+        timeframe: int,
+        sources: Sequence[str],
+        candles: Sequence[Candle],
+        *,
+        workers: int | None = None,
+        progress_callback: Any | None = None,
     ) -> list[tuple[str, Any]]:
         result: list[tuple[str, Any]] = []
         if "seeds" in sources or "all" in sources:
@@ -885,6 +906,8 @@ class LabRunner:
                 instrument=instrument,
                 timeframe_minutes=cast(Timeframe, timeframe),
                 ledger=self.ledger,
+                workers=workers,
+                progress_callback=progress_callback,
             ).scan(candles)
             result.extend(("pattern", candidate.strategy) for candidate in mined.candidates)
         if ("llm" in sources or "idea_generator" in sources) and self.idea_generator is not None:
@@ -912,7 +935,43 @@ class LabRunner:
         with RunFileLock(lock_path):
             return self._run_unlocked(*args, **kwargs)
 
-    def _run_unlocked(
+    def _run_unlocked(self, *args: Any, **kwargs: Any) -> LabRunResult:
+        try:
+            return self._run_unlocked_impl(*args, **kwargs)
+        except Exception as exc:
+            heartbeat_stop = self._heartbeat_stop
+            heartbeat_thread = self._heartbeat_thread
+            if heartbeat_stop is not None:
+                heartbeat_stop.set()
+            if heartbeat_thread is not None:
+                heartbeat_thread.join(timeout=2.0)
+            progress_path = kwargs.get("progress_path")
+            if progress_path is not None:
+                target = Path(progress_path)
+                try:
+                    payload = json.loads(target.read_text(encoding="utf-8"))
+                except (OSError, TypeError, ValueError, json.JSONDecodeError):
+                    payload = {"pid": os.getpid()}
+                payload.update(
+                    {
+                        "status": "failed",
+                        "error": type(exc).__name__,
+                        "updated_at": datetime.now(UTC).isoformat(),
+                    }
+                )
+                temporary = target.with_name(f".{target.name}.{os.getpid()}.tmp")
+                try:
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    temporary.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+                    os.replace(temporary, target)
+                finally:
+                    temporary.unlink(missing_ok=True)
+            raise
+        finally:
+            self._heartbeat_stop = None
+            self._heartbeat_thread = None
+
+    def _run_unlocked_impl(
         self,
         *,
         instruments: Sequence[str] = INSTRUMENTS,
@@ -954,27 +1013,30 @@ class LabRunner:
                 target = Path(progress_path)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 now = datetime.now(UTC).isoformat()
-                target.write_text(
-                    json.dumps(
-                        {
-                            "status": status,
-                            "run_id": run_name,
-                            "pid": os.getpid(),
-                            "started_at": started.isoformat(),
-                            "updated_at": now,
-                            "ideas_done": completed_ideas,
-                            "ideas_total": total_ideas,
-                            "survivors": sum(item.verdict == "pass" for item in attempts),
-                            "phase": current_phase,
-                            "phase_timings_seconds": dict(phase_timings),
-                            "peak_rss_bytes": peak_rss,
-                            "memory_limit_bytes": memory_limit,
-                            "workers": workers,
-                        },
-                        sort_keys=True,
-                    ),
-                    encoding="utf-8",
+                payload = json.dumps(
+                    {
+                        "status": status,
+                        "run_id": run_name,
+                        "pid": os.getpid(),
+                        "started_at": started.isoformat(),
+                        "updated_at": now,
+                        "ideas_done": completed_ideas,
+                        "ideas_total": total_ideas,
+                        "survivors": sum(item.verdict == "pass" for item in attempts),
+                        "phase": current_phase,
+                        "phase_timings_seconds": dict(phase_timings),
+                        "peak_rss_bytes": peak_rss,
+                        "memory_limit_bytes": memory_limit,
+                        "workers": workers,
+                    },
+                    sort_keys=True,
                 )
+                temporary = target.with_name(f".{target.name}.{os.getpid()}.tmp")
+                try:
+                    temporary.write_text(payload, encoding="utf-8")
+                    os.replace(temporary, target)
+                finally:
+                    temporary.unlink(missing_ok=True)
 
         def progress_heartbeat() -> None:
             while not heartbeat_stop.wait(PROGRESS_HEARTBEAT_SECONDS):
@@ -1006,6 +1068,8 @@ class LabRunner:
                 name="lab-progress-heartbeat",
                 daemon=True,
             )
+            self._heartbeat_stop = heartbeat_stop
+            self._heartbeat_thread = heartbeat_thread
             heartbeat_thread.start()
 
         def stopped() -> bool:
@@ -1068,11 +1132,34 @@ class LabRunner:
             train, test = candles[:split], candles[split:]
             if not test:
                 continue
-            mark_phase(f"mining:{instrument}:{timeframe}m")
+            mark_phase(f"mining:{instrument}:{timeframe}m:0/20")
+
             # Idea mining and parameter tuning must never inspect the later
             # evaluation window. The sealed holdout has already been excluded
             # from ``candles`` above, so this is the remaining in-sample slice.
-            grouped = self._candidates(instrument, timeframe, idea_sources, train)
+            def mining_progress(
+                done: int,
+                total: int,
+                instrument: str = instrument,
+                timeframe: int = timeframe,
+            ) -> None:
+                mark_phase(f"mining:{instrument}:{timeframe}m:{done}/{total}")
+
+            try:
+                grouped = self._candidates(
+                    instrument,
+                    timeframe,
+                    idea_sources,
+                    train,
+                    workers=workers,
+                    progress_callback=mining_progress,
+                )
+            except TypeError as exc:
+                # Keep test and plugin subclasses written against the T-114
+                # hook signature working while they migrate to T-116.
+                if "unexpected keyword argument" not in str(exc):
+                    raise
+                grouped = self._candidates(instrument, timeframe, idea_sources, train)
             by_source: dict[str, list[tuple[str, Any]]] = {}
             for source, spec in grouped:
                 family = source.split(":", 1)[0]

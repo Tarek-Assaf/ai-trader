@@ -15,7 +15,7 @@ from dataclasses import dataclass, field, replace
 from datetime import datetime
 
 from trader.data.resample import Candle, resample_ohlc
-from trader.lab.engine import IndicatorCache, evaluate_entries
+from trader.lab.engine import EntrySignal, IndicatorCache, evaluate_entries
 from trader.lab.spec import StrategySpec
 
 
@@ -299,6 +299,7 @@ def run_backtest(
     step_bars: int | None = None,
     holdout: bool = False,
     indicator_cache: IndicatorCache | None = None,
+    entry_signals: Sequence[EntrySignal] | None = None,
 ) -> BacktestResult:
     """Run one deterministic backtest over non-holdout candles.
 
@@ -337,10 +338,9 @@ def run_backtest(
         )
     model = cost_model or CostModel()
     multiplier = 1.0 + cost_stress_pct / 100.0
-    signals = {
-        signal.timestamp_utc: signal
-        for signal in evaluate_entries(spec, bars, indicator_cache=indicator_cache)
-    }
+    if entry_signals is None:
+        entry_signals = evaluate_entries(spec, bars, indicator_cache=indicator_cache)
+    signals = {signal.timestamp_utc: signal for signal in entry_signals}
     stop, target, time_stop, trailing_distance, trailing_activation = _exit_rules(spec)
     position: _OpenTrade | None = None
     trades: list[BacktestTrade] = []

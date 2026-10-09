@@ -7,15 +7,19 @@ broker. Every backtested variant is recorded before optional validation.
 
 from __future__ import annotations
 
+import logging
 import math
-from collections.abc import Iterable, Mapping, Sequence
+import multiprocessing
+import os
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any, Literal, Protocol
 
 from trader.data.resample import Candle
 from trader.lab.backtest import BacktestResult, CostModel, run_backtest
-from trader.lab.engine import evaluate_entries
+from trader.lab.engine import IndicatorCache, evaluate_entries
 from trader.lab.ledger import ExperimentLedger, ExperimentLedgerProtocol, ExperimentRecord
 from trader.lab.metrics import gate1_metrics
 from trader.lab.spec import ComplexityLimits, IndicatorCondition, StopExit, StrategySpec, TargetExit
@@ -37,6 +41,96 @@ PATTERN_NAMES: tuple[PatternName, ...] = (
     "mean_reversion",
 )
 DEFERRED_PATTERN_NAMES = ("event_reaction",)
+LOGGER = logging.getLogger(__name__)
+
+_MINING_CONTEXT: (
+    tuple[
+        tuple[Candle, ...],
+        CostModel | None,
+        float,
+        int | None,
+        int | None,
+        int | None,
+        IndicatorCache | None,
+    ]
+    | None
+) = None
+
+
+def _init_mining_worker(
+    candles: tuple[Candle, ...],
+    cost_model: CostModel | None,
+    cost_stress_pct: float,
+    train_bars: int | None,
+    test_bars: int | None,
+    step_bars: int | None,
+    cache: IndicatorCache | None = None,
+) -> None:
+    """Install an immutable mining context in each forked worker."""
+    global _MINING_CONTEXT
+    _MINING_CONTEXT = (
+        tuple(candles),
+        cost_model,
+        cost_stress_pct,
+        train_bars,
+        test_bars,
+        step_bars,
+        cache,
+    )
+    if hasattr(os, "nice"):
+        try:
+            os.nice(10)
+        except (OSError, PermissionError):
+            pass
+
+
+def _mine_one(
+    spec: StrategySpec,
+    candles: Sequence[Candle],
+    cost_model: CostModel | None,
+    cost_stress_pct: float,
+    train_bars: int | None,
+    test_bars: int | None,
+    step_bars: int | None,
+    shared_cache: IndicatorCache | None = None,
+) -> tuple[BacktestResult, BacktestResult, int]:
+    """Run both deterministic cost variants while sharing indicators/signals."""
+    cache = shared_cache or IndicatorCache.from_candles(candles, spec.timeframe_minutes)
+    signals = evaluate_entries(spec, cache.bars, indicator_cache=cache) if cache.bars else ()
+    result = run_backtest(
+        spec,
+        candles,
+        cost_model=cost_model,
+        train_bars=train_bars,
+        test_bars=test_bars,
+        step_bars=step_bars,
+        indicator_cache=cache,
+        entry_signals=signals,
+    )
+    stress = run_backtest(
+        spec,
+        candles,
+        cost_model=cost_model,
+        cost_stress_pct=cost_stress_pct,
+        train_bars=train_bars,
+        test_bars=test_bars,
+        step_bars=step_bars,
+        indicator_cache=cache,
+        entry_signals=signals,
+    )
+    return result, stress, len(signals)
+
+
+def _mine_one_worker(
+    item: tuple[int, StrategySpec],
+) -> tuple[int, BacktestResult, BacktestResult, int]:
+    if _MINING_CONTEXT is None:
+        raise RuntimeError("mining worker context is not initialized")
+    candles, cost_model, cost_stress_pct, train_bars, test_bars, step_bars, cache = _MINING_CONTEXT
+    result, stress, signals = _mine_one(
+        item[1], candles, cost_model, cost_stress_pct, train_bars, test_bars, step_bars, cache
+    )
+    return item[0], result, stress, signals
 
 
 class GateValidator(Protocol):
@@ -187,6 +281,8 @@ class PatternMiner:
         train_bars: int | None = None,
         test_bars: int | None = None,
         step_bars: int | None = None,
+        workers: int | None = 1,
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> None:
         if instrument is not None and (
             not instrument
@@ -196,6 +292,8 @@ class PatternMiner:
             raise ValueError("instrument must contain only letters, digits and underscores")
         if not math.isfinite(cost_stress_pct) or cost_stress_pct < 0:
             raise ValueError("cost_stress_pct must be finite and non-negative")
+        if workers is not None and workers < 1:
+            raise ValueError("workers must be positive")
         self.instrument = instrument.upper() if instrument else None
         self.timeframe_minutes = timeframe_minutes
         self.ledger = ledger or ExperimentLedger()
@@ -210,6 +308,8 @@ class PatternMiner:
         self.train_bars = train_bars
         self.test_bars = test_bars
         self.step_bars = step_bars
+        self.workers = workers
+        self.progress_callback = progress_callback
 
     def _spec(
         self,
@@ -237,12 +337,15 @@ class PatternMiner:
         *,
         validator: GateValidator | None = None,
         neighbor_results: Sequence[BacktestResult] = (),
+        workers: int | None = None,
+        progress_callback: Callable[[int, int], None] | None = None,
     ) -> MiningResult:
         source = tuple(candles)
         _validate_candles(source)
         instrument = _instrument(source, self.instrument)
         gate_validator = validator or self.validator
-        candidates: list[PatternCandidate] = []
+        callback = progress_callback or self.progress_callback
+        specs: list[tuple[PatternName, StrategySpec, float]] = []
         for name in PATTERN_NAMES:
             for direction in ("long", "short"):
                 for threshold in _thresholds(name, source):
@@ -252,65 +355,137 @@ class PatternMiner:
                     ):
                         continue
                     spec = self._spec(name, direction, threshold, instrument)
-                    result = run_backtest(
-                        spec,
+                    specs.append((name, spec, threshold))
+
+        worker_count = self.workers if workers is None else workers
+        if worker_count is None:
+            # Keep the miner's standalone API aligned with the runner's
+            # cgroup-aware worker cap without importing runner at module load.
+            from trader.lab.runner import cap_worker_count, read_memory_limit
+
+            worker_count = cap_worker_count(
+                cpu_count=os.cpu_count(),
+                memory_limit_bytes=read_memory_limit(),
+            )
+        work: dict[int, tuple[BacktestResult, BacktestResult, int]] = {}
+
+        # Regime and indicator series depend only on the bars, so compute them once
+        # here; forked workers then inherit them instead of rebuilding per spec.
+        shared_cache: IndicatorCache | None = None
+        if source and specs:
+            shared_cache = IndicatorCache.from_candles(source, specs[0][1].timeframe_minutes)
+            if shared_cache.bars:
+                shared_cache.volatility()
+                shared_cache.trend()
+                for _, spec, _ in specs:
+                    for condition in spec.entry_conditions:
+                        shared_cache.get(condition.indicator, condition.period)
+                        if condition.threshold_indicator is not None:
+                            shared_cache.get(
+                                condition.threshold_indicator,
+                                condition.threshold_period,
+                                condition.threshold_lookback,
+                            )
+
+        def report(done: int) -> None:
+            if callback is not None:
+                callback(done, len(specs))
+
+        if worker_count > 1 and len(specs) > 1:
+            try:
+                with ProcessPoolExecutor(
+                    max_workers=worker_count,
+                    mp_context=multiprocessing.get_context("fork" if os.name != "nt" else "spawn"),
+                    initializer=_init_mining_worker,
+                    initargs=(
                         source,
-                        cost_model=self.cost_model,
-                        train_bars=self.train_bars,
-                        test_bars=self.test_bars,
-                        step_bars=self.step_bars,
-                    )
-                    stress = run_backtest(
-                        spec,
-                        source,
-                        cost_model=self.cost_model,
-                        cost_stress_pct=self.cost_stress_pct,
-                        train_bars=self.train_bars,
-                        test_bars=self.test_bars,
-                        step_bars=self.step_bars,
-                    )
-                    metrics = dict(
-                        gate1_metrics(
-                            result,
-                            cost_stress=stress,
-                            neighbor_results=neighbor_results,
-                        )
-                    )
-                    metrics.update(
-                        {"pattern": name, "direction": direction, "threshold": threshold}
-                    )
-                    spec_hash = strategy_hash(spec.model_dump(mode="json"))
-                    self.ledger.append(
-                        ExperimentRecord(
-                            strategy_hash=spec_hash,
-                            parameters={
-                                "pattern": name,
-                                "direction": direction,
-                                "threshold": threshold,
-                            },
-                            data_start=source[0].ts_utc if source else datetime.now(UTC),
-                            data_end=source[-1].ts_utc if source else datetime.now(UTC),
-                            metrics=metrics,
-                            proposer=self.proposer,
-                        )
-                    )
-                    validation = (
-                        gate_validator(metrics, holdout_spec_hash=spec_hash)
-                        if gate_validator is not None
-                        else None
-                    )
-                    candidates.append(
-                        PatternCandidate(
-                            name=name,
-                            strategy=spec,
-                            hypotheses_tested=self.ledger.count(),
-                            signals=len(evaluate_entries(spec, source)) if source else 0,
-                            strategy_hash=spec_hash,
-                            validation=validation,
-                            backtest=result,
-                            metrics=metrics,
-                        )
-                    )
+                        self.cost_model,
+                        self.cost_stress_pct,
+                        self.train_bars,
+                        self.test_bars,
+                        self.step_bars,
+                        shared_cache,
+                    ),
+                ) as pool:
+                    futures = {
+                        pool.submit(_mine_one_worker, (index, spec)): index
+                        for index, (_, spec, _) in enumerate(specs)
+                    }
+                    completed = 0
+                    for future in as_completed(futures):
+                        index, result, stress, signals = future.result()
+                        work[index] = (result, stress, signals)
+                        completed += 1
+                        report(completed)
+            except Exception as exc:  # noqa: BLE001 - serial fallback keeps results identical
+                # A worker failure must not change candidate ordering or make
+                # the offline miner unusable on platforms without fork. Say so
+                # loudly: the serial path is many times slower.
+                LOGGER.warning(
+                    "parallel mining failed (%s); falling back to serial for %d specs",
+                    type(exc).__name__,
+                    len(specs),
+                )
+                work.clear()
+
+        if len(work) != len(specs):
+            work.clear()
+            for index, (_, spec, _) in enumerate(specs):
+                work[index] = _mine_one(
+                    spec,
+                    source,
+                    self.cost_model,
+                    self.cost_stress_pct,
+                    self.train_bars,
+                    self.test_bars,
+                    self.step_bars,
+                    shared_cache,
+                )
+                report(index + 1)
+
+        candidates: list[PatternCandidate] = []
+        for index, (name, spec, threshold) in enumerate(specs):
+            result, stress, signal_count = work[index]
+            metrics = dict(
+                gate1_metrics(
+                    result,
+                    cost_stress=stress,
+                    neighbor_results=neighbor_results,
+                )
+            )
+            metrics.update({"pattern": name, "direction": spec.direction, "threshold": threshold})
+            spec_hash = strategy_hash(spec.model_dump(mode="json"))
+            self.ledger.append(
+                ExperimentRecord(
+                    strategy_hash=spec_hash,
+                    parameters={
+                        "pattern": name,
+                        "direction": spec.direction,
+                        "threshold": threshold,
+                    },
+                    data_start=source[0].ts_utc if source else datetime.now(UTC),
+                    data_end=source[-1].ts_utc if source else datetime.now(UTC),
+                    metrics=metrics,
+                    proposer=self.proposer,
+                )
+            )
+            validation = (
+                gate_validator(metrics, holdout_spec_hash=spec_hash)
+                if gate_validator is not None
+                else None
+            )
+            candidates.append(
+                PatternCandidate(
+                    name=name,
+                    strategy=spec,
+                    hypotheses_tested=self.ledger.count(),
+                    signals=signal_count,
+                    strategy_hash=spec_hash,
+                    validation=validation,
+                    backtest=result,
+                    metrics=metrics,
+                )
+            )
         total = self.ledger.count()
         normalized = tuple(
             PatternCandidate(
@@ -336,8 +511,16 @@ def mine_patterns(
     instrument: str | None = None,
     ledger: ExperimentLedgerProtocol | None = None,
     validator: GateValidator | None = None,
+    workers: int | None = 1,
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> MiningResult:
-    return PatternMiner(instrument=instrument, ledger=ledger, validator=validator).scan(candles)
+    return PatternMiner(
+        instrument=instrument,
+        ledger=ledger,
+        validator=validator,
+        workers=workers,
+        progress_callback=progress_callback,
+    ).scan(candles)
 
 
 __all__ = [
