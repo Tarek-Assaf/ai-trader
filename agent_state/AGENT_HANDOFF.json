@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 262,
+  "turn": "claude",
+  "revision": 263,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -3599,10 +3599,15 @@
         "git diff --check: passed",
         "Pod small run: results.json 49,934 bytes; 80 attempts (40 fail, 40 skipped); 0 survivors; 2 coverage rows; progress.json absent.",
         "T-114 B-009 fix: scripts/lab_run.py defaults --progress to /workspace/state/lab/progress.json when omitted",
-        "Pod results breakdown: 80 attempts (40 fail, 40 skipped), 0 survivors; 40 gate failures had zero trades, zero OOS trades, zero walk-forward windows/validation periods, OOS PF 0.0 and walk-forward share 0.0; 40 skipped duplicate_strategy_hash; read-only experiment_ledger count 0"
+        "Pod results breakdown: 80 attempts (40 fail, 40 skipped), 0 survivors; 40 gate failures had zero trades, zero OOS trades, zero walk-forward windows/validation periods, OOS PF 0.0 and walk-forward share 0.0; 40 skipped duplicate_strategy_hash; read-only experiment_ledger count 0",
+        "Read-only Pod zero-trade diagnostic: results.json coverage rows were NSXUSD (first 2010-11-14T23:01:00Z, last 2026-09-25T00:59:00Z, months 191, gaps 0, QA flags conflicting_duplicates/gaps) and XAUUSD (first 2009-03-15T22:00:00Z, last 2026-09-25T00:59:00Z, months 211, gaps 0, QA flags conflicting_duplicates/gaps).",
+        "Read-only Pod lake/cache inspection: source lake has 1m parquet files (191 NSXUSD files / 5,285,568 rows; 211 XAUUSD files / 6,140,217 rows). Existing 5m cache (holdout months excluded) has NSXUSD 974,951 rows through 2026-06-30T23:55:00Z and XAUUSD 1,188,948 rows through 2026-06-30T23:55:00Z. With the configured 3-month sealed holdout and max_training_years=6, cutoff is 2020-07-01T00:00:00Z; cache rows at/after cutoff are NSXUSD 401,170 (80/20 train/test 320,936/80,234) and XAUUSD 415,509 (80/20 train/test 332,407/83,102).",
+        "Read-only source inspection: load_histdata_columns/load_histdata_candles resamples when timeframe != 1; backtest.py also calls resample_ohlc(source, spec.timeframe) before evaluate_entries, so a 5m loader output is resampled a second time by run_backtest.",
+        "The requested full 20-seed entry-signal count script was attempted read-only against the cached 5m series but stalled under the Pod resource envelope before producing counts; it was stopped/reconnected without starting a lab run. Existing results still show all 40 Gate-1 attempts had trades=0 and OOS trades=0.",
+        "Owner-requested Pod health snapshot after stopping the diagnostic: /sys/fs/cgroup/memory.current=791941120 bytes (~755 MiB); ps top CPU was trader workers 2.4% and 0.2%, Redis 0.2%, API 0.1%, with no lab_run process present."
       ],
-      "completion_note": "Implemented T-114 memory-safe columnar loading, read-only numeric arrays, cgroup worker caps, cross-process run locking, peak RSS progress evidence, timestamped phase counts, cache invalidation, bounded years, and indicator reuse. Fixed B-009 by making scripts/lab_run.py write progress.json by default for direct CLI runs. Focused tests pass; the Pod result breakdown and read-only ledger count are recorded for Claude review. No secrets, broker orders or destructive actions were used.",
-      "review_notes": "B-009 fix is ready for Claude review: omitting --progress now writes /workspace/state/lab/progress.json. Pod results were 40 Gate 1 failures (zero trades/OOS trades/windows/periods, OOS PF 0.0, walk-forward share 0.0) and 40 duplicate-hash skips; the read-only Postgres experiment_ledger count was 0. No gates were changed."
+      "completion_note": "Implemented T-114 memory-safe columnar loading, read-only numeric arrays, cgroup worker caps, cross-process run locking, peak RSS progress evidence, timestamped phase counts, cache invalidation, bounded years, and indicator reuse. Fixed B-009 by making scripts/lab_run.py write progress.json by default for direct CLI runs. Focused tests pass; the Pod result breakdown and read-only ledger count are recorded for Claude review. No secrets, broker orders or destructive actions were used. Read-only zero-trade diagnostic recorded: coverage and lake/cache bounds, 2020-07-01 cutoff, 80/20 lengths, 1m source plus second 5m resampling in backtest. The 20-seed signal-count script stalled under the Pod resource envelope and was stopped; no new lab run was started.",
+      "review_notes": "B-009 fix is ready for Claude review: omitting --progress now writes /workspace/state/lab/progress.json. Pod results were 40 Gate 1 failures (zero trades/OOS trades/windows/periods, OOS PF 0.0, walk-forward share 0.0) and 40 duplicate-hash skips; the read-only Postgres experiment_ledger count was 0. No gates were changed. Zero-trade diagnostic confirms usable 1m source data and a 5m cache with 2020-07-01 cutoff; run_backtest resamples 5m output again. Signal-count script stalled under current Pod resources, so no seed-count claim is made."
     }
   ],
   "decisions": [
@@ -11369,6 +11374,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Zero trades, zero OOS trades, zero windows on every attempt means no usable bars or no signals reached the backtest; this is not a strategy-quality result. Codex, read-only on the Pod, no new lab run: (1) print the 2 coverage rows (rows, first and last timestamp, QA flags) from results.json; (2) with a short script, for NAS100 and Gold at 5m, report candles loaded, first and last ts, the cutoff used for max_training_years, train and test lengths, and the number of entry signals each of the 20 seed ideas produces on the train slice; (3) report whether the lake files are 1m or already 5m and whether load_histdata_candles(timeframe=5) output is resampled a second time in run_backtest. Put results in a handoff note, no gate changes, then hand the turn to Claude."
+    },
+    {
+      "revision": 263,
+      "ts": "2026-10-09T10:03:22Z",
+      "agent": "codex",
+      "action": "record_t114_zero_trade_diagnostic",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Read-only Pod zero-trade diagnostic recorded coverage, 1m lake and 5m cache bounds, max_training_years cutoff, train/test lengths, cgroup memory/CPU snapshot, and the double-resampling path. The 20-seed entry-count script stalled under the current resource envelope and was stopped; no new lab run, gate change, broker call or order. Handing turn to Claude."
     }
   ],
   "project_summary": "T-114 merged and Pod small run done (0 survivors). All 40 Gate 1 failures had zero trades and zero walk-forward windows, which points to a data or signal problem rather than weak strategies. Diagnosing before any full run."
