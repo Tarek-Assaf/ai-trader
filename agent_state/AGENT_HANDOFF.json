@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 260,
+  "turn": "claude",
+  "revision": 261,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-060, T-112 and T-113 done. T-114 small Pod run completed with 80 attempts and no survivors, but progress.json was absent; investigate B-009 before the full run. T-017/T-044 still wait on recorder data.",
+    "summary": "T-060, T-112 and T-113 done. T-114 progress default fix is implemented and verified; the owner Pod result breakdown is recorded. T-017/T-044 still wait on recorder data.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3597,10 +3597,12 @@
         "mypy src/trader/lab scripts/lab_run.py scripts/lab_data_check.py: passed",
         "python -m compileall -q src scripts tests: passed",
         "git diff --check: passed",
-        "Pod small run: results.json 49,934 bytes; 80 attempts (40 fail, 40 skipped); 0 survivors; 2 coverage rows; progress.json absent."
+        "Pod small run: results.json 49,934 bytes; 80 attempts (40 fail, 40 skipped); 0 survivors; 2 coverage rows; progress.json absent.",
+        "T-114 B-009 fix: scripts/lab_run.py defaults --progress to /workspace/state/lab/progress.json when omitted",
+        "Pod results breakdown: 80 attempts (40 fail, 40 skipped), 0 survivors; 40 gate failures had zero trades, zero OOS trades, zero walk-forward windows/validation periods, OOS PF 0.0 and walk-forward share 0.0; 40 skipped duplicate_strategy_hash; read-only experiment_ledger count 0"
       ],
-      "completion_note": "Implemented T-114 memory-safe columnar loading, read-only numeric arrays, cgroup worker caps, cross-process run locking, peak RSS progress evidence, timestamped phase counts, cache invalidation, bounded years, and indicator reuse. Owner-authorized Pod small run completed with results.json but no progress.json; full-run visibility remains blocked by B-009.",
-      "review_notes": "Small Pod run completed; Claude should investigate the missing progress.json before the full run."
+      "completion_note": "Implemented T-114 memory-safe columnar loading, read-only numeric arrays, cgroup worker caps, cross-process run locking, peak RSS progress evidence, timestamped phase counts, cache invalidation, bounded years, and indicator reuse. Fixed B-009 by making scripts/lab_run.py write progress.json by default for direct CLI runs. Focused tests pass; the Pod result breakdown and read-only ledger count are recorded for Claude review. No secrets, broker orders or destructive actions were used.",
+      "review_notes": "B-009 fix is ready for Claude review: omitting --progress now writes /workspace/state/lab/progress.json. Pod results were 40 Gate 1 failures (zero trades/OOS trades/windows/periods, OOS PF 0.0, walk-forward share 0.0) and 40 duplicate-hash skips; the read-only Postgres experiment_ledger count was 0. No gates were changed."
     }
   ],
   "decisions": [
@@ -6572,6 +6574,17 @@
       "validated_by": "codex",
       "date": "2026-10-09",
       "reverify_if": "lab runner or Pod image changes"
+    },
+    {
+      "id": "V-268",
+      "subject": "T-114 direct-CLI progress default and Pod result breakdown",
+      "method": "Ran tests/unit/test_lab_runner.py and inspected the focused scripts/lab_run.py diff; read the owner Pod results.json and queried the experiment_ledger table read-only.",
+      "result": "pass",
+      "evidence": "20 lab-runner tests passed. scripts/lab_run.py now defaults --progress to /workspace/state/lab/progress.json. Pod run 20261008T231426Z: 80 attempts, 40 fail, 40 skipped, 0 survivors; gate failures reported zero trades/OOS trades/walk-forward windows/validation periods, OOS PF 0.0 and walk-forward share 0.0; experiment_ledger count 0.",
+      "review_notes": "B-009 is resolved without changing Strategy Lab gates or starting another run.",
+      "validated_by": "codex",
+      "date": "2026-10-09",
+      "reverify_if": "scripts/lab_run.py or lab runner progress handling changes"
     }
   ],
   "blockers": [
@@ -11329,7 +11342,21 @@
         "scripts/lab_run.py"
       ],
       "summary": "B-009 cause: CLI wrote progress.json only with --progress; now defaults to /workspace/state/lab/progress.json. Small run had 0 survivors (40 fail, 40 skipped as duplicate_strategy_hash from earlier ledger entries). Codex: from the Pod's results.json, report fail reasons per attempt (gate and metric that failed, e.g. trades, expectancy, drawdown) in a handoff note, and the ledger count, so Claude can decide how to widen the search. No lowering gates. Turn to codex."
+    },
+    {
+      "revision": 261,
+      "ts": "2026-10-09T04:44:20.377499Z",
+      "agent": "codex",
+      "action": "complete_t114_progress_default_b009",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_run.py"
+      ],
+      "summary": "Fixed B-009 by defaulting direct CLI runs to /workspace/state/lab/progress.json. Ran 20 focused lab-runner tests. Read the Pod results breakdown: 40 Gate 1 failures with zero trades/OOS trades/windows/periods, OOS PF 0.0 and walk-forward share 0.0; 40 duplicate-hash skips; 0 survivors; read-only experiment_ledger count 0. No gates changed; Codex did not start a second run. Handing turn to Claude."
     }
   ],
-  "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence is recorded. T-112 and T-113 are merged with a 3-month holdout. T-114 is merged; the owner-authorized small Pod run produced results.json but no progress.json, so Claude should investigate B-009 before the full run. T-017/T-044 still wait on recorder data."
+  "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence is recorded. T-112 and T-113 are merged with a 3-month holdout. T-114 speed and visibility plus the direct-CLI progress default fix are complete; Pod result failure groups and read-only ledger count are recorded for Claude review. T-017/T-044 still wait on recorder data."
 }
