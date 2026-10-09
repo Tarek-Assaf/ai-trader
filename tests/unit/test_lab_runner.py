@@ -394,6 +394,22 @@ def test_progress_records_phases_and_counts(tmp_path, monkeypatch) -> None:
     assert payload["ideas_done"] == payload["ideas_total"] == 0
     assert "peak_rss_bytes" in payload
     assert payload["workers"] >= 1
+    assert {"rss_bytes", "worker_pss_bytes"} <= payload.keys()
+    assert {"cgroup_anon_bytes", "memory_current_bytes"} <= payload.keys()
+    assert "memory_diagnostics" in payload
+
+
+def test_process_memory_diagnostics_returns_non_negative_integers() -> None:
+    from trader.lab.runner import process_memory_diagnostics
+
+    values = process_memory_diagnostics()
+    assert set(values) == {
+        "rss_bytes",
+        "worker_pss_bytes",
+        "cgroup_anon_bytes",
+        "memory_current_bytes",
+    }
+    assert all(isinstance(item, int) and item >= 0 for item in values.values())
 
 
 def test_max_training_years_is_configured(tmp_path) -> None:
