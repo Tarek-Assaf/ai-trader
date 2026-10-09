@@ -1089,7 +1089,12 @@ class LabRunner:
             with progress_lock:
                 peak_rss = max(peak_rss, process_rss_bytes())
                 diagnostics = process_memory_diagnostics()
-                phase_memory[current_phase] = diagnostics
+                # Keep the per-phase maximum, not the last sample, so a spike
+                # between heartbeats is still visible after the phase ends.
+                previous = phase_memory.get(current_phase, {})
+                phase_memory[current_phase] = {
+                    key: max(value, previous.get(key, 0)) for key, value in diagnostics.items()
+                }
                 target = Path(progress_path)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 now = datetime.now(UTC).isoformat()
