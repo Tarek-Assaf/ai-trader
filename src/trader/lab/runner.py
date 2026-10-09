@@ -244,7 +244,9 @@ class RunFileLock:
                     os.kill(pid, 0)
                 except ProcessLookupError:
                     stale = True
-                    LOGGER.warning("reclaiming dead Strategy Lab lock pid=%s path=%s", pid, self.path)
+                    LOGGER.warning(
+                        "reclaiming dead Strategy Lab lock pid=%s path=%s", pid, self.path
+                    )
                 except PermissionError:
                     # The process exists but belongs to another user; fail safe.
                     pass
