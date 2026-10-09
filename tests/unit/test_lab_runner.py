@@ -69,6 +69,11 @@ def test_worker_cap_respects_small_fake_memory_limit() -> None:
     assert cap_worker_count(2, cpu_count=8, memory_limit_bytes=16 * 1024**3) == 2
 
 
+def test_worker_cap_never_exceeds_four_on_large_pod() -> None:
+    assert cap_worker_count(None, cpu_count=12, memory_limit_bytes=16 * 1024**3) == 4
+    assert cap_worker_count(10, cpu_count=64, memory_limit_bytes=None) == 4
+
+
 def test_run_file_lock_refuses_second_owner(tmp_path) -> None:
     path = tmp_path / "run.lock"
     first = RunFileLock(path)

@@ -184,15 +184,19 @@ def worker_cap(
     cpu_count: int | None = None,
     memory_limit_bytes: int | None = None,
     per_worker_bytes: int = 700 * 1024**2,
-    memory_fraction: float = 0.5,
+    memory_fraction: float = 0.35,
+    max_workers: int = 4,
 ) -> int:
-    """Bound workers to CPU-2 and half the cgroup memory budget.
+    """Bound workers to CPU-2, 35% of the cgroup memory budget and ``max_workers``.
+
+    The Pod also runs the recorder, API, Redis and Postgres, so the lab may not
+    take half the memory: a seeds-only run with 10 workers reached 9.2 GB.
 
     ``per_worker_bytes`` is intentionally conservative: it is a sizing limit,
     not a measurement or a promise that a worker may exceed the cgroup cap.
     """
     cpus = cpu_count if cpu_count is not None else (os.cpu_count() or 1)
-    cpu_limit = max(1, cpus - 2)
+    cpu_limit = max(1, min(cpus - 2, max_workers))
     if memory_limit_bytes is None:
         return cpu_limit
     if per_worker_bytes <= 0 or not 0 < memory_fraction <= 1:
