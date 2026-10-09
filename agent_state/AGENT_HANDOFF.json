@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 283,
+  "turn": "claude",
+  "revision": 284,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-118 is implemented on codex/t118-one-log from main revision 280 and handed to Claude for review. Its single combined log entry records the diagnostics work; no Pod run was performed. After merge and redeploy, one seeds-only run may use the owner's 12 GB real-memory stop before T-117.",
+    "summary": "T-118 is merged and its one approved seeds-only follow-up run on image bc1f9354ae152784f3ed9f15989e17b23fb1dd53 was stopped when cgroup anon exceeded 12 GB; per-phase diagnostics and timings are recorded, no new results were produced, and T-117 follows using the measurements.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3753,10 +3753,15 @@
         "tests/unit/test_lab_runner.py: progress payload assertions cover rss_bytes, worker_pss_bytes, cgroup_anon_bytes, memory_current_bytes and memory_diagnostics; a direct diagnostics-shape test checks non-negative integer counters.",
         "python agent_state/validate_handoff.py: structural validation passed; python -m compileall -q src/trader/lab tests/unit/test_lab_runner.py passed; git diff --check passed.",
         "ruff, mypy, pytest and make are unavailable on this Windows desktop (commands missing or Python reports No module named pytest). CI should run the full suite.",
-        "No Pod was touched for T-118. Worker cap remains 4; gates, holdout access and trading defaults are unchanged."
+        "No Pod was touched for T-118. Worker cap remains 4; gates, holdout access and trading defaults are unchanged.",
+        "Owner-approved one seeds-only run after T-118 redeploy: image SHA bc1f9354ae152784f3ed9f15989e17b23fb1dd53; run_id=20261009T220740Z; worker cap 4; run.lock was absent before launch; exactly one detached command was started with default six-year window, lock and progress paths.",
+        "memory_diagnostics per phase (main RSS bytes / worker PSS-or-RSS bytes / cgroup anon bytes): loading 43417600 / 0 / 248659968; loading:NSXUSD:5m 283467776 / 0 / 465620992; loading:XAUUSD:5m 416788480 / 0 / 592842752; mining:NSXUSD:5m:0/20 364953600 / 0 / 542834688; mining:XAUUSD:5m:0/20 546643968 / 0 / 724525056; evaluating:0/20:NSXUSD:5m 8706011136 / 3521315840 / 10206457856; evaluating:0/20:XAUUSD:5m 6616879104 / 9258411008 / 15063203840; evaluating:20/20:NSXUSD:5m 5424943104 / 0 / 5596471296; holdout:NSXUSD:5m 5424943104 / 0 / 5596471296.",
+        "Phase timings seconds: loading 4.214478180743754; loading:NSXUSD:5m 33.667947807349265; loading:XAUUSD:5m 42.58581863436848; mining:NSXUSD:5m:0/20 0.023614875972270966; mining:XAUUSD:5m:0/20 0.062430793419480324; evaluating:0/20:NSXUSD:5m 250.98033587168902; evaluating:20/20:NSXUSD:5m 0.009853338822722435; holdout:NSXUSD:5m 0.034119442105293274.",
+        "Stop reason: cgroup_anon_bytes reached 15063203840 bytes (about 14.03 GiB), over the approved 12 GB real-memory limit; the parent PID 1465 was confirmed dead after the threshold/OOM event, then only its four matching workers were terminated and the matching run.lock was removed after PID death. No lab process remained; recorder/API was not the stop reason and the stale-progress CPU rule and three-hour limit were not reached.",
+        "results.json was unchanged (49934 bytes, mtime 2026-10-08 23:33:59); the run produced no new results, no Gate 1 table and no passed strategies. This was seeds-only, so pattern mining is untested. No broker/order, gate, secret, holdout or other Pod state was touched."
       ],
-      "completion_note": "Codex implemented per-phase memory diagnostics (rev 281); Claude added a unit test for process_memory_diagnostics. Merged after CI green. Worker cap stays 4.",
-      "review_notes": "Ready for Claude review and merge. CI must run the available lint, typecheck and pytest suite; no Pod run is authorized until this task merges and the owner redeploys the new image."
+      "completion_note": "Codex implemented per-phase memory diagnostics (rev 281); Claude added a unit test for process_memory_diagnostics. Merged after CI green. Worker cap stays 4. One approved seeds-only run on the redeployed image stopped at the 12 GB real-memory safety limit without new results; T-117 follows using the measurements.",
+      "review_notes": "T-118 is merged. The one approved seeds-only run on the redeployed image reached evaluating:0/20:XAUUSD:5m and exceeded the 12 GB cgroup-anon safety limit before writing new results; use these measurements for T-117."
     },
     {
       "id": "T-117",
@@ -12036,6 +12041,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner decisions in chat: 23:48 Riyadh approved diagnostics first, then ONE seeds-only run with a 12 GB real-memory stop; 01:06 Riyadh reported the Pod is redeployed with the T-118 code (image ghcr.io/tarek-assaf/ai-trader:bc1f9354ae152784f3ed9f15989e17b23fb1dd53) and process_memory_diagnostics works; 01:17 said Codex could not record findings because the turn was human. Turn handed to Codex. Codex: verify the running image SHA and that run.lock is absent, start exactly ONE detached run: lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force (worker cap 4). Stop only that process and its workers if cgroup_anon_bytes exceeds 12 GB, the recorder or API stops responding, updated_at is stale 15 minutes with flat CPU, or 3 hours pass; remove the lock only after the PID is dead. Record in ONE log entry: image SHA, memory_diagnostics per phase, timings per stage, stop reason or results.json outcome and any strategies that passed. No gate changes, no secrets or Pod URL. Then hand the turn to Claude. T-117 (load only the training window) follows using the measurements."
+    },
+    {
+      "revision": 284,
+      "ts": "2026-10-09T22:18:00Z",
+      "agent": "codex",
+      "action": "record_t118_seeds_run_12gb_stop",
+      "task_ids": [
+        "T-118"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Recorded the one owner-approved seeds-only run after T-118 redeploy on image SHA bc1f9354ae152784f3ed9f15989e17b23fb1dd53 (worker cap 4; run.lock absent before launch). Per-phase main RSS, worker PSS/RSS and cgroup anon diagnostics plus stage timings are recorded. The run reached evaluating:0/20:XAUUSD:5m and was stopped after cgroup_anon_bytes reached 15063203840 bytes, above the 12 GB real-memory limit; PID 1465 was dead before its four matching workers and lock were cleaned up. results.json remained stale with no new results or passed strategies; seeds-only pattern mining is untested. Handing turn to Claude; T-117 follows using these measurements."
     }
   ],
   "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."
