@@ -225,6 +225,79 @@ def process_rss_bytes() -> int:
         return 0
 
 
+def _proc_stat(pid: int) -> tuple[int, int] | None:
+    """Return (parent pid, resident bytes) from Linux /proc, if available."""
+    try:
+        fields = Path(f"/proc/{pid}/stat").read_text(encoding="ascii").rsplit(")", 1)[1].split()
+        page_size = os.sysconf("SC_PAGE_SIZE")
+        return int(fields[1]), int(fields[21]) * page_size
+    except (OSError, ValueError, IndexError, TypeError):
+        return None
+
+
+def _proc_pss(pid: int) -> int:
+    """Return proportional set size for a process, falling back to zero."""
+    try:
+        for line in Path(f"/proc/{pid}/smaps_rollup").read_text(encoding="ascii").splitlines():
+            if line.startswith("Pss:"):
+                return int(line.split()[1]) * 1024
+    except (OSError, ValueError, IndexError):
+        pass
+    return 0
+
+
+def _descendant_pids(root_pid: int) -> tuple[int, ...]:
+    children: dict[int, list[int]] = {}
+    for entry in Path("/proc").glob("[0-9]*"):
+        try:
+            pid = int(entry.name)
+        except ValueError:
+            continue
+        stat = _proc_stat(pid)
+        if stat is not None:
+            children.setdefault(stat[0], []).append(pid)
+    result: list[int] = []
+    pending = list(children.get(root_pid, ()))
+    while pending:
+        pid = pending.pop()
+        result.append(pid)
+        pending.extend(children.get(pid, ()))
+    return tuple(result)
+
+
+def _cgroup_memory_stat_anon() -> int:
+    try:
+        for line in Path("/sys/fs/cgroup/memory.stat").read_text(encoding="ascii").splitlines():
+            if line.startswith("anon "):
+                return int(line.split()[1])
+    except (OSError, ValueError, IndexError):
+        pass
+    return 0
+
+
+def _cgroup_memory_current() -> int:
+    try:
+        return int(Path("/sys/fs/cgroup/memory.current").read_text(encoding="ascii").strip())
+    except (OSError, ValueError):
+        return 0
+
+
+def process_memory_diagnostics() -> dict[str, int]:
+    """Capture main RSS, descendant worker memory and cgroup memory counters."""
+    pid = os.getpid()
+    descendants = _descendant_pids(pid)
+    main_rss = (_proc_stat(pid) or (0, 0))[1] or process_rss_bytes()
+    worker_pss = sum(_proc_pss(child) for child in descendants)
+    if worker_pss == 0:
+        worker_pss = sum((_proc_stat(child) or (0, 0))[1] for child in descendants)
+    return {
+        "rss_bytes": int(main_rss),
+        "worker_pss_bytes": int(worker_pss),
+        "cgroup_anon_bytes": _cgroup_memory_stat_anon(),
+        "memory_current_bytes": _cgroup_memory_current(),
+    }
+
+
 class RunFileLock:
     """Small cross-process lock implemented with atomic file creation."""
 
@@ -1003,6 +1076,7 @@ class LabRunner:
         total_ideas = 0
         phase_started = time.monotonic()
         phase_timings: dict[str, float] = {}
+        phase_memory: dict[str, dict[str, int]] = {}
         current_phase = "loading"
         progress_lock = threading.RLock()
         heartbeat_stop = threading.Event()
@@ -1014,6 +1088,11 @@ class LabRunner:
                 return
             with progress_lock:
                 peak_rss = max(peak_rss, process_rss_bytes())
+                diagnostics = process_memory_diagnostics()
+                previous = phase_memory.get(current_phase, {})
+                phase_memory[current_phase] = {
+                    key: max(value, previous.get(key, 0)) for key, value in diagnostics.items()
+                }
                 target = Path(progress_path)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 now = datetime.now(UTC).isoformat()
@@ -1032,6 +1111,11 @@ class LabRunner:
                         "peak_rss_bytes": peak_rss,
                         "memory_limit_bytes": memory_limit,
                         "workers": workers,
+                        "rss_bytes": diagnostics["rss_bytes"],
+                        "worker_pss_bytes": diagnostics["worker_pss_bytes"],
+                        "cgroup_anon_bytes": diagnostics["cgroup_anon_bytes"],
+                        "memory_current_bytes": diagnostics["memory_current_bytes"],
+                        "memory_diagnostics": dict(phase_memory),
                     },
                     sort_keys=True,
                 )
