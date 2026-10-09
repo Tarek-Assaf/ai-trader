@@ -490,14 +490,14 @@ class ValidationPipeline:
             neighbor_specs = candidate_eval.neighbor_specs
             neighbor_metrics = candidate_eval.neighbor_metrics
             preliminary = dict(candidate_eval.preliminary_metrics)
-            for neighbor, metrics in zip(neighbor_specs, neighbor_metrics, strict=True):
+            for neighbor, neighbor_row in zip(neighbor_specs, neighbor_metrics, strict=True):
                 self.ledger.append(
                     ExperimentRecord(
                         strategy_hash=strategy_hash(neighbor.model_dump(mode="json")),
                         parameters={"pipeline": "neighbor", "strategy": spec_hash},
                         data_start=candles[0].ts_utc,
                         data_end=candles[-1].ts_utc,
-                        metrics=dict(metrics),
+                        metrics=dict(neighbor_row),
                         proposer="pipeline_neighbor",
                     )
                 )
