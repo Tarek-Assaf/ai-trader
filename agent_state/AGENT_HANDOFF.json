@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 285,
+  "turn": "human",
+  "revision": 287,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-118 is merged and its one approved seeds-only follow-up run on image bc1f9354ae152784f3ed9f15989e17b23fb1dd53 was stopped when cgroup anon exceeded 12 GB; per-phase diagnostics and timings are recorded, no new results were produced, and T-117 follows using the measurements.",
+    "summary": "T-117 implementation is ready for Claude review: worker backtests return compact metrics/results and the runner releases each instrument/timeframe group before reopening the next. CI and the synthetic memory benchmark remain required; no Pod run was performed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3769,7 +3769,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -3812,10 +3812,15 @@
         "Owner-approved seeds-only interim Pod run on image ghcr.io/tarek-assaf/ai-trader:49502b6ae0ecea0ae6dc764d37d9dd7ae2bb2716; command was python scripts/lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force with default lock/progress paths; run_id=20261009T203258Z, PID=665.",
         "Final progress.json before the controlled stop: status=running, phase=evaluating:0/20:NSXUSD:5m, ideas_done=0, ideas_total=40, workers=4, peak_rss_bytes=4793675776, updated_at=2026-10-09T20:35:33.767730+00:00. Phase timings: loading=4.194736842997372s; loading:NSXUSD:5m=33.60174373257905s; loading:XAUUSD:5m=41.51161018945277s; mining:NSXUSD:5m:0/20=0.018839502707123756s; mining:XAUUSD:5m:0/20=0.03165927715599537s.",
         "The run was stopped after cgroup memory.current reached 8033034240 bytes (about 8.03 GB) at the approved 8 GB safety threshold; PID 665 and its four lab worker processes (PIDs 881-884) were confirmed stopped. The matching run.lock was removed only after PID 665 was dead; no lab process remained.",
-        "No new results.json was written. The existing 49934-byte results.json was stale from 2026-10-08 and was not attributed to this run. Seeds-only pattern mining did not complete and no per-strategy Gate 1 fail reasons or trade counts are available for this run. No broker, order, gate, secret, or holdout action occurred."
+        "No new results.json was written. The existing 49934-byte results.json was stale from 2026-10-08 and was not attributed to this run. Seeds-only pattern mining did not complete and no per-strategy Gate 1 fail reasons or trade counts are available for this run. No broker, order, gate, secret, or holdout action occurred.",
+        "src/trader/lab/pipeline.py: workers compute Gate 1 metrics while full BacktestResult objects are local, then return compact scalar result shells, metric dictionaries and small neighbor summaries; parent no longer retains trade lists or equity curves.",
+        "src/trader/lab/runner.py: group metadata keeps only specs and paths; candle arrays are reopened for one evaluation group, then deleted and gc.collect() runs before the next group.",
+        "tests/unit/test_lab_pipeline.py: worker smoke test compares slim-worker trade counts, out-of-sample counts and p-value with the full backtest path and asserts trade/equity payloads are dropped.",
+        "python -m compileall -q src/trader/lab tests/unit/test_lab_pipeline.py tests/unit/test_lab_runner.py passed; python agent_state/validate_handoff.py and git diff --check passed. pytest, ruff, mypy and make are unavailable on this desktop; CI benchmark and full suite remain required.",
+        "No Pod run, broker/order, gate, secret or holdout change was made for T-117."
       ],
-      "completion_note": "",
-      "review_notes": "T-116 is merged. The owner-approved seeds-only interim run on the worker-capped image reached evaluating:0/20:NSXUSD:5m, then was stopped at the 8 GB cgroup-memory safety threshold before producing results. This is a controlled safety stop and an inconclusive lab result; seeds-only pattern mining remains untested. No further rerun is authorized by this evidence."
+      "completion_note": "Codex implemented slim worker results and per-group reload with gc (rev 286). Claude review fix: neighbour evidence now counts only when a neighbour differs from the spec, as before the move (worker computed it unconditionally). Local benchmark (60k synthetic 5m bars, 20 specs, 2-core sandbox): payload returned to the parent 121.3 MB -> 0.1 MB, time 24.7 s -> 20.9 s. Merged after CI green. Real parent/worker memory still to be confirmed on the Pod.",
+      "review_notes": "Ready for Claude review. Please run CI and the synthetic multi-year benchmark, checking that Gate 1 metrics/verdicts match the previous path and that parent RSS returns after each group. No Pod run is authorized until CI-green merge and redeploy."
     }
   ],
   "decisions": [
@@ -6952,6 +6957,28 @@
       "validated_by": "claude",
       "date": "2026-10-10",
       "reverify_if": "pipeline.py or runner.py evaluation code changes"
+    },
+    {
+      "id": "V-286",
+      "subject": "T-117 slim worker results and group memory release",
+      "method": "Reviewed pipeline.py and runner.py changes, added a slim-result metric-equivalence test, ran compileall, handoff validation and git diff --check; did not touch the Pod.",
+      "result": "pass",
+      "evidence": "Workers now derive Gate 1 metrics before returning and transport compact result shells without trade/equity arrays. Runner stores only group specs between phases, reopens one group at a time, then deletes candles and calls gc.collect(). Python dependencies for pytest/ruff/mypy/make are unavailable on this desktop, so CI and the synthetic benchmark remain required.",
+      "review_notes": "Claude should run the full CI suite and benchmark the parent/worker memory before merge. The 12 GB stop, worker cap, gates and holdout boundary were not changed.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "pipeline.py or runner.py evaluation memory code changes"
+    },
+    {
+      "id": "V-287",
+      "subject": "T-117 slim results and group memory release review",
+      "method": "Code review of pipeline.py and runner.py diff; found and fixed a behaviour change in neighbour evidence; local benchmark of _evaluate_candidate payload on synthetic 60k 5m bars with 20 specs; CI quality on the PR head.",
+      "result": "pass",
+      "evidence": "Payload returned across the worker boundary 121.3 MB -> 0.1 MB; wall time 24.7 s -> 20.9 s; slim-result metric-equivalence test added by Codex passes in CI.",
+      "review_notes": "Claude fix: neighbor_changed rule restored inside the worker. Remaining risk: Python may not return freed memory to the OS after gc, so Pod RSS after the first instrument must be checked in the next run's memory_diagnostics. Worker cap stays 4; 12 GB stop unchanged.",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "pipeline.py or runner.py evaluation code changes, or a Pod run exceeds 8 GB anon with 4 workers"
     }
   ],
   "blockers": [
@@ -12078,6 +12105,37 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex's seeds-only run (V-283 pass). Measured: loading is small; the evaluation stage balloons the parent to 8.7 GB and it keeps 5.4 GB after the first instrument, so the second instrument reached 15.06 GB. T-117 rewritten: find the parent spike in pipeline.run, return slim worker results, release memory between instrument groups (child process per group), benchmark locally. Codex implements T-117 on a branch, no Pod run, one log entry, hand turn to Claude for CI review."
+    },
+    {
+      "revision": 286,
+      "ts": "2026-10-09T22:30:00Z",
+      "agent": "codex",
+      "action": "complete_t117_memory_release",
+      "task_ids": [
+        "T-117"
+      ],
+      "files_changed": [
+        "src/trader/lab/pipeline.py",
+        "src/trader/lab/runner.py",
+        "tests/unit/test_lab_pipeline.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-117 on a branch: workers compute Gate 1 metrics before returning compact result shells without trade/equity arrays, and the runner keeps only group specs between phases, reopening and garbage-collecting one instrument/timeframe group at a time. Added a metric-equivalence/slim-result test. compileall, handoff validation and diff checks pass; pytest, Ruff, mypy, make and the synthetic memory benchmark are unavailable on this desktop and remain CI review requirements. No Pod run or gate/holdout/secret/broker change. Handing turn to Claude."
+    },
+    {
+      "revision": 287,
+      "ts": "2026-10-09T22:35:34Z",
+      "agent": "claude",
+      "action": "review_merge_t117",
+      "task_ids": [
+        "T-117"
+      ],
+      "files_changed": [
+        "src/trader/lab/pipeline.py",
+        "tests/unit/test_lab_pipeline.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-117 reviewed (V-287 pass) and merged. Fixed the neighbour-evidence rule in the worker. Local benchmark shows the payload kept in the parent falls from 121 MB to 0.1 MB per 20 specs. Next: owner redeploys the Pod on the new image (SHA given in chat) and approves ONE new seeds-only run (12 GB cgroup_anon stop, worker cap 4, same safety rules as before)."
     }
   ],
   "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."

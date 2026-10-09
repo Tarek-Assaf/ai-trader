@@ -63,12 +63,43 @@ class PipelineDecision:
 
 @dataclass(frozen=True, slots=True)
 class _CandidateEvaluation:
+    """Small, parent-safe candidate payload returned across the worker boundary.
+
+    Full backtest results contain one trade and equity-curve object per bar.
+    Keeping those in the parent for every candidate made the evaluation phase
+    retain several gigabytes.  Workers derive the gate metrics while the full
+    results are local, then return only scalar summaries and compact result
+    shells for the public decision object.
+    """
+
     result: BacktestResult
     oos_result: BacktestResult
     stress_result: BacktestResult
+    preliminary_metrics: Mapping[str, Any]
     neighbor_specs: tuple[StrategySpec, ...]
-    neighbor_results: tuple[BacktestResult, ...]
-    profitable_regimes: int
+    neighbor_metrics: tuple[Mapping[str, Any], ...]
+
+
+def _compact_result(result: BacktestResult) -> BacktestResult:
+    """Drop per-bar/trade payloads before a result crosses into the parent."""
+
+    return BacktestResult(
+        instrument=result.instrument,
+        direction=result.direction,
+        schema_version=result.schema_version,
+        trades=(),
+        equity_curve=(),
+        starting_equity=result.starting_equity,
+        ending_equity=result.ending_equity,
+        gross_pnl=result.gross_pnl,
+        total_costs=result.total_costs,
+        net_pnl=result.net_pnl,
+        max_drawdown=result.max_drawdown,
+        cost_model=result.cost_model,
+        cost_stress_pct=result.cost_stress_pct,
+        walk_forward=result.walk_forward,
+        holdout_accessed=result.holdout_accessed,
+    )
 
 
 _WORKER_CONTEXT: (
@@ -179,15 +210,25 @@ def _evaluate_candidate(
         )
         for neighbor in neighbor_specs
     )
+    # Neighbours only count as evidence when at least one differs from the spec
+    # (same rule the parent applied before metrics moved into the worker).
+    neighbor_changed = any(neighbor != spec for neighbor in neighbor_specs)
+    preliminary_metrics = gate1_metrics(
+        result,
+        out_of_sample=oos_result,
+        cost_stress=stress_result,
+        neighbor_results=neighbor_results if neighbor_changed else (),
+        profitable_regimes=_profitable_regimes(result),
+    )
     return (
         strategy_hash(spec.model_dump(mode="json")),
         _CandidateEvaluation(
-            result,
-            oos_result,
-            stress_result,
+            _compact_result(result),
+            _compact_result(oos_result),
+            _compact_result(stress_result),
+            preliminary_metrics,
             neighbor_specs,
-            neighbor_results,
-            _profitable_regimes(result),
+            tuple(gate1_metrics(neighbor) for neighbor in neighbor_results),
         ),
     )
 
@@ -446,27 +487,17 @@ class ValidationPipeline:
                 continue
             candidate_eval = evaluation_result
             result = candidate_eval.result
-            oos_result = candidate_eval.oos_result
-            stress_result = candidate_eval.stress_result
             neighbor_specs = candidate_eval.neighbor_specs
-            neighbor_results = candidate_eval.neighbor_results
-            neighbor_changed = any(neighbor != spec for neighbor in neighbor_specs)
-            profitable_regimes = candidate_eval.profitable_regimes
-            preliminary = gate1_metrics(
-                result,
-                out_of_sample=oos_result,
-                cost_stress=stress_result,
-                neighbor_results=neighbor_results if neighbor_changed else (),
-                profitable_regimes=profitable_regimes,
-            )
-            for neighbor, neighbor_result in zip(neighbor_specs, neighbor_results, strict=True):
+            neighbor_metrics = candidate_eval.neighbor_metrics
+            preliminary = dict(candidate_eval.preliminary_metrics)
+            for neighbor, neighbor_row in zip(neighbor_specs, neighbor_metrics, strict=True):
                 self.ledger.append(
                     ExperimentRecord(
                         strategy_hash=strategy_hash(neighbor.model_dump(mode="json")),
                         parameters={"pipeline": "neighbor", "strategy": spec_hash},
                         data_start=candles[0].ts_utc,
                         data_end=candles[-1].ts_utc,
-                        metrics=gate1_metrics(neighbor_result),
+                        metrics=dict(neighbor_row),
                         proposer="pipeline_neighbor",
                     )
                 )
@@ -525,14 +556,13 @@ class ValidationPipeline:
                     )
                 )
                 continue
-            metrics = gate1_metrics(
-                result,
-                out_of_sample=oos_result,
-                holdout=holdout_result,
-                cost_stress=stress_result,
-                neighbor_results=neighbor_results if neighbor_changed else (),
-                profitable_regimes=profitable_regimes,
-            )
+            # The worker already derived all metrics that need full trade
+            # lists.  Only the sealed holdout profit factor is added here;
+            # retaining the holdout result itself is compacted before return.
+            metrics = dict(preliminary)
+            metrics["holdout_profit_factor"] = gate1_metrics(result, holdout=holdout_result)[
+                "holdout_profit_factor"
+            ]
             self.ledger.append(
                 ExperimentRecord(
                     strategy_hash=spec_hash,
@@ -560,7 +590,13 @@ class ValidationPipeline:
                 )
             decisions.append(
                 PipelineDecision(
-                    spec, spec_hash, metrics, validation, result, holdout_result, promotion
+                    spec,
+                    spec_hash,
+                    metrics,
+                    validation,
+                    result,
+                    _compact_result(holdout_result),
+                    promotion,
                 )
             )
         return tuple(decisions)
