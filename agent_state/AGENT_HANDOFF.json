@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 281,
+  "turn": "human",
+  "revision": 282,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -3726,7 +3726,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -3755,7 +3755,7 @@
         "ruff, mypy, pytest and make are unavailable on this Windows desktop (commands missing or Python reports No module named pytest). CI should run the full suite.",
         "No Pod was touched for T-118. Worker cap remains 4; gates, holdout access and trading defaults are unchanged."
       ],
-      "completion_note": "Implemented T-118 on a branch from main revision 280 and combined its start and completion in one handoff log entry. The post-merge seeds-only run must use the 12 GB real-memory stop procedure and record per-phase diagnostics before T-117 refactoring.",
+      "completion_note": "Codex implemented per-phase memory diagnostics (rev 281); Claude added a unit test for process_memory_diagnostics. Merged after CI green. Worker cap stays 4.",
       "review_notes": "Ready for Claude review and merge. CI must run the available lint, typecheck and pytest suite; no Pod run is authorized until this task merges and the owner redeploys the new image."
     },
     {
@@ -6925,6 +6925,17 @@
       "validated_by": "codex",
       "date": "2026-10-09",
       "reverify_if": "T-118 diagnostics or worker-cap code changes, or CI reports a progress-schema or memory-measurement regression."
+    },
+    {
+      "id": "V-282",
+      "subject": "T-118 memory diagnostics review",
+      "method": "Code review of the runner.py diff, local call of process_memory_diagnostics (cgroup counters read 0 off-Pod as designed), ruff; CI quality on the PR head.",
+      "result": "pass",
+      "evidence": "progress.json has rss_bytes, worker_pss_bytes, cgroup_anon_bytes, memory_current_bytes and a per-phase maximum map memory_diagnostics. Unit tests cover keys and integer values.",
+      "review_notes": "Stop rule for the seeds-only run: cgroup_anon_bytes (includes workers) at 12 GB; memory_current_bytes is logged only because it includes reclaimable cache.",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "runner.py progress code changes"
     }
   ],
   "blockers": [
@@ -11997,6 +12008,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started and completed T-118 on a branch from main revision 280 as one combined action: added per-phase progress.json diagnostics for main RSS, worker PSS or RSS, cgroup memory.stat anon and memory.current with history; kept worker cap at 4; added tests; and ran handoff validation, compileall and diff checks. Ruff, mypy, pytest and make are unavailable on this desktop, so Claude should run CI. No Pod was touched. After merge and redeploy, one seeds-only run may use the approved 12 GB real-memory stop procedure. Handing turn to Claude; T-117 follows."
+    },
+    {
+      "revision": 282,
+      "ts": "2026-10-09T21:11:32Z",
+      "agent": "claude",
+      "action": "review_merge_t118",
+      "task_ids": [
+        "T-118"
+      ],
+      "files_changed": [
+        "tests/unit/test_lab_runner.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-118 reviewed (V-282 pass) and merged. Next: owner redeploys the Pod on the new image (SHA given in chat). Per the owner's chat decision at 23:48 Riyadh (diagnostics first, then one seeds-only run at 12 GB), Codex then runs exactly ONE detached lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force after the owner confirms the redeploy. Stop rules: cgroup_anon_bytes above 12 GB, recorder or API unresponsive, updated_at stale 15 minutes with flat CPU, or 3 hours. Touch only that process and its lock; record per-phase memory, timings and results. T-117 follows."
     }
   ],
   "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."
