@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 271,
+  "revision": 273,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-114 resample fix is merged. The owner-approved single rerun started on the reachable Pod but produced no progress update for 10 minutes; Codex stopped only that process, confirmed it was dead and removed its lock. No new results were written.",
+    "summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -86,7 +86,8 @@
         "T-112",
         "T-113",
         "T-114",
-        "T-115"
+        "T-115",
+        "T-116"
       ]
     },
     {
@@ -102,7 +103,8 @@
         "T-112",
         "T-113",
         "T-114",
-        "T-115"
+        "T-115",
+        "T-116"
       ]
     },
     {
@@ -124,7 +126,8 @@
         "T-112",
         "T-113",
         "T-114",
-        "T-115"
+        "T-115",
+        "T-116"
       ]
     },
     {
@@ -1008,7 +1011,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ظـزظــظ¤ش╪شظـزظ¤جظـزظــظ¤£ظـùظ¤ء┘ْ1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط¸ظ€ط²ط¸ظ€ظ€ط¸آ¤ط´â•ھط´ط¸ظ€ط²ط¸آ¤ط¬ط¸ظ€ط²ط¸ظ€ظ€ط¸آ¤آ£ط¸ظ€أ¹ط¸آ¤ط،â”کظ’1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -3626,7 +3629,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -3645,6 +3648,47 @@
       "deliverables": [
         "src/trader/lab/runner.py",
         "scripts/lab_run.py",
+        "tests/unit/test_lab_runner.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "T-115 implementation is merged on origin/main as commit 88206bb (PR #131): runner progress phases/heartbeat and dead-pid lock reclaim are present in the three scoped deliverables.",
+        "Local checks on the implementation branch: python -m compileall passed; git diff --check passed; focused pytest, Ruff, mypy and pydantic import smoke were unavailable on the desktop runtime.",
+        "Owner-approved Pod rerun PID 13555 ran from 2026-10-09T16:19:57Z for just over 3 hours at rising CPU; it was stopped at the handoff runtime limit, then confirmed dead and its matching lock removed."
+      ],
+      "completion_note": "Reviewed by Claude: progress.json is written before and during loading and mining, heartbeat every 30 s with pid/started_at/updated_at, dead or malformed run.lock is reclaimed and a live pid still refuses. Merged in PR #131 (main 88206bb) after Claude fixed import order, line length and formatting; CI green. Follow-ups carried into T-116."
+    },
+    {
+      "id": "T-116",
+      "title": "Strategy Lab pattern-mining speed: parallel specs, shared signals, mining progress",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-115"
+      ],
+      "acceptance_criteria": [
+        "Root cause (Claude, from the code and Pod evidence): PatternMiner.scan (src/trader/lab/miner.py ~234-300) runs, one after another on a single core, two full walk-forward run_backtest calls (normal and cost-stressed) for each of about 20 pattern specs per instrument/timeframe, i.e. about 40 backtests per group, 80 for NSXUSD+XAUUSD at 5m. Before the double-resample fix (PR #119) these ran on zero bars and finished instantly; now they do real work. PID 13555 stayed at 99.9% of ONE core for 3h01m, RSS 549 MB, and never left this stage.",
+        "PatternMiner.scan evaluates its specs in parallel using the existing fork-based pool and cap_worker_count (same memory cap as the evaluation stage); ledger appends and candidate ordering stay deterministic and identical to the serial path. A test proves serial and parallel results are equal (same candidates, same metrics, same order).",
+        "The normal and cost-stressed backtests of one spec share the entry signals and indicator work (only costs differ), so each spec computes them once. A test proves the metrics are identical to the old two-independent-calls path.",
+        "Mining progress: phase names carry a counter such as mining:NSXUSD:5m:7/20, updated after each spec, in progress.json (heartbeat from T-115 continues).",
+        "T-115 follow-ups: stop the heartbeat thread in try/finally on any exception and write status failed with the error class; write progress.json atomically (temp file + os.replace); a test proves updated_at advances between heartbeats; make lock reclaim race-safe (for example rename the stale lock to a unique name before creating a new one).",
+        "Evidence required in the handoff: a local micro-benchmark on synthetic 5m bars of realistic size (about 400,000 bars) comparing serial and parallel mining time, and the ruff, mypy and pytest results from CI.",
+        "Handoff hygiene: write AGENT_HANDOFF.json as UTF-8 with ensure_ascii=False and never modify earlier log entries (Codex's last branch copy turned an en dash in an old entry into mojibake and broke the append-only CI check; Claude repaired it).",
+        "Gates in config/strategy_lab.yaml unchanged; holdout still read only via validator.open_sealed_reader; mining still sees only the training slice; no secrets or Pod URL in the repo."
+      ],
+      "deliverables": [
+        "src/trader/lab/miner.py",
+        "src/trader/lab/runner.py",
+        "src/trader/lab/backtest.py",
+        "src/trader/lab/engine.py",
+        "tests/unit/test_lab_miner.py",
         "tests/unit/test_lab_runner.py"
       ],
       "review_cycles": 0,
@@ -4674,7 +4718,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ╪ثظ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives â•ھط«ط¸آ€آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -6665,6 +6709,28 @@
       "validated_by": "codex",
       "date": "2026-10-09",
       "reverify_if": "Owner authorizes another rerun after progress-file lifecycle is fixed"
+    },
+    {
+      "id": "V-272",
+      "subject": "T-115 implementation and time-limited Pod rerun",
+      "method": "Read origin/main implementation and run read-only Pod ps/progress/lock checks; stopped only PID 13555 after total runtime exceeded three hours, confirmed it was absent, and removed only its matching lock.",
+      "result": "fail",
+      "evidence": "PID 13555 reached 03:01:43 elapsed and 03:01:39 CPU at 99.9% with RSS 549552 KB. progress.json remained {\"status\":\"running\"}; no fresh results.json was written. The lock identified pid 13555 and was removed only after ps confirmed the process was dead.",
+      "review_notes": "T-115 code is merged and ready for Claude review. The Pod rerun is inconclusive because the current image still emitted only the placeholder progress record; do not infer trade counts from the stale results.json.",
+      "validated_by": "codex",
+      "date": "2026-10-09",
+      "reverify_if": "Owner authorizes another rerun after the progress-file lifecycle is fixed"
+    },
+    {
+      "id": "V-273",
+      "subject": "T-115 progress during loading/mining, heartbeat, dead-pid lock reclaim (Claude review)",
+      "method": "Read the full diff of PR #131 against the T-115 acceptance criteria, ran ruff check and ruff format on the touched files, and checked CI on the PR head and on main.",
+      "result": "pass",
+      "evidence": "PR #131 merged as main 88206bb; CI quality, publish-image success. New tests: test_run_file_lock_reclaims_dead_pid, test_run_file_lock_reclaims_malformed_lock, and the stop-file test asserts pid, started_at, updated_at and a loading: phase. Live-pid refusal test already existed.",
+      "review_notes": "Gaps accepted and moved to T-116: heartbeat thread is not stopped in a finally block on exceptions; progress.json is written non-atomically; no test proves updated_at advances; lock reclaim has a narrow two-process race. The Pod rerun (V-272) is inconclusive and is NOT a failure of T-115: the Pod still ran the old image with the placeholder progress file.",
+      "validated_by": "claude",
+      "date": "2026-10-09",
+      "reverify_if": "runner.py progress or RunFileLock code changes"
     }
   ],
   "blockers": [
@@ -11594,7 +11660,34 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Landed Codex rev 270 (PR #129). Finding: the 10-minute no-progress stop was too strict. lab_run.py writes a 21-byte placeholder; the runner writes real progress only after loading and mining for all groups (runner.py ~972-1063), which is silent for a long time (the first 19m33s run was mostly this stage). RSS 548 MB and cgroup ~0.94 GB with zero OOM events show the killed process was alive. OWNER APPROVED in chat (2026-10-09 19:13 Riyadh) BOTH items. (A) RERUN on the current Pod image, no code change needed: read /workspace/state/lab/run.lock first; if absent, proceed. Run exactly ONE detached scripts/lab_run.py --max-ideas 20 --timeframes 5 --force (default 6 years, never --years all, default lock and progress paths, output to a log under /workspace/state/lab). Liveness rule replacing the 10-minute rule: the process counts as alive while its cumulative CPU time (ps -o cputime or /proc/<pid>/stat) keeps increasing; allow up to 45 minutes before the first real progress.json write (it should gain run_id, phase and ideas_total); after that, stop only that pid if progress.json is unchanged for 15 minutes AND CPU time is flat, or if memory nears 8 GB, or total runtime passes 3 hours. Delete only that pid's run.lock after confirming the pid is dead. Report phase timings, peak_rss_bytes and the results table with per-attempt fail reasons and trade counts. (B) IMPLEMENT T-115 (new, spec in tasks) on a codex branch: progress during loading and mining, heartbeat, and dead-pid lock reclaim. Do not wait for the rerun to finish to start T-115, but do not change files on the Pod. Open nothing on the Pod beyond the one run. No gate changes, no secrets or Pod URL in the repo. When the rerun ends, or T-115 is ready for review, push and hand the turn to claude."
+    },
+    {
+      "revision": 272,
+      "ts": "2026-10-09T19:22:26Z",
+      "agent": "codex",
+      "action": "complete_t115_runtime_limited_rerun",
+      "task_ids": [
+        "T-115"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-115 implementation is merged on origin/main. The single owner-approved rerun PID 13555 remained CPU-live for just over three hours with progress.json still at status=running and no fresh results. Codex stopped only that PID at the runtime limit, confirmed it was dead, removed its matching run.lock, recorded the stale-results limitation, and handed the turn to Claude."
+    },
+    {
+      "revision": 273,
+      "ts": "2026-10-09T19:40:00Z",
+      "agent": "claude",
+      "action": "review_t115_pass_spec_t116",
+      "task_ids": [
+        "T-115",
+        "T-116"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Landed Codex rev 272 (repaired an encoding glitch in an old log entry so the log stays append-only). T-115 reviewed: pass (V-273), task done. The 3-hour rerun (PID 13555, stopped at the runtime limit) is inconclusive but the cause is now known: PatternMiner.scan does about 40 full walk-forward backtests per instrument/timeframe serially on one core, and these became real work once the double-resample bug was fixed. New task T-116 (acceptance criteria in the task): parallel mining, shared signals for the normal and stress backtests, mining progress counter, and the T-115 follow-ups. Codex: implement T-116 on a branch, run the local benchmark, push and hand the turn to claude. Do NOT start another Pod lab run: a new rerun needs fresh owner approval and a redeploy on the new image after T-116 merges (or an owner-approved seeds-only interim run). No gate changes, no secrets or Pod URL in the repo."
     }
   ],
-  "project_summary": "T-114 resample fix is merged. Codex ran the single owner-approved detached lab command with the default six-year window. PID 12612 stayed at about 548 MB RSS and about 945 MB cgroup memory, while progress.json remained status=running for over 10 minutes; Codex stopped only that process, confirmed it was dead, and removed its lock. Existing results.json is still the old pre-fix run."
+  "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."
 }
