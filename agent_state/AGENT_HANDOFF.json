@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 283,
+  "revision": 285,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-118 is implemented on codex/t118-one-log from main revision 280 and handed to Claude for review. Its single combined log entry records the diagnostics work; no Pod run was performed. After merge and redeploy, one seeds-only run may use the owner's 12 GB real-memory stop before T-117.",
+    "summary": "T-118 is merged and its one approved seeds-only follow-up run on image bc1f9354ae152784f3ed9f15989e17b23fb1dd53 was stopped when cgroup anon exceeded 12 GB; per-phase diagnostics and timings are recorded, no new results were produced, and T-117 follows using the measurements.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3753,14 +3753,19 @@
         "tests/unit/test_lab_runner.py: progress payload assertions cover rss_bytes, worker_pss_bytes, cgroup_anon_bytes, memory_current_bytes and memory_diagnostics; a direct diagnostics-shape test checks non-negative integer counters.",
         "python agent_state/validate_handoff.py: structural validation passed; python -m compileall -q src/trader/lab tests/unit/test_lab_runner.py passed; git diff --check passed.",
         "ruff, mypy, pytest and make are unavailable on this Windows desktop (commands missing or Python reports No module named pytest). CI should run the full suite.",
-        "No Pod was touched for T-118. Worker cap remains 4; gates, holdout access and trading defaults are unchanged."
+        "No Pod was touched for T-118. Worker cap remains 4; gates, holdout access and trading defaults are unchanged.",
+        "Owner-approved one seeds-only run after T-118 redeploy: image SHA bc1f9354ae152784f3ed9f15989e17b23fb1dd53; run_id=20261009T220740Z; worker cap 4; run.lock was absent before launch; exactly one detached command was started with default six-year window, lock and progress paths.",
+        "memory_diagnostics per phase (main RSS bytes / worker PSS-or-RSS bytes / cgroup anon bytes): loading 43417600 / 0 / 248659968; loading:NSXUSD:5m 283467776 / 0 / 465620992; loading:XAUUSD:5m 416788480 / 0 / 592842752; mining:NSXUSD:5m:0/20 364953600 / 0 / 542834688; mining:XAUUSD:5m:0/20 546643968 / 0 / 724525056; evaluating:0/20:NSXUSD:5m 8706011136 / 3521315840 / 10206457856; evaluating:0/20:XAUUSD:5m 6616879104 / 9258411008 / 15063203840; evaluating:20/20:NSXUSD:5m 5424943104 / 0 / 5596471296; holdout:NSXUSD:5m 5424943104 / 0 / 5596471296.",
+        "Phase timings seconds: loading 4.214478180743754; loading:NSXUSD:5m 33.667947807349265; loading:XAUUSD:5m 42.58581863436848; mining:NSXUSD:5m:0/20 0.023614875972270966; mining:XAUUSD:5m:0/20 0.062430793419480324; evaluating:0/20:NSXUSD:5m 250.98033587168902; evaluating:20/20:NSXUSD:5m 0.009853338822722435; holdout:NSXUSD:5m 0.034119442105293274.",
+        "Stop reason: cgroup_anon_bytes reached 15063203840 bytes (about 14.03 GiB), over the approved 12 GB real-memory limit; the parent PID 1465 was confirmed dead after the threshold/OOM event, then only its four matching workers were terminated and the matching run.lock was removed after PID death. No lab process remained; recorder/API was not the stop reason and the stale-progress CPU rule and three-hour limit were not reached.",
+        "results.json was unchanged (49934 bytes, mtime 2026-10-08 23:33:59); the run produced no new results, no Gate 1 table and no passed strategies. This was seeds-only, so pattern mining is untested. No broker/order, gate, secret, holdout or other Pod state was touched."
       ],
-      "completion_note": "Codex implemented per-phase memory diagnostics (rev 281); Claude added a unit test for process_memory_diagnostics. Merged after CI green. Worker cap stays 4.",
-      "review_notes": "Ready for Claude review and merge. CI must run the available lint, typecheck and pytest suite; no Pod run is authorized until this task merges and the owner redeploys the new image."
+      "completion_note": "Codex implemented per-phase memory diagnostics (rev 281); Claude added a unit test for process_memory_diagnostics. Merged after CI green. Worker cap stays 4. One approved seeds-only run on the redeployed image stopped at the 12 GB real-memory safety limit without new results; T-117 follows using the measurements.",
+      "review_notes": "T-118 is merged. The one approved seeds-only run on the redeployed image reached evaluating:0/20:XAUUSD:5m and exceeded the 12 GB cgroup-anon safety limit before writing new results; use these measurements for T-117."
     },
     {
       "id": "T-117",
-      "title": "Strategy Lab memory: load only the training window, measure memory per phase, safe worker sizing",
+      "title": "Strategy Lab memory: slim evaluation results, release memory between instruments, measure the parent spike",
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
@@ -3774,13 +3779,13 @@
         "T-116"
       ],
       "acceptance_criteria": [
-        "Evidence (V-276, V-278 by Codex): with the T-116 image and 4 workers the seeds-only run reached cgroup 8.03 GB at evaluating:0/20:NSXUSD:5m with main-process peak RSS 4.79 GB (894 MB on the older image). Forked workers inherit a very large parent, and Python refcounts make copy-on-write pages private, so each worker grows toward the parent size.",
-        "Suspected cause 1 (code, runner.py ~1112-1133): load_histdata_candles loads ALL available history for the instrument and only afterwards drops candles older than max_training_years. Pass the cutoff into the loader (and the columnar cache) so older months are never materialised; results must be identical to today for the retained window. Test with a small fake lake.",
-        "Suspected cause 2: pipeline.run builds in_sample_times, tuple(candles) and evaluation copies, and each worker's _init_worker may expand columnar data into Candle tuples. Measure first, then fix the largest item (for example keep columnar arrays and build bars lazily, avoid full-set time intersection, release train/test duplicates).",
-        "Add memory diagnostics to progress.json: rss_bytes of the main process and the sum of worker PSS or RSS at each phase mark, plus cgroup memory.stat anon (memory.current includes reclaimable page cache and overstates real use; the 8 GB safety stop should use anon plus worker memory, but keep the conservative current threshold until measured).",
-        "Benchmark locally on a synthetic multi-year 1m lake (or the largest available) and report peak RSS main/worker before and after, in the handoff.",
-        "worker_cap sizing (now max 4 workers, 35% of cgroup) must use measured per-worker memory; document the measured number in a constant comment. Do not raise the cap without evidence.",
-        "Gates in config/strategy_lab.yaml unchanged; holdout only via validator.open_sealed_reader; no secrets or Pod URL; handoff written as UTF-8 with ensure_ascii=False and earlier log entries untouched. Do NOT run anything on the Pod for this task."
+        "Measurements (run 20261009T220740Z on image bc1f9354, 4 workers, V-283): loading is NOT the problem (main RSS 0.28-0.42 GB, anon 0.47-0.59 GB; mining 0.5 GB and under 0.1 s for seeds). The spike is in the evaluation stage: evaluating:0/20:NSXUSD:5m main RSS 8.7 GB + worker PSS 3.5 GB = cgroup anon 10.2 GB, finished in 251 s; after 20/20 the parent still held 5.4 GB RSS (5.6 GB anon); the next group evaluating:0/20:XAUUSD:5m reached main 6.6 GB + workers 9.3 GB = cgroup anon 15.06 GB and was stopped.",
+        "Find why the PARENT reaches 8.7 GB in pipeline.run (src/trader/lab/pipeline.py). Prime suspects: _CandidateEvaluation objects returned from workers carry full BacktestResult trade lists, equity curves, neighbour and regime results and are all held in the evaluations dict; in_sample_times set and tuple copies of the candle frames; Candle object tuples rebuilt from columnar data. Profile with tracemalloc or sizeof on a synthetic multi-year 5m frame and report the largest items in the handoff.",
+        "Fix 1: workers return only what the parent needs (gate1 metric dict, verdict, hash, small summaries); trade lists, equity curves and full BacktestResult stay in the worker and are dropped there. Decisions and ledger records must be identical for the same input (test: old-path and slim-path give equal metrics and verdicts).",
+        "Fix 2: release memory between instrument/timeframe groups. Preferred: run each group in its own forked child process that returns only the slim decisions, so the OS frees everything; acceptable alternative: del the group data, gc.collect(), and show by measurement that parent RSS returns near its pre-group level. After NSXUSD 20/20 the parent must not still hold 5 GB.",
+        "Fix 3: workers must not copy the parent: share the frame read-only (fork) and avoid touching objects that cause copy-on-write (build tuples before forking, avoid per-worker re-expansion of columnar data). Report worker PSS per worker.",
+        "Benchmark locally on a synthetic multi-year 5m frame (about 400k bars) with 20 seed specs: report parent peak RSS, worker PSS and wall time before and after; target parent peak under 3 GB and total anon under 8 GB for both instruments sequentially with 4 workers. Do not raise the worker cap without evidence.",
+        "Do NOT change the 12 GB real-memory stop; keep per-phase memory_diagnostics. Gates in config/strategy_lab.yaml unchanged; holdout only via validator.open_sealed_reader; no secrets or Pod URL; handoff UTF-8 with ensure_ascii=False, earlier log entries untouched, exactly ONE log entry per session. Do NOT run on the Pod for this task; the owner approves the next Pod run after CI-green merge and redeploy."
       ],
       "deliverables": [
         "src/trader/lab/miner.py",
@@ -6936,6 +6941,17 @@
       "validated_by": "claude",
       "date": "2026-10-10",
       "reverify_if": "runner.py progress code changes"
+    },
+    {
+      "id": "V-283",
+      "subject": "Review of T-118 seeds-only run (12 GB stop)",
+      "method": "Read Codex's recorded per-phase memory, timings and stop reason.",
+      "result": "pass",
+      "evidence": "Safety rules followed exactly (one run, stopped above 12 GB anon, lock removed after PID death, results.json untouched). Data: loading under 0.6 GB anon; NSXUSD evaluation took 251 s with parent 8.7 GB + workers 3.5 GB; parent kept 5.4 GB afterwards; XAUUSD evaluation reached 15.06 GB anon.",
+      "review_notes": "Result for strategies: none (no Gate 1 table). The earlier hypothesis that loading all history causes the memory was wrong; the parent evaluation stage and non-released group memory are the problem. T-117 rewritten accordingly.",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "pipeline.py or runner.py evaluation code changes"
     }
   ],
   "blockers": [
@@ -12036,6 +12052,32 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner decisions in chat: 23:48 Riyadh approved diagnostics first, then ONE seeds-only run with a 12 GB real-memory stop; 01:06 Riyadh reported the Pod is redeployed with the T-118 code (image ghcr.io/tarek-assaf/ai-trader:bc1f9354ae152784f3ed9f15989e17b23fb1dd53) and process_memory_diagnostics works; 01:17 said Codex could not record findings because the turn was human. Turn handed to Codex. Codex: verify the running image SHA and that run.lock is absent, start exactly ONE detached run: lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force (worker cap 4). Stop only that process and its workers if cgroup_anon_bytes exceeds 12 GB, the recorder or API stops responding, updated_at is stale 15 minutes with flat CPU, or 3 hours pass; remove the lock only after the PID is dead. Record in ONE log entry: image SHA, memory_diagnostics per phase, timings per stage, stop reason or results.json outcome and any strategies that passed. No gate changes, no secrets or Pod URL. Then hand the turn to Claude. T-117 (load only the training window) follows using the measurements."
+    },
+    {
+      "revision": 284,
+      "ts": "2026-10-09T22:18:00Z",
+      "agent": "codex",
+      "action": "record_t118_seeds_run_12gb_stop",
+      "task_ids": [
+        "T-118"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Recorded the one owner-approved seeds-only run after T-118 redeploy on image SHA bc1f9354ae152784f3ed9f15989e17b23fb1dd53 (worker cap 4; run.lock absent before launch). Per-phase main RSS, worker PSS/RSS and cgroup anon diagnostics plus stage timings are recorded. The run reached evaluating:0/20:XAUUSD:5m and was stopped after cgroup_anon_bytes reached 15063203840 bytes, above the 12 GB real-memory limit; PID 1465 was dead before its four matching workers and lock were cleaned up. results.json remained stale with no new results or passed strategies; seeds-only pattern mining is untested. Handing turn to Claude; T-117 follows using these measurements."
+    },
+    {
+      "revision": 285,
+      "ts": "2026-10-09T22:24:51Z",
+      "agent": "claude",
+      "action": "review_seeds_run_rewrite_t117",
+      "task_ids": [
+        "T-117"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed Codex's seeds-only run (V-283 pass). Measured: loading is small; the evaluation stage balloons the parent to 8.7 GB and it keeps 5.4 GB after the first instrument, so the second instrument reached 15.06 GB. T-117 rewritten: find the parent spike in pipeline.run, return slim worker results, release memory between instrument groups (child process per group), benchmark locally. Codex implements T-117 on a branch, no Pod run, one log entry, hand turn to Claude for CI review."
     }
   ],
   "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."
