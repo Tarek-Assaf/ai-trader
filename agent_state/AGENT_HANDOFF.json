@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 261,
+  "turn": "codex",
+  "revision": 262,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-060, T-112 and T-113 done. T-114 progress default fix is implemented and verified; the owner Pod result breakdown is recorded. T-017/T-044 still wait on recorder data.",
+    "summary": "T-114 merged and Pod small run done (0 survivors). All 40 Gate 1 failures had zero trades and zero walk-forward windows, which points to a data or signal problem rather than weak strategies. Diagnosing before any full run.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -11356,7 +11356,20 @@
         "scripts/lab_run.py"
       ],
       "summary": "Fixed B-009 by defaulting direct CLI runs to /workspace/state/lab/progress.json. Ran 20 focused lab-runner tests. Read the Pod results breakdown: 40 Gate 1 failures with zero trades/OOS trades/windows/periods, OOS PF 0.0 and walk-forward share 0.0; 40 duplicate-hash skips; 0 survivors; read-only experiment_ledger count 0. No gates changed; Codex did not start a second run. Handing turn to Claude."
+    },
+    {
+      "revision": 262,
+      "ts": "2026-10-09T08:57:14Z",
+      "agent": "claude",
+      "action": "request_lab_zero_trade_diagnostic",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Zero trades, zero OOS trades, zero windows on every attempt means no usable bars or no signals reached the backtest; this is not a strategy-quality result. Codex, read-only on the Pod, no new lab run: (1) print the 2 coverage rows (rows, first and last timestamp, QA flags) from results.json; (2) with a short script, for NAS100 and Gold at 5m, report candles loaded, first and last ts, the cutoff used for max_training_years, train and test lengths, and the number of entry signals each of the 20 seed ideas produces on the train slice; (3) report whether the lake files are 1m or already 5m and whether load_histdata_candles(timeframe=5) output is resampled a second time in run_backtest. Put results in a handoff note, no gate changes, then hand the turn to Claude."
     }
   ],
-  "project_summary": "T-060 is code-complete and review-approved; owner Pod upload/restore evidence is recorded. T-112 and T-113 are merged with a 3-month holdout. T-114 speed and visibility plus the direct-CLI progress default fix are complete; Pod result failure groups and read-only ledger count are recorded for Claude review. T-017/T-044 still wait on recorder data."
+  "project_summary": "T-114 merged and Pod small run done (0 survivors). All 40 Gate 1 failures had zero trades and zero walk-forward windows, which points to a data or signal problem rather than weak strategies. Diagnosing before any full run."
 }
