@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 288,
+  "turn": "claude",
+  "revision": 289,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-117 implementation is ready for Claude review: worker backtests return compact metrics/results and the runner releases each instrument/timeframe group before reopening the next. CI and the synthetic memory benchmark remain required; no Pod run was performed.",
+    "summary": "T-117 implementation is merged and its post-merge owner-approved seeds-only validation run completed normally with four workers under the 12 GB real-memory stop; results had 40 attempts, 0 survivors and no passed strategies. Turn is handed to Claude for review of the recorded evidence.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3817,10 +3817,11 @@
         "src/trader/lab/runner.py: group metadata keeps only specs and paths; candle arrays are reopened for one evaluation group, then deleted and gc.collect() runs before the next group.",
         "tests/unit/test_lab_pipeline.py: worker smoke test compares slim-worker trade counts, out-of-sample counts and p-value with the full backtest path and asserts trade/equity payloads are dropped.",
         "python -m compileall -q src/trader/lab tests/unit/test_lab_pipeline.py tests/unit/test_lab_runner.py passed; python agent_state/validate_handoff.py and git diff --check passed. pytest, ruff, mypy and make are unavailable on this desktop; CI benchmark and full suite remain required.",
-        "No Pod run, broker/order, gate, secret or holdout change was made for T-117."
+        "No Pod run, broker/order, gate, secret or holdout change was made for T-117.",
+        "Post-merge owner-approved seeds-only run on image ghcr.io/tarek-assaf/ai-trader:ea841b74374aeae23b95348298a0b1fee7d8c9cd; run_id=20261009T230726Z; command was exactly one detached `python scripts/lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force` with default six-year window, lock/progress paths and worker cap 4. The image was verified in RunPod and run.lock was absent before launch. The run completed normally at 2026-10-09T23:12:54.493692Z with PID 2541 dead and run.lock absent; no stop rule fired, no recorder/API failure occurred, and the three-hour/stale-progress limits were not reached. Peak RSS was 902070272 bytes; the largest cgroup_anon_bytes was 3469692928 and the largest memory_current_bytes was 3674529792, both below the 12 GB stop limit. Per-phase memory_diagnostics (main RSS / worker PSS-or-RSS / cgroup anon bytes): loading 40443904 / 0 / 265056256; loading:NSXUSD:5m 294330368 / 0 / 490930176; loading:NSXUSD:5m:reopen 414253056 / 0 / 604626944; loading:XAUUSD:5m 424493056 / 0 / 613703680; loading:XAUUSD:5m:reopen 297062400 / 0 / 492052480; mining:NSXUSD:5m:0/20 377245696 / 0 / 560930816; mining:XAUUSD:5m:0/20 398524416 / 0 / 585891840; evaluating:0/20:NSXUSD:5m 425672704 / 2989378560 / 3469692928; evaluating:0/20:XAUUSD:5m 451076096 / 1902947328 / 2403934208; evaluating:20/20:NSXUSD:5m 409681920 / 0 / 601825280; evaluating:20/20:XAUUSD:5m 451076096 / 0 / 647475200; holdout:NSXUSD:5m 409681920 / 0 / 601825280; holdout:XAUUSD:5m 451076096 / 0 / 647475200; done 258867200 / 0 / 450293760. Phase timings seconds: loading 3.897079911082983; loading:NSXUSD:5m 33.732727536931634; loading:NSXUSD:5m:reopen 33.5721455430612; loading:XAUUSD:5m 41.62311919592321; loading:XAUUSD:5m:reopen 41.78431493695825; mining:NSXUSD:5m:0/20 0.010201527737081051; mining:XAUUSD:5m:0/20 0.03086524549871683; evaluating:0/20:NSXUSD:5m 101.22561756148934; evaluating:20/20:NSXUSD:5m 0.009504072368144989; holdout:NSXUSD:5m 0.11761695891618729; evaluating:0/20:XAUUSD:5m 71.76427818648517; evaluating:20/20:XAUUSD:5m 0.008823205716907978; holdout:XAUUSD:5m 0.10722729191184044; done 0.0. results.json was fresh at 2026-10-09T23:12:54Z (40827 bytes), with 40 attempts, 0 survivors and no passed strategies. Gate-1 results by source: seed:bollinger_reversion 10 attempts, 277915 trades, all fail; seed:donchian_breakout 8 attempts, 265812 trades, all fail; seed:ema_crossover_atr_stop 2 attempts, 193476 trades, all fail; seed:ema_pullback 10 attempts, 620639 trades, all fail; seed:rsi_mean_reversion 10 attempts, 1069698 trades, all fail. Every failure reason was too_few_walk_forward_windows,too_few_validation_periods,out_of_sample_profit_factor_below_gate,walk_forward_share_below_gate,too_few_profitable_regimes,backtest. No strategies passed. This was seeds-only, so pattern mining is untested. No broker/order, gate, holdout, secret or unrelated Pod state was touched."
       ],
-      "completion_note": "Codex implemented slim worker results and per-group reload with gc (rev 286). Claude review fix: neighbour evidence now counts only when a neighbour differs from the spec, as before the move (worker computed it unconditionally). Local benchmark (60k synthetic 5m bars, 20 specs, 2-core sandbox): payload returned to the parent 121.3 MB -> 0.1 MB, time 24.7 s -> 20.9 s. Merged after CI green. Real parent/worker memory still to be confirmed on the Pod.",
-      "review_notes": "Ready for Claude review. Please run CI and the synthetic multi-year benchmark, checking that Gate 1 metrics/verdicts match the previous path and that parent RSS returns after each group. No Pod run is authorized until CI-green merge and redeploy."
+      "completion_note": "Codex implemented slim worker results and per-group reload with gc (rev 286). Claude review fix: neighbour evidence now counts only when a neighbour differs from the spec, as before the move (worker computed it unconditionally). Local benchmark (60k synthetic 5m bars, 20 specs, 2-core sandbox): payload returned to the parent 121.3 MB -> 0.1 MB, time 24.7 s -> 20.9 s. Merged after CI green. Real parent/worker memory still to be confirmed on the Pod. Post-merge seeds-only validation run on the redeployed image completed within the 12 GB real-memory limit: 40 attempts, 0 survivors, no passed strategies; this run confirms the T-117 release between-group memory behavior under four workers.",
+      "review_notes": "T-117 is merged. The post-merge owner-approved seeds-only run completed normally on the redeployed image with peak RSS 0.90 GB and cgroup anon peak 3.47 GB under the 12 GB limit; 40 attempts produced 0 survivors and no passed strategies. Full evidence is in the latest log entry."
     }
   ],
   "decisions": [
@@ -12149,6 +12150,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner said in chat at 01:53 Riyadh (22:53 UTC): 'I approve it. and you have the approval to test as much as you can till its fixed for the next 8 hours' - replying to the request to approve ONE seeds-only run on image ghcr.io/tarek-assaf/ai-trader:ea841b74374aeae23b95348298a0b1fee7d8c9cd. Recorded scope: (1) the requested seeds-only run is approved; (2) the owner also allows repeated Strategy Lab test runs on the Pod to get the memory problem fixed, until 09:53 Riyadh (06:53 UTC) on 2026-10-10 or until fixed, whichever is first. This covers lab test runs only; it does not lift any other rule: demo only, no live trading, no gate or holdout changes, no secrets or Pod URL in the repo, and the owner still redeploys new images (Codex must verify the running image SHA before each run and ask the owner to redeploy if it is not the intended one). Codex: verify image SHA and absent run.lock, start exactly ONE detached run: lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force (worker cap 4). Stop only that process and its workers if cgroup_anon_bytes exceeds 12 GB, the recorder or API stops responding, updated_at is stale 15 minutes with flat CPU, or 3 hours pass; remove the lock only after the PID is dead. Record in ONE log entry: image SHA, memory_diagnostics per phase (watch parent RSS after the first instrument), timings, stop reason or results and any strategies that passed. Then hand the turn to Claude, who reviews and, if a fix is needed, writes the next task."
+    },
+    {
+      "revision": 289,
+      "ts": "2026-10-09T23:12:54Z",
+      "agent": "codex",
+      "action": "complete_t117_seeds_run_record_evidence",
+      "task_ids": [
+        "T-117"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Verified the redeployed image SHA ea841b74374aeae23b95348298a0b1fee7d8c9cd and absent run.lock, then started exactly one detached seeds-only run with worker cap 4. PID 2541 completed normally at 2026-10-09T23:12:54Z; PID and lock were absent afterward. Peak RSS was 902070272 bytes and peak cgroup anon was 3469692928 bytes, below the 12 GB stop. results.json was fresh with 40 attempts, 0 survivors and no passed strategies; all five seed sources failed Gate 1 for too few walk-forward windows/validation periods, out-of-sample profit factor, walk-forward share, profitable regimes and backtest. Per-phase memory diagnostics and timings are recorded in T-117 evidence. This was seeds-only, so pattern mining is untested. No broker/order, gate, holdout, secret or unrelated Pod state was touched. Handing turn to Claude."
     }
   ],
   "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."
