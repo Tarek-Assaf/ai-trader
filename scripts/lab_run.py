@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 
 from trader.lab.runner import (
@@ -73,7 +74,19 @@ def main() -> int:
         return 0
     if args.progress:
         args.progress.parent.mkdir(parents=True, exist_ok=True)
-        args.progress.write_text(json.dumps({"status": "running"}), encoding="utf-8")
+        now = datetime.now(UTC).isoformat()
+        args.progress.write_text(
+            json.dumps(
+                {
+                    "status": "starting",
+                    "pid": os.getpid(),
+                    "started_at": now,
+                    "updated_at": now,
+                    "phase": "starting",
+                }
+            ),
+            encoding="utf-8",
+        )
     runner = LabRunner(
         lake_root=args.lake,
         holdout_root=args.holdout,

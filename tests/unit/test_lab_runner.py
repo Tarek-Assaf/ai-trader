@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from datetime import UTC, datetime, timedelta
 
@@ -12,6 +13,7 @@ import pyarrow.parquet as pq
 from trader.data.resample import Candle
 from trader.lab.engine import IndicatorCache, evaluate_entries
 from trader.lab.ledger import ExperimentLedger, ExperimentRecord
+from trader.lab import runner as runner_module
 from trader.lab.runner import (
     LabJobManager,
     LabRunner,
@@ -80,6 +82,29 @@ def test_run_file_lock_refuses_second_owner(tmp_path) -> None:
             raise AssertionError("second owner must be refused")
     finally:
         first.release()
+
+
+def test_run_file_lock_reclaims_dead_pid(tmp_path) -> None:
+    path = tmp_path / "run.lock"
+    path.write_text(json.dumps({"pid": 99999999, "started_at": "old"}), encoding="utf-8")
+    lock = RunFileLock(path)
+    lock.acquire()
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        assert payload["pid"] == os.getpid()
+    finally:
+        lock.release()
+
+
+def test_run_file_lock_reclaims_malformed_lock(tmp_path) -> None:
+    path = tmp_path / "run.lock"
+    path.write_text("not-json", encoding="utf-8")
+    lock = RunFileLock(path)
+    lock.acquire()
+    try:
+        assert json.loads(path.read_text(encoding="utf-8"))["pid"] == os.getpid()
+    finally:
+        lock.release()
 
 
 def test_read_memory_limit_parses_cgroup_values(tmp_path) -> None:
@@ -255,9 +280,11 @@ def test_runner_stop_file_preserves_partial_progress(tmp_path, monkeypatch) -> N
     progress = tmp_path / "progress.json"
 
     def candidates(_runner, instrument, _timeframe, _sources, _candles):
+        time.sleep(0.02)
         return [("seed:test", _runner_spec(instrument))]
 
     monkeypatch.setattr(LabRunner, "_candidates", candidates)
+    monkeypatch.setattr(runner_module, "PROGRESS_HEARTBEAT_SECONDS", 0.005)
 
     def stop_after_first(self, *args, **kwargs):
         del self, args, kwargs
@@ -277,6 +304,13 @@ def test_runner_stop_file_preserves_partial_progress(tmp_path, monkeypatch) -> N
     progress_payload = json.loads(progress.read_text(encoding="utf-8"))
     assert progress_payload["ideas_done"] == 1
     assert progress_payload["ideas_total"] == 2
+    assert progress_payload["pid"] == os.getpid()
+    assert progress_payload["started_at"]
+    assert progress_payload["updated_at"]
+    assert any(
+        phase.startswith("loading:")
+        for phase in progress_payload["phase_timings_seconds"]
+    )
 
 
 def test_runner_results_stay_within_telegram_limit() -> None:
