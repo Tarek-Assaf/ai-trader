@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 267,
+  "turn": "claude",
+  "revision": 268,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-114 resample fix is merged, and Claude requested one small rerun after the owner redeploys the Pod from the new main image. The rerun is blocked because the owner-provided Pod terminal is unreachable from this session.",
+    "summary": "T-114 resample fix is merged. The single authorized small rerun was attempted on the redeployed Pod, but the terminal connection closed after about 23 minutes before the runner wrote new results; no second run was started.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3604,10 +3604,13 @@
         "Read-only Pod lake/cache inspection: source lake has 1m parquet files (191 NSXUSD files / 5,285,568 rows; 211 XAUUSD files / 6,140,217 rows). Existing 5m cache (holdout months excluded) has NSXUSD 974,951 rows through 2026-06-30T23:55:00Z and XAUUSD 1,188,948 rows through 2026-06-30T23:55:00Z. With the configured 3-month sealed holdout and max_training_years=6, cutoff is 2020-07-01T00:00:00Z; cache rows at/after cutoff are NSXUSD 401,170 (80/20 train/test 320,936/80,234) and XAUUSD 415,509 (80/20 train/test 332,407/83,102).",
         "Read-only source inspection: load_histdata_columns/load_histdata_candles resamples when timeframe != 1; backtest.py also calls resample_ohlc(source, spec.timeframe) before evaluate_entries, so a 5m loader output is resampled a second time by run_backtest.",
         "The requested full 20-seed entry-signal count script was attempted read-only against the cached 5m series but stalled under the Pod resource envelope before producing counts; it was stopped/reconnected without starting a lab run. Existing results still show all 40 Gate-1 attempts had trades=0 and OOS trades=0.",
-        "Owner-requested Pod health snapshot after stopping the diagnostic: /sys/fs/cgroup/memory.current=791941120 bytes (~755 MiB); ps top CPU was trader workers 2.4% and 0.2%, Redis 0.2%, API 0.1%, with no lab_run process present."
+        "Owner-requested Pod health snapshot after stopping the diagnostic: /sys/fs/cgroup/memory.current=791941120 bytes (~755 MiB); ps top CPU was trader workers 2.4% and 0.2%, Redis 0.2%, API 0.1%, with no lab_run process present.",
+        "Authorized single rerun: PID 10886, command python scripts/lab_run.py --max-ideas 20 --timeframes 5 --force, started 2026-10-09T14:40:12Z and observed for about 23 minutes.",
+        "Rerun resource evidence: RSS about 549,784 KB and cgroup memory about 937-940 MB; memory.events low/high/max/oom/oom_kill/oom_group_kill all 0; memory.max 16,000,000,000.",
+        "Rerun interruption: Pod terminal connection closed before new results were written; progress.json remained status=running and results.json remained the prior 80-attempt file. PID 10886 was confirmed dead and its stale lock removed."
       ],
-      "completion_note": "Implemented T-114 memory-safe columnar loading, read-only numeric arrays, cgroup worker caps, cross-process run locking, peak RSS progress evidence, timestamped phase counts, cache invalidation, bounded years, and indicator reuse. Fixed B-009 by making scripts/lab_run.py write progress.json by default for direct CLI runs. Focused tests pass; the Pod result breakdown and read-only ledger count are recorded for Claude review. No secrets, broker orders or destructive actions were used. Read-only zero-trade diagnostic recorded: coverage and lake/cache bounds, 2020-07-01 cutoff, 80/20 lengths, 1m source plus second 5m resampling in backtest. The 20-seed signal-count script stalled under the Pod resource envelope and was stopped; no new lab run was started.",
-      "review_notes": "B-009 fix is ready for Claude review: omitting --progress now writes /workspace/state/lab/progress.json. Pod results were 40 Gate 1 failures (zero trades/OOS trades/windows/periods, OOS PF 0.0, walk-forward share 0.0) and 40 duplicate-hash skips; the read-only Postgres experiment_ledger count was 0. No gates were changed. Zero-trade diagnostic confirms usable 1m source data and a 5m cache with 2020-07-01 cutoff; run_backtest resamples 5m output again. Signal-count script stalled under current Pod resources, so no seed-count claim is made. Rerun request is blocked pending a reachable Pod after main-image redeploy; no lab process was started."
+      "completion_note": "Implemented T-114 memory-safe columnar loading, read-only numeric arrays, cgroup worker caps, cross-process run locking, peak RSS progress evidence, timestamped phase counts, cache invalidation, bounded years, and indicator reuse. Fixed B-009 by making scripts/lab_run.py write progress.json by default for direct CLI runs. Focused tests pass and prior Pod evidence is recorded. The authorized post-fix single small rerun was attempted once after confirming/removing stale PID 1438; PID 10886 ran about 23 minutes, then the Pod terminal connection closed before new results were written. PID 10886 was confirmed dead and its stale lock removed. No second run, gate change, broker order or secret use occurred.",
+      "review_notes": "B-009 fix is ready for Claude review. The single post-fix rerun attempt did not produce a new result: terminal disconnected while PID 10886 was running; no OOM events were recorded, but phase timing, peak_rss_bytes and per-attempt results are unavailable. Existing results.json is pre-rerun data and must not be used to claim the fix passed. No gates were changed and no second run was started."
     }
   ],
   "decisions": [
@@ -6601,6 +6604,17 @@
       "validated_by": "claude",
       "date": "2026-10-09",
       "reverify_if": "resample_ohlc or the lab loader changes"
+    },
+    {
+      "id": "V-270",
+      "subject": "T-114 single small rerun attempt after stale-lock cleanup",
+      "method": "Read-only Pod checks confirmed stale PID 1438 was absent before removing run.lock. Started exactly one python scripts/lab_run.py --max-ideas 20 --timeframes 5 --force process, monitored ps/progress/lock and cgroup memory, then confirmed PID 10886 was absent before removing its post-disconnect stale lock. No second run was started.",
+      "result": "fail",
+      "evidence": "Old lock JSON identified pid 1438 at 2026-10-09T11:02:42Z; ps -p 1438 showed no process and the lock was removed. New PID 10886 started 2026-10-09T14:40:12Z with the requested command and ran about 23 minutes; observed RSS was about 549,784 KB and cgroup memory about 937-940 MB. memory.events stayed low=0, high=0, max=0, oom=0, oom_kill=0, oom_group_kill=0 with memory.max=16,000,000,000. The terminal connection then closed; ps -p 10886 was empty, progress.json remained {\"status\":\"running\"}, run.lock still referenced 10886, and results.json remained the prior 2026-10-08T23:14:26Z-23:33:59Z file (80 attempts: 40 fail, 40 skipped, 0 survivors). After confirming PID 10886 was dead, its stale lock was removed. No new results or phase timings were produced.",
+      "review_notes": "The requested one-run attempt is recorded as interrupted by Pod terminal disconnect, not as a successful lab result. Do not infer post-fix trade counts from the old results.json; another run requires an owner-provided stable Pod session.",
+      "validated_by": "codex",
+      "date": "2026-10-09",
+      "reverify_if": "Owner authorizes another rerun on a stable Pod terminal"
     }
   ],
   "blockers": [
@@ -6667,6 +6681,12 @@
       "raised_by": "codex",
       "status": "resolved",
       "resolution": "Owner confirmed the Pod is running image d44b9ab and Codex can open a new terminal if needed."
+    },
+    {
+      "id": "B-011",
+      "text": "The authorized T-114 small rerun (PID 10886) exited when the Pod terminal connection closed after about 23 minutes; progress.json remained status=running and no new results.json was written, so phase timings, peak RSS and per-attempt results for this attempt are unavailable.",
+      "raised_by": "codex",
+      "status": "active"
     }
   ],
   "questions": [
@@ -7150,8 +7170,8 @@
         "Provide a reachable redeployed Pod terminal",
         "Defer the rerun"
       ],
-      "status": "open",
-      "answer": null
+      "status": "answered",
+      "answer": "Owner-provided terminal was reachable for one attempt. Codex confirmed stale PID 1438 was dead and removed its lock; the single rerun then used PID 10886, but the Pod terminal connection closed before completion/results were written. No second attempt was made."
     }
   ],
   "log": [
@@ -11469,7 +11489,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "B-010 resolved: owner confirmed the Pod runs image d44b9ab and Codex may open a new terminal. Codex: first check whether a lab run is already active or finished on the Pod (progress.json, run.lock, ps) and do NOT start a second process while one runs. If finished or stuck, record the results table (per-attempt fail reasons, trade counts), phase timings and peak_rss_bytes; if none exists run ONE lab_run.py --max-ideas 20 --timeframes 5 --force with the default 6 years, never --years all. If the run is stuck, stop only that process and report the last progress.json. No gate changes, no secrets or Pod URL in the repo. Hand the turn to claude."
+    },
+    {
+      "revision": 268,
+      "ts": "2026-10-09T15:05:00Z",
+      "agent": "codex",
+      "action": "attempt_t114_small_rerun_terminal_closed",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Confirmed stale PID 1438 was dead and removed its lock. Started exactly one python scripts/lab_run.py --max-ideas 20 --timeframes 5 --force run; PID 10886 ran about 23 minutes at about 550 MB RSS and 937-940 MB cgroup memory with no OOM events, then the Pod terminal connection closed before new results/progress completion. Confirmed PID 10886 dead and removed its stale lock. No second run, gate change, broker call, order or secret use. Handing turn to Claude."
     }
   ],
-  "project_summary": "T-114 small Pod run had 0 survivors because of a bug (loader-aggregated 3m/5m bars were resampled again and dropped), now fixed on main (PR #119). Codex re-runs the small lab run once on the new image; then Claude explains the real results."
+  "project_summary": "T-114 resample fix is merged. Codex confirmed the stale PID 1438 was dead, removed its lock, and started exactly one small lab run with --max-ideas 20 --timeframes 5 --force. PID 10886 ran for about 23 minutes, then the Pod terminal connection closed before new results were written. No second run, gate change, broker call or order was made."
 }
