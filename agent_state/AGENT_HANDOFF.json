@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 288,
+  "turn": "human",
+  "revision": 289,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-117 implementation is ready for Claude review: worker backtests return compact metrics/results and the runner releases each instrument/timeframe group before reopening the next. CI and the synthetic memory benchmark remain required; no Pod run was performed.",
+    "summary": "T-117 is merged. The owner-approved 12 GB seeds-only run and 8-hour lab testing window are blocked pending a reachable Pod terminal: the current endpoint returned HTTP 404 and previously supplied endpoints returned HTTP 502. No run was started.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -7054,6 +7054,12 @@
       "raised_by": "codex",
       "status": "resolved",
       "resolution": "Cause known (serial mining on one core, no progress inside the stage); fixed by T-115 and T-116 (merged). A new run needs the T-116 image deployed on the Pod."
+    },
+    {
+      "id": "B-012",
+      "text": "The owner-approved post-T-117 seeds-only Pod run is blocked because the current heartbeat terminal endpoint returned HTTP 404 and the previously supplied terminal endpoints returned HTTP 502. The running image SHA and run.lock could not be verified, so no lab process was started. A reachable terminal after redeploy is required before the approved run can begin.",
+      "raised_by": "codex",
+      "status": "active"
     }
   ],
   "questions": [
@@ -7539,6 +7545,18 @@
       ],
       "status": "answered",
       "answer": "Owner supplied a reachable Pod terminal. Codex checked the lab state read-only; no process was active, but stale run.lock/progress state remained and existing pre-rerun results were available."
+    },
+    {
+      "id": "Q-043",
+      "to": "human",
+      "from": "codex",
+      "status": "open",
+      "text": "The approved 12 GB seeds-only run cannot start because no reachable Pod terminal is available from this session. Please provide the current terminal/health link after confirming the redeployed image, or defer the run.",
+      "options": [
+        "Provide a reachable redeployed Pod terminal (recommended)",
+        "Defer the run"
+      ],
+      "recommendation": "Provide a reachable redeployed Pod terminal so Codex can verify the image and lock before starting exactly one run."
     }
   ],
   "log": [
@@ -12149,6 +12167,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner said in chat at 01:53 Riyadh (22:53 UTC): 'I approve it. and you have the approval to test as much as you can till its fixed for the next 8 hours' - replying to the request to approve ONE seeds-only run on image ghcr.io/tarek-assaf/ai-trader:ea841b74374aeae23b95348298a0b1fee7d8c9cd. Recorded scope: (1) the requested seeds-only run is approved; (2) the owner also allows repeated Strategy Lab test runs on the Pod to get the memory problem fixed, until 09:53 Riyadh (06:53 UTC) on 2026-10-10 or until fixed, whichever is first. This covers lab test runs only; it does not lift any other rule: demo only, no live trading, no gate or holdout changes, no secrets or Pod URL in the repo, and the owner still redeploys new images (Codex must verify the running image SHA before each run and ask the owner to redeploy if it is not the intended one). Codex: verify image SHA and absent run.lock, start exactly ONE detached run: lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force (worker cap 4). Stop only that process and its workers if cgroup_anon_bytes exceeds 12 GB, the recorder or API stops responding, updated_at is stale 15 minutes with flat CPU, or 3 hours pass; remove the lock only after the PID is dead. Record in ONE log entry: image SHA, memory_diagnostics per phase (watch parent RSS after the first instrument), timings, stop reason or results and any strategies that passed. Then hand the turn to Claude, who reviews and, if a fix is needed, writes the next task."
+    },
+    {
+      "revision": 289,
+      "ts": "2026-10-09T22:58:00Z",
+      "agent": "codex",
+      "action": "block_approved_run_pod_unreachable",
+      "task_ids": [
+        "T-117"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "The owner approved one seeds-only run with a 12 GB cgroup-anon stop and an 8-hour lab test window. Bounded checks found no reachable Pod terminal: the current heartbeat endpoint returned HTTP 404 and previously supplied endpoints returned HTTP 502. Codex could not verify the running image SHA or run.lock and therefore started no process. Recorded blocker B-012 and question Q-043; turn paused to human pending a reachable redeployed terminal."
     }
   ],
   "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."
