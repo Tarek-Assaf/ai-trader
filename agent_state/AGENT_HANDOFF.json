@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 278,
+  "turn": "claude",
+  "revision": 279,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-116 is merged on origin/main. The owner-approved seeds-only interim Pod run on the T-116 image was stopped safely at the 8 GB memory threshold before any results were written; the exact image, progress phase, peak RSS, worker count, cgroup memory and cleanup are recorded in T-116 evidence.",
+    "summary": "T-116 is merged on origin/main. The owner-approved seeds-only interim Pod run on image 49502b6ae0ecea0ae6dc764d37d9dd7ae2bb2716 was stopped safely at the 8 GB cgroup-memory threshold before results were written; image, last progress phase, phase timings, peak RSS, worker count, cgroup memory and lock cleanup are recorded in T-116 evidence. Seeds-only pattern mining remains untested.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3705,10 +3705,14 @@
         "Owner-approved seeds-only interim Pod run on image ghcr.io/tarek-assaf/ai-trader:88206bbf6a62d35e0b298f44e3bfa8413581178d; command was python scripts/lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force with default lock/progress paths; run_id=20261009T195820Z, PID=558.",
         "Last progress.json before stop: status=running, phase=evaluating:0/20:NSXUSD:5m, ideas_done=0, ideas_total=40, workers=10, peak_rss_bytes=893927424, updated_at=2026-10-09T19:59:55.403084+00:00.",
         "The run was stopped after cgroup memory.current reached 9160667136 bytes (about 8.53 GiB), above the approved 8 GB safety threshold; PID 558 and its ten lab worker processes were confirmed stopped. The matching run.lock was removed only after PID 558 was dead.",
-        "No new results.json was written; the existing results.json remained the stale 49934-byte file from 2026-10-08. Seeds-only pattern mining did not complete and no trade, gate, broker, secret, or holdout action occurred."
+        "No new results.json was written; the existing results.json remained the stale 49934-byte file from 2026-10-08. Seeds-only pattern mining did not complete and no trade, gate, broker, secret, or holdout action occurred.",
+        "Owner-approved seeds-only interim Pod run on image ghcr.io/tarek-assaf/ai-trader:49502b6ae0ecea0ae6dc764d37d9dd7ae2bb2716; command was python scripts/lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force with default lock/progress paths; run_id=20261009T203258Z, PID=665.",
+        "Final progress.json before the controlled stop: status=running, phase=evaluating:0/20:NSXUSD:5m, ideas_done=0, ideas_total=40, workers=4, peak_rss_bytes=4793675776, updated_at=2026-10-09T20:35:33.767730+00:00. Phase timings: loading=4.194736842997372s; loading:NSXUSD:5m=33.60174373257905s; loading:XAUUSD:5m=41.51161018945277s; mining:NSXUSD:5m:0/20=0.018839502707123756s; mining:XAUUSD:5m:0/20=0.03165927715599537s.",
+        "The run was stopped after cgroup memory.current reached 8033034240 bytes (about 8.03 GB) at the approved 8 GB safety threshold; PID 665 and its four lab worker processes (PIDs 881-884) were confirmed stopped. The matching run.lock was removed only after PID 665 was dead; no lab process remained.",
+        "No new results.json was written. The existing 49934-byte results.json was stale from 2026-10-08 and was not attributed to this run. Seeds-only pattern mining did not complete and no per-strategy Gate 1 fail reasons or trade counts are available for this run. No broker, order, gate, secret, or holdout action occurred."
       ],
       "completion_note": "Merged in PR #133 (squash 5ab5138). CI quality green. Claude additions: shared warmed IndicatorCache built once before forking, warning log on parallel->serial fallback, fix for _sign_test_p_value OverflowError above 1023 trades (also crashed old main code on large samples), new tests/unit/test_lab_metrics_pvalue.py. Benchmark (Claude, 100k synthetic 5m bars, 2-core sandbox, not 400k, not the Pod): old 42.8s, T-116 serial 24.0s, with shared cache 18.3s (about 2.3x); 2 workers no extra gain on 2 cores. 8-core Pod gain unproven until measured.",
-      "review_notes": "T-116 is merged. The owner-approved seeds-only interim run is recorded as inconclusive: it reached evaluating:0/20:NSXUSD:5m but exceeded the 8 GB memory safety threshold before producing results. No further rerun is authorized by this evidence."
+      "review_notes": "T-116 is merged. The owner-approved seeds-only interim run on the worker-capped image reached evaluating:0/20:NSXUSD:5m, then was stopped at the 8 GB cgroup-memory safety threshold before producing results. This is a controlled safety stop and an inconclusive lab result; seeds-only pattern mining remains untested. No further rerun is authorized by this evidence."
     }
   ],
   "decisions": [
@@ -6790,6 +6794,17 @@
       "validated_by": "claude",
       "date": "2026-10-09",
       "reverify_if": "worker_cap changes or a Pod run exceeds 8 GB with 4 workers"
+    },
+    {
+      "id": "V-279",
+      "subject": "T-116 seeds-only interim Pod run on worker-capped image",
+      "method": "Verified the exact image SHA, confirmed run.lock was absent before launch, started exactly one detached seeds-only process, monitored progress.json, worker count and cgroup memory, stopped only that process and its four lab workers at the approved memory threshold, confirmed PID death and removed the matching lock, then checked for fresh results.",
+      "result": "fail",
+      "evidence": "Image SHA 49502b6ae0ecea0ae6dc764d37d9dd7ae2bb2716; PID 665; workers 4; last phase evaluating:0/20:NSXUSD:5m; peak_rss_bytes=4793675776; cgroup memory.current=8033034240 bytes at stop; no new results.json; lock cleanup followed PID death.",
+      "review_notes": "Controlled safety stop, not evidence of a strategy or broker failure. The run is seeds-only, so pattern mining is untested and no Gate 1 strategy table can be reported.",
+      "validated_by": "codex",
+      "date": "2026-10-09",
+      "reverify_if": "The owner authorizes a future run after a memory-safe configuration is prepared."
     }
   ],
   "blockers": [
@@ -11821,6 +11836,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner said in chat at 23:16 Riyadh (20:16 UTC): 'Approved for your request and share the image once ready', replying to the request to redeploy the Pod on the newest image and run one seeds-only run. Image ghcr.io/tarek-assaf/ai-trader:49502b6ae0ecea0ae6dc764d37d9dd7ae2bb2716 is published (CI green). Codex: only after the owner confirms the Pod is redeployed on that SHA, verify the running image, then start exactly ONE detached run: lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force (worker cap is now 4). Touch only that process and its lock; stop only at 8 GB Pod memory, 15 min stale updated_at with flat CPU, or 3 hours. Record last phase, timings per stage, peak memory and results in the handoff; no gate changes, no secrets or Pod URL."
+    },
+    {
+      "revision": 279,
+      "ts": "2026-10-09T20:36:10Z",
+      "agent": "codex",
+      "action": "record_t116_seeds_r278_memory_stop",
+      "task_ids": [
+        "T-116"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Verified image ghcr.io/tarek-assaf/ai-trader:49502b6ae0ecea0ae6dc764d37d9dd7ae2bb2716, started exactly one detached seeds-only run (run_id=20261009T203258Z, PID 665, workers=4), and stopped it at cgroup memory.current=8033034240 bytes after the 8 GB safety threshold was reached. PID 665 and workers 881-884 were dead before the matching lock was removed. Last phase was evaluating:0/20:NSXUSD:5m with peak_rss_bytes=4793675776; no new results were produced. This was seeds-only, so pattern mining is untested. Handing turn to Claude."
     }
   ],
   "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."
