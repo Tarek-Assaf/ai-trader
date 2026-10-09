@@ -42,6 +42,7 @@ LOGGER = logging.getLogger(__name__)
 INSTRUMENTS = ("NSXUSD", "XAUUSD")
 TIMEFRAMES = (1, 3, 5)
 Timeframe = Literal[1, 3, 5]
+PROGRESS_HEARTBEAT_SECONDS = 30.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -231,7 +232,31 @@ class RunFileLock:
         try:
             descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError as exc:
-            raise RuntimeError("a Strategy Lab run is already in progress") from exc
+            stale = False
+            try:
+                payload = json.loads(self.path.read_text(encoding="utf-8"))
+                pid = int(payload["pid"])
+            except (OSError, TypeError, ValueError, KeyError, json.JSONDecodeError):
+                stale = True
+                LOGGER.warning("reclaiming malformed Strategy Lab lock %s", self.path)
+            else:
+                try:
+                    os.kill(pid, 0)
+                except ProcessLookupError:
+                    stale = True
+                    LOGGER.warning(
+                        "reclaiming dead Strategy Lab lock pid=%s path=%s", pid, self.path
+                    )
+                except PermissionError:
+                    # The process exists but belongs to another user; fail safe.
+                    pass
+            if not stale:
+                raise RuntimeError("a Strategy Lab run is already in progress") from exc
+            try:
+                self.path.unlink()
+            except FileNotFoundError:
+                pass
+            descriptor = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
             handle.write(
                 json.dumps({"pid": os.getpid(), "started_at": datetime.now(UTC).isoformat()})
@@ -902,9 +927,60 @@ class LabRunner:
         progress_path: str | Path | None = None,
     ) -> LabRunResult:
         started = datetime.now(UTC)
+        run_name = run_id or started.strftime("%Y%m%dT%H%M%SZ")
+        memory_limit = read_memory_limit()
+        workers = cap_worker_count(
+            workers,
+            cpu_count=os.cpu_count(),
+            memory_limit_bytes=memory_limit,
+        )
+        peak_rss = process_rss_bytes()
+        attempts: list[LabAttempt] = []
+        completed_ideas = 0
+        total_ideas = 0
         phase_started = time.monotonic()
         phase_timings: dict[str, float] = {}
         current_phase = "loading"
+        progress_lock = threading.RLock()
+        heartbeat_stop = threading.Event()
+        heartbeat_thread: threading.Thread | None = None
+
+        def write_progress(status: str = "running") -> None:
+            nonlocal peak_rss
+            if progress_path is None:
+                return
+            with progress_lock:
+                peak_rss = max(peak_rss, process_rss_bytes())
+                target = Path(progress_path)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                now = datetime.now(UTC).isoformat()
+                target.write_text(
+                    json.dumps(
+                        {
+                            "status": status,
+                            "run_id": run_name,
+                            "pid": os.getpid(),
+                            "started_at": started.isoformat(),
+                            "updated_at": now,
+                            "ideas_done": completed_ideas,
+                            "ideas_total": total_ideas,
+                            "survivors": sum(item.verdict == "pass" for item in attempts),
+                            "phase": current_phase,
+                            "phase_timings_seconds": dict(phase_timings),
+                            "peak_rss_bytes": peak_rss,
+                            "memory_limit_bytes": memory_limit,
+                            "workers": workers,
+                        },
+                        sort_keys=True,
+                    ),
+                    encoding="utf-8",
+                )
+
+        def progress_heartbeat() -> None:
+            while not heartbeat_stop.wait(PROGRESS_HEARTBEAT_SECONDS):
+                write_progress()
+
+        write_progress()
 
         def mark_phase(name: str) -> None:
             nonlocal current_phase, phase_started
@@ -915,23 +991,22 @@ class LabRunner:
             current_phase = name
             phase_started = now
             print(f"[{datetime.now(UTC).isoformat()}] {name}", flush=True)
+            write_progress()
 
-        run_name = run_id or started.strftime("%Y%m%dT%H%M%SZ")
-        memory_limit = read_memory_limit()
-        workers = cap_worker_count(
-            workers,
-            cpu_count=os.cpu_count(),
-            memory_limit_bytes=memory_limit,
-        )
-        peak_rss = process_rss_bytes()
         coverage = tuple(coverage_report(self.lake_root, instrument) for instrument in instruments)
-        attempts: list[LabAttempt] = []
         holdout_files = tuple(self.holdout_root.glob("**/*.parquet"))
         if not holdout_files:
             raise RuntimeError(
                 "Strategy Lab holdout is absent; run lab_data_check.py --prepare-holdout first"
             )
         sealed_months = holdout_months(self.holdout_root, instruments)
+        if progress_path is not None:
+            heartbeat_thread = threading.Thread(
+                target=progress_heartbeat,
+                name="lab-progress-heartbeat",
+                daemon=True,
+            )
+            heartbeat_thread.start()
 
         def stopped() -> bool:
             return bool(
@@ -970,6 +1045,7 @@ class LabRunner:
             ]
         ] = []
         for instrument, timeframe in ((i, t) for i in instruments for t in timeframes):
+            mark_phase(f"loading:{instrument}:{timeframe}m")
             candles = load_histdata_candles(
                 self.lake_root,
                 instrument,
@@ -992,6 +1068,7 @@ class LabRunner:
             train, test = candles[:split], candles[split:]
             if not test:
                 continue
+            mark_phase(f"mining:{instrument}:{timeframe}m")
             # Idea mining and parameter tuning must never inspect the later
             # evaluation window. The sealed holdout has already been excluded
             # from ``candles`` above, so this is the remaining in-sample slice.
@@ -1032,46 +1109,15 @@ class LabRunner:
         }
         trial_count = max(1, len(existing_hashes | current_hashes))
         total_ideas = sum(len(group[4]) for group in groups)
-        completed_ideas = 0
-
-        def write_progress(status: str = "running") -> None:
-            nonlocal peak_rss
-            if progress_path is None:
-                return
-            peak_rss = max(peak_rss, process_rss_bytes())
-            target = Path(progress_path)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_text(
-                json.dumps(
-                    {
-                        "status": status,
-                        "run_id": run_name,
-                        "ideas_done": completed_ideas,
-                        "ideas_total": total_ideas,
-                        "survivors": sum(item.verdict == "pass" for item in attempts),
-                        "phase": current_phase,
-                        "phase_timings_seconds": dict(phase_timings),
-                        "peak_rss_bytes": peak_rss,
-                        "memory_limit_bytes": memory_limit,
-                        "workers": workers,
-                    },
-                    sort_keys=True,
-                ),
-                encoding="utf-8",
-            )
-
         write_progress()
         for instrument, timeframe, train, test, candidates, specs, holdout in groups:
             if stopped():
                 break
-            mark_phase(f"mining:{instrument}:{timeframe}m")
-            write_progress()
             reader = open_sealed_reader(self.holdout_root, self.ledger)
             pipeline = ValidationPipeline(
                 ledger=self.ledger, cost_model=pessimistic_cost_model(self.config_path)
             )
             mark_phase(f"evaluating:0/{len(candidates)}:{instrument}:{timeframe}m")
-            write_progress()
             try:
                 decisions = pipeline.run(
                     specs,
@@ -1162,6 +1208,9 @@ class LabRunner:
         phase_timings.setdefault("done", 0.0)
         survivors = tuple(item for item in attempts if item.verdict == "pass")
         write_progress("completed")
+        heartbeat_stop.set()
+        if heartbeat_thread is not None:
+            heartbeat_thread.join(timeout=2.0)
         return LabRunResult(run_name, started, finished, tuple(attempts), survivors, coverage)
 
     @staticmethod
