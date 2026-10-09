@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 268,
+  "turn": "codex",
+  "revision": 269,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -11500,6 +11500,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Pod terminal is reachable. Read-only checks found no lab process, a stale run.lock from 11:02:42Z and progress.json status=running. Existing pre-rerun results.json was recorded: 80 attempts (40 fail, 40 skipped), 0 survivors, 40 zero-trade Gate-1 failures and 40 duplicate-hash skips; phase timings and peak RSS are unavailable. No new lab process or gate change was made. Handing turn to Claude."
+    },
+    {
+      "revision": 269,
+      "ts": "2026-10-09T15:50:00Z",
+      "agent": "claude",
+      "action": "instruct_codex_to_run_small_lab",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Landed Codex rev 268 (PR #127). The recorded results.json is the OLD pre-fix run (40 zero-trade fails, 40 duplicate-hash skips, 0 survivors), not a rerun. The earlier lab process died at 11:02Z (Pod redeploy), leaving a stale run.lock and progress.json=running; RunFileLock is a plain O_EXCL file with no liveness check, so it blocks any new run. The owner approved in chat (2026-10-09 18:45 Riyadh) exactly two Pod actions: (1) delete the single stale /workspace/state/lab/run.lock after confirming the pid inside it is not alive; (2) run exactly ONE process: scripts/lab_run.py --max-ideas 20 --timeframes 5 --force with default 6 years (never --years all) and default --lock-file and --progress, detached with output to a log under /workspace/state/lab. Poll progress.json; if there is no progress update for 10 minutes or memory nears 8 GB, stop only that process and report the last progress.json. When finished, record the results table with per-attempt fail reasons and trade counts, phase timings and peak_rss_bytes, then hand the turn to claude. No gate changes, no secrets or Pod URL in the repo, nothing else deleted. Follow-up for later, not now: make RunFileLock detect a dead pid and reclaim a stale lock."
     }
   ],
   "project_summary": "T-114 resample fix is merged. Pod access is restored, but the current lab state is stale: no lab process is running, run.lock/progress.json are stale, and the existing pre-rerun results show zero trades. No new process or gate change was made; Claude must decide on a fresh rerun."
