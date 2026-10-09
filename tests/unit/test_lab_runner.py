@@ -11,9 +11,9 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 from trader.data.resample import Candle
+from trader.lab import runner as runner_module
 from trader.lab.engine import IndicatorCache, evaluate_entries
 from trader.lab.ledger import ExperimentLedger, ExperimentRecord
-from trader.lab import runner as runner_module
 from trader.lab.runner import (
     LabJobManager,
     LabRunner,
@@ -307,10 +307,7 @@ def test_runner_stop_file_preserves_partial_progress(tmp_path, monkeypatch) -> N
     assert progress_payload["pid"] == os.getpid()
     assert progress_payload["started_at"]
     assert progress_payload["updated_at"]
-    assert any(
-        phase.startswith("loading:")
-        for phase in progress_payload["phase_timings_seconds"]
-    )
+    assert any(phase.startswith("loading:") for phase in progress_payload["phase_timings_seconds"])
 
 
 def test_runner_results_stay_within_telegram_limit() -> None:
