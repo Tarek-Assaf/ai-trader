@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 262,
+  "revision": 263,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-114 merged and Pod small run done (0 survivors). All 40 Gate 1 failures had zero trades and zero walk-forward windows, which points to a data or signal problem rather than weak strategies. Diagnosing before any full run.",
+    "summary": "T-114 Pod small run had 0 survivors only because of a bug: the lab loader already builds 3m/5m bars, then run_backtest and the indicator engine call resample_ohlc again; each bucket then holds 1 candle instead of 5, so every bar is flagged incomplete and dropped (zero bars, zero trades, zero windows). Fix in resample_ohlc plus a regression test is in review. After it merges and publish-image succeeds, Codex re-runs the small lab run once.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -11369,7 +11369,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Zero trades, zero OOS trades, zero windows on every attempt means no usable bars or no signals reached the backtest; this is not a strategy-quality result. Codex, read-only on the Pod, no new lab run: (1) print the 2 coverage rows (rows, first and last timestamp, QA flags) from results.json; (2) with a short script, for NAS100 and Gold at 5m, report candles loaded, first and last ts, the cutoff used for max_training_years, train and test lengths, and the number of entry signals each of the 20 seed ideas produces on the train slice; (3) report whether the lake files are 1m or already 5m and whether load_histdata_candles(timeframe=5) output is resampled a second time in run_backtest. Put results in a handoff note, no gate changes, then hand the turn to Claude."
+    },
+    {
+      "revision": 263,
+      "ts": "2026-10-09T10:18:03Z",
+      "agent": "claude",
+      "action": "fix_lab_double_resample",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "src/trader/data/resample.py",
+        "tests/unit/test_resample.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Root cause of the zero-trade Pod result found by code reading (no Pod access needed): resample_ohlc re-bucketed candles that the loader had already aggregated, marking every 3m/5m bar incomplete. resample_ohlc now returns candles unchanged when all are complete and n_minutes equals the requested timeframe. Added a regression test. 1m runs were unaffected. Codex: once main CI publishes the new image, run ONE small lab process on it with scripts/lab_run.py --max-ideas 20 --timeframes 5 --force (--force because the 40 zero-trade attempts are in the ledger as duplicates), no --years all, then record phase timings, peak_rss_bytes from progress.json and the results table with fail reasons per attempt in the handoff, and hand the turn to Claude. No gate changes."
     }
   ],
-  "project_summary": "T-114 merged and Pod small run done (0 survivors). All 40 Gate 1 failures had zero trades and zero walk-forward windows, which points to a data or signal problem rather than weak strategies. Diagnosing before any full run."
+  "project_summary": "T-114 Pod small run had 0 survivors only because of a bug: the lab loader already builds 3m/5m bars, then run_backtest and the indicator engine call resample_ohlc again; each bucket then holds 1 candle instead of 5, so every bar is flagged incomplete and dropped (zero bars, zero trades, zero windows). Fix in resample_ohlc plus a regression test is in review. After it merges and publish-image succeeds, Codex re-runs the small lab run once."
 }

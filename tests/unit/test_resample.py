@@ -167,3 +167,18 @@ def test_ohlc_resampling_properties_and_no_lookahead(
     )
     extended = resample_ohlc([*bars, future], timeframe)
     assert extended[0] == aggregate
+
+
+def test_already_aggregated_candles_are_not_resampled_into_incomplete_bars() -> None:
+    start = datetime(2024, 1, 2, 9, 0, tzinfo=UTC)
+    minutes = [
+        Candle(start + timedelta(minutes=i), 10.0 + i, 11.0 + i, 9.0 + i, 10.5 + i)
+        for i in range(10)
+    ]
+    five = [bar for bar in resample_ohlc(minutes, 5) if bar.complete]
+    assert len(five) == 2
+    again = resample_ohlc(five, 5)
+    assert len(again) == 2
+    assert all(bar.complete for bar in again)
+    assert [bar.ts_utc for bar in again] == [bar.ts_utc for bar in five]
+    assert again[0].open == five[0].open and again[1].close == five[1].close

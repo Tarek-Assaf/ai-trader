@@ -36,6 +36,17 @@ def resample_ohlc(candles: Iterable[Candle], timeframe_minutes: int) -> list[Can
     if timeframe_minutes <= 0:
         raise ValueError("timeframe_minutes must be a positive integer")
 
+    candles = list(candles)
+    if (
+        timeframe_minutes > 1
+        and candles
+        and all(item.n_minutes == timeframe_minutes and item.complete for item in candles)
+    ):
+        # Already aggregated to this timeframe (e.g. the Strategy Lab loader
+        # output).  Re-bucketing would flag every bar incomplete because each
+        # bucket holds one candle, not ``timeframe_minutes`` minute candles.
+        return sorted(candles, key=lambda item: (item.series_key, item.ts_utc))
+
     grouped: dict[tuple[tuple[str, ...], datetime], list[Candle]] = defaultdict(list)
     seen: set[tuple[tuple[str, ...], datetime]] = set()
     for candle in candles:
