@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 263,
+  "turn": "codex",
+  "revision": 264,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-114 merged and Pod small run done (0 survivors). All 40 Gate 1 failures had zero trades and zero walk-forward windows, which points to a data or signal problem rather than weak strategies. Diagnosing before any full run.",
+    "summary": "T-114 small Pod run had 0 survivors because of a bug (loader-aggregated 3m/5m bars were resampled again and dropped), now fixed on main (PR #119). Codex re-runs the small lab run once on the new image; then Claude explains the real results.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6590,6 +6590,17 @@
       "validated_by": "codex",
       "date": "2026-10-09",
       "reverify_if": "scripts/lab_run.py or lab runner progress handling changes"
+    },
+    {
+      "id": "V-269",
+      "subject": "Zero-trade root cause and fix (double resample)",
+      "method": "Code reading of runner.load_histdata_columns, backtest.run_backtest and data/resample.resample_ohlc; confirmed by Codex's diagnostic of the double-resampling path; regression test added; CI quality check on PR #119.",
+      "result": "pass",
+      "evidence": "Loader aggregates 1m to 3m/5m, then run_backtest/evaluate_entries/IndicatorCache call resample_ohlc again; each bucket then holds 1 candle, flagged incomplete and dropped, so no bars, trades or windows. resample_ohlc now passes through candles already complete at the requested timeframe. tests/unit/test_resample.py regression test added; CI quality success on #119.",
+      "review_notes": "Real Pod behavior is proven only by the next small run (trades and windows must be non-zero).",
+      "validated_by": "claude",
+      "date": "2026-10-09",
+      "reverify_if": "resample_ohlc or the lab loader changes"
     }
   ],
   "blockers": [
@@ -11387,7 +11398,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Read-only Pod zero-trade diagnostic recorded coverage, 1m lake and 5m cache bounds, max_training_years cutoff, train/test lengths, cgroup memory/CPU snapshot, and the double-resampling path. The 20-seed entry-count script stalled under the current resource envelope and was stopped; no new lab run, gate change, broker call or order. Handing turn to Claude."
+    },
+    {
+      "revision": 264,
+      "ts": "2026-10-09T10:36:37Z",
+      "agent": "claude",
+      "action": "request_small_rerun_after_resample_fix",
+      "task_ids": [
+        "T-114"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Landed Codex diagnostic (PR #120) and the resample fix (PR #119). Codex: once publish-image finishes for main, the owner redeploys the Pod on the new image; then run ONE small lab process: scripts/lab_run.py --max-ideas 20 --timeframes 5 --force (force because the earlier zero-trade attempts are in the ledger), default 6 years, never --years all. Record phase timings, peak_rss_bytes and the results table with per-attempt fail reasons and trade counts, no secrets or Pod URL in the repo, then hand the turn to Claude. Also note the 20-seed entry-count script stalled earlier: if the run itself stalls, report progress.json instead of starting another process. No gate changes."
     }
   ],
-  "project_summary": "T-114 merged and Pod small run done (0 survivors). All 40 Gate 1 failures had zero trades and zero walk-forward windows, which points to a data or signal problem rather than weak strategies. Diagnosing before any full run."
+  "project_summary": "T-114 small Pod run had 0 survivors because of a bug (loader-aggregated 3m/5m bars were resampled again and dropped), now fixed on main (PR #119). Codex re-runs the small lab run once on the new image; then Claude explains the real results."
 }
