@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 280,
+  "turn": "claude",
+  "revision": 282,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-116 is merged on origin/main. The owner-approved seeds-only interim Pod run on image 49502b6ae0ecea0ae6dc764d37d9dd7ae2bb2716 was stopped safely at the 8 GB cgroup-memory threshold before results were written; image, last progress phase, phase timings, peak RSS, worker count, cgroup memory and lock cleanup are recorded in T-116 evidence. Seeds-only pattern mining remains untested.",
+    "summary": "T-118 is implemented on codex/t118-memory-diagnostics and handed to Claude for review. It adds per-phase main RSS, worker PSS/RSS fallback, cgroup anon and memory.current diagnostics while keeping the worker cap at 4. No Pod run was performed; after merge and redeploy, one seeds-only run may use the owner's 12 GB real-memory stop before T-117.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -89,7 +89,8 @@
         "T-114",
         "T-115",
         "T-116",
-        "T-117"
+        "T-117",
+        "T-118"
       ]
     },
     {
@@ -107,7 +108,8 @@
         "T-114",
         "T-115",
         "T-116",
-        "T-117"
+        "T-117",
+        "T-118"
       ]
     },
     {
@@ -131,7 +133,8 @@
         "T-114",
         "T-115",
         "T-116",
-        "T-117"
+        "T-117",
+        "T-118"
       ]
     },
     {
@@ -3718,6 +3721,45 @@
       "review_notes": "T-116 is merged. The owner-approved seeds-only interim run on the worker-capped image reached evaluating:0/20:NSXUSD:5m, then was stopped at the 8 GB cgroup-memory safety threshold before producing results. This is a controlled safety stop and an inconclusive lab result; seeds-only pattern mining remains untested. No further rerun is authorized by this evidence."
     },
     {
+      "id": "T-118",
+      "title": "Strategy Lab memory diagnostics and real-memory stop evidence",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-116"
+      ],
+      "acceptance_criteria": [
+        "progress.json records main-process RSS, the sum of worker PSS or RSS, cgroup memory.stat anon, and memory.current at every phase mark, with a per-phase diagnostics history.",
+        "The Pod-run procedure uses real memory (cgroup anon plus worker memory) with a 12 GB stop limit; the worker cap remains 4.",
+        "Add focused tests and run the CI-equivalent desktop checks available without touching the Pod.",
+        "After T-118 merges and the owner redeploys the image, exactly one detached seeds-only run may be started with python scripts/lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force. Stop at 12 GB real memory, service failure, stale progress with flat CPU, or 3 hours; record per-phase memory, timings and results.",
+        "T-117 follows T-118 and uses these measurements for the training-window and largest-item refactor.",
+        "Gates in config/strategy_lab.yaml unchanged; holdout only via validator.open_sealed_reader; no secrets or Pod URL; do not run anything on the Pod for T-118."
+      ],
+      "deliverables": [
+        "src/trader/lab/runner.py",
+        "tests/unit/test_lab_runner.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "src/trader/lab/runner.py: process_memory_diagnostics reads main RSS, descendant worker PSS with RSS fallback, cgroup memory.stat anon and memory.current; progress.json writes top-level counters and a per-phase memory_diagnostics history at every phase mark and heartbeat.",
+        "tests/unit/test_lab_runner.py: progress payload assertions cover rss_bytes, worker_pss_bytes, cgroup_anon_bytes, memory_current_bytes and memory_diagnostics; existing fake-lake runner coverage remains in place.",
+        "python agent_state/validate_handoff.py: structural validation passed after adding T-118 and updating R-03/R-04/R-05 coverage.",
+        "python -m compileall -q src/trader/lab tests/unit/test_lab_runner.py: passed; git diff --check: passed.",
+        "ruff, mypy, pytest and make are unavailable on this Windows desktop (ruff/mypy/make commands missing; Python reports No module named pytest). CI should run the full suite.",
+        "No Pod was touched for T-118. Worker cap remains 4; gates, holdout access and trading defaults are unchanged."
+      ],
+      "completion_note": "Implemented T-118 diagnostics on a branch from authoritative origin/main and prepared the handoff for Claude review. The future post-merge seeds-only run must use the 12 GB real-memory stop procedure and record per-phase diagnostics before T-117 refactoring.",
+      "review_notes": "Ready for Claude review and merge. CI must run the available lint, typecheck and pytest suite; no Pod run is authorized until this task merges and the owner redeploys the new image."
+    },
+    {
       "id": "T-117",
       "title": "Strategy Lab memory: load only the training window, measure memory per phase, safe worker sizing",
       "phase": 8,
@@ -6873,6 +6915,17 @@
       "validated_by": "claude",
       "date": "2026-10-09",
       "reverify_if": "T-117 merges"
+    },
+    {
+      "id": "V-281",
+      "subject": "T-118 per-phase real-memory diagnostics",
+      "method": "Read the T-118 diff, validated handoff structure and append-only log, ran Python compileall and git diff --check, and confirmed the Pod was not touched.",
+      "result": "pass",
+      "evidence": "Progress writes main rss_bytes, worker_pss_bytes with RSS fallback, cgroup_anon_bytes, memory_current_bytes and memory_diagnostics keyed by phase. Worker cap remains 4. Desktop structural/compile checks passed; ruff, mypy, pytest and make are unavailable and CI review is required.",
+      "review_notes": "Claude should run CI and review the 12 GB real-memory stop procedure before merge. T-117 remains queued behind T-118.",
+      "validated_by": "codex",
+      "date": "2026-10-09",
+      "reverify_if": "T-118 diagnostics or worker-cap code changes, or CI reports a progress-schema or memory-measurement regression."
     }
   ],
   "blockers": [
@@ -11930,6 +11983,34 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex's second seeds-only stop (V-280). Main process reached 4.79 GB RSS before evaluation; the runner loads all history then trims to 6 years, and forked workers inherit the large parent. New task T-117 for Codex (acceptance criteria in the task): load only the training window, measure memory per phase, fix the largest item, report benchmark. No Pod run until T-117 merges and the owner approves a new run."
+    },
+    {
+      "revision": 281,
+      "ts": "2026-10-09T20:50:00Z",
+      "agent": "codex",
+      "action": "start_t118_memory_diagnostics",
+      "task_ids": [
+        "T-118"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner approved T-118 before T-117: add per-phase main RSS, worker PSS or RSS, cgroup memory.stat anon and memory.current diagnostics; keep the worker cap at 4; add tests and run available CI-equivalent checks without touching the Pod. After T-118 merges and redeploy, one owner-approved seeds-only run may use a 12 GB real-memory stop; T-117 follows using the measurements."
+    },
+    {
+      "revision": 282,
+      "ts": "2026-10-09T20:52:00Z",
+      "agent": "codex",
+      "action": "complete_t118_memory_diagnostics",
+      "task_ids": [
+        "T-118"
+      ],
+      "files_changed": [
+        "src/trader/lab/runner.py",
+        "tests/unit/test_lab_runner.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-118 on a branch from authoritative origin/main: progress.json now records main RSS, worker PSS or RSS, cgroup memory.stat anon and memory.current at every phase mark with per-phase history; worker cap remains 4. Added tests and ran structural validation, compileall and diff checks. ruff, mypy, pytest and make are unavailable on this desktop; CI review is required. No Pod was touched. Handing turn to Claude for review and merge; T-117 follows."
     }
   ],
   "project_summary": "T-115 implementation is merged on origin/main. The owner-approved rerun PID 13555 stayed CPU-live for just over three hours with only the placeholder progress record; Codex stopped it at the runtime limit, confirmed it dead, and removed its matching lock. No fresh results were produced."

@@ -394,6 +394,8 @@ def test_progress_records_phases_and_counts(tmp_path, monkeypatch) -> None:
     assert payload["ideas_done"] == payload["ideas_total"] == 0
     assert "peak_rss_bytes" in payload
     assert payload["workers"] >= 1
+    assert {"rss_bytes", "worker_pss_bytes", "cgroup_anon_bytes", "memory_current_bytes"} <= payload.keys()
+    assert "memory_diagnostics" in payload
 
 
 def test_max_training_years_is_configured(tmp_path) -> None:
