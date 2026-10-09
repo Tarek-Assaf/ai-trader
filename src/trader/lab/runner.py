@@ -9,6 +9,7 @@ services and never promotes a strategy.
 from __future__ import annotations
 
 import asyncio
+import gc
 import hashlib
 import io
 import json
@@ -1189,8 +1190,6 @@ class LabRunner:
             tuple[
                 str,
                 int,
-                tuple[Candle, ...],
-                tuple[Candle, ...],
                 list[tuple[str, Any]],
                 list[StrategySpec],
                 Path,
@@ -1268,7 +1267,10 @@ class LabRunner:
                 or self.ledger.count_for_strategy(strategy_hash(spec.model_dump(mode="json"))) == 0
             ]
             groups.append(
-                (instrument, timeframe, tuple(train), tuple(test), candidates, specs, holdout)
+                # Keep only specs and paths between phases.  The candle
+                # arrays are reopened for each evaluation group below so a
+                # completed instrument can be reclaimed before the next one.
+                (instrument, timeframe, candidates, specs, holdout)
             )
 
         existing_hashes = {
@@ -1279,15 +1281,40 @@ class LabRunner:
         }
         current_hashes = {
             strategy_hash(spec.model_dump(mode="json"))
-            for _, _, _, _, candidates, _, _ in groups
+            for _, _, candidates, _, _ in groups
             for _, spec in candidates
         }
         trial_count = max(1, len(existing_hashes | current_hashes))
-        total_ideas = sum(len(group[4]) for group in groups)
+        total_ideas = sum(len(group[2]) for group in groups)
         write_progress()
-        for instrument, timeframe, train, test, candidates, specs, holdout in groups:
+        for instrument, timeframe, candidates, specs, holdout in groups:
             if stopped():
                 break
+            # Reopen only the current group. This keeps the parent from
+            # retaining all instruments while worker results are evaluated.
+            mark_phase(f"loading:{instrument}:{timeframe}m:reopen")
+            candles = load_histdata_candles(
+                self.lake_root,
+                instrument,
+                timeframe,
+                exclude_months=sealed_months,
+                cache_root=self.cache_root,
+            )
+            if self.max_training_years is not None and sealed_months:
+                first_holdout = min(sealed_months)
+                cutoff = datetime(
+                    first_holdout[0] - self.max_training_years,
+                    first_holdout[1],
+                    1,
+                    tzinfo=UTC,
+                )
+                candles = tuple(item for item in candles if item.ts_utc >= cutoff)
+            split = max(1, int(len(candles) * 0.8))
+            train, test = candles[:split], candles[split:]
+            if not test:
+                del candles, train, test
+                gc.collect()
+                continue
             reader = open_sealed_reader(self.holdout_root, self.ledger)
             pipeline = ValidationPipeline(
                 ledger=self.ledger, cost_model=pessimistic_cost_model(self.config_path)
@@ -1378,6 +1405,8 @@ class LabRunner:
             mark_phase(f"evaluating:{len(candidates)}/{len(candidates)}:{instrument}:{timeframe}m")
             mark_phase(f"holdout:{instrument}:{timeframe}m")
             write_progress()
+            del candles, train, test
+            gc.collect()
         finished = datetime.now(UTC)
         mark_phase("done")
         phase_timings.setdefault("done", 0.0)

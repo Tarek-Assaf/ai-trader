@@ -209,6 +209,61 @@ def test_pipeline_worker_failure_isolated_from_other_ideas(
     assert decisions[1].metrics["verdict"] == "error"
 
 
+def test_pipeline_worker_returns_slim_results_with_identical_gate_metrics() -> None:
+    """Full worker backtests are reduced before crossing into the parent."""
+
+    candles = _trend(120)
+    out_of_sample = _trend(30, start_minute=len(candles))
+    candidate = StrategySpec(
+        schema_version=1,
+        instrument="NAS100",
+        direction="long",
+        timeframe_minutes=1,
+        entry_conditions=(IndicatorCondition(indicator="close", operator="gt", threshold=0.0),),
+        exit_rules=(StopExit(kind="stop", distance=1.0), TargetExit(kind="target", distance=0.2)),
+    )
+    pipeline_module._init_worker(tuple(candles), tuple(out_of_sample), None, 50.0, 60, 20, 20)
+    _, compact = pipeline_module._evaluate_candidate(candidate)
+
+    from trader.lab.backtest import run_backtest
+    from trader.lab.engine import IndicatorCache
+    from trader.lab.metrics import gate1_metrics
+
+    full = run_backtest(
+        candidate,
+        candles,
+        train_bars=60,
+        test_bars=20,
+        step_bars=20,
+        indicator_cache=IndicatorCache.from_candles(candles, candidate.timeframe_minutes),
+    )
+    full_oos = run_backtest(
+        candidate,
+        out_of_sample,
+        indicator_cache=IndicatorCache.from_candles(out_of_sample, candidate.timeframe_minutes),
+    )
+    full_stress = run_backtest(
+        candidate,
+        candles,
+        cost_stress_pct=50.0,
+        indicator_cache=IndicatorCache.from_candles(candles, candidate.timeframe_minutes),
+    )
+    expected = gate1_metrics(
+        full,
+        out_of_sample=full_oos,
+        cost_stress=full_stress,
+        neighbor_results=(),
+        profitable_regimes=0,
+    )
+
+    assert compact.result.trades == ()
+    assert compact.result.equity_curve == ()
+    assert compact.result.net_pnl == full.net_pnl
+    assert compact.preliminary_metrics["trades"] == expected["trades"]
+    assert compact.preliminary_metrics["out_of_sample_trades"] == expected["out_of_sample_trades"]
+    assert compact.preliminary_metrics["p_value"] == expected["p_value"]
+
+
 def test_real_config_noise_never_promotes_across_random_variants(tmp_path: Path) -> None:
     """Acceptance fixture: random walks cannot pass the real Strategy Lab gates."""
     for seed in range(3):
