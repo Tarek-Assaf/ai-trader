@@ -66,6 +66,32 @@ def test_miner_uses_validator_only_after_ledger_append() -> None:
     assert {candidate.name for candidate in result.promoted} == {"mean_reversion"}
 
 
+def test_parallel_mining_matches_serial_order_and_metrics() -> None:
+    serial = PatternMiner(ledger=ExperimentLedger(), workers=1).scan(_candles())
+    parallel = PatternMiner(ledger=ExperimentLedger(), workers=2).scan(_candles())
+
+    assert [item.strategy_hash for item in parallel.candidates] == [
+        item.strategy_hash for item in serial.candidates
+    ]
+    assert [item.metrics for item in parallel.candidates] == [
+        item.metrics for item in serial.candidates
+    ]
+    assert [item.signals for item in parallel.candidates] == [
+        item.signals for item in serial.candidates
+    ]
+
+
+def test_mining_reports_completed_spec_progress() -> None:
+    updates: list[tuple[int, int]] = []
+    PatternMiner(
+        ledger=ExperimentLedger(),
+        workers=1,
+        progress_callback=lambda done, total: updates.append((done, total)),
+    ).scan(_candles())
+
+    assert updates == [(index, 20) for index in range(1, 21)]
+
+
 def test_miner_is_safe_for_empty_input_when_instrument_is_explicit() -> None:
     result = PatternMiner(instrument="XAUUSD").scan(())
 
