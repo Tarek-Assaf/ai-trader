@@ -225,6 +225,69 @@ def process_rss_bytes() -> int:
         return 0
 
 
+def _proc_stat(pid: int) -> tuple[int, int] | None:
+    """Return (parent pid, resident bytes) from Linux /proc, if available."""
+    try:
+        fields = Path(f"/proc/{pid}/stat").read_text(encoding="ascii").rsplit(")", 1)[1].split()
+        page_size = os.sysconf("SC_PAGE_SIZE")
+        return int(fields[1]), int(fields[21]) * page_size
+    except (OSError, ValueError, IndexError, TypeError):
+        return None
+
+
+def _proc_pss(pid: int) -> int:
+    """Return proportional set size for a process, falling back to zero."""
+    try:
+        for line in Path(f"/proc/{pid}/smaps_rollup").read_text(encoding="ascii").splitlines():
+            if line.startswith("Pss:"):
+                return int(line.split()[1]) * 1024
+    except (OSError, ValueError, IndexError):
+        pass
+    return 0
+
+
+def _descendant_pids(root_pid: int) -> tuple[int, ...]:
+    children: dict[int, list[int]] = {}
+    for entry in Path("/proc").glob("[0-9]*"):
+        try:
+            pid = int(entry.name)
+        except ValueError:
+            continue
+        stat = _proc_stat(pid)
+        if stat is not None:
+            children.setdefault(stat[0], []).append(pid)
+    result: list[int] = []
+    pending = list(children.get(root_pid, ()))
+    while pending:
+        pid = pending.pop()
+        result.append(pid)
+        pending.extend(children.get(pid, ()))
+    return tuple(result)
+
+
+def process_memory_diagnostics() -> dict[str, int]:
+    """Capture main RSS, descendant worker memory and cgroup anonymous bytes."""
+    pid = os.getpid()
+    descendants = _descendant_pids(pid)
+    main_rss = (_proc_stat(pid) or (0, 0))[1] or process_rss_bytes()
+    worker_pss = sum(_proc_pss(child) for child in descendants)
+    if worker_pss == 0:
+        worker_pss = sum((_proc_stat(child) or (0, 0))[1] for child in descendants)
+    anon = 0
+    try:
+        for line in Path("/sys/fs/cgroup/memory.stat").read_text(encoding="ascii").splitlines():
+            if line.startswith("anon "):
+                anon = int(line.split()[1])
+                break
+    except (OSError, ValueError, IndexError):
+        pass
+    return {
+        "rss_bytes": int(main_rss),
+        "worker_pss_bytes": int(worker_pss),
+        "cgroup_anon_bytes": int(anon),
+    }
+
+
 class RunFileLock:
     """Small cross-process lock implemented with atomic file creation."""
 
@@ -490,6 +553,7 @@ def load_histdata_columns(
     *,
     exclude_months: set[tuple[int, int]] | None = None,
     cache_root: str | Path | None = None,
+    min_timestamp: datetime | None = None,
 ) -> ColumnarSeries:
     """Load HistData into compact read-only columns.
 
@@ -504,7 +568,10 @@ def load_histdata_columns(
         raise RuntimeError("pyarrow is required for Strategy Lab data") from exc
     files = _parquet_files(Path(root), instrument)
     excluded = exclude_months or set()
-    cache_path = _cache_path(files, excluded, instrument, timeframe, cache_root)
+    start_at = _as_utc(min_timestamp) if min_timestamp is not None else None
+    cache_path = _cache_path(
+        files, excluded, instrument, timeframe, cache_root, min_timestamp=start_at
+    )
     if cache_path is not None and cache_path.is_file():
         try:
             return _read_columnar_cache(cache_path, instrument, timeframe=timeframe)
@@ -516,6 +583,12 @@ def load_histdata_columns(
         name: [] for name in ("open", "high", "low", "close", "volume")
     }
     for path in files:
+        # Skip complete months before the training cutoff before asking Arrow
+        # to materialize any rows. The boundary month is filtered row-wise.
+        path_month = _path_month(path)
+        if start_at is not None and path_month is not None:
+            if path_month < (start_at.year, start_at.month):
+                continue
         try:
             available = set(pq.ParquetFile(path).schema.names)
             required = ["ts_utc", "open", "high", "low", "close"]
@@ -530,6 +603,8 @@ def load_histdata_columns(
             }
             for index, stamp in enumerate(stamps):
                 if (stamp.year, stamp.month) in excluded:
+                    continue
+                if start_at is not None and stamp < start_at:
                     continue
                 numeric = tuple(float(values[name][index] or 0.0) for name in columns)
                 if not all(math.isfinite(value) for value in numeric[:4]):
@@ -587,6 +662,7 @@ def load_histdata_arrays(
     *,
     exclude_months: set[tuple[int, int]] | None = None,
     cache_root: str | Path | None = None,
+    min_timestamp: datetime | None = None,
 ) -> ColumnarSeries:
     """Alias with an explicit name for callers that require array output."""
     return load_histdata_columns(
@@ -595,6 +671,7 @@ def load_histdata_arrays(
         timeframe,
         exclude_months=exclude_months,
         cache_root=cache_root,
+        min_timestamp=min_timestamp,
     )
 
 
@@ -605,6 +682,7 @@ def load_histdata_candles(
     *,
     exclude_months: set[tuple[int, int]] | None = None,
     cache_root: str | Path | None = None,
+    min_timestamp: datetime | None = None,
 ) -> tuple[Candle, ...]:
     """Read HistData as the backwards-compatible lazy Candle view."""
     return load_histdata_columns(
@@ -613,6 +691,7 @@ def load_histdata_candles(
         timeframe,
         exclude_months=exclude_months,
         cache_root=cache_root,
+        min_timestamp=min_timestamp,
     ).to_candles()
 
 
@@ -622,6 +701,8 @@ def _cache_path(
     instrument: str,
     timeframe: int,
     cache_root: str | Path | None,
+    *,
+    min_timestamp: datetime | None = None,
 ) -> Path | None:
     if cache_root is None:
         return None
@@ -637,6 +718,7 @@ def _cache_path(
         "exclude_months": sorted(f"{year:04d}-{month:02d}" for year, month in excluded),
         "instrument": instrument,
         "timeframe": timeframe,
+        "min_timestamp": min_timestamp.isoformat() if min_timestamp is not None else None,
     }
     digest = hashlib.sha256(
         json.dumps(signature, sort_keys=True, separators=(",", ":")).encode("utf-8")
@@ -1003,6 +1085,7 @@ class LabRunner:
         total_ideas = 0
         phase_started = time.monotonic()
         phase_timings: dict[str, float] = {}
+        phase_memory: dict[str, dict[str, int]] = {}
         current_phase = "loading"
         progress_lock = threading.RLock()
         heartbeat_stop = threading.Event()
@@ -1014,6 +1097,8 @@ class LabRunner:
                 return
             with progress_lock:
                 peak_rss = max(peak_rss, process_rss_bytes())
+                diagnostics = process_memory_diagnostics()
+                phase_memory[current_phase] = diagnostics
                 target = Path(progress_path)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 now = datetime.now(UTC).isoformat()
@@ -1032,6 +1117,7 @@ class LabRunner:
                         "peak_rss_bytes": peak_rss,
                         "memory_limit_bytes": memory_limit,
                         "workers": workers,
+                        "memory_diagnostics": dict(phase_memory),
                     },
                     sort_keys=True,
                 )
@@ -1114,13 +1200,7 @@ class LabRunner:
         ] = []
         for instrument, timeframe in ((i, t) for i in instruments for t in timeframes):
             mark_phase(f"loading:{instrument}:{timeframe}m")
-            candles = load_histdata_candles(
-                self.lake_root,
-                instrument,
-                timeframe,
-                exclude_months=sealed_months,
-                cache_root=self.cache_root,
-            )
+            cutoff: datetime | None = None
             if self.max_training_years is not None and sealed_months:
                 first_holdout = min(sealed_months)
                 cutoff = datetime(
@@ -1129,6 +1209,17 @@ class LabRunner:
                     1,
                     tzinfo=UTC,
                 )
+            candles = load_histdata_candles(
+                self.lake_root,
+                instrument,
+                timeframe,
+                exclude_months=sealed_months,
+                cache_root=self.cache_root,
+                min_timestamp=cutoff,
+            )
+            # Keep the exact row-wise guard for cache compatibility and
+            # callers that provide a boundary-month cutoff.
+            if cutoff is not None:
                 candles = tuple(item for item in candles if item.ts_utc >= cutoff)
             if len(candles) < 10:
                 continue

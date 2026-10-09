@@ -333,6 +333,35 @@ def test_holdout_months_are_read_from_strategy_lab_config(tmp_path) -> None:
     assert strategy_lab_holdout_months(config) == 7
 
 
+def test_loader_min_timestamp_skips_older_months_before_materialization(tmp_path) -> None:
+    lake = tmp_path / "lake"
+    for year, month in ((2019, 1), (2024, 1)):
+        path = lake / "NSXUSD" / "1m" / str(year) / f"{month:02}.parquet"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        pq.write_table(
+            pa.Table.from_pylist(
+                [
+                    {
+                        "ts_utc": datetime(year, month, 1, tzinfo=UTC),
+                        "open": float(year),
+                        "high": float(year + 1),
+                        "low": float(year - 1),
+                        "close": float(year),
+                        "volume": 1.0,
+                    }
+                ]
+            ),
+            path,
+        )
+    bounded = load_histdata_candles(
+        lake,
+        "NSXUSD",
+        min_timestamp=datetime(2024, 1, 1, tzinfo=UTC),
+    )
+    assert [item.ts_utc.year for item in bounded] == [2024]
+    assert bounded[0].open == 2024.0
+
+
 def test_loader_columns_match_reference_row_loader(tmp_path) -> None:
     _write_bars(tmp_path)
     path = tmp_path / "NSXUSD" / "1m" / "2024" / "01.parquet"
