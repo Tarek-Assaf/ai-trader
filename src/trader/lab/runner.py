@@ -1091,8 +1091,7 @@ class LabRunner:
                 diagnostics = process_memory_diagnostics()
                 previous = phase_memory.get(current_phase, {})
                 phase_memory[current_phase] = {
-                    key: max(value, previous.get(key, 0))
-                    for key, value in diagnostics.items()
+                    key: max(value, previous.get(key, 0)) for key, value in diagnostics.items()
                 }
                 target = Path(progress_path)
                 target.parent.mkdir(parents=True, exist_ok=True)
