@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 305,
+  "turn": "claude",
+  "revision": 306,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-122 ATR-scaled exits are merged in PR #158. The authorized post-merge seeds+patterns lab run and sequential controls run completed normally on image 517112fc00e45c34ae944f125b0dbe02f50ccbae under the 12 GB safety limit; no strategy passed Gate 1 and no broker or holdout activity occurred. Codex recorded per-phase timings, memory diagnostics, controls and results in V-298 and handed turn to Claude.",
+    "summary": "T-123 is implemented and published as image 4afd34ff3cf069cc3a80bf6f51b83c062725edb1. The single authorized seeds-only run completed normally on the six-year 5m window with four workers, 40 standard-seed attempts, zero survivors and no passed strategies. Peak cgroup anon was 2.67 GB, worker PSS 2.17 GB, RSS 0.90 GB and memory.current 2.88 GB, below the 12 GB stop. The max-ideas=20 cap selected the existing standard seeds, so T-123 slow seeds were not exercised; pattern mining was not run. Claude review is required.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4016,9 +4016,10 @@
       ],
       "review_cycles": 0,
       "evidence": [
-        "Implemented by Claude; unit tests pass locally; CI is the authority."
+        "Implemented by Claude; unit tests pass locally; CI is the authority.",
+        "V-300"
       ],
-      "completion_note": "Implemented by Claude. Pod run pending merge and redeploy."
+      "completion_note": "Implemented by Claude and published as image 4afd34ff3cf069cc3a80bf6f51b83c062725edb1. Codex verified the image and absent lock, then completed exactly one clean seeds-only run with four workers. The run completed normally with 40 standard-seed attempts, no survivors or passed strategies, and peak cgroup anon 2.67 GB / worker PSS 2.17 GB / RSS 0.90 GB / memory.current 2.88 GB. The max-ideas=20 cap did not reach the 24 new slow seeds, so their behavior remains untested. Claude review is required."
     }
   ],
   "decisions": [
@@ -7309,6 +7310,389 @@
       "validated_by": "claude",
       "date": "2026-10-10",
       "reverify_if": "Exit scale, cost model or gates change."
+    },
+    {
+      "id": "V-300",
+      "subject": "T-123 post-merge seeds-only Pod run",
+      "method": "Verified the running Pod image in the RunPod UI, confirmed run.lock was absent, stopped the accidentally duplicated initial launch only after confirming its PIDs, then launched exactly one clean detached lab_run.py process and read progress.json/results.json until normal completion.",
+      "result": "pass",
+      "evidence": {
+        "image_sha": "4afd34ff3cf069cc3a80bf6f51b83c062725edb1",
+        "command": "python scripts/lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force",
+        "training_window_years": 6,
+        "timeframe": "5m",
+        "workers": 4,
+        "run_id": "20261010T032503Z",
+        "started_at": "2026-10-10T03:25:03.460981+00:00",
+        "finished_at": "2026-10-10T03:29:52.067932+00:00",
+        "duration_seconds": 288.606951,
+        "pid": 1294,
+        "stop_reason": "normal completion; progress.status=completed and PID 1294 was dead at final check; run.lock absent after confirming PID death",
+        "initial_launch_cleanup": "The first terminal interaction accidentally launched PID 643 and PID 690. PID 690 exited 126; PID 643 was confirmed alive and was terminated with its children. The stale run.lock was removed only after PID 643 was confirmed dead. Exactly one clean run (PID 1294) was then launched and monitored.",
+        "attempts": 40,
+        "survivors": [],
+        "passed_strategies": [],
+        "slow_seed_coverage": "The max-ideas=20 cap selected the existing standard seed candidates (five families per instrument); none of the 24 new slow trend seeds appeared in results. T-123 slow-seed behavior is therefore untested by this one mandated run.",
+        "memory_peak": {
+          "peak_rss_bytes": 901197824,
+          "peak_worker_pss_bytes": 2168444928,
+          "peak_cgroup_anon_bytes": 2670112768,
+          "peak_memory_current_bytes": 2879836160,
+          "limit_cgroup_anon_bytes": 12000000000
+        },
+        "memory_diagnostics": {
+          "loading": {
+            "rss_bytes": 40882176,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 245907456,
+            "memory_current_bytes": 439767040
+          },
+          "loading:NSXUSD:5m": {
+            "rss_bytes": 519073792,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 709267456,
+            "memory_current_bytes": 653066240
+          },
+          "loading:NSXUSD:5m:reopen": {
+            "rss_bytes": 413282304,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 590159872,
+            "memory_current_bytes": 787234816
+          },
+          "loading:XAUUSD:5m": {
+            "rss_bytes": 422076416,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 598794240,
+            "memory_current_bytes": 794984448
+          },
+          "loading:XAUUSD:5m:reopen": {
+            "rss_bytes": 572440576,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 742088704,
+            "memory_current_bytes": 970862592
+          },
+          "mining:NSXUSD:5m:0/20": {
+            "rss_bytes": 360370176,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 533508096,
+            "memory_current_bytes": 729497600
+          },
+          "mining:XAUUSD:5m:0/20": {
+            "rss_bytes": 391262208,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 563957760,
+            "memory_current_bytes": 759496704
+          },
+          "evaluating:0/20:NSXUSD:5m": {
+            "rss_bytes": 420200448,
+            "worker_pss_bytes": 1764019200,
+            "cgroup_anon_bytes": 2210443264,
+            "memory_current_bytes": 2417332224
+          },
+          "evaluating:20/20:NSXUSD:5m": {
+            "rss_bytes": 403496960,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 582803456,
+            "memory_current_bytes": 783523840
+          },
+          "holdout:NSXUSD:5m": {
+            "rss_bytes": 403496960,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 582803456,
+            "memory_current_bytes": 783519744
+          },
+          "evaluating:0/20:XAUUSD:5m": {
+            "rss_bytes": 464367616,
+            "worker_pss_bytes": 2168444928,
+            "cgroup_anon_bytes": 2670112768,
+            "memory_current_bytes": 2879836160
+          },
+          "evaluating:20/20:XAUUSD:5m": {
+            "rss_bytes": 464367616,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 643977216,
+            "memory_current_bytes": 846057472
+          },
+          "holdout:XAUUSD:5m": {
+            "rss_bytes": 464367616,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 643977216,
+            "memory_current_bytes": 846053376
+          },
+          "done": {
+            "rss_bytes": 268619776,
+            "worker_pss_bytes": 0,
+            "cgroup_anon_bytes": 443834368,
+            "memory_current_bytes": 645222400
+          }
+        },
+        "phase_timings_seconds": {
+          "loading": 3.330830897204578,
+          "loading:NSXUSD:5m": 33.65749741625041,
+          "loading:NSXUSD:5m:reopen": 33.427899327129126,
+          "loading:XAUUSD:5m": 41.142666939646006,
+          "loading:XAUUSD:5m:reopen": 41.05559828132391,
+          "mining:NSXUSD:5m:0/20": 0.017694282345473766,
+          "mining:XAUUSD:5m:0/20": 0.030530598014593124,
+          "evaluating:0/20:NSXUSD:5m": 65.9244902068749,
+          "evaluating:20/20:NSXUSD:5m": 0.021673343144357204,
+          "holdout:NSXUSD:5m": 0.10646310169249773,
+          "evaluating:0/20:XAUUSD:5m": 69.76982349902391,
+          "evaluating:20/20:XAUUSD:5m": 0.009928140789270401,
+          "holdout:XAUUSD:5m": 0.11121419817209244,
+          "done": 0.0
+        },
+        "results_table": [
+          {
+            "instrument": "NSXUSD",
+            "source": "seed:bollinger_reversion",
+            "attempts": 5,
+            "trades": [
+              12005,
+              12815,
+              13635,
+              14384,
+              15170
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": -0.126666,
+            "median_cost_per_trade": 4.0,
+            "median_win_rate": 0.557169,
+            "median_trades_per_day": 7.737984
+          },
+          {
+            "instrument": "NSXUSD",
+            "source": "seed:donchian_breakout",
+            "attempts": 4,
+            "trades": [
+              8823,
+              8789,
+              8743,
+              8701
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": 0.803324,
+            "median_cost_per_trade": 4.0,
+            "median_win_rate": 0.461614,
+            "median_trades_per_day": 4.974783
+          },
+          {
+            "instrument": "NSXUSD",
+            "source": "seed:ema_crossover_atr_stop",
+            "attempts": 1,
+            "trades": [
+              13076
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": 0.494288,
+            "median_cost_per_trade": 4.0,
+            "median_win_rate": 0.450749,
+            "median_trades_per_day": 7.420747
+          },
+          {
+            "instrument": "NSXUSD",
+            "source": "seed:ema_pullback",
+            "attempts": 5,
+            "trades": [
+              14407,
+              19698,
+              17531,
+              29526,
+              32725
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": -0.243546,
+            "median_cost_per_trade": 4.0,
+            "median_win_rate": 0.573055,
+            "median_trades_per_day": 11.178791
+          },
+          {
+            "instrument": "NSXUSD",
+            "source": "seed:rsi_mean_reversion",
+            "attempts": 5,
+            "trades": [
+              50458,
+              42767,
+              25205,
+              21327,
+              11178
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": -0.423662,
+            "median_cost_per_trade": 4.0,
+            "median_win_rate": 0.540409,
+            "median_trades_per_day": 14.304063
+          },
+          {
+            "instrument": "XAUUSD",
+            "source": "seed:bollinger_reversion",
+            "attempts": 5,
+            "trades": [
+              11721,
+              19441,
+              26585,
+              32721,
+              38113
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": 0.030573,
+            "median_cost_per_trade": 1.6,
+            "median_win_rate": 0.174459,
+            "median_trades_per_day": 15.080153
+          },
+          {
+            "instrument": "XAUUSD",
+            "source": "seed:donchian_breakout",
+            "attempts": 4,
+            "trades": [
+              10703,
+              10391,
+              10139,
+              9759
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": 0.079779,
+            "median_cost_per_trade": 1.6,
+            "median_win_rate": 0.455165,
+            "median_trades_per_day": 5.822748
+          },
+          {
+            "instrument": "XAUUSD",
+            "source": "seed:ema_crossover_atr_stop",
+            "attempts": 1,
+            "trades": [
+              14070
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": 0.046799,
+            "median_cost_per_trade": 1.6,
+            "median_win_rate": 0.42651,
+            "median_trades_per_day": 7.981108
+          },
+          {
+            "instrument": "XAUUSD",
+            "source": "seed:ema_pullback",
+            "attempts": 5,
+            "trades": [
+              15425,
+              21019,
+              18574,
+              31341,
+              34956
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": 0.017718,
+            "median_cost_per_trade": 1.6,
+            "median_win_rate": 0.183643,
+            "median_trades_per_day": 11.922879
+          },
+          {
+            "instrument": "XAUUSD",
+            "source": "seed:rsi_mean_reversion",
+            "attempts": 5,
+            "trades": [
+              55752,
+              47544,
+              27523,
+              23308,
+              11678
+            ],
+            "gate_fail_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ],
+            "median_gross_per_trade": -0.021507,
+            "median_cost_per_trade": 1.6,
+            "median_win_rate": 0.254215,
+            "median_trades_per_day": 15.612226
+          }
+        ],
+        "coverage": [
+          {
+            "instrument": "NSXUSD",
+            "first_bar": "2010-11-14T23:01:00+00:00",
+            "last_bar": "2026-09-25T00:59:00+00:00",
+            "months": 191,
+            "gaps": 0,
+            "qa_flags": [
+              "conflicting_duplicates",
+              "gaps"
+            ]
+          },
+          {
+            "instrument": "XAUUSD",
+            "first_bar": "2009-03-15T22:00:00+00:00",
+            "last_bar": "2026-09-25T00:59:00+00:00",
+            "months": 211,
+            "gaps": 0,
+            "qa_flags": [
+              "conflicting_duplicates",
+              "gaps"
+            ]
+          }
+        ]
+      },
+      "review_notes": "No strategy passed Gate 1 and no gate, broker, order, secret or unrelated Pod state changed. The command was seeds-only; pattern mining was not run. Because max-ideas=20 selected the existing standard candidates, the new T-123 slow seeds were not exercised and require a later explicitly approved run if desired.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "T-123 runner, seed ordering, memory diagnostics or gate configuration changes."
     }
   ],
   "blockers": [
@@ -12746,6 +13130,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex rev 304 (V-299 pass). The exit-scale fix works (random entries now about zero gross) but 0 of 72 attempts pass Gate 1 and textbook 5m seeds earn at best about 1 point gross per trade against a cost of 4.0 (NSXUSD) or 1.6 (XAUUSD). T-123 adds 24 slow trend breakout seeds per instrument (4h to 24h channels, EMA50/200 trend filter, wide ATR exits, hours-long holds). Gates and costs unchanged. Within the owner 8-hour authorization (rev 290) Codex runs lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force ONCE after redeploying the new main image (SHA in chat) and records results in ONE log entry."
+    },
+    {
+      "revision": 306,
+      "ts": "2026-10-10T03:38:11Z",
+      "agent": "codex",
+      "action": "record_t123_seeds_only_run",
+      "task_ids": [
+        "T-123"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Recorded the one authorized post-T-123 seeds-only run on image 4afd34ff3cf069cc3a80bf6f51b83c062725edb1. After confirming run.lock was absent, an accidental duplicate launch was stopped safely (PID 690 had already exited; PID 643 and its children were terminated after confirmation), and the stale lock was removed only after PID 643 was dead. Exactly one clean detached run then completed normally as PID 1294 with four workers: 40 standard-seed attempts, 0 survivors, no passed strategies, and all failures were out_of_sample_profit_factor_below_gate, walk_forward_share_below_gate, too_few_profitable_regimes, backtest_drawdown_above_gate and neighbor_parameters_not_profitable. Peak RSS/worker PSS/cgroup anon/memory.current were 901197824/2168444928/2670112768/2879836160 bytes, under the 12 GB stop. Full per-phase memory diagnostics, timings, grouped trade counts, medians, coverage and results are in V-300. This was seeds-only, so pattern mining was not run; max-ideas=20 selected the standard candidates and did not reach the 24 new slow seeds. No gate, broker, order, secret or unrelated Pod state changed. Handing turn to Claude for review."
     }
   ],
   "project_summary": "Engine and exits are now honest (V-299): random entries earn about zero. No strategy passes Gate 1 (0 of 72); textbook 5m seeds earn at best about 1 point gross per trade against a 4.0 point cost on NSXUSD. T-123 adds slow trend seeds with wide ATR exits. After CI and publish, Codex redeploys the new image (SHA in chat), runs seeds once and records results in ONE log entry. No paper trading yet."
