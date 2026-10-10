@@ -10,7 +10,7 @@ data:
   max_training_years: 6            # bounded walk-forward history; use all only for an explicit full-history run
   hypothesis_source: histdata      # ideas come from HistData and the own data lake
   confirmation_source: capital_demo
-  timeframes: [1m, 3m, 5m]         # 3m is built from 1m
+  timeframes: [1m, 3m, 5m, 15m, 1h]  # all built from 1m; 15m and 1h added 2026-10-10 by owner approval
 
 cost_defaults:
   # Deliberately pessimistic until T-017 calibration replaces this section.

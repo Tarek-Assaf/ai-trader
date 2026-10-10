@@ -42,8 +42,8 @@ from trader.viz import strategy_comparison
 
 LOGGER = logging.getLogger(__name__)
 INSTRUMENTS = ("NSXUSD", "XAUUSD")
-TIMEFRAMES = (1, 3, 5)
-Timeframe = Literal[1, 3, 5]
+TIMEFRAMES = (1, 3, 5, 15, 60)
+Timeframe = Literal[1, 3, 5, 15, 60]
 PROGRESS_HEARTBEAT_SECONDS = 30.0
 
 
@@ -582,7 +582,7 @@ def load_histdata_columns(
     is created only when downstream indicator code explicitly iterates it.
     """
     if timeframe not in TIMEFRAMES:
-        raise ValueError("timeframe must be one of 1, 3 or 5 minutes")
+        raise ValueError("timeframe must be one of 1, 3, 5, 15 or 60 minutes")
     try:
         import pyarrow.parquet as pq  # type: ignore[import-untyped]
     except ImportError as exc:  # pragma: no cover
