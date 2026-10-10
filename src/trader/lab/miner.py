@@ -325,8 +325,8 @@ class PatternMiner:
             timeframe_minutes=self.timeframe_minutes,
             entry_conditions=(_condition(name, direction, threshold),),
             exit_rules=(
-                StopExit(kind="stop", distance=1.5),
-                TargetExit(kind="target", distance=1.0),
+                StopExit(kind="stop", distance=1.5, unit="atr"),
+                TargetExit(kind="target", distance=1.0, unit="atr"),
             ),
             session_filters=_sessions(name),
         )

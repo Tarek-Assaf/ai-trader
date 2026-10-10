@@ -120,8 +120,8 @@ def _with_exit_rules(spec: StrategySpec, *, stop: float, target: float) -> Strat
     updated: StrategySpec = spec.model_copy(
         update={
             "exit_rules": (
-                StopExit(kind="stop", distance=stop),
-                TargetExit(kind="target", distance=target),
+                StopExit(kind="stop", distance=stop, unit="atr"),
+                TargetExit(kind="target", distance=target, unit="atr"),
             )
         }
     )
