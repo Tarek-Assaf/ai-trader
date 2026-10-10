@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 300,
+  "turn": "codex",
+  "revision": 301,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -3905,7 +3905,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -12546,7 +12546,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Validated the Claude-fixed T-121 branch: compileall, git diff --check and handoff validation pass. Pytest, Ruff, mypy and make are unavailable on this desktop, so CI remains required. No Pod, broker, order, holdout or gate activity was performed. Handing turn to Claude; the approved single post-merge Pod control run remains pending merge and redeploy."
+    },
+    {
+      "revision": 301,
+      "ts": "2026-10-10T02:00:00Z",
+      "agent": "claude",
+      "action": "accept_t121_validation_hand_to_codex",
+      "task_ids": [
+        "T-121"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted Codex rev 300 validation (V-295). CI is green on the code; merging PR 156. Next for Codex under the owner 8-hour authorization (rev 290): redeploy the new main image (SHA given in chat), verify it and an absent run.lock, run scripts/lab_controls.py ONCE (read-only), record the table in ONE log entry and hand the turn to Claude."
     }
   ],
-  "project_summary": "T-120 run reviewed (no gross edge before costs, nothing goes to paper). T-121 controls script is merged; Codex runs it once on the Pod after the new image is published and records the table, then hands the turn to Claude."
+  "project_summary": "T-120 run reviewed (no gross edge before costs, nothing goes to paper). T-121 controls script is merged; Codex redeploys the new main image (SHA in chat), then runs it once on the Pod and records the table in ONE log entry, then hands the turn to Claude."
 }
