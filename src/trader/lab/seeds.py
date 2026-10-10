@@ -303,6 +303,134 @@ def slow_seed_specs(
     return tuple(result)
 
 
+SWING_CHANNELS = (96, 288)
+SWING_ADX_MIN = 20.0
+SWING_REVERSION_RSI = (25.0, 30.0)
+SWING_REVERSION_EXITS = ((1.5, 3.0), (2.0, 4.0))
+SWING_REVERSION_HOLD_BARS = 144
+
+
+def _regime_trend_breakout(
+    instrument: str,
+    timeframe: int,
+    *,
+    channel: int,
+    direction: str,
+    sessions: tuple[str, ...],
+) -> StrategySpec:
+    """Slow channel breakout that only trades in a confirmed trending regime."""
+    long_side = direction == "long"
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=(
+            IndicatorCondition(
+                indicator="close",
+                operator="gt" if long_side else "lt",
+                threshold=0.0,
+                threshold_indicator="rolling_high" if long_side else "rolling_low",
+                threshold_period=channel,
+                threshold_lookback=1,
+            ),
+            IndicatorCondition(indicator="adx", period=14, operator="gt", threshold=SWING_ADX_MIN),
+        ),
+        exit_rules=(
+            StopExit(kind="stop", distance=3.0, unit="atr"),
+            TargetExit(kind="target", distance=6.0, unit="atr"),
+            TimeStopExit(kind="time_stop", bars=SLOW_HOLD_BARS),
+        ),
+        regime_filters=("trending_up" if long_side else "trending_down",),
+        session_filters=sessions,  # type: ignore[arg-type]
+    )
+
+
+def _ranging_reversion(
+    instrument: str,
+    timeframe: int,
+    *,
+    rsi_level: float,
+    stop: float,
+    target: float,
+    direction: str,
+    sessions: tuple[str, ...],
+) -> StrategySpec:
+    """Fade a stretched move below/above the Bollinger band, only in a ranging regime."""
+    long_side = direction == "long"
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=(
+            IndicatorCondition(
+                indicator="rsi",
+                period=14,
+                operator="lt" if long_side else "gt",
+                threshold=rsi_level if long_side else 100.0 - rsi_level,
+            ),
+            IndicatorCondition(
+                indicator="close",
+                operator="lt" if long_side else "gt",
+                threshold=0.0,
+                threshold_indicator="bollinger_lower" if long_side else "bollinger_upper",
+                threshold_period=20,
+            ),
+        ),
+        exit_rules=(
+            StopExit(kind="stop", distance=stop, unit="atr"),
+            TargetExit(kind="target", distance=target, unit="atr"),
+            TimeStopExit(kind="time_stop", bars=SWING_REVERSION_HOLD_BARS),
+        ),
+        regime_filters=("ranging",),
+        session_filters=sessions,  # type: ignore[arg-type]
+    )
+
+
+def swing_seed_specs(
+    instrument: str, timeframe: int
+) -> tuple[tuple[SeedStrategy, StrategySpec], ...]:
+    """Return regime-filtered trend and ranging mean-reversion seeds with ATR exits."""
+    result: list[tuple[SeedStrategy, StrategySpec]] = []
+    for label, sessions in (("all", ()), ("ny", ("new_york",))):
+        for direction in ("long", "short"):
+            for channel in SWING_CHANNELS:
+                name = f"regime_trend_{direction}_{channel}_{label}"
+                seed = SeedStrategy(name, "regime_trend", "regime_trend_breakout")
+                result.append(
+                    (
+                        seed,
+                        _regime_trend_breakout(
+                            instrument,
+                            timeframe,
+                            channel=channel,
+                            direction=direction,
+                            sessions=sessions,
+                        ),
+                    )
+                )
+            for rsi_level in SWING_REVERSION_RSI:
+                for stop, target in SWING_REVERSION_EXITS:
+                    name = f"range_revert_{direction}_{rsi_level:g}_{stop:g}_{target:g}_{label}"
+                    seed = SeedStrategy(name, "range_reversion", "ranging_reversion")
+                    result.append(
+                        (
+                            seed,
+                            _ranging_reversion(
+                                instrument,
+                                timeframe,
+                                rsi_level=rsi_level,
+                                stop=stop,
+                                target=target,
+                                direction=direction,
+                                sessions=sessions,
+                            ),
+                        )
+                    )
+    return tuple(result)
+
+
 __all__ = [
     "SEED_LIBRARY",
     "SLOW_CHANNELS",
@@ -310,4 +438,5 @@ __all__ = [
     "seed_library",
     "seed_specs",
     "slow_seed_specs",
+    "swing_seed_specs",
 ]
