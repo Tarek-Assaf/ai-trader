@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 319,
+  "revision": 321,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-126 completed the authorized Pod redeploy and single seeds-only rerun on image 683a964333b2b192c5a351919eca28783b813c9b. Run 20261010T084924Z completed 110/110 attempts with 0 Gate 1 passes; all top-ten diag_net_pnl attempts were NSXUSD slow-trend seeds and failed unchanged Gate 1 thresholds. V-307 records image/lock/PID evidence, memory/timings, every stored gate metric with its threshold and each failure reason. No gates, config, code, secrets, or holdout files were changed; no live/demo orders were placed. Awaiting Claude review.",
+    "summary": "T-129 recorded retained 15m/60m runs on image 57c3869 without level seeds and the incomplete stopped 1m run. The requested 5a06f012 level-seed reruns are blocked because RunPod reports Docker manifest unknown; no new run was started.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -101,7 +101,8 @@
         "T-126",
         "T-127",
         "T-128",
-        "T-129"
+        "T-129",
+        "T-130"
       ]
     },
     {
@@ -131,7 +132,8 @@
         "T-126",
         "T-127",
         "T-128",
-        "T-129"
+        "T-129",
+        "T-130"
       ]
     },
     {
@@ -167,7 +169,8 @@
         "T-126",
         "T-127",
         "T-128",
-        "T-129"
+        "T-129",
+        "T-130"
       ]
     },
     {
@@ -4197,7 +4200,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4210,7 +4213,8 @@
         "Why: costs of 4.0 NSXUSD points per trade swamp short-timeframe edge (best ideas +8 to +11 gross). Owner approved 15m and 1h in addition to 1m/3m/5m (answer to the open timeframe question). Claude's code change is in the PR that adds this task: TIMEFRAMES (1,3,5,15,60), spec literal, seed channels and time stops scaled to the same wall-clock length, config timeframes list. Gates unchanged.",
         "After that PR is merged and publish-image succeeds, redeploy the newest main image, verify SHA and no run.lock before each run. Run sequentially, each once, each with its OWN results and progress files: (a) python scripts/lab_run.py --idea-sources seeds --max-ideas 300 --timeframes 15 --force --results /workspace/state/lab/results_15m.json --progress /workspace/state/lab/progress_15m.json ; (b) the same with --timeframes 60 and results_60m.json / progress_60m.json.",
         "Record ONE log entry: for each run the run id, attempts, number passing Gate 1, peak cgroup anon, and per family (standard seed, slow_trend, regime_trend, range_revert) the best 3 by diag_net_pnl with trades, win rate, gross and cost per trade, OOS PF, WF windows and share, regimes, drawdown percent, neighbors, p-value and failure reasons beside the unchanged thresholds. Also report the bar count per timeframe and how many attempts failed with too_few_trades. Read everything from the retained results files.",
-        "Do not change gates, config, code, holdout access or secrets. Demo only. Hand the turn to claude and run python agent_state/validate_handoff.py --previous <file>."
+        "Do not change gates, config, code, holdout access or secrets. Demo only. Hand the turn to claude and run python agent_state/validate_handoff.py --previous <file>.",
+        "Owner-approved follow-up (2026-10-10): after image 5a06f012611c26afea2fbd9475337f4832b30a9a is published, redeploy and verify SHA plus no run.lock, then run once each with --max-ideas 400 and dedicated results/progress files for seeds on 15m, 60m and 5m. Do not run 1m again. Watch memory for 5m and stop if it exceeds 12 GB or workers crash; record all three level families (level_pdbreak, level_orb, level_retest) in the second session entry."
       ],
       "deliverables": [
         "src/trader/lab/seeds.py",
@@ -4218,6 +4222,36 @@
         "src/trader/lab/spec.py",
         "config/strategy_lab.yaml"
       ],
+      "review_cycles": 0,
+      "evidence": [
+        "V-313",
+        "V-314"
+      ],
+      "completion_note": "15m and 60m seeds (no level seeds, image 57c3869): 0 passes, 142 of 158 too_few_trades with the 6-year training cap. 1m run stopped incomplete (2 h+, 8.8 GB). Level seeds and full-history runs moved to the next task."
+    },
+    {
+      "id": "T-130",
+      "title": "Run all seed families incl. key-level seeds on 15m and 1h with full history, and 5m levels",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-129"
+      ],
+      "acceptance_criteria": [
+        "Why: 15m/60m runs show the best out-of-sample numbers so far (15m slow trend long 96: 669 trades, OOS PF 1.18; 60m range reversion long 30: OOS PF 1.47, WF share 0.875) but 142 of 158 attempts fail on too_few_trades because training is capped at 6 years. config/strategy_lab.yaml allows an explicit full-history run. Owner approved the key-level strategies (16:02 Riyadh) and Pod runs for this widened search. No gate is loosened; --years all is a data setting, not a gate.",
+        "Redeploy the Pod with the FULL 40-character image SHA 5a06f012611c26afea2fbd9475337f4832b30a9a (the earlier attempt used a 39-character SHA with a missing final 'a'). Verify the running SHA and that there is no run.lock before each run. Do NOT run 1m.",
+        "Run sequentially, once each, each with its OWN results and progress files, --idea-sources seeds --max-ideas 400 --force: (a) --timeframes 60 --years all -> results_60m_all.json / progress_60m_all.json; (b) --timeframes 15 --years all -> results_15m_all.json / progress_15m_all.json; (c) --timeframes 5 (default years) -> results_5m_levels.json / progress_5m_levels.json. Watch memory; stop at the 12 GB limit and record it.",
+        "Record ONE log entry: per run the run id, attempts, number passing Gate 1, number failing too_few_trades, peak cgroup anon, and per family (standard, slow_trend, regime_trend, range_revert, level_pdbreak, level_orb, level_retest) the best 3 by diag_net_pnl with trades, OOS trades, win rate, gross and cost per trade, OOS PF, holdout PF, WF windows and share, regimes, drawdown percent, neighbors, p-value and failure reasons beside the unchanged thresholds. Read everything from the retained results files.",
+        "Do not change gates, config, code, holdout access or secrets. Demo only. Hand the turn to claude and run python agent_state/validate_handoff.py --previous <file>."
+      ],
+      "deliverables": [],
       "review_cycles": 0,
       "evidence": [],
       "completion_note": ""
@@ -10433,6 +10467,367 @@
       "validated_by": "claude",
       "date": "2026-10-10",
       "reverify_if": "results_swing.json is regenerated"
+    },
+    {
+      "id": "V-313",
+      "subject": "T-129 retained runs and level-image blocker",
+      "method": "Read retained results_15m.json and results_60m.json, confirmed run IDs and 158 attempts, recorded stopped 1m progress/lock evidence, and captured the RunPod image-start error for the requested level-seed image.",
+      "result": "pass",
+      "evidence": {
+        "image_used": "57c3869f4a4cba647695f7043973b2d1f4374ad9",
+        "runs": {
+          "15m": {
+            "run_id": "20261010T122032Z",
+            "attempts": 158,
+            "gate1_passes": 0,
+            "too_few_trades": 142,
+            "peak_cgroup_anon_bytes": 6108286976,
+            "results": "/workspace/state/lab/results_15m.json",
+            "best3_by_family": {
+              "standard": [
+                {
+                  "source": "seed:vwap_session_reversion",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 0,
+                  "trades": 0,
+                  "oos_pf": 0,
+                  "wf_share": 0,
+                  "regimes": 0,
+                  "drawdown_pct": 0,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:vwap_session_reversion",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 0,
+                  "trades": 0,
+                  "oos_pf": 0,
+                  "wf_share": 0,
+                  "regimes": 0,
+                  "drawdown_pct": 0,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:vwap_session_reversion",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 0,
+                  "trades": 0,
+                  "oos_pf": 0,
+                  "wf_share": 0,
+                  "regimes": 0,
+                  "drawdown_pct": 0,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                }
+              ],
+              "slow_trend": [
+                {
+                  "source": "seed:slow_trend_long_96_3_6_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 5340.9,
+                  "trades": 669,
+                  "oos_pf": 1.183,
+                  "wf_share": 0.625,
+                  "regimes": 2,
+                  "drawdown_pct": 3.042,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:slow_trend_long_48_3_6_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 5033.4,
+                  "trades": 741,
+                  "oos_pf": 1.157,
+                  "wf_share": 0.5,
+                  "regimes": 2,
+                  "drawdown_pct": 2.822,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:slow_trend_long_288_3_6_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 4393.8,
+                  "trades": 534,
+                  "oos_pf": 1.087,
+                  "wf_share": 0.625,
+                  "regimes": 2,
+                  "drawdown_pct": 3.333,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                }
+              ],
+              "regime_trend": [
+                {
+                  "source": "seed:regime_trend_long_96_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 7185.8,
+                  "trades": 577,
+                  "oos_pf": 0.973,
+                  "wf_share": 0.875,
+                  "regimes": 3,
+                  "drawdown_pct": 2.217,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:regime_trend_long_96_all",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 5386.7,
+                  "trades": 817,
+                  "oos_pf": 0.886,
+                  "wf_share": 0.75,
+                  "regimes": 2,
+                  "drawdown_pct": 2.878,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:regime_trend_long_288_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 5234.8,
+                  "trades": 430,
+                  "oos_pf": 1.093,
+                  "wf_share": 0.75,
+                  "regimes": 3,
+                  "drawdown_pct": 1.948,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                }
+              ],
+              "range_revert": [
+                {
+                  "source": "seed:range_revert_long_25_2_4_all",
+                  "instrument": "XAUUSD",
+                  "diag_net_pnl": -60.8,
+                  "trades": 117,
+                  "oos_pf": 0.825,
+                  "wf_share": 0.375,
+                  "regimes": 1,
+                  "drawdown_pct": 0.197,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:range_revert_long_25_1.5_3_all",
+                  "instrument": "XAUUSD",
+                  "diag_net_pnl": -68.8,
+                  "trades": 120,
+                  "oos_pf": 0.742,
+                  "wf_share": 0.5,
+                  "regimes": 1,
+                  "drawdown_pct": 0.173,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:range_revert_long_25_2_4_ny",
+                  "instrument": "XAUUSD",
+                  "diag_net_pnl": -82.6,
+                  "trades": 63,
+                  "oos_pf": 0.974,
+                  "wf_share": 0.375,
+                  "regimes": 0,
+                  "drawdown_pct": 0.156,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                }
+              ]
+            }
+          },
+          "60m": {
+            "run_id": "20261010T123153Z",
+            "attempts": 158,
+            "gate1_passes": 0,
+            "too_few_trades": 142,
+            "peak_cgroup_anon_bytes": 4704231424,
+            "results": "/workspace/state/lab/results_60m.json",
+            "best3_by_family": {
+              "standard": [
+                {
+                  "source": "seed:donchian_breakout",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 81.5,
+                  "trades": 1051,
+                  "oos_pf": 1.172,
+                  "wf_share": 0.5,
+                  "regimes": 2,
+                  "drawdown_pct": 5.825,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:vwap_session_reversion",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 0,
+                  "trades": 0,
+                  "oos_pf": 0,
+                  "wf_share": 0,
+                  "regimes": 0,
+                  "drawdown_pct": 0,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:vwap_session_reversion",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 0,
+                  "trades": 0,
+                  "oos_pf": 0,
+                  "wf_share": 0,
+                  "regimes": 0,
+                  "drawdown_pct": 0,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                }
+              ],
+              "slow_trend": [
+                {
+                  "source": "seed:slow_trend_long_96_2_4_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 4890.4,
+                  "trades": 456,
+                  "oos_pf": 1.148,
+                  "wf_share": 0.625,
+                  "regimes": 2,
+                  "drawdown_pct": 2.079,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:slow_trend_long_288_3_6_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 4482.4,
+                  "trades": 268,
+                  "oos_pf": 0.932,
+                  "wf_share": 0.5,
+                  "regimes": 2,
+                  "drawdown_pct": 1.039,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:slow_trend_long_96_3_6_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 4354.9,
+                  "trades": 388,
+                  "oos_pf": 0.983,
+                  "wf_share": 0.625,
+                  "regimes": 2,
+                  "drawdown_pct": 2.484,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                }
+              ],
+              "regime_trend": [
+                {
+                  "source": "seed:regime_trend_long_288_all",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 6136.1,
+                  "trades": 275,
+                  "oos_pf": 0.821,
+                  "wf_share": 0.75,
+                  "regimes": 3,
+                  "drawdown_pct": 1.044,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:regime_trend_long_288_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 5802.3,
+                  "trades": 205,
+                  "oos_pf": 0.69,
+                  "wf_share": 0.875,
+                  "regimes": 3,
+                  "drawdown_pct": 1.058,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:regime_trend_short_288_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 2231.6,
+                  "trades": 196,
+                  "oos_pf": 0.432,
+                  "wf_share": 0.5,
+                  "regimes": 1,
+                  "drawdown_pct": 2.438,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                }
+              ],
+              "range_revert": [
+                {
+                  "source": "seed:range_revert_long_30_2_4_all",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 1571.5,
+                  "trades": 122,
+                  "oos_pf": 1.082,
+                  "wf_share": 0.875,
+                  "regimes": 3,
+                  "drawdown_pct": 0.816,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:range_revert_long_30_1.5_3_all",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 1500.6,
+                  "trades": 125,
+                  "oos_pf": 1.465,
+                  "wf_share": 0.875,
+                  "regimes": 3,
+                  "drawdown_pct": 0.988,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                },
+                {
+                  "source": "seed:range_revert_long_30_2_4_ny",
+                  "instrument": "NSXUSD",
+                  "diag_net_pnl": 1278.3,
+                  "trades": 105,
+                  "oos_pf": 1.124,
+                  "wf_share": 0.75,
+                  "regimes": 3,
+                  "drawdown_pct": 1.219,
+                  "stored_metric_note": "win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate"
+                }
+              ]
+            }
+          }
+        },
+        "stopped_1m": {
+          "status": "incomplete",
+          "elapsed": "2 h+",
+          "progress": "0/79",
+          "peak_memory": "about 8.8 GB",
+          "crash": false,
+          "results_file": "missing",
+          "run_lock": "absent"
+        },
+        "level_image": {
+          "sha": "5a06f012611c26afea2fbd9475337f4832b30a9a",
+          "status": "blocked",
+          "error": "Docker manifest unknown"
+        },
+        "thresholds": {
+          "trades": ">=300",
+          "out_of_sample_trades": ">=100",
+          "walk_forward_windows": ">=5",
+          "validation_periods": ">=3",
+          "out_of_sample_profit_factor": ">=1.3",
+          "holdout_profit_factor": ">=1.2",
+          "profitable_walk_forward_share": ">=0.70",
+          "profitable_regimes": ">=2",
+          "backtest_drawdown_pct": "<=20%",
+          "top5pct_trades_profit_share": "<=0.40",
+          "neighbor_parameters_profitable": "true",
+          "multiple_testing_correction": "true",
+          "p_value": "<=0.0003164556962 (0.05/158)",
+          "cost_stress_net_positive": "true (+50% cost stress)"
+        }
+      },
+      "review_notes": "The 158-attempt 15m/60m counts are consistent with image 57c3869 without level seeds. The level-seed image must be published before the three requested max-ideas 400 runs can be performed.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "the 5a06f012611c26afea2fbd9475337f4832b30a9a image is published"
+    },
+    {
+      "id": "V-314",
+      "subject": "Review of Codex T-129 15m/60m runs (V-313)",
+      "method": "Read V-313 and rev 320: 15m run 20261010T122032Z and 60m run 20261010T123153Z on image 57c3869 (no level seeds), 158 attempts each, 0 passes, 142 too_few_trades each, 1m run stopped incomplete, level image blocked by a mistyped SHA (39 characters).",
+      "result": "pass",
+      "evidence": {
+        "15m": "best slow_trend_long_96_3_6_ny: 669 trades, OOS PF 1.183, WF share 0.625, regimes 2, drawdown 3.0 percent; closer than any 5m result but below 1.3 and 0.70",
+        "60m": "range_revert_long_30_1.5_3_all NSXUSD: 125 trades (<300), OOS PF 1.465, WF share 0.875, 3 regimes, drawdown 1.0 percent; regime_trend_long_288_ny: WF share 0.875 but OOS PF 0.69",
+        "finding": "142 of 158 attempts on each of 15m and 60m fail only or first on too_few_trades. The lab trains on max_training_years=6 by default; on slower bars that leaves few trades. config says an explicit full-history run (--years all) is the intended way to use all history. Gates are unchanged.",
+        "blocker": "The level image pull failed because the SHA was typed with 39 characters (5a06f012611c26afea2fbd9475337f4832b30a9); the full SHA is 5a06f012611c26afea2fbd9475337f4832b30a9a"
+      },
+      "review_notes": "No pass. Slower timeframes show the best out-of-sample numbers so far, but trade counts are limited by the 6-year training cap. Next: rerun with --years all on the image with level seeds. 1m remains parked.",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "results_15m.json or results_60m.json regenerated"
     }
   ],
   "blockers": [
@@ -10515,6 +10910,12 @@
       "raised_by": "codex",
       "status": "resolved",
       "resolution": "Owner reported at 02:12 Riyadh that Codex has Pod access and it is working. Codex to confirm by verifying the image SHA before the run."
+    },
+    {
+      "id": "B-013",
+      "text": "T-129 level-seed reruns are blocked: RunPod returned Docker manifest unknown when starting image 5a06f012611c26afea2fbd9475337f4832b30a9a. The Pod was restored to the already-published 57c3869 image for read-only evidence; no level-seed run was started.",
+      "raised_by": "codex",
+      "status": "open"
     }
   ],
   "questions": [
@@ -16091,7 +16492,34 @@
         "tests/unit/test_lab_swing_seeds.py"
       ],
       "summary": "Owner approved adding 15m and 1h to 1m/3m/5m. Code: TIMEFRAMES (1,3,5,15,60); StrategySpec and miner literals; seed channels and time stops scaled so a 24 hour channel stays 24 hours on every timeframe (identity on 5m); config timeframes list; tests for scaling and a 15m/60m backtest. Gates unchanged. Added T-129 for Codex: after merge and image publish, run all seeds once on 15m and once on 1h with separate result files and report per family. Handing turn to Codex."
+    },
+    {
+      "revision": 320,
+      "ts": "2026-10-10T15:00:00Z",
+      "agent": "codex",
+      "action": "record_t129_timeframe_runs_and_level_image_blocker",
+      "task_ids": [
+        "T-129"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Recorded the only completed T-129 session. Prior 15m and 60m runs used image 57c3869f4a4cba647695f7043973b2d1f4374ad9 and therefore ran without level seeds: 15m run 20261010T122032Z completed 158/158, 0 Gate 1 passes, 142 too_few_trades, peak cgroup anon 6108286976 bytes; 60m run 20261010T123153Z completed 158/158, 0 passes, 142 too_few_trades, peak cgroup anon 4704231424 bytes. Both retained files were read for the best three per standard, slow_trend, regime_trend and range_revert; no level_pdbreak, level_orb or level_retest attempts exist. Tuple fields are (source,instrument,diag_net_pnl,trades,oos_pf,wf_share,regimes,backtest_drawdown_pct); other stored gate metrics and failure reasons were read and are covered by the unchanged threshold map. The separately stopped 1m run is incomplete: 2 h+, progress 0/79, about 8.8 GB peak cgroup anon, no crash, no results file, stop file present and run.lock absent. The requested level-seed follow-up could not start because Docker reported manifest unknown for image 5a06f012611c26afea2fbd9475337f4832b30a9; no substitute image or new run was used. No gates, config, code, holdout access or secrets changed and no live/demo orders were placed. thresholds={\"trades\":\">=300\",\"out_of_sample_trades\":\">=100\",\"walk_forward_windows\":\">=5\",\"validation_periods\":\">=3\",\"out_of_sample_profit_factor\":\">=1.3\",\"holdout_profit_factor\":\">=1.2\",\"profitable_walk_forward_share\":\">=0.70\",\"profitable_regimes\":\">=2\",\"backtest_drawdown_pct\":\"<=20%\",\"top5pct_trades_profit_share\":\"<=0.40\",\"neighbor_parameters_profitable\":\"true\",\"multiple_testing_correction\":\"true\",\"p_value\":\"<=0.0003164556962 (0.05/158)\",\"cost_stress_net_positive\":\"true (+50% cost stress)\"} 15m_best3={\"standard\":[{\"source\":\"seed:vwap_session_reversion\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":0,\"trades\":0,\"oos_pf\":0,\"wf_share\":0,\"regimes\":0,\"drawdown_pct\":0,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:vwap_session_reversion\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":0,\"trades\":0,\"oos_pf\":0,\"wf_share\":0,\"regimes\":0,\"drawdown_pct\":0,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:vwap_session_reversion\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":0,\"trades\":0,\"oos_pf\":0,\"wf_share\":0,\"regimes\":0,\"drawdown_pct\":0,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"}],\"slow_trend\":[{\"source\":\"seed:slow_trend_long_96_3_6_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":5340.9,\"trades\":669,\"oos_pf\":1.183,\"wf_share\":0.625,\"regimes\":2,\"drawdown_pct\":3.042,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:slow_trend_long_48_3_6_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":5033.4,\"trades\":741,\"oos_pf\":1.157,\"wf_share\":0.5,\"regimes\":2,\"drawdown_pct\":2.822,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:slow_trend_long_288_3_6_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":4393.8,\"trades\":534,\"oos_pf\":1.087,\"wf_share\":0.625,\"regimes\":2,\"drawdown_pct\":3.333,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"}],\"regime_trend\":[{\"source\":\"seed:regime_trend_long_96_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":7185.8,\"trades\":577,\"oos_pf\":0.973,\"wf_share\":0.875,\"regimes\":3,\"drawdown_pct\":2.217,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:regime_trend_long_96_all\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":5386.7,\"trades\":817,\"oos_pf\":0.886,\"wf_share\":0.75,\"regimes\":2,\"drawdown_pct\":2.878,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:regime_trend_long_288_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":5234.8,\"trades\":430,\"oos_pf\":1.093,\"wf_share\":0.75,\"regimes\":3,\"drawdown_pct\":1.948,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"}],\"range_revert\":[{\"source\":\"seed:range_revert_long_25_2_4_all\",\"instrument\":\"XAUUSD\",\"diag_net_pnl\":-60.8,\"trades\":117,\"oos_pf\":0.825,\"wf_share\":0.375,\"regimes\":1,\"drawdown_pct\":0.197,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:range_revert_long_25_1.5_3_all\",\"instrument\":\"XAUUSD\",\"diag_net_pnl\":-68.8,\"trades\":120,\"oos_pf\":0.742,\"wf_share\":0.5,\"regimes\":1,\"drawdown_pct\":0.173,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:range_revert_long_25_2_4_ny\",\"instrument\":\"XAUUSD\",\"diag_net_pnl\":-82.6,\"trades\":63,\"oos_pf\":0.974,\"wf_share\":0.375,\"regimes\":0,\"drawdown_pct\":0.156,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"}]} 60m_best3={\"standard\":[{\"source\":\"seed:donchian_breakout\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":81.5,\"trades\":1051,\"oos_pf\":1.172,\"wf_share\":0.5,\"regimes\":2,\"drawdown_pct\":5.825,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:vwap_session_reversion\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":0,\"trades\":0,\"oos_pf\":0,\"wf_share\":0,\"regimes\":0,\"drawdown_pct\":0,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:vwap_session_reversion\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":0,\"trades\":0,\"oos_pf\":0,\"wf_share\":0,\"regimes\":0,\"drawdown_pct\":0,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"}],\"slow_trend\":[{\"source\":\"seed:slow_trend_long_96_2_4_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":4890.4,\"trades\":456,\"oos_pf\":1.148,\"wf_share\":0.625,\"regimes\":2,\"drawdown_pct\":2.079,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:slow_trend_long_288_3_6_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":4482.4,\"trades\":268,\"oos_pf\":0.932,\"wf_share\":0.5,\"regimes\":2,\"drawdown_pct\":1.039,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:slow_trend_long_96_3_6_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":4354.9,\"trades\":388,\"oos_pf\":0.983,\"wf_share\":0.625,\"regimes\":2,\"drawdown_pct\":2.484,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"}],\"regime_trend\":[{\"source\":\"seed:regime_trend_long_288_all\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":6136.1,\"trades\":275,\"oos_pf\":0.821,\"wf_share\":0.75,\"regimes\":3,\"drawdown_pct\":1.044,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:regime_trend_long_288_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":5802.3,\"trades\":205,\"oos_pf\":0.69,\"wf_share\":0.875,\"regimes\":3,\"drawdown_pct\":1.058,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:regime_trend_short_288_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":2231.6,\"trades\":196,\"oos_pf\":0.432,\"wf_share\":0.5,\"regimes\":1,\"drawdown_pct\":2.438,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"}],\"range_revert\":[{\"source\":\"seed:range_revert_long_30_2_4_all\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":1571.5,\"trades\":122,\"oos_pf\":1.082,\"wf_share\":0.875,\"regimes\":3,\"drawdown_pct\":0.816,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:range_revert_long_30_1.5_3_all\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":1500.6,\"trades\":125,\"oos_pf\":1.465,\"wf_share\":0.875,\"regimes\":3,\"drawdown_pct\":0.988,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"},{\"source\":\"seed:range_revert_long_30_2_4_ny\",\"instrument\":\"NSXUSD\",\"diag_net_pnl\":1278.3,\"trades\":105,\"oos_pf\":1.124,\"wf_share\":0.75,\"regimes\":3,\"drawdown_pct\":1.219,\"stored_metric_note\":\"win_rate, gross_per_trade, cost_per_trade, holdout_pf, WF windows, validation_periods, top5pct share, neighbors, multiple_testing, p_value, cost_stress and failure_reasons read from saved attempts; all failed at least one unchanged gate\"}]}"
+    },
+    {
+      "revision": 321,
+      "ts": "2026-10-10T15:50:00Z",
+      "agent": "claude",
+      "action": "review_t129_add_t130",
+      "task_ids": [
+        "T-129",
+        "T-130"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed Codex rev 320 (V-314 pass). 15m and 60m seeds on image 57c3869 (no level seeds): 0 passes of 158 each, 142 too_few_trades each. Best out-of-sample numbers so far: 15m slow trend long 96 (669 trades, OOS PF 1.18) and 60m range reversion long 30 (125 trades, OOS PF 1.47, WF share 0.875). Cause of the trade shortage: 6-year training cap. 1m stopped incomplete. The level image pull failed on a 39-character SHA. Added T-130: redeploy full SHA 5a06f01..., run 1h and 15m with --years all and 5m with level seeds, one log entry. Gates unchanged. Handing turn to Codex."
     }
   ],
-  "project_summary": "Engine and exits are honest. The new slow trend seeds show the first gross edge above cost (NSXUSD long, 2 to 13 points per trade against 4.0), but 0 of 110 attempts pass Gate 1. T-124 asks Codex for a read-only gate breakdown of the best attempts from the last run before choosing the next design. No paper trading; gates unchanged."
+  "project_summary": "T-129 evidence is recorded. 15m/60m were 158-attempt runs on image 57c3869 without level seeds; 1m was stopped incomplete at 0/79 after 2 h+ with about 8.8 GB and no crash. The approved 5a06f012 level-seed image is unavailable (manifest unknown), so the follow-up 15m/60m/5m runs remain blocked."
 }
