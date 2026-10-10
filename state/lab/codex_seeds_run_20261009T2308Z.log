@@ -1,0 +1,26 @@
+nohup: ignoring input
+[2026-10-09T23:07:30.484870+00:00] loading:NSXUSD:5m
+[2026-10-09T23:08:04.217602+00:00] mining:NSXUSD:5m:0/20
+[2026-10-09T23:08:04.227794+00:00] loading:XAUUSD:5m
+[2026-10-09T23:08:45.850919+00:00] mining:XAUUSD:5m:0/20
+[2026-10-09T23:08:45.881778+00:00] loading:NSXUSD:5m:reopen
+[2026-10-09T23:09:19.453927+00:00] evaluating:0/20:NSXUSD:5m
+[2026-10-09T23:11:00.679542+00:00] evaluating:20/20:NSXUSD:5m
+[2026-10-09T23:11:00.689047+00:00] holdout:NSXUSD:5m
+[2026-10-09T23:11:00.806665+00:00] loading:XAUUSD:5m:reopen
+[2026-10-09T23:11:42.590980+00:00] evaluating:0/20:XAUUSD:5m
+[2026-10-09T23:12:54.355257+00:00] evaluating:20/20:XAUUSD:5m
+[2026-10-09T23:12:54.364080+00:00] holdout:XAUUSD:5m
+[2026-10-09T23:12:54.471306+00:00] done
+Strategy Lab 20261009T230726Z
+id instrument tf trades oos_pf holdout_pf max_dd verdict reason
+1b8a4bf201 NSXUSD 5m 38596 0.0 0.0 188558.628 fail too_few_walk_forward_windows,too
+be6afe1e33 NSXUSD 5m 69525 0.0 0.0 339035.298 fail too_few_walk_forward_windows,too
+ab4a0f6e1b NSXUSD 5m 55698 0.0 0.0 271674.488 fail too_few_walk_forward_windows,too
+6a841b49b8 NSXUSD 5m 126860 0.0 0.0 621139.796 fail too_few_walk_forward_windows,too
+b9b95646b5 NSXUSD 5m 144785 0.0 0.0 710179.796 fail too_few_walk_forward_windows,too
+a7c948498d NSXUSD 5m 162073 3.975394117410112e-05 3.975394117410112e-05 784712.6479999999 fail too_few_walk_forward_windows,too
+629ef1df61 NSXUSD 5m 286756 0.0 0.0 1401813.2320015128 fail too_few_walk_forward_windows,too
+a2f72d21bf NSXUSD 5m 241266 0.0 0.0 1175588.79200107 fail too_few_walk_forward_windows,too
+8f43c1e45c NSXUSD 5m 119232 0.0 0.0 579881.8459998274 fail too_few_walk_forward_windows,too
+4833f1a7b5 NSXUSD 5m 94477 0.0 0.0 459925.3449998885 fail too_few_walk_forward_windows,too

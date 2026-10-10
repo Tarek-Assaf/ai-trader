@@ -1,0 +1,249 @@
+nohup: ignoring input
+{
+  "gates_evaluated": false,
+  "holdout_accessed": false,
+  "instruments": {
+    "NSXUSD": {
+      "bars": 401170,
+      "cost_audit": {
+        "average_bar_range_points": 16.009997734127683,
+        "commission_note": "commission is not modeled by Strategy Lab CostModel",
+        "commission_points": 0.0,
+        "cost_per_trade_points": 4.0,
+        "cost_share_of_average_bar_range": 0.24984388295529905,
+        "instrument": "NSXUSD",
+        "slippage_points": 1.0,
+        "spread_points": 2.0
+      },
+      "perfect_foresight": {
+        "costs": 1602176.0,
+        "gross_per_trade": 0.25001887682751456,
+        "gross_pnl": 100143.561,
+        "net_pnl": -1502032.439,
+        "trades": 400544,
+        "win_rate": 1.0
+      },
+      "random_entry": {
+        "seeds": [
+          {
+            "costs": 83800.0,
+            "gross_per_trade": -0.9855465871121719,
+            "gross_pnl": -20647.201,
+            "net_pnl": -104447.201,
+            "seed": 0,
+            "trades": 20950,
+            "trades_per_day": 9.5618590602006,
+            "win_rate": 0.20577565632458233
+          },
+          {
+            "costs": 83328.0,
+            "gross_per_trade": -0.9741278801843317,
+            "gross_pnl": -20293.032,
+            "net_pnl": -103621.032,
+            "seed": 1,
+            "trades": 20832,
+            "trades_per_day": 9.508002288405676,
+            "win_rate": 0.2103494623655914
+          },
+          {
+            "costs": 82952.0,
+            "gross_per_trade": -0.9710121516057478,
+            "gross_pnl": -20136.85,
+            "net_pnl": -103088.85,
+            "seed": 2,
+            "trades": 20738,
+            "trades_per_day": 9.465099436297853,
+            "win_rate": 0.21159224611823704
+          },
+          {
+            "costs": 83412.0,
+            "gross_per_trade": -0.9634441567160601,
+            "gross_pnl": -20090.701,
+            "net_pnl": -103502.701,
+            "seed": 3,
+            "trades": 20853,
+            "trades_per_day": 9.51758696813189,
+            "win_rate": 0.2145974200354865
+          },
+          {
+            "costs": 84264.0,
+            "gross_per_trade": -0.984380470900978,
+            "gross_pnl": -20736.959000000003,
+            "net_pnl": -105000.959,
+            "seed": 4,
+            "trades": 21066,
+            "trades_per_day": 9.614803005354933,
+            "win_rate": 0.20625652710528813
+          }
+        ],
+        "stop_points": 1.5,
+        "target_points": 1.0,
+        "trades_per_day_target": 15.0
+      },
+      "zero_cost": {
+        "bollinger_reversion": {
+          "costs": 0.0,
+          "gross_per_trade": -0.9895285681086864,
+          "gross_pnl": -29805.590000001743,
+          "net_pnl": -29805.590000001743,
+          "trades": 30121,
+          "win_rate": 0.19634142292752566
+        },
+        "donchian_breakout": {
+          "costs": 0.0,
+          "gross_per_trade": -1.0412970116811282,
+          "gross_pnl": -58923.873999999996,
+          "net_pnl": -58923.873999999996,
+          "trades": 56587,
+          "win_rate": 0.26521992683831974
+        },
+        "ema_crossover_atr_stop": {
+          "costs": 0.0,
+          "gross_per_trade": -0.891487908292219,
+          "gross_pnl": -183765.077,
+          "net_pnl": -183765.077,
+          "trades": 206133,
+          "win_rate": 0.24639916946825594
+        },
+        "ema_pullback": {
+          "costs": 0.0,
+          "gross_per_trade": -0.9178088353876281,
+          "gross_pnl": -63739.988,
+          "net_pnl": -63739.988,
+          "trades": 69448,
+          "win_rate": 0.23287927658103905
+        },
+        "rsi_mean_reversion": {
+          "costs": 0.0,
+          "gross_per_trade": -0.9048455250165263,
+          "gross_pnl": -136920.31999997573,
+          "net_pnl": -136920.31999997573,
+          "trades": 151319,
+          "win_rate": 0.2204283665633529
+        }
+      }
+    },
+    "XAUUSD": {
+      "bars": 415509,
+      "cost_audit": {
+        "average_bar_range_points": 2.189790996103574,
+        "commission_note": "commission is not modeled by Strategy Lab CostModel",
+        "commission_points": 0.0,
+        "cost_per_trade_points": 1.6,
+        "cost_share_of_average_bar_range": 0.7306633385775061,
+        "instrument": "XAUUSD",
+        "slippage_points": 0.4,
+        "spread_points": 0.8
+      },
+      "perfect_foresight": {
+        "costs": 226265.6,
+        "gross_per_trade": 0.23335835407591787,
+        "gross_pnl": 33000.605,
+        "net_pnl": -193264.995,
+        "trades": 141416,
+        "win_rate": 0.9999929286643662
+      },
+      "random_entry": {
+        "seeds": [
+          {
+            "costs": 32497.600000000002,
+            "gross_per_trade": -0.13685362611392837,
+            "gross_pnl": -2779.633999999999,
+            "net_pnl": -35277.234,
+            "seed": 0,
+            "trades": 20311,
+            "trades_per_day": 9.270210948531474,
+            "win_rate": 0.5453695042095417
+          },
+          {
+            "costs": 32419.2,
+            "gross_per_trade": -0.11844694502023491,
+            "gross_pnl": -2399.9719999999998,
+            "net_pnl": -34819.172000000006,
+            "seed": 1,
+            "trades": 20262,
+            "trades_per_day": 9.247846695836971,
+            "win_rate": 0.5528575658868818
+          },
+          {
+            "costs": 32347.2,
+            "gross_per_trade": -0.12952089825394467,
+            "gross_pnl": -2618.5239999999994,
+            "net_pnl": -34965.724,
+            "seed": 2,
+            "trades": 20217,
+            "trades_per_day": 9.227308096423652,
+            "win_rate": 0.5484987881485878
+          },
+          {
+            "costs": 32382.4,
+            "gross_per_trade": -0.1346765650476802,
+            "gross_pnl": -2725.7189999999996,
+            "net_pnl": -35108.119,
+            "seed": 3,
+            "trades": 20239,
+            "trades_per_day": 9.237349189470164,
+            "win_rate": 0.546617915904936
+          },
+          {
+            "costs": 32846.4,
+            "gross_per_trade": -0.12471148131910945,
+            "gross_pnl": -2560.201999999998,
+            "net_pnl": -35406.602,
+            "seed": 4,
+            "trades": 20529,
+            "trades_per_day": 9.369709052355995,
+            "win_rate": 0.5498563008427103
+          }
+        ],
+        "stop_points": 1.5,
+        "target_points": 1.0,
+        "trades_per_day_target": 15.0
+      },
+      "zero_cost": {
+        "bollinger_reversion": {
+          "costs": 0.0,
+          "gross_per_trade": -0.12078491879353662,
+          "gross_pnl": -4685.247000001285,
+          "net_pnl": -4685.247000001285,
+          "trades": 38790,
+          "win_rate": 0.5306264501160093
+        },
+        "donchian_breakout": {
+          "costs": 0.0,
+          "gross_per_trade": -0.06947557901105915,
+          "gross_pnl": -2066.828999999999,
+          "net_pnl": -2066.828999999999,
+          "trades": 29749,
+          "win_rate": 0.4408215402198393
+        },
+        "ema_crossover_atr_stop": {
+          "costs": 0.0,
+          "gross_per_trade": -0.143167963065188,
+          "gross_pnl": -8558.724000000004,
+          "net_pnl": -8558.724000000004,
+          "trades": 59781,
+          "win_rate": 0.41217109114936185
+        },
+        "ema_pullback": {
+          "costs": 0.0,
+          "gross_per_trade": -0.17409399491094146,
+          "gross_pnl": -6841.893999999999,
+          "net_pnl": -6841.893999999999,
+          "trades": 39300,
+          "win_rate": 0.5298982188295165
+        },
+        "rsi_mean_reversion": {
+          "costs": 0.0,
+          "gross_per_trade": -0.18107964776333554,
+          "gross_pnl": -12852.12800000274,
+          "net_pnl": -12852.12800000274,
+          "trades": 70975,
+          "win_rate": 0.4883268756604438
+        }
+      }
+    }
+  },
+  "timeframe_minutes": 5,
+  "training_years": 6
+}
