@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 303,
+  "revision": 305,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-121 control experiments are implemented, merged in PR #156, and the single approved post-merge read-only Pod run completed normally on image a89a2fd9. Codex recorded the control table and memory evidence; no strategy passed the diagnostics and gates were not evaluated. Turn is handed to Claude for review.",
+    "summary": "T-122 ATR-scaled exits are merged in PR #158. The authorized post-merge seeds+patterns lab run and sequential controls run completed normally on image 517112fc00e45c34ae944f125b0dbe02f50ccbae under the 12 GB safety limit; no strategy passed Gate 1 and no broker or holdout activity occurred. Codex recorded per-phase timings, memory diagnostics, controls and results in V-298 and handed turn to Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -94,7 +94,8 @@
         "T-119",
         "T-120",
         "T-121",
-        "T-122"
+        "T-122",
+        "T-123"
       ]
     },
     {
@@ -117,7 +118,8 @@
         "T-119",
         "T-120",
         "T-121",
-        "T-122"
+        "T-122",
+        "T-123"
       ]
     },
     {
@@ -146,7 +148,8 @@
         "T-119",
         "T-120",
         "T-121",
-        "T-122"
+        "T-122",
+        "T-123"
       ]
     },
     {
@@ -3952,7 +3955,7 @@
       "phase": 8,
       "owner": "claude",
       "reviewer": "codex",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -3978,9 +3981,44 @@
       ],
       "review_cycles": 0,
       "evidence": [
-        "Implemented by Claude; unit tests for the new behaviour pass locally; CI is the authority."
+        "CI/published image 517112fc00e45c34ae944f125b0dbe02f50ccbae",
+        "V-298: one seeds+patterns lab run and one sequential controls run completed normally"
       ],
-      "completion_note": "Implemented by Claude after the T-121 controls found the point-distance scale defect. Next: Codex redeploys the new main image and runs seeds+patterns once, then lab_controls once, under the owner 8-hour authorization."
+      "completion_note": "Post-merge validation completed on the published main image. The seeds+patterns run and sequential controls run completed normally under the 12 GB safety limit; no strategy passed and no gates or broker activity were involved. Claude review is requested.",
+      "review_notes": "Reviewed by Claude (V-299): the fix works. Random-entry gross per trade is now about zero (NSXUSD -0.23..+0.16, XAUUSD about -0.03) and perfect foresight still earns exactly its target. No strategy passes Gate 1 (0 of 72). Zero-cost gross per trade is small: best NSXUSD donchian +1.12 and ema_crossover +0.82 points against a cost of 4.0; XAUUSD best +0.05 against 1.6."
+    },
+    {
+      "id": "T-123",
+      "title": "Slow trend seeds: rare trades with wide ATR exits so cost is a small share of the target",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-122"
+      ],
+      "acceptance_criteria": [
+        "Why: after T-122 the engine is honest (V-299) but textbook 5m seeds earn at best about +1 point gross per trade against a cost of 4.0 (NSXUSD) and 1.6 (XAUUSD), at 13 to 55 trades a day. Cost must be a small share of the average winning move, so the new seeds trade rarely in the direction of a slow trend and aim for large moves.",
+        "seeds.slow_seed_specs: 24 declarative seeds per instrument = channel breakout of 48, 96 or 288 bars (4h, 8h, 24h) in the direction of EMA50 versus EMA200, long and short, stop and target 2 and 4 or 3 and 6 ATR, time stop 288 bars, each with all sessions or new_york only. Included in the lab idea list whenever the seeds source runs; the old seed library and its tests are unchanged.",
+        "Unit tests: names unique and 24, all exits ATR-scaled with a time stop, trade rate low on a synthetic trend.",
+        "Gates in config/strategy_lab.yaml and the cost model unchanged; holdout only via validator.open_sealed_reader.",
+        "Pod step (owner 8-hour authorization, rev 290): after merge and publish Codex redeploys the new main image (SHA in chat), verifies it and no run.lock, runs lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force ONCE (seeds only: the pattern miner was run in V-298 and is unchanged), records per-source results and the diag medians (gross per trade, cost per trade, trades per day, win rate), failure counts and survivors in ONE log entry and hands the turn to Claude."
+      ],
+      "deliverables": [
+        "src/trader/lab/seeds.py",
+        "src/trader/lab/runner.py",
+        "tests/unit/test_lab_slow_seeds.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "Implemented by Claude; unit tests pass locally; CI is the authority."
+      ],
+      "completion_note": "Implemented by Claude. Pod run pending merge and redeploy."
     }
   ],
   "decisions": [
@@ -7249,6 +7287,28 @@
       "validated_by": "claude",
       "date": "2026-10-10",
       "reverify_if": "Exit scale or cost model changes."
+    },
+    {
+      "id": "V-298",
+      "subject": "T-122 post-merge seeds+patterns run and controls",
+      "method": "Verified the published main image in the redeployed Pod, confirmed the default run lock was absent, ran the authorized lab command once, waited for PID 644 to exit normally, then ran scripts/lab_controls.py once sequentially. Read only progress.json, results.json, the two run logs and cgroup/process checkpoints; no broker or holdout access was performed.",
+      "result": "pass",
+      "evidence": "Image SHA 517112fc00e45c34ae944f125b0dbe02f50ccbae. Lab command: lab_run.py --idea-sources seeds patterns --max-ideas 20 --timeframes 5 --force, default training window 6 years, four workers, PID 644, started 2026-10-10T02:34:23.239162+00:00 and finished 2026-10-10T02:41:36.092108+00:00 (about 432.9 s); status completed, run.lock absent after PID death, stop reason normal completion. No strategy passed and survivors was empty; all 72 attempts failed Gate 1 with out_of_sample_profit_factor_below_gate, walk_forward_share_below_gate, too_few_profitable_regimes, backtest_drawdown_above_gate and neighbor_parameters_not_profitable, with some pattern attempts also reporting too_few_trades/too_few_out_of_sample_trades. Phase timings (s): loading 153.566, mining 43.838, evaluating 235.211, holdout 0.215, done 0. Memory diagnostics maxima by phase (rss, worker_pss, cgroup_anon, memory_current bytes; checkpoints): loading (892272640,0,1059090432,1248485376;5), mining (2569674752,1752891392,4167454720,4370309120;42), evaluating (843718656,2446861312,3214614528,3423412224;4), holdout (843718656,0,1012477952,1208590336;2), done (688373760,0,853352448,1049456640;1). Lab peak was cgroup anon 4167454720 and memory.current 4370309120, below 12 GB. NSXUSD coverage 2010-11-14 through 2026-09-25 (191 months, gaps 0; QA flags conflicting_duplicates,gaps); XAUUSD 2009-03-15 through 2026-09-25 (211 months, gaps 0; same flags). Results: NSXUSD seed ema_pullback 5 fails/113887 trades, ema_crossover_atr_stop 1/13076, rsi_mean_reversion 5/150935, bollinger_reversion 5/68009, donchian_breakout 4/35056, pattern 20/364564; XAUUSD respectively 5/121315, 1/14070, 5/165805, 5/128581, 4/40992, 20/338230. Controls completed normally as one PID 3508 single-process run (about 9 minutes), training_years=6, timeframe=5, holdout_accessed=false, gates_evaluated=false, no worker children. Controls: NSXUSD bars 401170; random gross/trade by seed [-0.1989,0.0720,-0.1581,-0.2252,0.1648] with trades [18634,18474,18436,18511,18659]; zero-cost gross/trade {bollinger_reversion:0.0586,donchian_breakout:1.1228,ema_crossover_atr_stop:0.8150,ema_pullback:-0.1761,rsi_mean_reversion:-0.4694}; perfect foresight gross/trade 0.25, gross_pnl 100143.561, trades 400544, win_rate 1.0; cost audit spread 2.0, slippage 1.0, cost/trade 4.0, average range 16.01, cost share 0.2498. XAUUSD bars 415509; random gross/trade [-0.0400,-0.0202,-0.0182,-0.0226,-0.0365] with trades [19367,19330,19293,19280,19532]; zero-cost {bollinger_reversion:0.0060,donchian_breakout:0.0507,ema_crossover_atr_stop:0.0072,ema_pullback:0.0126,rsi_mean_reversion:-0.0146}; perfect foresight gross/trade 0.2334, gross_pnl 33000.605, trades 141416, win_rate 1.0; cost audit spread 0.8, slippage 0.4, cost/trade 1.6, average range 2.1898, cost share 0.7307. Controls sampled peak was cgroup anon 6393278464 and memory.current 6813114368; final after PID death 243847168 and 651128832. No gates, broker, orders, secrets or unrelated Pod state were touched.",
+      "review_notes": "No strategy passed; the run is seeds+patterns and therefore pattern mining was exercised. Gates remain unchanged. Claude review is required.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "T-122 exit units, lab runner, memory diagnostics, controls or cost model changes."
+    },
+    {
+      "id": "V-299",
+      "subject": "Claude review of the post-T-122 seeds+patterns and controls Pod runs (V-298)",
+      "method": "Read the recorded run results and controls table from rev 304 and compared them with the pre-fix controls (V-294 era) and the cost model.",
+      "result": "pass",
+      "evidence": "Run 72 attempts, 0 survivors, peak anon 4.17 GB; controls peak 6.39 GB, both under 12 GB. Random control gross per trade moved from -0.97 to about 0 on NSXUSD and from -0.13 to -0.03 on XAUUSD; zero-cost best gross per trade +1.12 (NSXUSD donchian) and +0.05 (XAUUSD); cost per trade 4.0 and 1.6 points.",
+      "review_notes": "Engine honest. The textbook 5m seeds have a gross edge of about one point at best, a quarter of the NSXUSD cost and nothing on XAUUSD, and they trade 13 to 55 times a day. A strategy only survives if its average gross per trade is well above the cost, so the next search uses rare, large-move trades (T-123). Gates and costs unchanged.",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "Exit scale, cost model or gates change."
     }
   ],
   "blockers": [
@@ -12656,7 +12716,37 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex rev 302 (V-297 pass). Controls prove fills and accounting are sound but exposed that stops and targets were absolute points (1.5 and 1.0) while a 5m bar spans about 16 points (NSXUSD) and 2.2 (XAUUSD), so no strategy could win. T-122 adds ATR-unit exits (default stays points) and switches seeds, miner and the random control to ATR multiples. Gates and costs unchanged. Under the owner 8-hour authorization (rev 290), after merge and publish Codex redeploys the new main image (SHA in chat), verifies it and no run.lock, runs lab_run.py --idea-sources seeds patterns --max-ideas 20 --timeframes 5 --force ONCE, then scripts/lab_controls.py ONCE (sequential, not together), records both in ONE log entry and hands the turn to Claude."
+    },
+    {
+      "revision": 304,
+      "ts": "2026-10-10T02:55:00Z",
+      "agent": "codex",
+      "action": "record_t122_postmerge_runs",
+      "task_ids": [
+        "T-122"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Recorded the two authorized post-merge validation runs on image 517112fc00e45c34ae944f125b0dbe02f50ccbae in V-298. The one lab_run.py seeds+patterns run (six-year window, 5m, max 20, four workers, PID 644) completed normally in about 432.9 seconds with run.lock absent after PID death; phase timings were loading 153.566s, mining 43.838s, evaluating 235.211s and holdout 0.215s. Memory diagnostics maxima (rss/worker_pss/cgroup_anon/memory_current bytes) were loading 892272640/0/1059090432/1248485376, mining 2569674752/1752891392/4167454720/4370309120, evaluating 843718656/2446861312/3214614528/3423412224, holdout 843718656/0/1012477952/1208590336 and done 688373760/0/853352448/1049456640. All 72 attempts failed Gate 1; survivors/passed strategies were none. The subsequent single sequential lab_controls.py run (PID 3508, no workers, six years, 5m, holdout_accessed=false, gates_evaluated=false) completed normally in about nine minutes; sampled peak cgroup anon/current were 6393278464/6813114368 and final values after PID death were 243847168/651128832. Controls and run never touched broker, holdout, gates, secrets or unrelated Pod state. Handing turn to Claude for review."
+    },
+    {
+      "revision": 305,
+      "ts": "2026-10-10T03:20:00Z",
+      "agent": "claude",
+      "action": "review_t122_runs_add_slow_seeds",
+      "task_ids": [
+        "T-122",
+        "T-123"
+      ],
+      "files_changed": [
+        "src/trader/lab/seeds.py",
+        "src/trader/lab/runner.py",
+        "tests/unit/test_lab_slow_seeds.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed Codex rev 304 (V-299 pass). The exit-scale fix works (random entries now about zero gross) but 0 of 72 attempts pass Gate 1 and textbook 5m seeds earn at best about 1 point gross per trade against a cost of 4.0 (NSXUSD) or 1.6 (XAUUSD). T-123 adds 24 slow trend breakout seeds per instrument (4h to 24h channels, EMA50/200 trend filter, wide ATR exits, hours-long holds). Gates and costs unchanged. Within the owner 8-hour authorization (rev 290) Codex runs lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force ONCE after redeploying the new main image (SHA in chat) and records results in ONE log entry."
     }
   ],
-  "project_summary": "The T-121 controls found a real defect: stops and targets were absolute points far smaller than a 5m bar. T-122 makes them ATR multiples. After CI and publish, Codex redeploys the new main image (SHA in chat), runs seeds+patterns once and then lab_controls once, and records both in ONE log entry, then hands the turn to Claude. Nothing has passed Gate 1 yet; no paper trading."
+  "project_summary": "Engine and exits are now honest (V-299): random entries earn about zero. No strategy passes Gate 1 (0 of 72); textbook 5m seeds earn at best about 1 point gross per trade against a 4.0 point cost on NSXUSD. T-123 adds slow trend seeds with wide ATR exits. After CI and publish, Codex redeploys the new image (SHA in chat), runs seeds once and records results in ONE log entry. No paper trading yet."
 }
