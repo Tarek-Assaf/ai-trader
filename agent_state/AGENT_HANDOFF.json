@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 309,
+  "revision": 311,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-123 is implemented and published as image 4afd34ff3cf069cc3a80bf6f51b83c062725edb1. The authorized seeds-only max-ideas=100 rerun completed normally on the six-year 5m window with four workers: 110 attempts, 0 survivors and no passed strategies. Peak cgroup anon was 2.81 GB, worker PSS 2.27 GB, RSS 0.90 GB and memory.current 3.02 GB, below the 12 GB stop. All 48 slow_trend_* attempts failed Gate 1; pattern mining was not run. Claude review is required.",
+    "summary": "T-124 is complete. A read-only inspection of run 20261010T040308Z recorded the top ten attempts by diag_net_pnl with every stored Gate 1 metric beside its unchanged threshold and each failure reason in V-304. All ten were NSXUSD slow-trend attempts and all failed; the best gross candidate still had negative out-of-sample net PnL. In-sample profit factor, adjusted p-value and per-calendar-year median daily-return sign were not stored. No gates, code, image, holdout, broker, order or secret state changed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -96,7 +96,8 @@
         "T-121",
         "T-122",
         "T-123",
-        "T-124"
+        "T-124",
+        "T-125"
       ]
     },
     {
@@ -121,7 +122,8 @@
         "T-121",
         "T-122",
         "T-123",
-        "T-124"
+        "T-124",
+        "T-125"
       ]
     },
     {
@@ -152,7 +154,8 @@
         "T-121",
         "T-122",
         "T-123",
-        "T-124"
+        "T-124",
+        "T-125"
       ]
     },
     {
@@ -4032,7 +4035,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4049,8 +4052,40 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Not started."
+      "evidence": [
+        "V-304",
+        "run 20261010T040308Z results.json"
+      ],
+      "completion_note": "Read-only Gate 1 breakdown recorded in V-304 for the top ten attempts by diag_net_pnl. All ten are NSXUSD slow-trend attempts; none passed. Stored in-sample profit factor, adjusted p-value and per-calendar-year median daily-return sign were unavailable and are explicitly marked not stored. No gates, code, image, holdout, broker, orders or secrets were touched."
+    },
+    {
+      "id": "T-125",
+      "title": "Gate 1 drawdown metric must be a percent of starting equity",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "done",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-124"
+      ],
+      "acceptance_criteria": [
+        "backtest_drawdown_pct equals 100 * max_drawdown / starting_equity; threshold in config unchanged."
+      ],
+      "deliverables": [
+        "src/trader/lab/metrics.py",
+        "tests/unit/test_lab_metrics_drawdown.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "V-306",
+        "V-305"
+      ],
+      "completion_note": "Drawdown gate metric converted from currency to percent of starting equity; gates unchanged."
     }
   ],
   "decisions": [
@@ -8500,6 +8535,429 @@
       "validated_by": "claude",
       "date": "2026-10-10",
       "reverify_if": "Seeds, exits, costs or gates change."
+    },
+    {
+      "id": "V-304",
+      "subject": "T-124 read-only Gate 1 breakdown of top ten attempts",
+      "method": "Read-only inspection of the existing results.json for run 20261010T040308Z. Sorted all 110 attempts by diag_net_pnl descending and recorded the top ten across both instruments with the stored gate metrics, unchanged configured thresholds and failure reasons. No new run, code, image, holdout, broker or secrets were touched.",
+      "result": "pass",
+      "evidence": {
+        "run_id": "20261010T040308Z",
+        "attempt_count": 110,
+        "selection": "top 10 by diag_net_pnl across both instruments; all ten were NSXUSD slow_trend sources",
+        "gate_thresholds": {
+          "trades": ">=300",
+          "out_of_sample_trades": ">=100",
+          "walk_forward_windows": ">=5",
+          "validation_periods": ">=3",
+          "out_of_sample_profit_factor": ">=1.3",
+          "holdout_profit_factor": ">=1.2",
+          "profitable_walk_forward_share": ">=0.70",
+          "profitable_regimes": ">=2",
+          "backtest_drawdown_pct": "<=20",
+          "neighbor_parameters_profitable": "true",
+          "multiple_testing_correction": "true",
+          "cost_stress_net_positive": "true after 50% cost increase",
+          "top5pct_trades_profit_share": "<=0.40",
+          "p_value": "no direct Gate 1 threshold stored",
+          "adjusted_p_value": "not stored",
+          "in_sample_profit_factor": "not stored"
+        },
+        "attempts": [
+          {
+            "rank": 1,
+            "source": "seed:slow_trend_long_288_3_6_ny",
+            "instrument": "NSXUSD",
+            "trades": 835,
+            "trades_per_day": 0.473869957693,
+            "win_rate": 0.421556886228,
+            "gross_per_trade": 13.012672184496,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 7525.581274054361,
+            "diag_oos_net_pnl": -721.159745839948,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.94155400659,
+              "holdout_profit_factor": 0.94155400659,
+              "out_of_sample_trades": 224,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.625,
+              "validation_periods": 8,
+              "profitable_regimes": 3,
+              "backtest_drawdown_pct": 1606.820920132,
+              "neighbor_parameters_profitable": true,
+              "p_value": 0.999963144842,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": true,
+              "top5pct_trades_profit_share": 0.139587033402
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "backtest_drawdown_above_gate",
+              "adjusted_significance_failed"
+            ]
+          },
+          {
+            "rank": 2,
+            "source": "seed:slow_trend_long_96_3_6_ny",
+            "instrument": "NSXUSD",
+            "trades": 1205,
+            "trades_per_day": 0.683848262299,
+            "win_rate": 0.404979253112,
+            "gross_per_trade": 9.600112329352,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 6748.135356868797,
+            "diag_oos_net_pnl": -1298.238575838121,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.924865817124,
+              "holdout_profit_factor": 0.924865817124,
+              "out_of_sample_trades": 315,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.625,
+              "validation_periods": 8,
+              "profitable_regimes": 3,
+              "backtest_drawdown_pct": 2194.223868875,
+              "neighbor_parameters_profitable": false,
+              "p_value": 0.999999033821,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": true,
+              "top5pct_trades_profit_share": 0.147100060066
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable",
+              "adjusted_significance_failed"
+            ]
+          },
+          {
+            "rank": 3,
+            "source": "seed:slow_trend_long_48_3_6_ny",
+            "instrument": "NSXUSD",
+            "trades": 1300,
+            "trades_per_day": 0.73776161078,
+            "win_rate": 0.396923076923,
+            "gross_per_trade": 8.569775194459,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 5940.707752797129,
+            "diag_oos_net_pnl": -1453.371988921441,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.921422743215,
+              "holdout_profit_factor": 0.921422743215,
+              "out_of_sample_trades": 342,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.625,
+              "validation_periods": 8,
+              "profitable_regimes": 3,
+              "backtest_drawdown_pct": 2329.733278385,
+              "neighbor_parameters_profitable": false,
+              "p_value": 0.999999627573,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": true,
+              "top5pct_trades_profit_share": 0.145211981984
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable",
+              "adjusted_significance_failed"
+            ]
+          },
+          {
+            "rank": 4,
+            "source": "seed:slow_trend_long_288_3_6_all",
+            "instrument": "NSXUSD",
+            "trades": 1148,
+            "trades_per_day": 0.651500253211,
+            "win_rate": 0.397212543554,
+            "gross_per_trade": 8.772927050858,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 5479.320254385018,
+            "diag_oos_net_pnl": -637.87469027159,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.960355496797,
+              "holdout_profit_factor": 0.960355496797,
+              "out_of_sample_trades": 321,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.625,
+              "validation_periods": 8,
+              "profitable_regimes": 2,
+              "backtest_drawdown_pct": 2313.158178595,
+              "neighbor_parameters_profitable": true,
+              "p_value": 0.999999785759,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": true,
+              "top5pct_trades_profit_share": 0.14572739373
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "backtest_drawdown_above_gate",
+              "adjusted_significance_failed"
+            ]
+          },
+          {
+            "rank": 5,
+            "source": "seed:slow_trend_long_96_3_6_all",
+            "instrument": "NSXUSD",
+            "trades": 1784,
+            "trades_per_day": 1.012435933562,
+            "win_rate": 0.386210762332,
+            "gross_per_trade": 6.711385858419,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 4837.112371419657,
+            "diag_oos_net_pnl": -861.285129753644,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.96150461928,
+              "holdout_profit_factor": 0.96150461928,
+              "out_of_sample_trades": 479,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.5,
+              "validation_periods": 8,
+              "profitable_regimes": 2,
+              "backtest_drawdown_pct": 3124.974869652,
+              "neighbor_parameters_profitable": false,
+              "p_value": 0.999999999358,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": true,
+              "top5pct_trades_profit_share": 0.153359043987
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable",
+              "adjusted_significance_failed"
+            ]
+          },
+          {
+            "rank": 6,
+            "source": "seed:slow_trend_short_96_3_6_ny",
+            "instrument": "NSXUSD",
+            "trades": 899,
+            "trades_per_day": 0.510190529301,
+            "win_rate": 0.368186874305,
+            "gross_per_trade": 8.115732298573,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 3700.043336417044,
+            "diag_oos_net_pnl": -2665.340475847552,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.8096122262,
+              "holdout_profit_factor": 0.8096122262,
+              "out_of_sample_trades": 183,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.5,
+              "validation_periods": 8,
+              "profitable_regimes": 2,
+              "backtest_drawdown_pct": 3010.142695434,
+              "neighbor_parameters_profitable": true,
+              "p_value": 0.999999965288,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": true,
+              "top5pct_trades_profit_share": 0.136926150818
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "backtest_drawdown_above_gate",
+              "adjusted_significance_failed"
+            ]
+          },
+          {
+            "rank": 7,
+            "source": "seed:slow_trend_short_48_3_6_ny",
+            "instrument": "NSXUSD",
+            "trades": 977,
+            "trades_per_day": 0.554456225947,
+            "win_rate": 0.370522006141,
+            "gross_per_trade": 7.739030779675,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 3653.033071742344,
+            "diag_oos_net_pnl": -2984.835828082662,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.807502809836,
+              "holdout_profit_factor": 0.807502809836,
+              "out_of_sample_trades": 204,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.5,
+              "validation_periods": 8,
+              "profitable_regimes": 2,
+              "backtest_drawdown_pct": 2622.69250875,
+              "neighbor_parameters_profitable": true,
+              "p_value": 0.999999989399,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": true,
+              "top5pct_trades_profit_share": 0.139059403647
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "backtest_drawdown_above_gate",
+              "adjusted_significance_failed"
+            ]
+          },
+          {
+            "rank": 8,
+            "source": "seed:slow_trend_short_288_3_6_ny",
+            "instrument": "NSXUSD",
+            "trades": 640,
+            "trades_per_day": 0.363205716076,
+            "win_rate": 0.3625,
+            "gross_per_trade": 8.959976191812,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 3174.384762759552,
+            "diag_oos_net_pnl": -3431.411306430306,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.708650999157,
+              "holdout_profit_factor": 0.708650999157,
+              "out_of_sample_trades": 137,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.5,
+              "validation_periods": 8,
+              "profitable_regimes": 1,
+              "backtest_drawdown_pct": 2992.45352417,
+              "neighbor_parameters_profitable": true,
+              "p_value": 0.999999987448,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": true,
+              "top5pct_trades_profit_share": 0.12393888378
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "adjusted_significance_failed"
+            ]
+          },
+          {
+            "rank": 9,
+            "source": "seed:slow_trend_short_288_3_6_all",
+            "instrument": "NSXUSD",
+            "trades": 889,
+            "trades_per_day": 0.504515439987,
+            "win_rate": 0.353205849269,
+            "gross_per_trade": 7.11606689036,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 2770.183465529652,
+            "diag_oos_net_pnl": -5637.975997756392,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.672665872064,
+              "holdout_profit_factor": 0.672665872064,
+              "out_of_sample_trades": 219,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.5,
+              "validation_periods": 8,
+              "profitable_regimes": 1,
+              "backtest_drawdown_pct": 3074.072693884,
+              "neighbor_parameters_profitable": true,
+              "p_value": 0.999999999979,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": true,
+              "top5pct_trades_profit_share": 0.12347555201
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "adjusted_significance_failed"
+            ]
+          },
+          {
+            "rank": 10,
+            "source": "seed:slow_trend_long_48_3_6_all",
+            "instrument": "NSXUSD",
+            "trades": 1983,
+            "trades_per_day": 1.125370210904,
+            "win_rate": 0.374180534544,
+            "gross_per_trade": 5.3313492694,
+            "cost_per_trade": 4.0,
+            "diag_net_pnl": 2640.065601222041,
+            "diag_oos_net_pnl": -662.493166054,
+            "gate_metrics": {
+              "in_sample_profit_factor": "not_stored",
+              "out_of_sample_profit_factor": 0.972193116849,
+              "holdout_profit_factor": 0.972193116849,
+              "out_of_sample_trades": 521,
+              "walk_forward_windows": 8,
+              "profitable_walk_forward_share": 0.625,
+              "validation_periods": 8,
+              "profitable_regimes": 1,
+              "backtest_drawdown_pct": 3192.946574604,
+              "neighbor_parameters_profitable": false,
+              "p_value": 0.999999999659,
+              "adjusted_p_value": "not_stored",
+              "multiple_testing_correction": true,
+              "cost_stress_net_positive": false,
+              "top5pct_trades_profit_share": 0.155233559042
+            },
+            "failure_reasons": [
+              "out_of_sample_profit_factor_below_gate",
+              "walk_forward_share_below_gate",
+              "too_few_profitable_regimes",
+              "backtest_drawdown_above_gate",
+              "neighbor_parameters_not_profitable"
+            ]
+          }
+        ],
+        "nsxusd_median_daily_return_sign_by_calendar_year": "not stored in results.json; skipped",
+        "holdout_data_used": false
+      },
+      "review_notes": "The best gross/net candidate is seed:slow_trend_long_288_3_6_ny: gross 13.01 per trade versus 4.00 cost, but out-of-sample net PnL is -721.16 and it fails out-of-sample profit factor, walk-forward share, drawdown and adjusted significance. All ten fail at least out_of_sample_profit_factor_below_gate, walk_forward_share_below_gate and backtest_drawdown_above_gate; no gate was loosened.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "T-123 results, seed ordering, or Gate 1 configuration changes."
+    },
+    {
+      "id": "V-305",
+      "subject": "Review of Codex T-124 gate breakdown (V-304)",
+      "method": "Read V-304 and cross-checked the stored drawdown values against the Gate 1 threshold code in src/trader/lab/metrics.py and config/strategy_lab.yaml.",
+      "result": "pass",
+      "evidence": {
+        "finding": "V-304 is read-only and complete. It exposed that backtest_drawdown_pct held max drawdown in currency points of equity while the gate limit is a percent, so every attempt failed that gate regardless of quality."
+      },
+      "review_notes": "Gates and thresholds unchanged. In-sample PF, adjusted p-value and per-year sign are not stored (follow-up).",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "V-304 inputs change"
+    },
+    {
+      "id": "V-306",
+      "subject": "T-125 drawdown gate metric is a percent of starting equity",
+      "method": "Added _drawdown_pct in metrics.py and unit test tests/unit/test_lab_metrics_drawdown.py asserting metric == 100*max_drawdown/starting_equity and below the raw value; ruff clean; CI quality is the test authority.",
+      "result": "pass",
+      "evidence": {
+        "files": [
+          "src/trader/lab/metrics.py",
+          "tests/unit/test_lab_metrics_drawdown.py"
+        ],
+        "config_changed": false
+      },
+      "review_notes": "Unit fix only; threshold 20 percent unchanged. Pending CI quality on the PR.",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "metrics.py gate1_metrics changes"
     }
   ],
   "blockers": [
@@ -13990,6 +14448,35 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex rev 308 (V-303 pass). The 24 slow trend seeds per instrument trade 0.3 to 1.7 times a day. NSXUSD long seeds earn +2 to +13 points gross per trade against a 4.0 cost (best 288-bar channel, stop 3 and target 6 ATR, New York only: +13.0 gross over 835 trades), XAUUSD has no edge; still 0 of 110 pass Gate 1. New task T-124 (read-only, within the owner 8-hour authorization rev 290): Codex reads the existing results.json of run 20261010T040308Z and records the top 10 attempts by diag_net_pnl with every gate metric next to its threshold and the failure reasons, in ONE log entry, then hands the turn to Claude. No new lab run, code change or image change."
+    },
+    {
+      "revision": 310,
+      "ts": "2026-10-10T04:32:15Z",
+      "agent": "codex",
+      "action": "record_t124_gate_breakdown",
+      "task_ids": [
+        "T-124"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Read the existing results.json for run 20261010T040308Z only; no new run. Recorded V-304 with the top ten attempts by diag_net_pnl across both instruments, all NSXUSD slow_trend sources, including trades, rate, win rate, gross/cost per trade, diag_net_pnl, diag_oos_net_pnl, every stored Gate 1 metric, unchanged config thresholds and failure reasons. Best: slow_trend_long_288_3_6_ny, gross 13.01 versus 4.00 cost, diag_net_pnl 7525.58, diag_oos_net_pnl -721.16; it still failed four gates. In-sample PF, adjusted p-value and per-calendar-year median daily-return sign were not stored. No gates, code, image, holdout, broker, order or secret state changed. Handing turn to Claude."
+    },
+    {
+      "revision": 311,
+      "ts": "2026-10-10T05:10:00Z",
+      "agent": "claude",
+      "action": "review_t124_fix_drawdown_unit",
+      "task_ids": [
+        "T-124",
+        "T-125"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/lab/metrics.py",
+        "tests/unit/test_lab_metrics_drawdown.py"
+      ],
+      "summary": "Reviewed Codex rev 310 (V-304 pass, V-305). Found that the Gate 1 drawdown metric compared absolute points to a percent limit, so every attempt failed it. T-125 divides by starting equity (V-306); gates and config unchanged. Within the owner 8-hour authorization (ends 06:57 UTC), after the new main image is published Codex redeploys it, verifies the image SHA and no run.lock, runs lab_run.py --idea-sources seeds --max-ideas 100 --timeframes 5 --force ONCE, and records per-source results and gate metrics in ONE log entry, then hands to Claude. Handing turn to Codex."
     }
   ],
   "project_summary": "Engine and exits are honest. The new slow trend seeds show the first gross edge above cost (NSXUSD long, 2 to 13 points per trade against 4.0), but 0 of 110 attempts pass Gate 1. T-124 asks Codex for a read-only gate breakdown of the best attempts from the last run before choosing the next design. No paper trading; gates unchanged."
