@@ -14,6 +14,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 
+from trader.analysis.indicators import atr
 from trader.data.resample import Candle, resample_ohlc
 from trader.lab.engine import EntrySignal, IndicatorCache, evaluate_entries
 from trader.lab.spec import StrategySpec
@@ -150,9 +151,22 @@ def walk_forward_splits(
     return tuple(windows)
 
 
+ATR_EXIT_PERIOD = 14
+
+
+def _uses_atr_units(spec: StrategySpec) -> bool:
+    return any(getattr(rule, "unit", "points") == "atr" for rule in spec.exit_rules)
+
+
 def _exit_rules(
     spec: StrategySpec,
+    atr_value: float = 1.0,
 ) -> tuple[float, float | None, int | None, float | None, float | None]:
+    """Return exit distances in price points.
+
+    Rules with ``unit="atr"`` are multiples of ``atr_value`` (the ATR known at the
+    signal bar), so one seed makes sense on every instrument and volatility level.
+    """
     stop: float | None = None
     target: float | None = None
     time_stop: int | None = None
@@ -160,14 +174,15 @@ def _exit_rules(
     trailing_activation: float | None = None
     for rule in spec.exit_rules:
         if rule.kind == "stop":
-            stop = float(rule.distance)
+            stop = float(rule.distance) * (atr_value if rule.unit == "atr" else 1.0)
         elif rule.kind == "target":
-            target = float(rule.distance)
+            target = float(rule.distance) * (atr_value if rule.unit == "atr" else 1.0)
         elif rule.kind == "time_stop":
             time_stop = rule.bars
         elif rule.kind == "trailing":
-            trailing_distance = float(rule.distance)
-            trailing_activation = float(rule.activation_distance)
+            factor = atr_value if rule.unit == "atr" else 1.0
+            trailing_distance = float(rule.distance) * factor
+            trailing_activation = float(rule.activation_distance) * factor
     if stop is None:
         raise ValueError("strategy must define a stop exit")
     return stop, target, time_stop, trailing_distance, trailing_activation
@@ -342,6 +357,8 @@ def run_backtest(
         entry_signals = evaluate_entries(spec, bars, indicator_cache=indicator_cache)
     signals = {signal.timestamp_utc: signal for signal in entry_signals}
     stop, target, time_stop, trailing_distance, trailing_activation = _exit_rules(spec)
+    atr_exits = _uses_atr_units(spec)
+    atr_series = atr(bars, ATR_EXIT_PERIOD) if atr_exits else ()
     position: _OpenTrade | None = None
     trades: list[BacktestTrade] = []
     equity = starting_equity
@@ -377,6 +394,13 @@ def run_backtest(
                 position = replace(position, best_price=favorable)
         if position is None and index > 0 and last_exit_index != index:
             signal = signals.get(bars[index - 1].ts_utc)
+            signal_atr = atr_series[index - 1] if atr_exits else None
+            if atr_exits and (signal_atr is None or signal_atr <= 0.0):
+                signal = None
+            if signal is not None and atr_exits and signal_atr is not None:
+                stop, target, time_stop, trailing_distance, trailing_activation = _exit_rules(
+                    spec, signal_atr
+                )
             if signal is not None and index < len(bars):
                 spread, slippage = model.for_bar(spec.instrument, bar.ts_utc)
                 position = _OpenTrade(
