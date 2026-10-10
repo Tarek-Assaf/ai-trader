@@ -440,12 +440,210 @@ def swing_seed_specs(
     return tuple(result)
 
 
+LEVEL_EXITS = ((1.5, 3.0), (2.0, 4.0))  # (stop, target) in ATR multiples, 1:2
+LEVEL_HOLD_BARS = 288  # 24 hours on the 5m chart
+RETEST_TOUCH_BARS = 12  # the pullback must have touched the level within 1 hour
+RETEST_BREAKOUT_BARS = 96  # and price must have cleared it clearly within 8 hours
+
+
+def _trend_filter(long_side: bool) -> IndicatorCondition:
+    return IndicatorCondition(
+        indicator="ema",
+        period=50,
+        operator="gt" if long_side else "lt",
+        threshold=0.0,
+        threshold_indicator="ema",
+        threshold_period=200,
+    )
+
+
+def _prior_day_breakout(
+    instrument: str,
+    timeframe: int,
+    *,
+    direction: str,
+    with_trend: bool,
+    stop: float,
+    target: float,
+    sessions: tuple[str, ...],
+) -> StrategySpec:
+    """Close beyond the previous day's high (long) or low (short)."""
+    long_side = direction == "long"
+    conditions: list[IndicatorCondition] = [
+        IndicatorCondition(
+            indicator="close",
+            operator="gt" if long_side else "lt",
+            threshold=0.0,
+            threshold_indicator="prior_day_high" if long_side else "prior_day_low",
+        )
+    ]
+    if with_trend:
+        conditions.append(_trend_filter(long_side))
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=tuple(conditions),
+        exit_rules=(
+            StopExit(kind="stop", distance=stop, unit="atr"),
+            TargetExit(kind="target", distance=target, unit="atr"),
+            TimeStopExit(kind="time_stop", bars=_bars(LEVEL_HOLD_BARS, timeframe)),
+        ),
+        session_filters=sessions,  # type: ignore[arg-type]
+    )
+
+
+def _opening_range_breakout(
+    instrument: str,
+    timeframe: int,
+    *,
+    direction: str,
+    with_trend: bool,
+    stop: float,
+    target: float,
+) -> StrategySpec:
+    """Close beyond the first-30-minute New York range; needs bars of 30m or less."""
+    long_side = direction == "long"
+    conditions: list[IndicatorCondition] = [
+        IndicatorCondition(
+            indicator="close",
+            operator="gt" if long_side else "lt",
+            threshold=0.0,
+            threshold_indicator="opening_range_high" if long_side else "opening_range_low",
+        )
+    ]
+    if with_trend:
+        conditions.append(_trend_filter(long_side))
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=tuple(conditions),
+        exit_rules=(
+            StopExit(kind="stop", distance=stop, unit="atr"),
+            TargetExit(kind="target", distance=target, unit="atr"),
+            TimeStopExit(kind="time_stop", bars=_bars(78, timeframe)),  # 6.5 hours
+        ),
+        session_filters=("new_york",),
+    )
+
+
+def _prior_day_retest(
+    instrument: str,
+    timeframe: int,
+    *,
+    direction: str,
+    stop: float,
+    target: float,
+    sessions: tuple[str, ...],
+) -> StrategySpec:
+    """Break the previous day's level, pull back to it, and hold it."""
+    long_side = direction == "long"
+    level = "prior_day_high" if long_side else "prior_day_low"
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=(
+            IndicatorCondition(
+                indicator="close",
+                operator="gt" if long_side else "lt",
+                threshold=0.0,
+                threshold_indicator=level,
+            ),
+            IndicatorCondition(
+                indicator="rolling_low" if long_side else "rolling_high",
+                period=_bars(RETEST_TOUCH_BARS, timeframe),
+                operator="lte" if long_side else "gte",
+                threshold=0.0,
+                threshold_indicator=level,
+                threshold_atr_multiple=0.25 if long_side else -0.25,
+            ),
+            IndicatorCondition(
+                indicator="rolling_high" if long_side else "rolling_low",
+                period=_bars(RETEST_BREAKOUT_BARS, timeframe),
+                operator="gt" if long_side else "lt",
+                threshold=0.0,
+                threshold_indicator=level,
+                threshold_atr_multiple=0.5 if long_side else -0.5,
+            ),
+        ),
+        exit_rules=(
+            StopExit(kind="stop", distance=stop, unit="atr"),
+            TargetExit(kind="target", distance=target, unit="atr"),
+            TimeStopExit(kind="time_stop", bars=_bars(LEVEL_HOLD_BARS, timeframe)),
+        ),
+        session_filters=sessions,  # type: ignore[arg-type]
+    )
+
+
+def level_seed_specs(
+    instrument: str, timeframe: int
+) -> tuple[tuple[SeedStrategy, StrategySpec], ...]:
+    """Return previous-day, opening-range and break-and-retest seeds (1:2 reward)."""
+    result: list[tuple[SeedStrategy, StrategySpec]] = []
+    for direction in ("long", "short"):
+        for stop, target in LEVEL_EXITS:
+            for with_trend in (False, True):
+                tag = "trend" if with_trend else "any"
+                for label, sessions in (("all", ()), ("ny", ("new_york",))):
+                    name = f"level_pdbreak_{direction}_{tag}_{label}_{stop:g}_{target:g}"
+                    result.append(
+                        (
+                            SeedStrategy(name, "level_pdbreak", "prior_day_breakout"),
+                            _prior_day_breakout(
+                                instrument,
+                                timeframe,
+                                direction=direction,
+                                with_trend=with_trend,
+                                stop=stop,
+                                target=target,
+                                sessions=sessions,
+                            ),
+                        )
+                    )
+                name = f"level_orb_{direction}_{tag}_{stop:g}_{target:g}"
+                result.append(
+                    (
+                        SeedStrategy(name, "level_orb", "opening_range_breakout"),
+                        _opening_range_breakout(
+                            instrument,
+                            timeframe,
+                            direction=direction,
+                            with_trend=with_trend,
+                            stop=stop,
+                            target=target,
+                        ),
+                    )
+                )
+            for label, sessions in (("all", ()), ("ny", ("new_york",))):
+                name = f"level_retest_{direction}_{label}_{stop:g}_{target:g}"
+                result.append(
+                    (
+                        SeedStrategy(name, "level_retest", "prior_day_retest"),
+                        _prior_day_retest(
+                            instrument,
+                            timeframe,
+                            direction=direction,
+                            stop=stop,
+                            target=target,
+                            sessions=sessions,
+                        ),
+                    )
+                )
+    return tuple(result)
+
+
 __all__ = [
     "SEED_LIBRARY",
     "SLOW_CHANNELS",
     "SeedStrategy",
     "seed_library",
     "seed_specs",
+    "level_seed_specs",
     "slow_seed_specs",
     "swing_seed_specs",
 ]

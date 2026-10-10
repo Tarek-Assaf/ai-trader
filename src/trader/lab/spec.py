@@ -26,6 +26,10 @@ IndicatorName = Literal[
     "bollinger_lower",
     "rolling_high",
     "rolling_low",
+    "prior_day_high",
+    "prior_day_low",
+    "opening_range_high",
+    "opening_range_low",
 ]
 Comparison = Literal["gt", "gte", "lt", "lte", "eq", "ne"]
 SessionName = Literal["asia", "london", "new_york", "closed"]

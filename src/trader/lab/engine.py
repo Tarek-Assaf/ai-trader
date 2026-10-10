@@ -113,6 +113,12 @@ def _indicator_series(
             period,
             "max" if indicator == "rolling_high" else "min",
         )
+    elif indicator in {"prior_day_high", "prior_day_low"}:
+        day_highs, day_lows = indicators.prior_day_levels(bars)
+        values = day_highs if indicator == "prior_day_high" else day_lows
+    elif indicator in {"opening_range_high", "opening_range_low"}:
+        range_highs, range_lows = indicators.opening_range(bars)
+        values = range_highs if indicator == "opening_range_high" else range_lows
     elif indicator in {"bollinger_upper", "bollinger_lower"}:
         assert period is not None
         mean = indicators.sma(closes, period)
