@@ -21,6 +21,15 @@ from trader.lab.spec import (
 )
 
 
+def _bars(bars_on_5m: int, timeframe: int) -> int:
+    """Express a length given in 5-minute bars as bars of ``timeframe`` minutes.
+
+    Identity on the 5m chart.  A 288-bar (24 hour) channel stays about 24 hours
+    on every timeframe instead of becoming 12 days on the 1h chart.
+    """
+    return max(5, round(bars_on_5m * 5 / timeframe))
+
+
 @dataclass(frozen=True, slots=True)
 class SeedStrategy:
     name: str
@@ -254,7 +263,7 @@ def _slow_trend_breakout(
                 operator="gt" if long_side else "lt",
                 threshold=0.0,
                 threshold_indicator="rolling_high" if long_side else "rolling_low",
-                threshold_period=channel,
+                threshold_period=_bars(channel, timeframe),
                 threshold_lookback=1,
             ),
             IndicatorCondition(
@@ -269,7 +278,7 @@ def _slow_trend_breakout(
         exit_rules=(
             StopExit(kind="stop", distance=stop, unit="atr"),
             TargetExit(kind="target", distance=target, unit="atr"),
-            TimeStopExit(kind="time_stop", bars=SLOW_HOLD_BARS),
+            TimeStopExit(kind="time_stop", bars=_bars(SLOW_HOLD_BARS, timeframe)),
         ),
         session_filters=sessions,  # type: ignore[arg-type]
     )
@@ -331,7 +340,7 @@ def _regime_trend_breakout(
                 operator="gt" if long_side else "lt",
                 threshold=0.0,
                 threshold_indicator="rolling_high" if long_side else "rolling_low",
-                threshold_period=channel,
+                threshold_period=_bars(channel, timeframe),
                 threshold_lookback=1,
             ),
             IndicatorCondition(indicator="adx", period=14, operator="gt", threshold=SWING_ADX_MIN),
@@ -339,7 +348,7 @@ def _regime_trend_breakout(
         exit_rules=(
             StopExit(kind="stop", distance=3.0, unit="atr"),
             TargetExit(kind="target", distance=6.0, unit="atr"),
-            TimeStopExit(kind="time_stop", bars=SLOW_HOLD_BARS),
+            TimeStopExit(kind="time_stop", bars=_bars(SLOW_HOLD_BARS, timeframe)),
         ),
         regime_filters=("trending_up" if long_side else "trending_down",),
         session_filters=sessions,  # type: ignore[arg-type]
@@ -381,7 +390,7 @@ def _ranging_reversion(
         exit_rules=(
             StopExit(kind="stop", distance=stop, unit="atr"),
             TargetExit(kind="target", distance=target, unit="atr"),
-            TimeStopExit(kind="time_stop", bars=SWING_REVERSION_HOLD_BARS),
+            TimeStopExit(kind="time_stop", bars=_bars(SWING_REVERSION_HOLD_BARS, timeframe)),
         ),
         regime_filters=("ranging",),
         session_filters=sessions,  # type: ignore[arg-type]

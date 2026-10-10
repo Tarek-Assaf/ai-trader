@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 318,
+  "turn": "codex",
+  "revision": 319,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -100,7 +100,8 @@
         "T-125",
         "T-126",
         "T-127",
-        "T-128"
+        "T-128",
+        "T-129"
       ]
     },
     {
@@ -129,7 +130,8 @@
         "T-125",
         "T-126",
         "T-127",
-        "T-128"
+        "T-128",
+        "T-129"
       ]
     },
     {
@@ -164,7 +166,8 @@
         "T-125",
         "T-126",
         "T-127",
-        "T-128"
+        "T-128",
+        "T-129"
       ]
     },
     {
@@ -4187,6 +4190,37 @@
         "V-312"
       ],
       "completion_note": "Swing seeds run once: 158/158 attempts, 0 pass. Regime-filtered NAS100 long trend reaches OOS PF 1.03-1.08 but not 1.3; mean reversion has too few trades and no edge."
+    },
+    {
+      "id": "T-129",
+      "title": "Add 15m and 1h timeframes and run all seed families on them",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-128"
+      ],
+      "acceptance_criteria": [
+        "Why: costs of 4.0 NSXUSD points per trade swamp short-timeframe edge (best ideas +8 to +11 gross). Owner approved 15m and 1h in addition to 1m/3m/5m (answer to the open timeframe question). Claude's code change is in the PR that adds this task: TIMEFRAMES (1,3,5,15,60), spec literal, seed channels and time stops scaled to the same wall-clock length, config timeframes list. Gates unchanged.",
+        "After that PR is merged and publish-image succeeds, redeploy the newest main image, verify SHA and no run.lock before each run. Run sequentially, each once, each with its OWN results and progress files: (a) python scripts/lab_run.py --idea-sources seeds --max-ideas 300 --timeframes 15 --force --results /workspace/state/lab/results_15m.json --progress /workspace/state/lab/progress_15m.json ; (b) the same with --timeframes 60 and results_60m.json / progress_60m.json.",
+        "Record ONE log entry: for each run the run id, attempts, number passing Gate 1, peak cgroup anon, and per family (standard seed, slow_trend, regime_trend, range_revert) the best 3 by diag_net_pnl with trades, win rate, gross and cost per trade, OOS PF, WF windows and share, regimes, drawdown percent, neighbors, p-value and failure reasons beside the unchanged thresholds. Also report the bar count per timeframe and how many attempts failed with too_few_trades. Read everything from the retained results files.",
+        "Do not change gates, config, code, holdout access or secrets. Demo only. Hand the turn to claude and run python agent_state/validate_handoff.py --previous <file>."
+      ],
+      "deliverables": [
+        "src/trader/lab/seeds.py",
+        "src/trader/lab/runner.py",
+        "src/trader/lab/spec.py",
+        "config/strategy_lab.yaml"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -10998,7 +11032,7 @@
       "id": "Q-045",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "After five families (textbook seeds, slow trend, regime-filtered trend, mean reversion, mined patterns) on 1m-5m, 0 of about 400 attempts pass Gate 1. The best NAS100 long trend ideas still earn +8 to +11 points gross per trade against an assumed 4.0 point cost, but only about +1.0 out-of-sample profit factor (need 1.3). Cost is the main drag on short timeframes. What should we try next? No gate will be loosened.",
       "options": [
         "Allow 15-minute and 1-hour timeframes (slower, so costs are a smaller share of each move) for the same seeds; needs a code change and your OK to go beyond 1m/3m/5m (recommended)",
@@ -11006,7 +11040,7 @@
         "Keep 1m/3m/5m only and fix 1-minute memory use so it can be tested"
       ],
       "recommendation": "Option 1: the best ideas already show gross edge; on 15m and 1h the same moves cost far less relative to size, and it is the quickest honest test. Run option 2 in parallel on the recorder.",
-      "answer": null
+      "answer": "Owner at 14:53 Riyadh (11:53 UTC) said in chat: 'Can we add the 15 min and 1hr timeframe to the 1/3/5 mins? Having them both.' = option 1: add 15m and 1h and keep 1m/3m/5m. Pod runs for this are approved as part of that request."
     }
   ],
   "log": [
@@ -16038,6 +16072,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex rev 317 (V-312 pass). Swing seeds run 20261010T105214Z: 158 attempts, 0 pass. Regime-filtered NAS100 long trend improves OOS PF to 1.03-1.08 but misses 1.3 and 0.70 walk-forward share; mean reversion has too few trades and no edge. Added Q-045 asking the owner whether to allow 15m/1h timeframes (recommended), measure real spreads first, or stay on 1m-5m. Gates unchanged. Handing turn to human."
+    },
+    {
+      "revision": 319,
+      "ts": "2026-10-10T12:10:00Z",
+      "agent": "claude",
+      "action": "owner_approved_15m_1h_add_t129",
+      "task_ids": [
+        "T-129"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/lab/seeds.py",
+        "src/trader/lab/runner.py",
+        "src/trader/lab/spec.py",
+        "src/trader/lab/miner.py",
+        "config/strategy_lab.yaml",
+        "tests/unit/test_lab_swing_seeds.py"
+      ],
+      "summary": "Owner approved adding 15m and 1h to 1m/3m/5m. Code: TIMEFRAMES (1,3,5,15,60); StrategySpec and miner literals; seed channels and time stops scaled so a 24 hour channel stays 24 hours on every timeframe (identity on 5m); config timeframes list; tests for scaling and a 15m/60m backtest. Gates unchanged. Added T-129 for Codex: after merge and image publish, run all seeds once on 15m and once on 1h with separate result files and report per family. Handing turn to Codex."
     }
   ],
   "project_summary": "Engine and exits are honest. The new slow trend seeds show the first gross edge above cost (NSXUSD long, 2 to 13 points per trade against 4.0), but 0 of 110 attempts pass Gate 1. T-124 asks Codex for a read-only gate breakdown of the best attempts from the last run before choosing the next design. No paper trading; gates unchanged."

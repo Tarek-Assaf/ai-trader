@@ -152,7 +152,7 @@ class StrategySpec(StrictModel):
     schema_version: Literal[1]
     instrument: str = Field(pattern=r"^[A-Z0-9_]{1,32}$")
     direction: Literal["long", "short"]
-    timeframe_minutes: Literal[1, 3, 5]
+    timeframe_minutes: Literal[1, 3, 5, 15, 60]
     entry_conditions: tuple[IndicatorCondition, ...] = Field(min_length=1)
     exit_rules: tuple[ExitRule, ...] = Field(min_length=1)
     tunable_parameters: tuple[TunableParameter, ...] = ()

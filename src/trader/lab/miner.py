@@ -271,7 +271,7 @@ class PatternMiner:
         self,
         *,
         instrument: str | None = None,
-        timeframe_minutes: Literal[1, 3, 5] = 1,
+        timeframe_minutes: Literal[1, 3, 5, 15, 60] = 1,
         ledger: ExperimentLedgerProtocol | None = None,
         complexity_limits: ComplexityLimits | None = None,
         proposer: str = "pattern_miner",
