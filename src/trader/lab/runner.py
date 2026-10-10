@@ -35,7 +35,7 @@ from trader.lab.backtest import CostModel
 from trader.lab.ledger import ExperimentLedger, ExperimentRecord
 from trader.lab.miner import PatternMiner
 from trader.lab.pipeline import ValidationPipeline
-from trader.lab.seeds import seed_specs, slow_seed_specs, swing_seed_specs
+from trader.lab.seeds import level_seed_specs, seed_specs, slow_seed_specs, swing_seed_specs
 from trader.lab.spec import StrategySpec
 from trader.lab.validator import open_sealed_reader, strategy_hash
 from trader.viz import strategy_comparison
@@ -992,6 +992,7 @@ class LabRunner:
                 *seed_specs(instrument, timeframe),
                 *slow_seed_specs(instrument, timeframe),
                 *swing_seed_specs(instrument, timeframe),
+                *level_seed_specs(instrument, timeframe),
             ):
                 result.extend((f"seed:{seed.name}", variant) for variant in tune_variants(spec))
         if ("patterns" in sources or "pattern" in sources or "all" in sources) and candles:

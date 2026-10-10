@@ -5,7 +5,8 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, time
+from zoneinfo import ZoneInfo
 
 from trader.data.resample import Candle
 
@@ -342,3 +343,62 @@ def session_tags(stamp: datetime) -> tuple[str, ...]:
     if 12 <= hour < 21:
         sessions.append("new_york")
     return tuple(sessions) or ("closed",)
+
+
+def prior_day_levels(
+    candles: Sequence[Candle],
+) -> tuple[tuple[float | None, ...], tuple[float | None, ...]]:
+    """High and low of the previous observed UTC calendar day; no look-ahead."""
+    highs: list[float | None] = [None] * len(candles)
+    lows: list[float | None] = [None] * len(candles)
+    current_day = None
+    day_high = day_low = None
+    prior_high: float | None = None
+    prior_low: float | None = None
+    for index, candle in enumerate(candles):
+        day = candle.ts_utc.date()
+        if day != current_day:
+            if day_high is not None and day_low is not None:
+                prior_high, prior_low = day_high, day_low
+            current_day = day
+            day_high, day_low = candle.high, candle.low
+        else:
+            day_high = max(day_high, candle.high) if day_high is not None else candle.high
+            day_low = min(day_low, candle.low) if day_low is not None else candle.low
+        highs[index] = prior_high
+        lows[index] = prior_low
+    return tuple(highs), tuple(lows)
+
+
+_NEW_YORK = ZoneInfo("America/New_York")
+_OPEN = time(9, 30)
+_OPEN_RANGE_END = time(10, 0)
+
+
+def opening_range(
+    candles: Sequence[Candle],
+) -> tuple[tuple[float | None, ...], tuple[float | None, ...]]:
+    """High and low of the first 30 minutes of the New York cash session.
+
+    A value is available only from 10:00 New York time on the same day, so a
+    bar never sees a range that is still forming.  Bars that straddle the
+    window (such as 1h bars) do not form a range, which leaves it unavailable.
+    """
+    highs: list[float | None] = [None] * len(candles)
+    lows: list[float | None] = [None] * len(candles)
+    current_day = None
+    range_high: float | None = None
+    range_low: float | None = None
+    for index, candle in enumerate(candles):
+        local = candle.ts_utc.astimezone(_NEW_YORK)
+        if local.date() != current_day:
+            current_day = local.date()
+            range_high = range_low = None
+        clock = local.time()
+        if _OPEN <= clock < _OPEN_RANGE_END:
+            range_high = candle.high if range_high is None else max(range_high, candle.high)
+            range_low = candle.low if range_low is None else min(range_low, candle.low)
+        elif clock >= _OPEN_RANGE_END:
+            highs[index] = range_high
+            lows[index] = range_low
+    return tuple(highs), tuple(lows)
