@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 301,
+  "turn": "claude",
+  "revision": 302,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-121 control experiments are implemented and reviewed on PR #156. Codex validated the Claude lint/type/test-import fixes; compileall, diff check and handoff validation pass, while CI remains required for pytest, Ruff and mypy. After merge and redeploy, Codex performs the single approved read-only control run and records its table before handing back to Claude.",
+    "summary": "T-121 control experiments are implemented, merged in PR #156, and the single approved post-merge read-only Pod run completed normally on image a89a2fd9. Codex recorded the control table and memory evidence; no strategy passed the diagnostics and gates were not evaluated. Turn is handed to Claude for review.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3905,7 +3905,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04",
@@ -3935,10 +3935,13 @@
         "No Pod run was started for T-121; the approved one-run Pod step remains after merge and redeploy.",
         "Codex reran python -m compileall -q scripts/lab_controls.py tests/unit/test_lab_controls.py on the Claude-fixed branch; it passed.",
         "Codex reran git diff --check and python agent_state/validate_handoff.py; both passed. Handoff validation reported revision 299, turn codex, with jsonschema unavailable so only the structural schema check was skipped.",
-        "No Pod, broker, order, holdout or gate activity was performed. The approved single post-merge Pod control run remains deferred until CI/merge and redeploy."
+        "No Pod, broker, order, holdout or gate activity was performed. The approved single post-merge Pod control run remains deferred until CI/merge and redeploy.",
+        "Post-merge Pod run completed once on image a89a2fd9f016754ff9260138f909c6ee7c491b7b with `nohup python scripts/lab_controls.py`, PID 463 (shell PID 462), no child workers, run.lock absent before and after, no broker/holdout/order activity.",
+        "Observed cgroup/RSS checkpoints (bytes; no child workers for this single-process CLI): early anon=1005064192,current=1156313088,rss=837804KB; 03:03 anon=2361294848,current=2574499840,rss=2151296KB; 03:28 anon=4627423232,current=4844707840,rss=4364524KB; 03:48 peak anon=5350662144,current=5570224128,rss=5070320KB; 04:37 anon=890998784,current=1112973312,rss=711876KB; 05:23 anon=1015803904,current=1265278976,rss=831852KB; 06:43 anon=1476325376,current=1778896896,rss=1286180KB; completion 02:02:48Z anon=234188800,current=614719488 after PID 463 exited. Peak cgroup anon was 5350662144 bytes (4.98 GiB), below 12 GB; peak memory.current was 5570224128 bytes (5.19 GiB).",
+        "Results: training_years=6, timeframe=5m, bars NSXUSD=401170 and XAUUSD=415509, holdout_accessed=false, gates_evaluated=false. NSXUSD: random gross/trade [-0.9855,-0.9741,-0.9710,-0.9634,-0.9844] (trades [20950,20832,20738,20853,21066]); zero-cost gross/trade {bollinger_reversion:-0.9895,donchian_breakout:-1.0413,ema_crossover_atr_stop:-0.8915,ema_pullback:-0.9178,rsi_mean_reversion:-0.9048}; perfect foresight gross/trade=0.2500, gross_pnl=100143.561, trades=400544, win_rate=1.0; cost audit spread=2.0,slippage=1.0,cost/trade=4.0,avg_range=16.0100,cost_share=0.24984. XAUUSD: random gross/trade [-0.1369,-0.1184,-0.1295,-0.1347,-0.1247] (trades [20311,20262,20217,20239,20529]); zero-cost gross/trade {bollinger_reversion:-0.1208,donchian_breakout:-0.0695,ema_crossover_atr_stop:-0.1432,ema_pullback:-0.1741,rsi_mean_reversion:-0.1811}; perfect foresight gross/trade=0.2334, gross_pnl=33000.605, trades=141416, win_rate=0.999993; cost audit spread=0.8,slippage=0.4,cost/trade=1.6,avg_range=2.1898,cost_share=0.73066. All requested controls completed; survivors/passed strategies: none (controls are diagnostics, not Gate 1)."
       ],
-      "completion_note": "Validated Claude review fixes on the T-121 branch. Compileall, diff check and handoff validation pass; pytest/Ruff/mypy/make remain unavailable on this desktop. Handing turn to Claude for CI review; the single approved post-merge Pod control run remains pending merge and redeploy.",
-      "review_notes": "Codex validation V-295 confirms the Claude-fixed branch is syntactically clean and handoff-valid. CI remains the authoritative check for pytest, Ruff and mypy before merge; no Pod run is allowed before merge and redeploy."
+      "completion_note": "The single approved post-merge read-only T-121 control run completed normally on image a89a2fd9f016754ff9260138f909c6ee7c491b7b. PID 463 exited after about 16 minutes; no worker children or run.lock were present. Peak cgroup anon was 4.98 GiB (memory.current 5.19 GiB), below the 12 GB stop limit. The full per-instrument control table is in the new log entry. No strategies passed because this is an engine/cost diagnostic, not a gate.",
+      "review_notes": "Codex recorded the completed Pod evidence and is handing the turn to Claude for review. The run was read-only and did not access holdout data, evaluate gates, contact a broker or place orders. CI remains authoritative for pytest, Ruff and mypy."
     }
   ],
   "decisions": [
@@ -7185,6 +7188,17 @@
       "validated_by": "codex",
       "date": "2026-10-10",
       "reverify_if": "CI identifies a T-121 defect, the T-121 code changes, or the owner redeploys for the approved post-merge control run."
+    },
+    {
+      "id": "V-296",
+      "subject": "T-121 post-merge Pod control run",
+      "method": "Ran scripts/lab_controls.py once after redeploy on the merged main image; captured its JSON output and cgroup/RSS checkpoints without touching the broker or holdout.",
+      "result": "pass",
+      "evidence": "Image a89a2fd9f016754ff9260138f909c6ee7c491b7b; PID 463 completed normally; run.lock absent; Results: training_years=6, timeframe=5m, bars NSXUSD=401170 and XAUUSD=415509, holdout_accessed=false, gates_evaluated=false. NSXUSD: random gross/trade [-0.9855,-0.9741,-0.9710,-0.9634,-0.9844] (trades [20950,20832,20738,20853,21066]); zero-cost gross/trade {bollinger_reversion:-0.9895,donchian_breakout:-1.0413,ema_crossover_atr_stop:-0.8915,ema_pullback:-0.9178,rsi_mean_reversion:-0.9048}; perfect foresight gross/trade=0.2500, gross_pnl=100143.561, trades=400544, win_rate=1.0; cost audit spread=2.0,slippage=1.0,cost/trade=4.0,avg_range=16.0100,cost_share=0.24984. XAUUSD: random gross/trade [-0.1369,-0.1184,-0.1295,-0.1347,-0.1247] (trades [20311,20262,20217,20239,20529]); zero-cost gross/trade {bollinger_reversion:-0.1208,donchian_breakout:-0.0695,ema_crossover_atr_stop:-0.1432,ema_pullback:-0.1741,rsi_mean_reversion:-0.1811}; perfect foresight gross/trade=0.2334, gross_pnl=33000.605, trades=141416, win_rate=0.999993; cost audit spread=0.8,slippage=0.4,cost/trade=1.6,avg_range=2.1898,cost_share=0.73066. All requested controls completed; survivors/passed strategies: none (controls are diagnostics, not Gate 1). Observed cgroup/RSS checkpoints (bytes; no child workers for this single-process CLI): early anon=1005064192,current=1156313088,rss=837804KB; 03:03 anon=2361294848,current=2574499840,rss=2151296KB; 03:28 anon=4627423232,current=4844707840,rss=4364524KB; 03:48 peak anon=5350662144,current=5570224128,rss=5070320KB; 04:37 anon=890998784,current=1112973312,rss=711876KB; 05:23 anon=1015803904,current=1265278976,rss=831852KB; 06:43 anon=1476325376,current=1778896896,rss=1286180KB; completion 02:02:48Z anon=234188800,current=614719488 after PID 463 exited. Peak cgroup anon was 5350662144 bytes (4.98 GiB), below 12 GB; peak memory.current was 5570224128 bytes (5.19 GiB).",
+      "review_notes": "No strategy passed the diagnostic controls; gates remain unchanged. Claude review is required.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "scripts/lab_controls.py, the backtester or cost model changes."
     }
   ],
   "blockers": [
@@ -12559,6 +12573,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted Codex rev 300 validation (V-295). CI is green on the code; merging PR 156. Next for Codex under the owner 8-hour authorization (rev 290): redeploy the new main image (SHA given in chat), verify it and an absent run.lock, run scripts/lab_controls.py ONCE (read-only), record the table in ONE log entry and hand the turn to Claude."
+    },
+    {
+      "revision": 302,
+      "ts": "2026-10-10T02:03:57Z",
+      "agent": "codex",
+      "action": "record_t121_controls_run",
+      "task_ids": [
+        "T-121"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-121 one-run post-merge controls completed normally on image a89a2fd9f016754ff9260138f909c6ee7c491b7b (PID 463, no child workers, run.lock absent). Results: training_years=6, timeframe=5m, bars NSXUSD=401170 and XAUUSD=415509, holdout_accessed=false, gates_evaluated=false. NSXUSD: random gross/trade [-0.9855,-0.9741,-0.9710,-0.9634,-0.9844] (trades [20950,20832,20738,20853,21066]); zero-cost gross/trade {bollinger_reversion:-0.9895,donchian_breakout:-1.0413,ema_crossover_atr_stop:-0.8915,ema_pullback:-0.9178,rsi_mean_reversion:-0.9048}; perfect foresight gross/trade=0.2500, gross_pnl=100143.561, trades=400544, win_rate=1.0; cost audit spread=2.0,slippage=1.0,cost/trade=4.0,avg_range=16.0100,cost_share=0.24984. XAUUSD: random gross/trade [-0.1369,-0.1184,-0.1295,-0.1347,-0.1247] (trades [20311,20262,20217,20239,20529]); zero-cost gross/trade {bollinger_reversion:-0.1208,donchian_breakout:-0.0695,ema_crossover_atr_stop:-0.1432,ema_pullback:-0.1741,rsi_mean_reversion:-0.1811}; perfect foresight gross/trade=0.2334, gross_pnl=33000.605, trades=141416, win_rate=0.999993; cost audit spread=0.8,slippage=0.4,cost/trade=1.6,avg_range=2.1898,cost_share=0.73066. All requested controls completed; survivors/passed strategies: none (controls are diagnostics, not Gate 1). Wall time was about 16 minutes; the CLI emitted no per-stage timings. Peak cgroup anon was 5350662144 bytes (4.98 GiB), peak memory.current 5570224128 bytes (5.19 GiB), below 12 GB. No strategies passed; gates and holdout were not evaluated, and no broker/order activity occurred. Handing turn to Claude."
     }
   ],
   "project_summary": "T-120 run reviewed (no gross edge before costs, nothing goes to paper). T-121 controls script is merged; Codex redeploys the new main image (SHA in chat), then runs it once on the Pod and records the table in ONE log entry, then hands the turn to Claude."
