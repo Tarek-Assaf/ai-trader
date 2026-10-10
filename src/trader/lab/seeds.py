@@ -47,8 +47,8 @@ def _spec(
         timeframe_minutes=timeframe,  # type: ignore[arg-type]
         entry_conditions=conditions,
         exit_rules=(
-            StopExit(kind="stop", distance=stop),
-            TargetExit(kind="target", distance=target),
+            StopExit(kind="stop", distance=stop, unit="atr"),
+            TargetExit(kind="target", distance=target, unit="atr"),
         ),
         tunable_parameters=parameters,
     )

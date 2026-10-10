@@ -115,14 +115,19 @@ class TunableParameter(StrictModel):
         return self
 
 
+DistanceUnit = Literal["points", "atr"]
+
+
 class StopExit(StrictModel):
     kind: Literal["stop"]
     distance: PositiveFiniteFloat
+    unit: DistanceUnit = "points"
 
 
 class TargetExit(StrictModel):
     kind: Literal["target"]
     distance: PositiveFiniteFloat
+    unit: DistanceUnit = "points"
 
 
 class TimeStopExit(StrictModel):
@@ -134,6 +139,7 @@ class TrailingStopExit(StrictModel):
     kind: Literal["trailing"]
     activation_distance: PositiveFiniteFloat
     distance: PositiveFiniteFloat
+    unit: DistanceUnit = "points"
 
 
 type ExitRule = Annotated[

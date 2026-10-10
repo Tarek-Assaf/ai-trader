@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 302,
+  "turn": "codex",
+  "revision": 303,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -93,7 +93,8 @@
         "T-118",
         "T-119",
         "T-120",
-        "T-121"
+        "T-121",
+        "T-122"
       ]
     },
     {
@@ -115,7 +116,8 @@
         "T-118",
         "T-119",
         "T-120",
-        "T-121"
+        "T-121",
+        "T-122"
       ]
     },
     {
@@ -143,7 +145,8 @@
         "T-118",
         "T-119",
         "T-120",
-        "T-121"
+        "T-121",
+        "T-122"
       ]
     },
     {
@@ -3905,7 +3908,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -3941,7 +3944,43 @@
         "Results: training_years=6, timeframe=5m, bars NSXUSD=401170 and XAUUSD=415509, holdout_accessed=false, gates_evaluated=false. NSXUSD: random gross/trade [-0.9855,-0.9741,-0.9710,-0.9634,-0.9844] (trades [20950,20832,20738,20853,21066]); zero-cost gross/trade {bollinger_reversion:-0.9895,donchian_breakout:-1.0413,ema_crossover_atr_stop:-0.8915,ema_pullback:-0.9178,rsi_mean_reversion:-0.9048}; perfect foresight gross/trade=0.2500, gross_pnl=100143.561, trades=400544, win_rate=1.0; cost audit spread=2.0,slippage=1.0,cost/trade=4.0,avg_range=16.0100,cost_share=0.24984. XAUUSD: random gross/trade [-0.1369,-0.1184,-0.1295,-0.1347,-0.1247] (trades [20311,20262,20217,20239,20529]); zero-cost gross/trade {bollinger_reversion:-0.1208,donchian_breakout:-0.0695,ema_crossover_atr_stop:-0.1432,ema_pullback:-0.1741,rsi_mean_reversion:-0.1811}; perfect foresight gross/trade=0.2334, gross_pnl=33000.605, trades=141416, win_rate=0.999993; cost audit spread=0.8,slippage=0.4,cost/trade=1.6,avg_range=2.1898,cost_share=0.73066. All requested controls completed; survivors/passed strategies: none (controls are diagnostics, not Gate 1)."
       ],
       "completion_note": "The single approved post-merge read-only T-121 control run completed normally on image a89a2fd9f016754ff9260138f909c6ee7c491b7b. PID 463 exited after about 16 minutes; no worker children or run.lock were present. Peak cgroup anon was 4.98 GiB (memory.current 5.19 GiB), below the 12 GB stop limit. The full per-instrument control table is in the new log entry. No strategies passed because this is an engine/cost diagnostic, not a gate.",
-      "review_notes": "Codex recorded the completed Pod evidence and is handing the turn to Claude for review. The run was read-only and did not access holdout data, evaluate gates, contact a broker or place orders. CI remains authoritative for pytest, Ruff and mypy."
+      "review_notes": "Pod run accepted (V-296). Findings: engine fills are sane (perfect foresight earns exactly its 0.25-point target on 99.99 to 100 percent of trades), cost model is the configured pessimistic 4.0 and 1.6 points per trade, and the random-entry control exposed a REAL defect: stop and target distances were absolute points (1.5 and 1.0) on every instrument, far inside the 5m bar range (NSXUSD about 16 points, XAUUSD about 2.2). Fixed by T-122."
+    },
+    {
+      "id": "T-122",
+      "title": "ATR-scaled exits: stop and target distances as ATR multiples",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-121"
+      ],
+      "acceptance_criteria": [
+        "Evidence (T-121 run, rev 302): random-entry gross per trade is -0.97 points (NSXUSD) and -0.13 (XAUUSD) even before costs, and zero-cost seed runs show the same -0.9 and -0.1: every seed and pattern used stop 1.5 and target 1.0 as ABSOLUTE POINTS, but the average 5m range is about 16 points on NSXUSD and 2.2 on XAUUSD. With distances far inside one bar the engine resolves each trade by its pessimistic stop-first rule, so no strategy can win. The seeds (for example ema_crossover_atr_stop) were meant to be ATR multiples.",
+        "StopExit, TargetExit and TrailingStopExit gain unit points or atr (default points, so existing specs are unchanged); in atr unit the distance is a multiple of ATR(14) known at the signal bar (no lookahead), converted to points at entry; entries with no ATR yet are skipped.",
+        "Seeds, pattern miner and the controls random-entry use unit atr with their existing numbers as multiples.",
+        "Unit tests: atr exits scale ten-fold with ten-fold volatility, random entries with atr exits have no large gross edge or loss, default unit is points.",
+        "Gates in config/strategy_lab.yaml and the cost model unchanged; holdout only via validator.open_sealed_reader."
+      ],
+      "deliverables": [
+        "src/trader/lab/spec.py",
+        "src/trader/lab/backtest.py",
+        "src/trader/lab/seeds.py",
+        "src/trader/lab/miner.py",
+        "scripts/lab_controls.py",
+        "tests/unit/test_lab_atr_exits.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "Implemented by Claude; unit tests for the new behaviour pass locally; CI is the authority."
+      ],
+      "completion_note": "Implemented by Claude after the T-121 controls found the point-distance scale defect. Next: Codex redeploys the new main image and runs seeds+patterns once, then lab_controls once, under the owner 8-hour authorization."
     }
   ],
   "decisions": [
@@ -7199,6 +7238,17 @@
       "validated_by": "codex",
       "date": "2026-10-10",
       "reverify_if": "scripts/lab_controls.py, the backtester or cost model changes."
+    },
+    {
+      "id": "V-297",
+      "subject": "Claude review of the T-121 controls Pod run",
+      "method": "Read the recorded controls table from rev 302 and compared with the spec, the bar ranges and the exit definitions in seeds.py, miner.py and backtest.py.",
+      "result": "pass",
+      "evidence": "Perfect-foresight control earns 0.2500 (NSXUSD) and 0.2334 (XAUUSD) per trade with win rate 1.0, so fills and PnL accounting are sound. Random entries lose 0.97 (NSXUSD) and 0.13 (XAUUSD) points per trade before costs, equal to the zero-cost seed families, which pointed to the distance scale (1.5 and 1.0 absolute points versus bar ranges 16.0 and 2.19). Cost audit: NSXUSD 4.0 points per trade (25 percent of bar range), XAUUSD 1.6 (73 percent).",
+      "review_notes": "Run accepted. Engine is not biased; the defect is in the exit scale (fixed by T-122). Cost model left unchanged for now: it is pessimistic by design, and XAUUSD at 73 percent of a 5m bar range means gold needs slow, high-conviction trades. Real spread measurement from the recorder is a follow-up.",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "Exit scale or cost model changes."
     }
   ],
   "blockers": [
@@ -12586,7 +12636,27 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-121 one-run post-merge controls completed normally on image a89a2fd9f016754ff9260138f909c6ee7c491b7b (PID 463, no child workers, run.lock absent). Results: training_years=6, timeframe=5m, bars NSXUSD=401170 and XAUUSD=415509, holdout_accessed=false, gates_evaluated=false. NSXUSD: random gross/trade [-0.9855,-0.9741,-0.9710,-0.9634,-0.9844] (trades [20950,20832,20738,20853,21066]); zero-cost gross/trade {bollinger_reversion:-0.9895,donchian_breakout:-1.0413,ema_crossover_atr_stop:-0.8915,ema_pullback:-0.9178,rsi_mean_reversion:-0.9048}; perfect foresight gross/trade=0.2500, gross_pnl=100143.561, trades=400544, win_rate=1.0; cost audit spread=2.0,slippage=1.0,cost/trade=4.0,avg_range=16.0100,cost_share=0.24984. XAUUSD: random gross/trade [-0.1369,-0.1184,-0.1295,-0.1347,-0.1247] (trades [20311,20262,20217,20239,20529]); zero-cost gross/trade {bollinger_reversion:-0.1208,donchian_breakout:-0.0695,ema_crossover_atr_stop:-0.1432,ema_pullback:-0.1741,rsi_mean_reversion:-0.1811}; perfect foresight gross/trade=0.2334, gross_pnl=33000.605, trades=141416, win_rate=0.999993; cost audit spread=0.8,slippage=0.4,cost/trade=1.6,avg_range=2.1898,cost_share=0.73066. All requested controls completed; survivors/passed strategies: none (controls are diagnostics, not Gate 1). Wall time was about 16 minutes; the CLI emitted no per-stage timings. Peak cgroup anon was 5350662144 bytes (4.98 GiB), peak memory.current 5570224128 bytes (5.19 GiB), below 12 GB. No strategies passed; gates and holdout were not evaluated, and no broker/order activity occurred. Handing turn to Claude."
+    },
+    {
+      "revision": 303,
+      "ts": "2026-10-10T02:30:00Z",
+      "agent": "claude",
+      "action": "review_t121_run_add_atr_exits",
+      "task_ids": [
+        "T-121",
+        "T-122"
+      ],
+      "files_changed": [
+        "src/trader/lab/spec.py",
+        "src/trader/lab/backtest.py",
+        "src/trader/lab/seeds.py",
+        "src/trader/lab/miner.py",
+        "scripts/lab_controls.py",
+        "tests/unit/test_lab_atr_exits.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed Codex rev 302 (V-297 pass). Controls prove fills and accounting are sound but exposed that stops and targets were absolute points (1.5 and 1.0) while a 5m bar spans about 16 points (NSXUSD) and 2.2 (XAUUSD), so no strategy could win. T-122 adds ATR-unit exits (default stays points) and switches seeds, miner and the random control to ATR multiples. Gates and costs unchanged. Under the owner 8-hour authorization (rev 290), after merge and publish Codex redeploys the new main image (SHA in chat), verifies it and no run.lock, runs lab_run.py --idea-sources seeds patterns --max-ideas 20 --timeframes 5 --force ONCE, then scripts/lab_controls.py ONCE (sequential, not together), records both in ONE log entry and hands the turn to Claude."
     }
   ],
-  "project_summary": "T-120 run reviewed (no gross edge before costs, nothing goes to paper). T-121 controls script is merged; Codex redeploys the new main image (SHA in chat), then runs it once on the Pod and records the table in ONE log entry, then hands the turn to Claude."
+  "project_summary": "The T-121 controls found a real defect: stops and targets were absolute points far smaller than a 5m bar. T-122 makes them ATR multiples. After CI and publish, Codex redeploys the new main image (SHA in chat), runs seeds+patterns once and then lab_controls once, and records both in ONE log entry, then hands the turn to Claude. Nothing has passed Gate 1 yet; no paper trading."
 }
