@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 326,
+  "turn": "human",
+  "revision": 328,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Q-046 answered: Round A active (D-029). Claude added NAS100- and gold-specific seed families (image e36beb89a496 on main). T-131 (Codex) runs them on 5m/15m/60m. Stop rule: two rounds without a Gate 1 pass ends the search and the owner decides. Gates unchanged. No live trading; demo only.",
+    "summary": "T-131 blocked before execution: current Pod is idle on the old image, the console redeploy control is unauthenticated, and the terminal cannot change images (no docker socket; runpodctl unauthorized). No Round A run was started; no code/config/gate changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4268,7 +4268,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-03",
         "R-04",
@@ -4286,8 +4286,10 @@
       ],
       "deliverables": [],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "Pod terminal read-only check: run.lock absent; no lab_run process; cgroup memory.current 426106880 bytes."
+      ],
+      "completion_note": "Blocked before any Round A run: the reachable Pod terminal is still the old 5a06f012 image and the RunPod console session needed to redeploy the approved e36beb89a496181562f53e0f44147121a1c0e220 image is no longer authenticated. The terminal has no docker socket and runpodctl is unauthorized, so the image cannot be changed or verified from inside the Pod. No lab run was started; run.lock is absent and the Pod is idle."
     }
   ],
   "decisions": [
@@ -10993,6 +10995,24 @@
       "validated_by": "claude",
       "date": "2026-10-10",
       "reverify_if": "Result files are regenerated"
+    },
+    {
+      "id": "V-319",
+      "subject": "T-131 preflight redeploy blocker",
+      "method": "Read-only Pod preflight checked run.lock, lab_run processes and cgroup memory before execution; image redeploy could not be performed from the terminal and the authenticated RunPod console was unavailable.",
+      "result": "fail",
+      "evidence": {
+        "run_lock": "absent",
+        "lab_process": "none",
+        "memory_current_bytes": 426106880,
+        "requested_image": "e36beb89a496181562f53e0f44147121a1c0e220",
+        "observed_image": "old image; console verification unavailable",
+        "runs_started": 0
+      },
+      "review_notes": "Owner action required: redeploy the requested image in RunPod console, then hand T-131 back to Codex.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "Pod image or console access changes"
     }
   ],
   "blockers": [
@@ -11079,6 +11099,12 @@
     {
       "id": "B-013",
       "text": "T-129 level-seed reruns are blocked: RunPod returned Docker manifest unknown when starting image 5a06f012611c26afea2fbd9475337f4832b30a9a. The Pod was restored to the already-published 57c3869 image for read-only evidence; no level-seed run was started.",
+      "raised_by": "codex",
+      "status": "open"
+    },
+    {
+      "id": "B-014",
+      "text": "T-131 cannot start: the available Pod terminal is attached to the old 5a06f012 image, the RunPod console session needed to set e36beb89a496181562f53e0f44147121a1c0e220 is unauthenticated, and the container has no docker socket while runpodctl is unauthorized. No approved Round A run was started.",
       "raised_by": "codex",
       "status": "open"
     }
@@ -18937,7 +18963,33 @@
         "docs/specs/round_a_plan.md"
       ],
       "summary": "Owner approved Q-046 option 1. Added D-029, docs/specs/round_a_plan.md (rounds, stop rule, incubation, cost calibration), instrument_seed_specs (16 NAS100 + 20 gold ideas, merged in #175, image e36beb89a496181562f53e0f44147121a1c0e220), and T-131 for Codex. Requirement statuses with at least one done covering task moved from not_started to in_progress (nothing is marked done: no strategy has passed Gate 1 or run in the demo). Found that holdout_profit_factor equals out-of-sample PF for attempts that failed the preliminary screen by design (gate1_metrics fallback), so it is not a bug; documented in the plan."
+    },
+    {
+      "revision": 327,
+      "ts": "2026-10-10T18:32:00Z",
+      "agent": "codex",
+      "action": "block_t131_redeploy",
+      "task_ids": [
+        "T-131"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-131 from origin/main after Claude activated Round A. Will redeploy image e36beb89a496181562f53e0f44147121a1c0e220 and run the approved 60m, 15m and 5m seed searches sequentially. | Preflight only: old Pod image remained active and no authenticated RunPod console or in-container image control was available. Verified run.lock absent, no lab_run process, memory.current 426106880 bytes. No Round A run started; owner must redeploy e36beb89a496181562f53e0f44147121a1c0e220 and provide reachable console/terminal access. (Claude note: Codex wrote two log entries, 327 and 328, in two sessions without a Claude turn between; merged into one entry 327 because log agents must alternate.)"
+    },
+    {
+      "revision": 328,
+      "ts": "2026-10-10T19:10:00Z",
+      "agent": "claude",
+      "action": "land_t131_blocker_ask_owner",
+      "task_ids": [
+        "T-131"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Codex rev 327 (two sessions merged): T-131 cannot start because the Pod image cannot be changed from the terminal (RunPod console session unauthenticated, no docker socket, runpodctl unauthorized); the Pod is idle on the old 5a06f012 image, no run started. Landed Codex's new entries, V-319, B-014 and the T-131 blocked status onto main WITHOUT its branch copy of the file, because that copy re-encoded old entries (V-081 evidence and T-017 note became mojibake and old log entries differed), which breaks append-only. Codex must edit the handoff by appending only (read and write UTF-8, ensure_ascii=False). Owner action: redeploy image ghcr.io/tarek-assaf/ai-trader:e36beb89a496181562f53e0f44147121a1c0e220 in the RunPod console, then prompt Codex to continue T-131."
     }
   ],
-  "project_summary": "T-130 complete after review correction: full-image 15m/60m and level-seed 5m runs were retained and re-read; real top-three metrics and failure reasons for all seven families are recorded once in correction log revision 324."
+  "project_summary": "T-131 blocked before the approved Round A searches; owner must redeploy the exact e36beb89a496181562f53e0f44147121a1c0e220 image and provide a reachable terminal for verification. No run.lock and no lab process were observed."
 }
