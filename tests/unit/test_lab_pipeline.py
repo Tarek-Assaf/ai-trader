@@ -262,6 +262,17 @@ def test_pipeline_worker_returns_slim_results_with_identical_gate_metrics() -> N
     assert compact.preliminary_metrics["trades"] == expected["trades"]
     assert compact.preliminary_metrics["out_of_sample_trades"] == expected["out_of_sample_trades"]
     assert compact.preliminary_metrics["p_value"] == expected["p_value"]
+    for key in (
+        "diag_gross_pnl",
+        "diag_total_costs",
+        "diag_net_pnl",
+        "diag_avg_gross_per_trade",
+        "diag_avg_cost_per_trade",
+        "diag_win_rate",
+        "diag_trades_per_day",
+    ):
+        assert key in compact.preliminary_metrics
+    assert compact.preliminary_metrics["diag_net_pnl"] == full.net_pnl
 
 
 def test_real_config_noise_never_promotes_across_random_variants(tmp_path: Path) -> None:

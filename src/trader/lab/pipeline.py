@@ -102,6 +102,30 @@ def _compact_result(result: BacktestResult) -> BacktestResult:
     )
 
 
+def _cost_diagnostics(
+    result: BacktestResult, oos_result: BacktestResult, candles: Sequence[Candle]
+) -> dict[str, float]:
+    """Plain numbers that show whether trading costs, not the signal, decide a result.
+
+    Extra keys only: no gate reads them. They land in results.json so the owner and
+    reviewers can see gross edge versus cost per trade without rerunning anything.
+    """
+    trades = result.trades
+    count = len(trades)
+    days = max(1.0, (candles[-1].ts_utc - candles[0].ts_utc).total_seconds() / 86400.0)
+    wins = sum(1 for trade in trades if trade.net_pnl > 0)
+    return {
+        "diag_gross_pnl": float(result.gross_pnl),
+        "diag_total_costs": float(result.total_costs),
+        "diag_net_pnl": float(result.net_pnl),
+        "diag_oos_net_pnl": float(oos_result.net_pnl),
+        "diag_avg_gross_per_trade": float(result.gross_pnl) / count if count else 0.0,
+        "diag_avg_cost_per_trade": float(result.total_costs) / count if count else 0.0,
+        "diag_win_rate": wins / count if count else 0.0,
+        "diag_trades_per_day": count / days,
+    }
+
+
 _WORKER_CONTEXT: (
     tuple[
         Sequence[Candle],
@@ -220,6 +244,7 @@ def _evaluate_candidate(
         neighbor_results=neighbor_results if neighbor_changed else (),
         profitable_regimes=_profitable_regimes(result),
     )
+    preliminary_metrics = {**preliminary_metrics, **_cost_diagnostics(result, oos_result, candles)}
     return (
         strategy_hash(spec.model_dump(mode="json")),
         _CandidateEvaluation(
