@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 313,
+  "turn": "codex",
+  "revision": 314,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -98,7 +98,8 @@
         "T-123",
         "T-124",
         "T-125",
-        "T-126"
+        "T-126",
+        "T-127"
       ]
     },
     {
@@ -125,7 +126,8 @@
         "T-123",
         "T-124",
         "T-125",
-        "T-126"
+        "T-126",
+        "T-127"
       ]
     },
     {
@@ -158,7 +160,8 @@
         "T-123",
         "T-124",
         "T-125",
-        "T-126"
+        "T-126",
+        "T-127"
       ]
     },
     {
@@ -4122,6 +4125,32 @@
         "run.lock absent after PID 684 exit"
       ],
       "completion_note": "Rerun on image 683a964 completed once: 110/110 attempts, 0 pass Gate 1. Drawdown gate now passes for top attempts; failures are OOS profit factor, walk-forward share and significance."
+    },
+    {
+      "id": "T-127",
+      "title": "Widen the search on the Pod: patterns on 5m, then seeds on 3m and 1m",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-126"
+      ],
+      "acceptance_criteria": [
+        "Why: 0 of 110 5m seeds pass Gate 1 (V-307); we have never run the pattern miner or the 1m/3m seeds on the fixed engine. Owner approved Option 1 (Riyadh 2026-10-10 12:13, answer to Q-044). Pod work is allowed for this task only. No gate is loosened.",
+        "Verify the Pod runs image 683a964333b2b192c5a351919eca28783b813c9b (code unchanged since; newer main SHAs only changed agent_state) and there is no run.lock before EACH run. Run sequentially, one at a time, each with --force: (a) python scripts/lab_run.py --idea-sources patterns --max-ideas 100 --timeframes 5 --force; (b) python scripts/lab_run.py --idea-sources seeds --max-ideas 100 --timeframes 3 --force; (c) python scripts/lab_run.py --idea-sources seeds --max-ideas 100 --timeframes 1 --force. If a run exceeds the 3 h limit or the 12 GB stop, record it and continue to the next only if safe.",
+        "Record ONE log entry for the whole session: per run the run id, attempts, number passing Gate 1, peak cgroup anon, and the top 5 by diag_net_pnl with trades, OOS profit factor, WF share, regimes, drawdown percent, neighbors, p-value and failure reasons next to the unchanged thresholds. Also say whether holdout_profit_factor is computed independently of out_of_sample_profit_factor (read the code path in src/trader/lab/metrics.py or the validator; it was identical in every row of V-307).",
+        "Do not change gates, config, code, holdout access or secrets. Demo only. Hand the turn to claude and run python agent_state/validate_handoff.py --previous <file>."
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -9861,7 +9890,7 @@
       "id": "Q-044",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "With the drawdown bug fixed, 0 of 110 seed strategies pass Gate 1. The best NAS100 slow-trend longs earn more per trade than costs in the in-sample years, but lose money out of sample (profit factor 0.92 to 0.96 versus 1.3 needed) and are profitable in only 5 of 8 walk-forward windows. Changing the significance test would not rescue them. How should we widen the search? No gate will be loosened.",
       "options": [
         "Widen the search: run the pattern-mining source, test 1m and 3m timeframes, and add regime-filtered and mean-reversion seeds for NAS100 and gold (recommended)",
@@ -9869,7 +9898,7 @@
         "Stop here and review results with the owner before any more Pod runs"
       ],
       "recommendation": "Option 1: it uses the existing authorized Pod workflow, changes no gates, and tests whether any family has edge out of sample.",
-      "answer": null
+      "answer": "Owner at 12:13 Riyadh (09:13 UTC) replied in chat: '1' = widen the search (pattern mining, 1m and 3m timeframes, then regime-filtered and mean-reversion seeds). This gives fresh approval for the Pod runs in T-127."
     }
   ],
   "log": [
@@ -14835,6 +14864,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex rerun (V-308 pass). Image 683a964, one run, 110/110 attempts, 0 pass. Drawdown gate now passes (1.6 to 3.1 percent); failures are out-of-sample profit factor 0.67 to 0.96, walk-forward share 0.5 to 0.625 and significance. Noted holdout PF equals OOS PF in every row, to check. Renumbered Codex's single new log entry to 312 so revisions are contiguous. Added Q-044 for the owner on how to widen the search; gates unchanged. Handing turn to human."
+    },
+    {
+      "revision": 314,
+      "ts": "2026-10-10T09:20:00Z",
+      "agent": "claude",
+      "action": "owner_chose_widen_add_t127",
+      "task_ids": [
+        "T-127"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner answered Q-044 with option 1 (widen the search). Added T-127 for Codex: three sequential Pod runs on the unchanged image (patterns 5m, seeds 3m, seeds 1m), one log entry with per-run results, and a check of whether holdout PF is independent of OOS PF. Gates, config and holdout unchanged. Claude will meanwhile write regime-filtered and mean-reversion seeds (next task) in code. Handing turn to Codex."
     }
   ],
   "project_summary": "Engine and exits are honest. The new slow trend seeds show the first gross edge above cost (NSXUSD long, 2 to 13 points per trade against 4.0), but 0 of 110 attempts pass Gate 1. T-124 asks Codex for a read-only gate breakdown of the best attempts from the last run before choosing the next design. No paper trading; gates unchanged."
