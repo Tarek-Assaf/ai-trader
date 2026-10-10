@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 297,
+  "revision": 301,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-117, T-119 and T-120 are merged. The single approved post-T-120 seeds+patterns run completed normally on the verified main image 010afdcd7543453c52a957597881ef8885f1d6e7 with 4 workers; peak cgroup anon was 4.68 GB, 80 attempts, 0 survivors and no passed strategies. Per-source Gate 1, gross-versus-cost medians, per-phase memory and timing evidence is recorded in T-117/T-120 evidence.",
+    "summary": "T-121 control experiments are implemented and reviewed on PR #156. Codex validated the Claude lint/type/test-import fixes; compileall, diff check and handoff validation pass, while CI remains required for pytest, Ruff and mypy. After merge and redeploy, Codex performs the single approved read-only control run and records its table before handing back to Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -3905,7 +3905,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -3925,9 +3925,20 @@
         "scripts/lab_controls.py",
         "tests/unit/test_lab_controls.py"
       ],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Not started."
+      "review_cycles": 1,
+      "evidence": [
+        "scripts/lab_controls.py uses the existing HistData loader, CostModel and run_backtest only; it does not open holdout data, evaluate Gate 1, call a broker or place orders.",
+        "The CLI covers NSXUSD and XAUUSD on 5m over the configured six-year training window: five seeded random-entry controls at about 15 trades/day with ema_pullback exits, zero-cost runs for the five requested seed families, next-bar perfect-foresight control and spread/slippage/commission cost audit.",
+        "tests/unit/test_lab_controls.py covers deterministic five-seed random controls and a strongly positive perfect-foresight control on a synthetic frame.",
+        "python -m compileall -q scripts/lab_controls.py tests/unit/test_lab_controls.py passed; git diff --check passed.",
+        "pytest, Ruff, mypy and make are unavailable on this desktop; CI must run the full suite and lint/type checks.",
+        "No Pod run was started for T-121; the approved one-run Pod step remains after merge and redeploy.",
+        "Codex reran python -m compileall -q scripts/lab_controls.py tests/unit/test_lab_controls.py on the Claude-fixed branch; it passed.",
+        "Codex reran git diff --check and python agent_state/validate_handoff.py; both passed. Handoff validation reported revision 299, turn codex, with jsonschema unavailable so only the structural schema check was skipped.",
+        "No Pod, broker, order, holdout or gate activity was performed. The approved single post-merge Pod control run remains deferred until CI/merge and redeploy."
+      ],
+      "completion_note": "Validated Claude review fixes on the T-121 branch. Compileall, diff check and handoff validation pass; pytest/Ruff/mypy/make remain unavailable on this desktop. Handing turn to Claude for CI review; the single approved post-merge Pod control run remains pending merge and redeploy.",
+      "review_notes": "Codex validation V-295 confirms the Claude-fixed branch is syntactically clean and handoff-valid. CI remains the authoritative check for pytest, Ruff and mypy before merge; no Pod run is allowed before merge and redeploy."
     }
   ],
   "decisions": [
@@ -7141,6 +7152,39 @@
       "validated_by": "claude",
       "date": "2026-10-10",
       "reverify_if": "The backtester, cost model or gates change."
+    },
+    {
+      "id": "V-293",
+      "subject": "T-121 offline control experiments",
+      "method": "Reviewed the new control script and focused synthetic tests; compileall and diff checks were run without contacting the Pod or broker.",
+      "result": "pass",
+      "evidence": "Random-entry, zero-cost, perfect-foresight and cost-audit controls are implemented with the existing backtester and CostModel; holdout_accessed and gates_evaluated are explicitly false in the CLI result.",
+      "review_notes": "CI review is required for pytest, Ruff and mypy. The single approved Pod run is intentionally deferred until this PR merges and the owner redeploys.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "CI identifies a control or test defect, or the owner redeploys for the approved post-merge control run."
+    },
+    {
+      "id": "V-294",
+      "subject": "Review of scripts/lab_controls.py (T-121 code)",
+      "method": "Read the script; checked it uses only the loader, cost model and run_backtest, bounds data to the training window, never opens holdout contents, evaluates no gates and calls no broker. Ran ruff check/format, mypy and the two unit tests locally.",
+      "result": "pass",
+      "evidence": "Ruff and format clean, no mypy errors in the script, both unit tests pass. Claude fixed import order, collections.abc, unused type-ignores, a mypy Any return and the test import (loaded by path like other script tests).",
+      "review_notes": "Pod run (T-121 step 4) still to do; that result decides the next step.",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "scripts/lab_controls.py changes."
+    },
+    {
+      "id": "V-295",
+      "subject": "Codex validation of Claude T-121 fixes",
+      "method": "Ran compileall, git diff --check and agent_state/validate_handoff.py on the Claude-fixed T-121 branch without contacting the Pod or broker.",
+      "result": "pass",
+      "evidence": "compileall and git diff --check passed. Handoff validation passed at revision 299; jsonschema is unavailable on this desktop, so only the structural schema check was skipped.",
+      "review_notes": "CI must run the full pytest, Ruff and mypy checks. The single approved post-merge Pod control run remains deferred until merge and redeploy.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "CI identifies a T-121 defect, the T-121 code changes, or the owner redeploys for the approved post-merge control run."
     }
   ],
   "blockers": [
@@ -12459,7 +12503,63 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex rev 296 (V-292 pass). The run shows no gross edge before costs in any source (median gross per trade -0.13 to -0.49 points against cost 1.6-2.8), so nothing is a paper candidate. Added T-121: control experiments (random-entry, zero-cost, perfect-foresight, cost audit) to prove the engine and cost model are honest before widening the search. Within the owner 8-hour authorization (rev 290) Codex may run it once on the Pod after merge and redeploy."
+    },
+    {
+      "revision": 298,
+      "ts": "2026-10-10T01:25:00Z",
+      "agent": "codex",
+      "action": "implement_t121_lab_controls",
+      "task_ids": [
+        "T-121"
+      ],
+      "files_changed": [
+        "scripts/lab_controls.py",
+        "tests/unit/test_lab_controls.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented the offline Strategy Lab controls: five seeded random-entry controls near 15 trades/day with ema_pullback exits, zero-cost gross reruns for the five requested seed families, next-bar perfect-foresight control and configured spread/slippage/commission audit for NSXUSD and XAUUSD 5m data over the bounded training window. Added synthetic tests. No holdout, gates, broker, orders, secrets or Pod state were touched. Desktop compileall and diff checks pass; pytest/Ruff/mypy/make are unavailable. Handing turn to Claude for CI review; the one approved post-merge Pod run remains pending redeploy."
+    },
+    {
+      "revision": 299,
+      "ts": "2026-10-10T01:40:00Z",
+      "agent": "claude",
+      "action": "review_t121_controls_code",
+      "task_ids": [
+        "T-121"
+      ],
+      "files_changed": [
+        "scripts/lab_controls.py",
+        "tests/unit/test_lab_controls.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed Codex rev 298 (V-293 pass; my review is V-294) and fixed lint, typing and test-import issues. Within the owner 8-hour authorization (rev 290), after merge and publish Codex redeploys the new main image (SHA given in chat), verifies it and an absent run.lock, runs scripts/lab_controls.py ONCE (read-only, no holdout), records the table in ONE log entry and hands the turn to Claude."
+    },
+    {
+      "revision": 300,
+      "ts": "2026-10-10T01:50:00Z",
+      "agent": "codex",
+      "action": "validate_t121_controls_and_handoff",
+      "task_ids": [
+        "T-121"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Validated the Claude-fixed T-121 branch: compileall, git diff --check and handoff validation pass. Pytest, Ruff, mypy and make are unavailable on this desktop, so CI remains required. No Pod, broker, order, holdout or gate activity was performed. Handing turn to Claude; the approved single post-merge Pod control run remains pending merge and redeploy."
+    },
+    {
+      "revision": 301,
+      "ts": "2026-10-10T02:00:00Z",
+      "agent": "claude",
+      "action": "accept_t121_validation_hand_to_codex",
+      "task_ids": [
+        "T-121"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted Codex rev 300 validation (V-295). CI is green on the code; merging PR 156. Next for Codex under the owner 8-hour authorization (rev 290): redeploy the new main image (SHA given in chat), verify it and an absent run.lock, run scripts/lab_controls.py ONCE (read-only), record the table in ONE log entry and hand the turn to Claude."
     }
   ],
-  "project_summary": "T-117, T-119 and T-120 are merged and the T-120 Pod run is reviewed (V-292): 80 attempts, 0 survivors, median gross profit per trade is negative before costs in every source. No strategy goes to paper. T-121 (control experiments to prove the engine and cost model are honest) is next for Codex; the search is widened afterwards without lowering gates."
+  "project_summary": "T-120 run reviewed (no gross edge before costs, nothing goes to paper). T-121 controls script is merged; Codex redeploys the new main image (SHA in chat), then runs it once on the Pod and records the table in ONE log entry, then hands the turn to Claude."
 }
