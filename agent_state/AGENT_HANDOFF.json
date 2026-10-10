@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 311,
+  "revision": 312,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -97,7 +97,8 @@
         "T-122",
         "T-123",
         "T-124",
-        "T-125"
+        "T-125",
+        "T-126"
       ]
     },
     {
@@ -123,7 +124,8 @@
         "T-122",
         "T-123",
         "T-124",
-        "T-125"
+        "T-125",
+        "T-126"
       ]
     },
     {
@@ -155,7 +157,8 @@
         "T-122",
         "T-123",
         "T-124",
-        "T-125"
+        "T-125",
+        "T-126"
       ]
     },
     {
@@ -4086,6 +4089,33 @@
         "V-305"
       ],
       "completion_note": "Drawdown gate metric converted from currency to percent of starting equity; gates unchanged."
+    },
+    {
+      "id": "T-126",
+      "title": "Redeploy main image on the Pod and rerun seeds once to see true Gate 1 status",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "in_progress",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-125"
+      ],
+      "acceptance_criteria": [
+        "Redeploy main image 683a964333b2b192c5a351919eca28783b813c9b, verify the running SHA and absent run.lock, then run the seeds-only lab command exactly once.",
+        "Record Gate 1 pass count and the top ten attempts by diag_net_pnl with every stored gate metric beside its threshold and failure reasons.",
+        "Do not change gates, config, holdout access, code, secrets, or live-trading state."
+      ],
+      "deliverables": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Pod rerun pending."
     }
   ],
   "decisions": [
