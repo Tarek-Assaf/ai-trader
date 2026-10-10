@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 322,
+  "revision": 321,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -16519,19 +16519,6 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex rev 320 (V-314 pass). 15m and 60m seeds on image 57c3869 (no level seeds): 0 passes of 158 each, 142 too_few_trades each. Best out-of-sample numbers so far: 15m slow trend long 96 (669 trades, OOS PF 1.18) and 60m range reversion long 30 (125 trades, OOS PF 1.47, WF share 0.875). Cause of the trade shortage: 6-year training cap. 1m stopped incomplete. The level image pull failed on a 39-character SHA. Added T-130: redeploy full SHA 5a06f01..., run 1h and 15m with --years all and 5m with level seeds, one log entry. Gates unchanged. Handing turn to Codex."
-    },
-    {
-      "revision": 322,
-      "ts": "2026-10-10T15:57:01Z",
-      "agent": "codex",
-      "action": "start_t130_full_history_level_seed_runs",
-      "task_ids": [
-        "T-130"
-      ],
-      "files_changed": [
-        "agent_state/AGENT_HANDOFF.json"
-      ],
-      "summary": "Started T-130 on Pod AI-Trading-01-cpu8 after redeploying full image 5a06f012611c26afea2fbd9475337f4832b30a9a. Verified running SHA and LOCK_ABSENT. Will run 60m --years all, 15m --years all, then 5m sequentially with dedicated result/progress files; no 1m rerun and no gate/config/code changes."
     }
   ],
   "project_summary": "T-130 in progress on full image 5a06f012611c26afea2fbd9475337f4832b30a9a; sequential 60m/15m full-history and 5m level-seed runs pending."
