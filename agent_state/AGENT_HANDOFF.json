@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 295,
+  "revision": 297,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-117 and T-119 are merged. The approved post-merge seeds+patterns run completed normally on the verified main image with 4 workers; peak cgroup anon was 4.63 GB, 80 attempts, 0 survivors and no passed strategies. Per-source Gate 1, per-phase memory and timing evidence is recorded in the T-117 evidence.",
+    "summary": "T-117, T-119 and T-120 are merged. The single approved post-T-120 seeds+patterns run completed normally on the verified main image 010afdcd7543453c52a957597881ef8885f1d6e7 with 4 workers; peak cgroup anon was 4.68 GB, 80 attempts, 0 survivors and no passed strategies. Per-source Gate 1, gross-versus-cost medians, per-phase memory and timing evidence is recorded in T-117/T-120 evidence.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -92,7 +92,8 @@
         "T-117",
         "T-118",
         "T-119",
-        "T-120"
+        "T-120",
+        "T-121"
       ]
     },
     {
@@ -113,7 +114,8 @@
         "T-117",
         "T-118",
         "T-119",
-        "T-120"
+        "T-120",
+        "T-121"
       ]
     },
     {
@@ -140,7 +142,8 @@
         "T-117",
         "T-118",
         "T-119",
-        "T-120"
+        "T-120",
+        "T-121"
       ]
     },
     {
@@ -3825,10 +3828,11 @@
         "python -m compileall -q src/trader/lab tests/unit/test_lab_pipeline.py tests/unit/test_lab_runner.py passed; python agent_state/validate_handoff.py and git diff --check passed. pytest, ruff, mypy and make are unavailable on this desktop; CI benchmark and full suite remain required.",
         "No Pod run, broker/order, gate, secret or holdout change was made for T-117.",
         "Post-merge owner-approved seeds-only run on image ghcr.io/tarek-assaf/ai-trader:ea841b74374aeae23b95348298a0b1fee7d8c9cd; run_id=20261009T230726Z; command was exactly one detached `python scripts/lab_run.py --idea-sources seeds --max-ideas 20 --timeframes 5 --force` with default six-year window, lock/progress paths and worker cap 4. The image was verified in RunPod and run.lock was absent before launch. The run completed normally at 2026-10-09T23:12:54.493692Z with PID 2541 dead and run.lock absent; no stop rule fired, no recorder/API failure occurred, and the three-hour/stale-progress limits were not reached. Peak RSS was 902070272 bytes; the largest cgroup_anon_bytes was 3469692928 and the largest memory_current_bytes was 3674529792, both below the 12 GB stop limit. Per-phase memory_diagnostics (main RSS / worker PSS-or-RSS / cgroup anon bytes): loading 40443904 / 0 / 265056256; loading:NSXUSD:5m 294330368 / 0 / 490930176; loading:NSXUSD:5m:reopen 414253056 / 0 / 604626944; loading:XAUUSD:5m 424493056 / 0 / 613703680; loading:XAUUSD:5m:reopen 297062400 / 0 / 492052480; mining:NSXUSD:5m:0/20 377245696 / 0 / 560930816; mining:XAUUSD:5m:0/20 398524416 / 0 / 585891840; evaluating:0/20:NSXUSD:5m 425672704 / 2989378560 / 3469692928; evaluating:0/20:XAUUSD:5m 451076096 / 1902947328 / 2403934208; evaluating:20/20:NSXUSD:5m 409681920 / 0 / 601825280; evaluating:20/20:XAUUSD:5m 451076096 / 0 / 647475200; holdout:NSXUSD:5m 409681920 / 0 / 601825280; holdout:XAUUSD:5m 451076096 / 0 / 647475200; done 258867200 / 0 / 450293760. Phase timings seconds: loading 3.897079911082983; loading:NSXUSD:5m 33.732727536931634; loading:NSXUSD:5m:reopen 33.5721455430612; loading:XAUUSD:5m 41.62311919592321; loading:XAUUSD:5m:reopen 41.78431493695825; mining:NSXUSD:5m:0/20 0.010201527737081051; mining:XAUUSD:5m:0/20 0.03086524549871683; evaluating:0/20:NSXUSD:5m 101.22561756148934; evaluating:20/20:NSXUSD:5m 0.009504072368144989; holdout:NSXUSD:5m 0.11761695891618729; evaluating:0/20:XAUUSD:5m 71.76427818648517; evaluating:20/20:XAUUSD:5m 0.008823205716907978; holdout:XAUUSD:5m 0.10722729191184044; done 0.0. results.json was fresh at 2026-10-09T23:12:54Z (40827 bytes), with 40 attempts, 0 survivors and no passed strategies. Gate-1 results by source: seed:bollinger_reversion 10 attempts, 277915 trades, all fail; seed:donchian_breakout 8 attempts, 265812 trades, all fail; seed:ema_crossover_atr_stop 2 attempts, 193476 trades, all fail; seed:ema_pullback 10 attempts, 620639 trades, all fail; seed:rsi_mean_reversion 10 attempts, 1069698 trades, all fail. Every failure reason was too_few_walk_forward_windows,too_few_validation_periods,out_of_sample_profit_factor_below_gate,walk_forward_share_below_gate,too_few_profitable_regimes,backtest. No strategies passed. This was seeds-only, so pattern mining is untested. No broker/order, gate, holdout, secret or unrelated Pod state was touched.",
-        "Post-merge owner-approved seeds+patterns run on image ghcr.io/tarek-assaf/ai-trader:ba5299dbe5a2db3c070e4e66eff179ceff9be9fa; exact command was one detached `python scripts/lab_run.py --idea-sources seeds patterns --max-ideas 20 --timeframes 5 --force` with default six-year window, default lock/progress paths and worker cap 4. Image SHA was verified in RunPod and run.lock was absent before launch. run_id=20261009T235045Z; started 2026-10-09T23:50:45.480477Z and completed normally at 2026-10-10T00:00:15.817534Z with PID 465 dead and run.lock absent; no stop rule fired, recorder/API failure occurred, or stale-progress/three-hour limit was reached. Final progress status=completed, ideas_done=80/80, survivors=0, workers=4. Overall peak main RSS was 3130048512 bytes; peak worker PSS was 3195797504 bytes; peak cgroup_anon_bytes was 4634411008 bytes; peak memory_current_bytes was 4816760832 bytes, all below the 12 GB cgroup-anon stop. Stage timing totals in seconds: loading 156.423, mining 83.954, evaluating 329.733, holdout 0.217, done 0.0. Stage memory maxima as main RSS/worker PSS/cgroup anon/memory.current bytes: loading 900915200/0/1072205824/1262723072; mining 3130048512/1847939072/4634411008/4816760832; evaluating 710889472/3195797504/3853250560/4057821184; holdout 707428352/0/892006400/1088143360; done 550653952/0/733237248/929112064. results.json was fresh for this run with 80 attempts, 0 survivors and no passed strategies. Gate 1 per-source results (attempts, total trades, all failed; reason-code counts; OPF=out_of_sample_profit_factor_below_gate, WFS=walk_forward_share_below_gate, FPR=too_few_profitable_regimes, DD=backtest_drawdown_above_gate, NBR=neighbor_parameters_not_profitable, FEW=too_few_trades, OFEW=too_few_out_of_sample_trades, PC=profit_concentration_above_gate): pattern 40/2074674 (OPF40,WFS40,FPR40,DD30,NBR23,FEW10,OFEW14,PC3); seed:bollinger_reversion 10/277915 (OPF10,WFS10,FPR10,DD10,NBR10); seed:donchian_breakout 8/265812 (OPF8,WFS8,FPR8,DD8,PC4,NBR4); seed:ema_crossover_atr_stop 2/193476 (OPF2,WFS2,FPR2,DD2,PC1,NBR1); seed:ema_pullback 10/620639 (OPF10,WFS10,FPR10,DD10,NBR10); seed:rsi_mean_reversion 10/1069698 (OPF10,WFS10,FPR10,DD10,PC2,NBR8). No strategy passed. No broker/order, gate, holdout, secret or unrelated Pod state was touched."
+        "Post-merge owner-approved seeds+patterns run on image ghcr.io/tarek-assaf/ai-trader:ba5299dbe5a2db3c070e4e66eff179ceff9be9fa; exact command was one detached `python scripts/lab_run.py --idea-sources seeds patterns --max-ideas 20 --timeframes 5 --force` with default six-year window, default lock/progress paths and worker cap 4. Image SHA was verified in RunPod and run.lock was absent before launch. run_id=20261009T235045Z; started 2026-10-09T23:50:45.480477Z and completed normally at 2026-10-10T00:00:15.817534Z with PID 465 dead and run.lock absent; no stop rule fired, recorder/API failure occurred, or stale-progress/three-hour limit was reached. Final progress status=completed, ideas_done=80/80, survivors=0, workers=4. Overall peak main RSS was 3130048512 bytes; peak worker PSS was 3195797504 bytes; peak cgroup_anon_bytes was 4634411008 bytes; peak memory_current_bytes was 4816760832 bytes, all below the 12 GB cgroup-anon stop. Stage timing totals in seconds: loading 156.423, mining 83.954, evaluating 329.733, holdout 0.217, done 0.0. Stage memory maxima as main RSS/worker PSS/cgroup anon/memory.current bytes: loading 900915200/0/1072205824/1262723072; mining 3130048512/1847939072/4634411008/4816760832; evaluating 710889472/3195797504/3853250560/4057821184; holdout 707428352/0/892006400/1088143360; done 550653952/0/733237248/929112064. results.json was fresh for this run with 80 attempts, 0 survivors and no passed strategies. Gate 1 per-source results (attempts, total trades, all failed; reason-code counts; OPF=out_of_sample_profit_factor_below_gate, WFS=walk_forward_share_below_gate, FPR=too_few_profitable_regimes, DD=backtest_drawdown_above_gate, NBR=neighbor_parameters_not_profitable, FEW=too_few_trades, OFEW=too_few_out_of_sample_trades, PC=profit_concentration_above_gate): pattern 40/2074674 (OPF40,WFS40,FPR40,DD30,NBR23,FEW10,OFEW14,PC3); seed:bollinger_reversion 10/277915 (OPF10,WFS10,FPR10,DD10,NBR10); seed:donchian_breakout 8/265812 (OPF8,WFS8,FPR8,DD8,PC4,NBR4); seed:ema_crossover_atr_stop 2/193476 (OPF2,WFS2,FPR2,DD2,PC1,NBR1); seed:ema_pullback 10/620639 (OPF10,WFS10,FPR10,DD10,NBR10); seed:rsi_mean_reversion 10/1069698 (OPF10,WFS10,FPR10,DD10,PC2,NBR8). No strategy passed. No broker/order, gate, holdout, secret or unrelated Pod state was touched.",
+        "Post-merge owner-approved seeds+patterns run on image ghcr.io/tarek-assaf/ai-trader:010afdcd7543453c52a957597881ef8885f1d6e7; exact command was one detached 'python scripts/lab_run.py --idea-sources seeds patterns --max-ideas 20 --timeframes 5 --force' with default six-year window, default lock/progress paths and worker cap 4. Image SHA matched Pod Details; HTTP service was Ready; web terminal was enabled; run.lock was absent before launch. run_id=20261010T004745Z; PID=1212; started 2026-10-10T00:47:45.555095Z and completed normally at 2026-10-10T00:56:53.734464Z. Final progress.json status=completed, phase=done, ideas_done=80/80, survivors=0, workers=4; PID 1212 was dead and run.lock was absent after completion. No cgroup, recorder/API, stale-progress or three-hour stop rule fired. Peak main RSS was 3142201344 bytes; peak worker PSS was 3515694080 bytes; peak cgroup_anon_bytes was 4678430720 bytes; peak memory_current_bytes was 4858949632 bytes, all below the 12 GB cgroup-anon stop. Per-phase memory_diagnostics (main RSS/worker PSS/cgroup anon/memory.current bytes) were: loading 42979328/0/249540608/338669568; loading:NSXUSD:5m 533753856/0/461160448/627118080; loading:XAUUSD:5m 770015232/0/946688000/1138556928; mining:NSXUSD:5m:20/20 3142201344/1499219968/4678430720/4858941440; mining:XAUUSD:5m:20/20 2757189632/1797867520/4484751360/4693880832; evaluating:0/40:NSXUSD:5m 817287168/3515694080/4218216448/4436090880; evaluating:0/40:XAUUSD:5m 908447744/2652115968/3443339264/3657195520; evaluating:40/40:NSXUSD:5m 817287168/0/1001930752/1197801472; evaluating:40/40:XAUUSD:5m 908447744/0/1089687552/1286008832; holdout:NSXUSD:5m 817287168/0/1001930752/1197527040; holdout:XAUUSD:5m 908447744/0/1089687552/1285996544; done 757985280/0/937078784/1133109248. Stage timings (seconds) were loading=154.681, mining=85.066, evaluating=308.187, holdout=0.244, done=0.0. Results were fresh for this run: 80 attempts, 0 survivors, no passed strategies. Gate 1 per-source results (attempts/total trades; every attempt failed): pattern 40/2074674, medians diag_avg_gross_per_trade=-0.1283844691, diag_avg_cost_per_trade=1.6, diag_win_rate=0, diag_trades_per_day=12.94353145, diag_gross_pnl=-5082.4155, diag_total_costs=51326.4; seed:bollinger_reversion 10/277915, medians diag_avg_gross_per_trade=-0.4712404923, diag_avg_cost_per_trade=2.8, diag_win_rate=0.00025836, diag_trades_per_day=14.69138746, diag_gross_pnl=-10812.3045, diag_total_costs=78612; seed:donchian_breakout 8/265812, medians diag_avg_gross_per_trade=-0.4926229128, diag_avg_cost_per_trade=2.8, diag_win_rate=0.22567853, diag_trades_per_day=18.49928031, diag_gross_pnl=-22124.4575, diag_total_costs=103980; seed:ema_crossover_atr_stop 2/193476, medians diag_avg_gross_per_trade=-0.4252248533, diag_avg_cost_per_trade=2.8, diag_win_rate=0.22125533, diag_trades_per_day=54.89550197, diag_gross_pnl=-68347.339, diag_total_costs=349268.4; seed:ema_pullback 10/620639, medians diag_avg_gross_per_trade=-0.4699746580, diag_avg_cost_per_trade=2.8, diag_win_rate=0.00045475, diag_trades_per_day=30.13424647, diag_gross_pnl=-18902.523, diag_total_costs=122931.2; seed:rsi_mean_reversion 10/1069698, medians diag_avg_gross_per_trade=-0.4662216477, diag_avg_cost_per_trade=2.8, diag_win_rate=0.00046431, diag_trades_per_day=51.20368623, diag_gross_pnl=-21185.661, diag_total_costs=160486.8. Common Gate 1 failures were out_of_sample_profit_factor_below_gate, walk_forward_share_below_gate and too_few_profitable_regimes; most attempts also failed backtest_drawdown_above_gate and/or neighbor_parameters_not_profitable. This run included patterns, so pattern mining was tested. No broker/order, gate, holdout, secret or unrelated Pod state was touched."
       ],
-      "completion_note": "Codex implemented slim worker results and per-group reload with gc (rev 286). Claude review fix: neighbour evidence now counts only when a neighbour differs from the spec, as before the move (worker computed it unconditionally). Local benchmark (60k synthetic 5m bars, 20 specs, 2-core sandbox): payload returned to the parent 121.3 MB -> 0.1 MB, time 24.7 s -> 20.9 s. Merged after CI green. Real parent/worker memory still to be confirmed on the Pod. Post-merge seeds-only run evidence reconciled onto main revision 291; no duplicate Pod run was started. Post-merge seeds+patterns run 20261009T235045Z completed normally on the verified ba5299d image with 4 workers, peak cgroup anon 4.63 GB, 80 attempts, 0 survivors and no passed strategies; per-phase evidence is recorded above.",
-      "review_notes": "Post-merge seeds+patterns run evidence recorded; Claude review is required."
+      "completion_note": "Codex implemented slim worker results and per-group reload with gc (rev 286). Claude review fix: neighbour evidence now counts only when a neighbour differs from the spec, as before the move (worker computed it unconditionally). Local benchmark (60k synthetic 5m bars, 20 specs, 2-core sandbox): payload returned to the parent 121.3 MB -> 0.1 MB, time 24.7 s -> 20.9 s. Merged after CI green. Real parent/worker memory still to be confirmed on the Pod. Post-merge seeds-only run evidence reconciled onto main revision 291; no duplicate Pod run was started. Post-merge seeds+patterns run 20261009T235045Z completed normally on the verified ba5299d image with 4 workers, peak cgroup anon 4.63 GB, 80 attempts, 0 survivors and no passed strategies; per-phase evidence is recorded above. Post-merge T-120 seeds+patterns run 20261010T004745Z completed normally on image 010afdcd7543453c52a957597881ef8885f1d6e7 with 4 workers, peak cgroup anon 4.68 GB, 80 attempts, 0 survivors and no passed strategies; per-phase diagnostics, timings and per-source cost medians are recorded in the latest evidence.",
+      "review_notes": "Reviewed by Claude (V-292): memory fixed (peak cgroup anon 4.6 GB, run ~10 min); evidence accepted."
     },
     {
       "id": "T-119",
@@ -3889,10 +3893,41 @@
       ],
       "review_cycles": 0,
       "evidence": [
-        "Local test only; the Pod rerun shows the numbers."
+        "Local test only; the Pod rerun shows the numbers.",
+        "Post-merge owner-approved seeds+patterns run on image ghcr.io/tarek-assaf/ai-trader:010afdcd7543453c52a957597881ef8885f1d6e7; exact command was one detached 'python scripts/lab_run.py --idea-sources seeds patterns --max-ideas 20 --timeframes 5 --force' with default six-year window, default lock/progress paths and worker cap 4. Image SHA matched Pod Details; HTTP service was Ready; web terminal was enabled; run.lock was absent before launch. run_id=20261010T004745Z; PID=1212; started 2026-10-10T00:47:45.555095Z and completed normally at 2026-10-10T00:56:53.734464Z. Final progress.json status=completed, phase=done, ideas_done=80/80, survivors=0, workers=4; PID 1212 was dead and run.lock was absent after completion. No cgroup, recorder/API, stale-progress or three-hour stop rule fired. Peak main RSS was 3142201344 bytes; peak worker PSS was 3515694080 bytes; peak cgroup_anon_bytes was 4678430720 bytes; peak memory_current_bytes was 4858949632 bytes, all below the 12 GB cgroup-anon stop. Per-phase memory_diagnostics (main RSS/worker PSS/cgroup anon/memory.current bytes) were: loading 42979328/0/249540608/338669568; loading:NSXUSD:5m 533753856/0/461160448/627118080; loading:XAUUSD:5m 770015232/0/946688000/1138556928; mining:NSXUSD:5m:20/20 3142201344/1499219968/4678430720/4858941440; mining:XAUUSD:5m:20/20 2757189632/1797867520/4484751360/4693880832; evaluating:0/40:NSXUSD:5m 817287168/3515694080/4218216448/4436090880; evaluating:0/40:XAUUSD:5m 908447744/2652115968/3443339264/3657195520; evaluating:40/40:NSXUSD:5m 817287168/0/1001930752/1197801472; evaluating:40/40:XAUUSD:5m 908447744/0/1089687552/1286008832; holdout:NSXUSD:5m 817287168/0/1001930752/1197527040; holdout:XAUUSD:5m 908447744/0/1089687552/1285996544; done 757985280/0/937078784/1133109248. Stage timings (seconds) were loading=154.681, mining=85.066, evaluating=308.187, holdout=0.244, done=0.0. Results were fresh for this run: 80 attempts, 0 survivors, no passed strategies. Gate 1 per-source results (attempts/total trades; every attempt failed): pattern 40/2074674, medians diag_avg_gross_per_trade=-0.1283844691, diag_avg_cost_per_trade=1.6, diag_win_rate=0, diag_trades_per_day=12.94353145, diag_gross_pnl=-5082.4155, diag_total_costs=51326.4; seed:bollinger_reversion 10/277915, medians diag_avg_gross_per_trade=-0.4712404923, diag_avg_cost_per_trade=2.8, diag_win_rate=0.00025836, diag_trades_per_day=14.69138746, diag_gross_pnl=-10812.3045, diag_total_costs=78612; seed:donchian_breakout 8/265812, medians diag_avg_gross_per_trade=-0.4926229128, diag_avg_cost_per_trade=2.8, diag_win_rate=0.22567853, diag_trades_per_day=18.49928031, diag_gross_pnl=-22124.4575, diag_total_costs=103980; seed:ema_crossover_atr_stop 2/193476, medians diag_avg_gross_per_trade=-0.4252248533, diag_avg_cost_per_trade=2.8, diag_win_rate=0.22125533, diag_trades_per_day=54.89550197, diag_gross_pnl=-68347.339, diag_total_costs=349268.4; seed:ema_pullback 10/620639, medians diag_avg_gross_per_trade=-0.4699746580, diag_avg_cost_per_trade=2.8, diag_win_rate=0.00045475, diag_trades_per_day=30.13424647, diag_gross_pnl=-18902.523, diag_total_costs=122931.2; seed:rsi_mean_reversion 10/1069698, medians diag_avg_gross_per_trade=-0.4662216477, diag_avg_cost_per_trade=2.8, diag_win_rate=0.00046431, diag_trades_per_day=51.20368623, diag_gross_pnl=-21185.661, diag_total_costs=160486.8. Common Gate 1 failures were out_of_sample_profit_factor_below_gate, walk_forward_share_below_gate and too_few_profitable_regimes; most attempts also failed backtest_drawdown_above_gate and/or neighbor_parameters_not_profitable. This run included patterns, so pattern mining was tested. No broker/order, gate, holdout, secret or unrelated Pod state was touched."
       ],
-      "completion_note": "Implemented by Claude; CI green before merge. The rerun on the Pod will show whether gross edge exists before costs.",
-      "review_notes": "T-119 is merged. The approved post-merge seeds+patterns run completed normally; per-source Gate 1 results and memory/timing evidence are recorded under T-117."
+      "completion_note": "Implemented by Claude; CI green before merge. The rerun on the Pod will show whether gross edge exists before costs. The approved rerun 20261010T004745Z completed normally with no passed strategies; gross-versus-cost medians and phase diagnostics are recorded in T-117 evidence.",
+      "review_notes": "Reviewed by Claude (V-292): diagnostics work; they show no gross edge before costs in any source."
+    },
+    {
+      "id": "T-121",
+      "title": "Strategy Lab control experiments: is the lab engine and cost model honest?",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-120"
+      ],
+      "acceptance_criteria": [
+        "Why: T-120 run 20261010T004745Z shows median gross profit per trade is NEGATIVE for every source (about -0.13 to -0.49 points) while cost per trade is 1.6 to 2.8 points; trades per day 13-55. Before searching wider we must know that the engine is unbiased and the cost model is right. Mean-reversion and breakout both losing almost the same amount per trade is suspicious.",
+        "Add scripts/lab_controls.py (uses the existing lab backtester and cost model only; no broker, no orders, no holdout, gates untouched) that for each of NSXUSD and XAUUSD on 5m over the default six-year window runs: (a) RANDOM-ENTRY control: random direction at roughly 15 trades/day with the same stop/target rules as ema_pullback, 5 random seeds, expected gross per trade near 0 (a clearly negative value means a fill or bias bug); (b) ZERO-COST re-run of one spec per seed family (bollinger, donchian, ema_crossover_atr_stop, ema_pullback, rsi_mean_reversion) to report pure gross PnL per trade; (c) PERFECT-FORESIGHT control: enter in the direction of the NEXT bar (close minus open) with the engine fill rules; it must be strongly profitable gross, otherwise the engine is broken; (d) COST AUDIT: print the spread, slippage and commission per instrument actually applied, and the average cost per trade in points and as a share of the average 5m bar range.",
+        "Unit tests for the control functions on a small synthetic frame (random control gross near 0 within tolerance; perfect-foresight clearly positive).",
+        "Run it ONCE on the Pod after merge and redeploy, under the owner 8-hour authorization (rev 290), reading data only; record the table (per instrument: random gross per trade, zero-cost gross per trade per family, perfect-foresight gross, cost per trade versus bar range) in ONE log entry and hand the turn to Claude.",
+        "Gates in config/strategy_lab.yaml unchanged; holdout only via validator.open_sealed_reader (not used here); no secrets or Pod URL; handoff UTF-8 with ensure_ascii=False, earlier log entries untouched, exactly ONE log entry per session."
+      ],
+      "deliverables": [
+        "scripts/lab_controls.py",
+        "tests/unit/test_lab_controls.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Not started."
     }
   ],
   "decisions": [
@@ -7084,6 +7119,28 @@
       "validated_by": "claude",
       "date": "2026-10-10",
       "reverify_if": "T-120 diagnostics change the interpretation"
+    },
+    {
+      "id": "V-291",
+      "subject": "Post-merge T-120 seeds+patterns Pod run",
+      "method": "Read the verified main image, run.lock, progress.json, results.json, process state, per-phase memory diagnostics, timings and per-source Gate 1 results after the single approved detached run.",
+      "result": "pass",
+      "evidence": "Image 010afdcd7543453c52a957597881ef8885f1d6e7 verified; one run only; PID 1212 and run.lock absent after normal completion; 80 attempts, 0 survivors, no passed strategies; peak cgroup anon 4.68 GB under the 12 GB stop.",
+      "review_notes": "T-120 diagnostics show negative gross edge and costs across all sources. Gates and worker cap were unchanged; no broker, order, holdout, secret or unrelated Pod action occurred.",
+      "validated_by": "codex",
+      "date": "2026-10-10",
+      "reverify_if": "A later approved Pod run changes the results or stop conditions."
+    },
+    {
+      "id": "V-292",
+      "subject": "Claude review of the T-120 seeds+patterns Pod run (V-291)",
+      "method": "Read the recorded per-source medians and failure counts from rev 296 and compared with the cost model (config) and the earlier run.",
+      "result": "pass",
+      "evidence": "Run 20261010T004745Z: 80 attempts, 0 survivors, peak anon 4.68 GB. Median gross per trade is negative in every source (pattern -0.13, seeds -0.43 to -0.49 points) against cost 1.6-2.8 points; trades per day 13-55; net win rate near 0 for four sources.",
+      "review_notes": "Run accepted. Conclusion: no strategy is a paper candidate. The search cannot be improved by widening ideas until T-121 confirms the engine and costs are honest. Gates unchanged.",
+      "validated_by": "claude",
+      "date": "2026-10-10",
+      "reverify_if": "The backtester, cost model or gates change."
     }
   ],
   "blockers": [
@@ -12372,7 +12429,37 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed Codex's rev 294 (V-290 pass): memory and speed are fixed, the window rule no longer blocks, and 80 of 80 attempts still fail Gate 1 on profit factor, walk-forward share and regimes. New task T-120 adds cost diagnostics to each attempt's metrics so we can see gross edge versus cost per trade; gates unchanged. Within the owner's 8-hour authorization (rev 290) I approve one more lab test run: after T-120 merges and publishes, Codex redeploys that main image (SHA given in chat), verifies it and an absent run.lock, then starts exactly ONE detached run: lab_run.py --idea-sources seeds patterns --max-ideas 20 --timeframes 5 --force (4 workers; same stop rules: cgroup_anon_bytes above 12 GB, recorder or API unresponsive, 15 min stale updated_at with flat CPU, 3 hours). Record in ONE log entry the per-source medians (or full per-attempt table if short) of diag_avg_gross_per_trade, diag_avg_cost_per_trade, diag_win_rate, diag_trades_per_day, diag_gross_pnl and diag_total_costs, then hand the turn to Claude."
+    },
+    {
+      "revision": 296,
+      "ts": "2026-10-10T00:59:31Z",
+      "agent": "codex",
+      "action": "record_post_t120_seeds_patterns_run",
+      "task_ids": [
+        "T-117",
+        "T-119",
+        "T-120"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Recorded the one approved post-T-120 seeds+patterns run on image 010afdcd7543453c52a957597881ef8885f1d6e7. Run 20261010T004745Z completed normally with 4 workers, PID 1212 dead, run.lock absent, peak cgroup anon 4.68 GB, 80 attempts, 0 survivors and no passed strategies. Per-phase memory diagnostics, stage timings, Gate 1 failure reasons and per-source cost medians are recorded in T-117/T-120 evidence. This run included patterns, so pattern mining was tested. No stop rule fired and no gate, broker/order, holdout, secret or unrelated Pod state changed. Handing turn to Claude."
+    },
+    {
+      "revision": 297,
+      "ts": "2026-10-10T01:12:00Z",
+      "agent": "claude",
+      "action": "review_t120_run_add_controls",
+      "task_ids": [
+        "T-117",
+        "T-120",
+        "T-121"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed Codex rev 296 (V-292 pass). The run shows no gross edge before costs in any source (median gross per trade -0.13 to -0.49 points against cost 1.6-2.8), so nothing is a paper candidate. Added T-121: control experiments (random-entry, zero-cost, perfect-foresight, cost audit) to prove the engine and cost model are honest before widening the search. Within the owner 8-hour authorization (rev 290) Codex may run it once on the Pod after merge and redeploy."
     }
   ],
-  "project_summary": "T-117 and T-119 are merged. The approved post-merge seeds+patterns run completed normally on the verified main image with 4 workers; peak cgroup anon was 4.63 GB, 80 attempts, 0 survivors and no passed strategies. Per-source Gate 1, per-phase memory and timing evidence is recorded in the T-117 evidence."
+  "project_summary": "T-117, T-119 and T-120 are merged and the T-120 Pod run is reviewed (V-292): 80 attempts, 0 survivors, median gross profit per trade is negative before costs in every source. No strategy goes to paper. T-121 (control experiments to prove the engine and cost model are honest) is next for Codex; the search is widened afterwards without lowering gates."
 }
