@@ -16,6 +16,7 @@ from trader.lab.spec import (
     StopExit,
     StrategySpec,
     TargetExit,
+    TimeStopExit,
     TunableParameter,
 )
 
@@ -218,4 +219,95 @@ def seed_specs(instrument: str, timeframe: int) -> tuple[tuple[SeedStrategy, Str
 
 seed_library = seed_specs
 
-__all__ = ["SEED_LIBRARY", "SeedStrategy", "seed_library", "seed_specs"]
+
+# --- Slow trend seeds -------------------------------------------------------------
+# The first seed library traded 13-55 times a day for a gross edge of about one
+# point, while a trade costs 4.0 points (NSXUSD) or 1.6 (XAUUSD).  These seeds trade
+# rarely (long channel breakouts in the direction of a slow trend), use wide ATR exits
+# so that cost is a small share of the target, and hold for hours.  They are plain
+# declarative data like every other seed; gates and costs are unchanged.
+
+SLOW_CHANNELS = (48, 96, 288)  # bars: 4h, 8h and 24h on the 5m chart
+SLOW_EXITS = ((2.0, 4.0), (3.0, 6.0))  # (stop, target) in ATR multiples
+SLOW_HOLD_BARS = 288
+
+
+def _slow_trend_breakout(
+    instrument: str,
+    timeframe: int,
+    *,
+    channel: int,
+    stop: float,
+    target: float,
+    direction: str,
+    sessions: tuple[str, ...],
+) -> StrategySpec:
+    long_side = direction == "long"
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=(
+            IndicatorCondition(
+                indicator="close",
+                operator="gt" if long_side else "lt",
+                threshold=0.0,
+                threshold_indicator="rolling_high" if long_side else "rolling_low",
+                threshold_period=channel,
+                threshold_lookback=1,
+            ),
+            IndicatorCondition(
+                indicator="ema",
+                period=50,
+                operator="gt" if long_side else "lt",
+                threshold=0.0,
+                threshold_indicator="ema",
+                threshold_period=200,
+            ),
+        ),
+        exit_rules=(
+            StopExit(kind="stop", distance=stop, unit="atr"),
+            TargetExit(kind="target", distance=target, unit="atr"),
+            TimeStopExit(kind="time_stop", bars=SLOW_HOLD_BARS),
+        ),
+        session_filters=sessions,  # type: ignore[arg-type]
+    )
+
+
+def slow_seed_specs(
+    instrument: str, timeframe: int
+) -> tuple[tuple[SeedStrategy, StrategySpec], ...]:
+    """Return rarely-trading trend breakout seeds with wide ATR exits."""
+    result: list[tuple[SeedStrategy, StrategySpec]] = []
+    for channel in SLOW_CHANNELS:
+        for stop, target in SLOW_EXITS:
+            for direction in ("long", "short"):
+                for label, sessions in (("all", ()), ("ny", ("new_york",))):
+                    name = f"slow_trend_{direction}_{channel}_{stop:g}_{target:g}_{label}"
+                    seed = SeedStrategy(name, "slow_trend", "slow_trend_breakout")
+                    result.append(
+                        (
+                            seed,
+                            _slow_trend_breakout(
+                                instrument,
+                                timeframe,
+                                channel=channel,
+                                stop=stop,
+                                target=target,
+                                direction=direction,
+                                sessions=sessions,
+                            ),
+                        )
+                    )
+    return tuple(result)
+
+
+__all__ = [
+    "SEED_LIBRARY",
+    "SLOW_CHANNELS",
+    "SeedStrategy",
+    "seed_library",
+    "seed_specs",
+    "slow_seed_specs",
+]
