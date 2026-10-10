@@ -69,6 +69,19 @@ def _walk_forward_metrics(
     return len(windows), profitable / len(windows)
 
 
+def _drawdown_pct(result: BacktestResult) -> float:
+    """Max drawdown as a percent of starting equity.
+
+    ``BacktestResult.max_drawdown`` is in account currency, while the Gate 1 limit
+    (``max_backtest_drawdown_pct``) is a percent.  Comparing the two directly made
+    every attempt fail the drawdown gate.  Dividing by the starting equity is
+    conservative because equity above the start only shrinks a peak-relative figure.
+    """
+    if result.starting_equity <= 0:
+        return float("inf")
+    return 100.0 * result.max_drawdown / result.starting_equity
+
+
 def gate1_metrics(
     result: BacktestResult,
     *,
@@ -99,7 +112,7 @@ def gate1_metrics(
         "holdout_profit_factor": _profit_factor(hold.trades),
         "profitable_walk_forward_share": profitable_share,
         "profitable_regimes": profitable_regimes if profitable_regimes is not None else 0,
-        "backtest_drawdown_pct": result.max_drawdown,
+        "backtest_drawdown_pct": _drawdown_pct(result),
         "top5pct_trades_profit_share": _top_profit_share(trades),
         "neighbor_parameters_profitable": neighbors_ok,
         "multiple_testing_correction": True,
