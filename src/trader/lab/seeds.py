@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from trader.lab.spec import (
     IndicatorCondition,
+    IndicatorName,
     ParameterReference,
     StopExit,
     StrategySpec,
@@ -541,7 +542,7 @@ def _prior_day_retest(
 ) -> StrategySpec:
     """Break the previous day's level, pull back to it, and hold it."""
     long_side = direction == "long"
-    level = "prior_day_high" if long_side else "prior_day_low"
+    level: IndicatorName = "prior_day_high" if long_side else "prior_day_low"
     return StrategySpec(
         schema_version=1,
         instrument=instrument,
