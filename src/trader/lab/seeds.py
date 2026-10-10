@@ -638,11 +638,275 @@ def level_seed_specs(
     return tuple(result)
 
 
+# --- Instrument-specific families (round A, owner approved Q-046) ----------------
+# NAS100 is a US index: it trends in the US session and drifts upward.  Gold is a
+# macro/dollar-driven metal: it ranges in the Asian session and breaks out at the
+# London open and on US data (about 12:30-13:30 UTC).  Each instrument therefore
+# gets its own ideas instead of copies of the other's.  Session tags are UTC:
+# asia 00-09, london 07-16, new_york 12-21.
+
+NAS_PULLBACK_RSI = (35.0, 40.0)
+NAS_EXITS = ((1.5, 3.0), (2.0, 4.0))
+GOLD_FADE_EXITS = ((1.0, 1.5), (1.5, 2.25))
+GOLD_BREAK_EXITS = ((1.5, 3.0), (2.0, 4.0))
+INSTRUMENT_HOLD_BARS = 144  # 12 hours on the 5m chart
+
+
+def _exits(stop: float, target: float, timeframe: int) -> tuple[StopExit, TargetExit, TimeStopExit]:
+    return (
+        StopExit(kind="stop", distance=stop, unit="atr"),
+        TargetExit(kind="target", distance=target, unit="atr"),
+        TimeStopExit(kind="time_stop", bars=_bars(INSTRUMENT_HOLD_BARS, timeframe)),
+    )
+
+
+def _trend_pullback(
+    instrument: str,
+    timeframe: int,
+    *,
+    direction: str,
+    rsi_level: float,
+    stop: float,
+    target: float,
+) -> StrategySpec:
+    """Buy a dip (sell a rally) inside the 50/200 EMA trend during the US session."""
+    long_side = direction == "long"
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=(
+            _trend_filter(long_side),
+            IndicatorCondition(
+                indicator="rsi",
+                period=14,
+                operator="lt" if long_side else "gt",
+                threshold=rsi_level if long_side else 100.0 - rsi_level,
+            ),
+        ),
+        exit_rules=_exits(stop, target, timeframe),
+        session_filters=("new_york",),
+    )
+
+
+def _momentum_break(
+    instrument: str,
+    timeframe: int,
+    *,
+    direction: str,
+    channel: int,
+    adx_min: float,
+    stop: float,
+    target: float,
+    sessions: tuple[str, ...],
+) -> StrategySpec:
+    """Break of a recent channel with ADX confirming momentum, in chosen sessions."""
+    long_side = direction == "long"
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=(
+            IndicatorCondition(
+                indicator="close",
+                operator="gt" if long_side else "lt",
+                threshold=0.0,
+                threshold_indicator="rolling_high" if long_side else "rolling_low",
+                threshold_period=_bars(channel, timeframe),
+                threshold_lookback=1,
+            ),
+            IndicatorCondition(indicator="adx", period=14, operator="gt", threshold=adx_min),
+        ),
+        exit_rules=_exits(stop, target, timeframe),
+        session_filters=sessions,  # type: ignore[arg-type]
+    )
+
+
+def _asia_range_fade(
+    instrument: str,
+    timeframe: int,
+    *,
+    direction: str,
+    stop: float,
+    target: float,
+    ranging_only: bool,
+) -> StrategySpec:
+    """Fade a stretched move beyond the Bollinger band in the quiet Asian session."""
+    long_side = direction == "long"
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=(
+            IndicatorCondition(
+                indicator="rsi",
+                period=14,
+                operator="lt" if long_side else "gt",
+                threshold=30.0 if long_side else 70.0,
+            ),
+            IndicatorCondition(
+                indicator="close",
+                operator="lt" if long_side else "gt",
+                threshold=0.0,
+                threshold_indicator="bollinger_lower" if long_side else "bollinger_upper",
+                threshold_period=20,
+            ),
+        ),
+        exit_rules=_exits(stop, target, timeframe),
+        regime_filters=("ranging",) if ranging_only else (),
+        session_filters=("asia",),
+    )
+
+
+def _london_break(
+    instrument: str,
+    timeframe: int,
+    *,
+    direction: str,
+    stop: float,
+    target: float,
+    with_trend: bool,
+) -> StrategySpec:
+    """Break of the overnight (Asian, about 7 hour) range once London trades."""
+    long_side = direction == "long"
+    conditions = [
+        IndicatorCondition(
+            indicator="close",
+            operator="gt" if long_side else "lt",
+            threshold=0.0,
+            threshold_indicator="rolling_high" if long_side else "rolling_low",
+            threshold_period=_bars(84, timeframe),
+            threshold_lookback=1,
+        )
+    ]
+    if with_trend:
+        conditions.append(_trend_filter(long_side))
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=tuple(conditions),
+        exit_rules=_exits(stop, target, timeframe),
+        session_filters=("london",),
+    )
+
+
+def _nas_specs(instrument: str, timeframe: int) -> list[tuple[SeedStrategy, StrategySpec]]:
+    result: list[tuple[SeedStrategy, StrategySpec]] = []
+    for direction in ("long", "short"):
+        for stop, target in NAS_EXITS:
+            for rsi_level in NAS_PULLBACK_RSI:
+                name = f"nas_pullback_{direction}_{rsi_level:g}_{stop:g}_{target:g}"
+                result.append(
+                    (
+                        SeedStrategy(name, "nas_pullback", "trend_pullback"),
+                        _trend_pullback(
+                            instrument,
+                            timeframe,
+                            direction=direction,
+                            rsi_level=rsi_level,
+                            stop=stop,
+                            target=target,
+                        ),
+                    )
+                )
+            for label, sessions in (("ny", ("new_york",)), ("all", ())):
+                name = f"nas_momentum_{direction}_{label}_{stop:g}_{target:g}"
+                result.append(
+                    (
+                        SeedStrategy(name, "nas_momentum", "momentum_break"),
+                        _momentum_break(
+                            instrument,
+                            timeframe,
+                            direction=direction,
+                            channel=36,
+                            adx_min=20.0,
+                            stop=stop,
+                            target=target,
+                            sessions=sessions,
+                        ),
+                    )
+                )
+    return result
+
+
+def _gold_specs(instrument: str, timeframe: int) -> list[tuple[SeedStrategy, StrategySpec]]:
+    result: list[tuple[SeedStrategy, StrategySpec]] = []
+    for direction in ("long", "short"):
+        for stop, target in GOLD_FADE_EXITS:
+            for ranging_only in (True, False):
+                tag = "ranging" if ranging_only else "any"
+                name = f"gold_asia_fade_{direction}_{tag}_{stop:g}_{target:g}"
+                result.append(
+                    (
+                        SeedStrategy(name, "gold_asia_fade", "asia_range_fade"),
+                        _asia_range_fade(
+                            instrument,
+                            timeframe,
+                            direction=direction,
+                            stop=stop,
+                            target=target,
+                            ranging_only=ranging_only,
+                        ),
+                    )
+                )
+        for stop, target in GOLD_BREAK_EXITS:
+            for with_trend in (False, True):
+                tag = "trend" if with_trend else "any"
+                name = f"gold_london_break_{direction}_{tag}_{stop:g}_{target:g}"
+                result.append(
+                    (
+                        SeedStrategy(name, "gold_london_break", "london_break"),
+                        _london_break(
+                            instrument,
+                            timeframe,
+                            direction=direction,
+                            stop=stop,
+                            target=target,
+                            with_trend=with_trend,
+                        ),
+                    )
+                )
+            name = f"gold_us_momentum_{direction}_{stop:g}_{target:g}"
+            result.append(
+                (
+                    SeedStrategy(name, "gold_us_momentum", "momentum_break"),
+                    _momentum_break(
+                        instrument,
+                        timeframe,
+                        direction=direction,
+                        channel=36,
+                        adx_min=25.0,
+                        stop=stop,
+                        target=target,
+                        sessions=("new_york",),
+                    ),
+                )
+            )
+    return result
+
+
+def instrument_seed_specs(
+    instrument: str, timeframe: int
+) -> tuple[tuple[SeedStrategy, StrategySpec], ...]:
+    """Return ideas written for one instrument's own behaviour (none for others)."""
+    if instrument.startswith("NSX"):
+        return tuple(_nas_specs(instrument, timeframe))
+    if instrument.startswith("XAU"):
+        return tuple(_gold_specs(instrument, timeframe))
+    return ()
+
+
 __all__ = [
     "SEED_LIBRARY",
     "SLOW_CHANNELS",
     "SeedStrategy",
     "seed_library",
+    "instrument_seed_specs",
     "seed_specs",
     "level_seed_specs",
     "slow_seed_specs",
