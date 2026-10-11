@@ -26,7 +26,7 @@ are reported separately.
 `python scripts/ostdv_stats.py` writes `docs/evidence/round_c_ostdv_stats.json`: for each market, overall
 and per year, how often the day's high and the day's low fall in each OSTDV zone, in equally wide
 neighbouring bands, and (micro SMR) among days that reached k=2. Tests the claim "70-80% of day highs/lows
-form at the micro SMR". Training lake only; never the holdout.
+form at the micro SMR". Training months only: the script excludes the sealed holdout months (names only) and loads 5-minute bars.
 
 ## Part 1b: level event study (owner request, 2026-10-11 22:47 Riyadh; no trading, no gate)
 `python scripts/ostdv_events.py` writes `docs/evidence/round_c_ostdv_events.json` and a readable `.md`.
