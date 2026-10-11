@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 342,
+  "revision": 344,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Owner decision D-031: Round C (OSTDV levels + ICT concepts + candle shapes, NAS100 and gold separate) plus two read-only history studies. D-032: 8-hour work authorization; Codex may redeploy the Pod itself. T-133 (todo, Codex) names the new image; a 15-minute handoff check is running. Gates unchanged. No live trading; demo only.",
+    "summary": "Round C: code and 228 seeds merged. T-133 (read-only history studies) can run now on the current Pod image; T-134 (lab runs) needs image 72e63f010f150a61a52c4a150f5b97b5bd8be748 which the owner must deploy (Q-051; Codex's redeploy attempt was 403). D-032: 8-hour work authorization; 15-minute handoff check running. Gates unchanged. No live trading; demo only.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -105,7 +105,8 @@
         "T-130",
         "T-131",
         "T-132",
-        "T-133"
+        "T-133",
+        "T-134"
       ]
     },
     {
@@ -139,7 +140,8 @@
         "T-130",
         "T-131",
         "T-132",
-        "T-133"
+        "T-133",
+        "T-134"
       ]
     },
     {
@@ -179,7 +181,8 @@
         "T-130",
         "T-131",
         "T-132",
-        "T-133"
+        "T-133",
+        "T-134"
       ]
     },
     {
@@ -4348,7 +4351,7 @@
     },
     {
       "id": "T-133",
-      "title": "Round C run: OSTDV levels and ICT concepts, plus two read-only history studies",
+      "title": "Round C read-only history studies (OSTDV zone statistics and level event study)",
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
@@ -4362,18 +4365,43 @@
         "T-132"
       ],
       "acceptance_criteria": [
-        "Why: D-031. Round C = 228 new seeds per market and timeframe (families ostdv_sweep, ostdv_ote, ostdv_fade, ostdv_break, ict_sweep_fvg, ict_structure_shift, candle_at_level, ostdv_fade_range_exit, ostdv_sweep_range_exit, ict_sweep_fvg_range_exit; see docs/specs/round_c_ict_ostdv.md) plus two read-only studies the owner asked for: zone statistics and a level event study (what repeats when price reaches an OSTDV level, retrace vs continue, with placebo levels). Image: ghcr.io/tarek-assaf/ai-trader:72e63f010f150a61a52c4a150f5b97b5bd8be748 (full 40-character SHA; copy and paste it).",
-        "IMAGE: the owner confirmed (D-032, Q-050) that Codex may use its Pod console privilege to redeploy. Before starting, check the running image. If it is not the SHA above, redeploy the Pod with ghcr.io/tarek-assaf/ai-trader:72e63f010f150a61a52c4a150f5b97b5bd8be748 keeping the SAME volume, then verify health (version = the SHA, mode paper, live disabled) before anything else. Do not put tokens, the Pod URL or any secret in the repo, handoff, logs or chat. If you genuinely cannot redeploy, STOP and tell the owner what is missing. Verify no run.lock before each run. Do NOT run 1m or 3m. Do not change code, config, gates or holdout handling. Each result now also carries diag_year_<year>_net / _trades, diag_years_traded and diag_years_profitable: include for each reported attempt the years traded, years profitable and the best year's share of total net if available.",
-        "Step 1 (read-only studies, training months only): run python scripts/ostdv_stats.py and python scripts/ostdv_events.py with the default lake and holdout paths and --out under docs/evidence/ (round_c_ostdv_stats.json, round_c_ostdv_events.json; the events script also writes round_c_ostdv_events.md). They exclude the sealed holdout months themselves. Stop and record if cgroup anon memory reaches 12 GB.",
-        "Step 2 (lab runs), sequential, once each, own results and progress files, --idea-sources round_c --max-ideas 400 --force, both instruments: (a) --timeframes 60 --years all -> results_60m_c.json / progress_60m_c.json; (b) --timeframes 15 --years all -> results_15m_c.json; (c) --timeframes 5 -> results_5m_c.json. Detached run (nohup) with the stop file and a memory watchdog (stop and record at 12 GB cgroup anon).",
-        "Write ONE compact evidence file docs/evidence/t133_round_c_summary.json (UTF-8, no Pod URL, host or secret, null never 0 for missing data): per run: run id, attempts, Gate 1 passes, too_few_trades, peak cgroup anon and memory.current; per instrument per family the best 3 by lowest diag_mean_pnl_p_weekly among attempts with at least 300 trades (if fewer than 3 have 300 trades, the best 3 by out-of-sample profit factor, labelled) with trades, oos_trades, win_rate, gross_per_trade, cost_per_trade, oos_pf, holdout_pf, wf_windows, wf_share, regimes, backtest_drawdown_pct, neighbors, gate p_value, diag_oos_mean_pnl, diag_mean_pnl_p_trade, diag_mean_pnl_p_weekly and failure reasons (a missing field must be explained in a note, not silently null); per instrument per run the best 10 overall by the same ranking; counts of attempts with at least 300 trades whose diag_mean_pnl_p_weekly is <= 0.05, <= 0.001, <= 0.0001.",
-        "ONE log entry that points to the evidence files (do not paste rows into the log or validation), then turn=claude, then run python agent_state/validate_handoff.py --previous <copy of main>. Edit the handoff APPEND-ONLY, UTF-8 with ensure_ascii=False; do not re-encode, reorder or rewrite earlier entries; do not change current_phase (integer)."
+        "Why: D-031 and the owner's 22:47 request: what repeats when price reaches an OSTDV level (retrace vs continue, repeated confirmations, counts) and whether the day's high/low forms at the micro SMR 70-80% of the time. These two scripts are identical in image 10dcd5e02cf0af2af7d7e61dc9079776b5566b01 and 72e63f010f150a61a52c4a150f5b97b5bd8be748, so run them on whichever of the two is currently on the Pod (do NOT wait for the redeploy; the lab runs are the separate task T-134).",
+        "Run python scripts/ostdv_stats.py and python scripts/ostdv_events.py with the default lake and holdout paths and --out under docs/evidence/ (round_c_ostdv_stats.json, round_c_ostdv_events.json; the events script also writes round_c_ostdv_events.md). They exclude the sealed holdout months themselves and load 5-minute bars. Verify no run.lock first and do not start any lab run. Stop and record if cgroup anon memory reaches 12 GB.",
+        "ONE log entry that points to the evidence files (do not paste rows into the log), then turn=claude, then run python agent_state/validate_handoff.py --previous <copy of main>. Edit the handoff APPEND-ONLY, UTF-8 with ensure_ascii=False; do not re-encode, reorder or rewrite earlier entries; do not change current_phase (integer)."
       ],
       "deliverables": [
-        "docs/evidence/t133_round_c_summary.json",
         "docs/evidence/round_c_ostdv_stats.json",
         "docs/evidence/round_c_ostdv_events.json",
         "docs/evidence/round_c_ostdv_events.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-134",
+      "title": "Round C lab runs (228 seeds with range-unit exits and per-year diagnostics) on 60m, 15m, 5m",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-133"
+      ],
+      "acceptance_criteria": [
+        "Why: D-031/D-032. The lab part of Round C needs image ghcr.io/tarek-assaf/ai-trader:72e63f010f150a61a52c4a150f5b97b5bd8be748 (228 seeds per market/timeframe incl. range-unit exits, plus per-year diagnostics). See docs/specs/round_c_ict_ostdv.md.",
+        "IMAGE: Codex cannot redeploy (RunPod API returned 403, V-329). The owner redeploys (Q-051). Before starting, check health: if the version is not 72e63f010f150a61a52c4a150f5b97b5bd8be748, do nothing and stop. Verify no run.lock before each run. Do NOT run 1m or 3m. Do not change code, config, gates or holdout handling.",
+        "Step 2 (lab runs), sequential, once each, own results and progress files, --idea-sources round_c --max-ideas 400 --force, both instruments: (a) --timeframes 60 --years all -> results_60m_c.json / progress_60m_c.json; (b) --timeframes 15 --years all -> results_15m_c.json; (c) --timeframes 5 -> results_5m_c.json. Detached run (nohup) with the stop file and a memory watchdog (stop and record at 12 GB cgroup anon).",
+        "Write ONE compact evidence file docs/evidence/t134_round_c_summary.json (UTF-8, no Pod URL, host or secret, null never 0 for missing data): per run: run id, attempts, Gate 1 passes, too_few_trades, peak cgroup anon and memory.current; per instrument per family the best 3 by lowest diag_mean_pnl_p_weekly among attempts with at least 300 trades (if fewer than 3 have 300 trades, the best 3 by out-of-sample profit factor, labelled) with trades, oos_trades, win_rate, gross_per_trade, cost_per_trade, oos_pf, holdout_pf, wf_windows, wf_share, regimes, backtest_drawdown_pct, neighbors, gate p_value, diag_oos_mean_pnl, diag_mean_pnl_p_trade, diag_mean_pnl_p_weekly and failure reasons (a missing field must be explained in a note, not silently null); per instrument per run the best 10 overall by the same ranking; counts of attempts with at least 300 trades whose diag_mean_pnl_p_weekly is <= 0.05, <= 0.001, <= 0.0001.",
+        "ONE log entry that points to the evidence file, then turn=claude, then run python agent_state/validate_handoff.py --previous <copy of main>. Edit the handoff APPEND-ONLY, UTF-8 with ensure_ascii=False; do not re-encode, reorder or rewrite earlier entries; do not change current_phase (integer)."
+      ],
+      "deliverables": [
+        "docs/evidence/t134_round_c_summary.json"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -11271,6 +11299,23 @@
       "validated_by": "codex",
       "date": "2026-10-11",
       "reverify_if": "After owner redeploys the required image"
+    },
+    {
+      "id": "V-329",
+      "subject": "T-133 authoritative image precondition (rev342)",
+      "method": "Fetched origin/main online, read authoritative rev342 task, checked health and Pod terminal, and attempted the owner-authorized redeploy path without printing credentials. Health remained on the superseded image; GraphQL/runpodctl returned 403/Unauthorized.",
+      "result": "fail",
+      "evidence": {
+        "required_image": "72e63f010f150a61a52c4a150f5b97b5bd8be748",
+        "observed_image": "10dcd5e02cf0af2af7d7e61dc9079776b5566b01",
+        "redeploy": "blocked: RunPod GraphQL and runpodctl unauthorized",
+        "runs_started": 0,
+        "stale_runs_discarded": 3
+      },
+      "review_notes": "Owner action required: redeploy the exact rev342 image with the same volume or provide an authorized Pod console session, then prompt Codex to continue.",
+      "validated_by": "codex",
+      "date": "2026-10-12",
+      "reverify_if": "After owner redeploys the authoritative required image"
     }
   ],
   "blockers": [
@@ -11379,6 +11424,13 @@
     {
       "id": "B-016",
       "text": "T-133 cannot start: the reachable Pod health endpoint reports version 05f0bcd5fd163501fceb01c49eb73c00d291d62b, while the approved Round C image is 10dcd5e02cf0af2af7d7e61dc9079776b5566b01. No Round C study or lab run was started.",
+      "raised_by": "codex",
+      "status": "open",
+      "resolution": ""
+    },
+    {
+      "id": "B-017",
+      "text": "T-133 cannot start on authoritative rev342: Pod health reports 10dcd5e02cf0af2af7d7e61dc9079776b5566b01 while required image is 72e63f010f150a61a52c4a150f5b97b5bd8be748. Redeployment via Pod GraphQL/runpodctl is unavailable because the terminal credential is unauthorized (403). No authoritative-image study or lab run was started.",
       "raised_by": "codex",
       "status": "open",
       "resolution": ""
@@ -11976,6 +12028,19 @@
       ],
       "recommendation": "Redeploy the exact image so the Round C seeds and the two read-only studies are present on the Pod.",
       "answer": "Owner 2026-10-12 00:11 Riyadh: Codex has the privilege to control the Pod console and perform the redeployment itself. The required image is now 72e63f010f150a61a52c4a150f5b97b5bd8be748 (replaces 10dcd5e02cf0af2af7d7e61dc9079776b5566b01; it adds range-unit exits, 56 more seeds and per-year diagnostics)."
+    },
+    {
+      "id": "Q-051",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "Codex tried to redeploy the Pod and RunPod rejected it (403 Unauthorized, so Codex does not have a working redeploy privilege). The Pod still runs 10dcd5e02cf0af2af7d7e61dc9079776b5566b01. Please redeploy ghcr.io/tarek-assaf/ai-trader:72e63f010f150a61a52c4a150f5b97b5bd8be748 with the same volume yourself, then prompt Codex. Meanwhile the two read-only history studies (T-133) can run on the current image.",
+      "options": [
+        "Redeploy the image with the same volume (recommended)",
+        "Give Codex a working RunPod key in the Pod environment (not in chat or the repo)"
+      ],
+      "recommendation": "Redeploy yourself; it takes one change of the image tag in RunPod and keeps secrets out of the repo.",
+      "answer": null
     }
   ],
   "log": [
@@ -19534,6 +19599,34 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted Codex's blocker note (rev 341: Pod on the old image). Recorded owner decisions D-032 (8-hour authorization; Codex may redeploy the Pod itself) and answered Q-050. Merged range-unit exits, 56 more Round C seeds and per-year diagnostics; T-133 now names image 72e63f010f150a61a52c4a150f5b97b5bd8be748 and is back to todo for Codex."
+    },
+    {
+      "revision": 343,
+      "ts": "2026-10-12T01:00:00Z",
+      "agent": "codex",
+      "action": "block_t133_rev342_image_precondition",
+      "task_ids": [
+        "T-133"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reconciled online origin/main rev342. The Pod still runs superseded image 10dcd5e0; required image is 72e63f... with expanded Round C. Owner-authorized redeploy attempts via terminal GraphQL/runpodctl were 403/Unauthorized, so no authoritative studies or runs were started. Stale 10dcd5 runs were discarded. Awaiting redeploy and prompt.",
+      "validation": "V-329"
+    },
+    {
+      "revision": 344,
+      "ts": "2026-10-12T01:10:00+03:00",
+      "agent": "claude",
+      "action": "split_t133_studies_from_lab_runs",
+      "task_ids": [
+        "T-133",
+        "T-134"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted Codex rev 343 (RunPod redeploy returned 403; Pod on 10dcd5e0). Split the work so progress continues: T-133 is now only the two read-only history studies, runnable on the current image; T-134 holds the lab runs and needs the 72e63f image, which the owner must deploy (Q-051)."
     }
   ],
   "project_summary": "T-131 completed Round A and T-132 Round B completed on image 05f0bcd5fd163501fceb01c49eb73c00d291d62b. Evidence was regenerated from the three existing Pod result/progress files after review; no new runs, broker orders or secrets."
