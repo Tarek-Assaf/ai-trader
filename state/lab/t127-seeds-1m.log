@@ -1,0 +1,26 @@
+nohup: ignoring input
+[2026-10-10T09:48:20.992547+00:00] loading:NSXUSD:1m
+[2026-10-10T09:51:35.532729+00:00] mining:NSXUSD:1m:0/20
+[2026-10-10T09:51:35.602623+00:00] loading:XAUUSD:1m
+[2026-10-10T09:55:22.116998+00:00] mining:XAUUSD:1m:0/20
+[2026-10-10T09:55:22.219181+00:00] loading:NSXUSD:1m:reopen
+[2026-10-10T09:58:21.187315+00:00] evaluating:0/55:NSXUSD:1m
+[2026-10-10T10:02:06.069461+00:00] evaluating:55/55:NSXUSD:1m
+[2026-10-10T10:02:06.078400+00:00] holdout:NSXUSD:1m
+[2026-10-10T10:02:06.972889+00:00] loading:XAUUSD:1m:reopen
+[2026-10-10T10:05:38.516983+00:00] evaluating:0/55:XAUUSD:1m
+[2026-10-10T10:08:15.434298+00:00] evaluating:55/55:XAUUSD:1m
+[2026-10-10T10:08:15.444386+00:00] holdout:XAUUSD:1m
+[2026-10-10T10:08:16.415287+00:00] done
+Strategy Lab 20261010T094814Z
+id instrument tf trades oos_pf holdout_pf max_dd verdict reason
+ed70f43fbc NSXUSD 1m - - - - error worker_BrokenProcessPool
+012602642e NSXUSD 1m - - - - error worker_BrokenProcessPool
+2937f11dc1 NSXUSD 1m - - - - error worker_BrokenProcessPool
+133c7205b6 NSXUSD 1m - - - - error worker_BrokenProcessPool
+6cc2ebe132 NSXUSD 1m - - - - error worker_BrokenProcessPool
+60ab746102 NSXUSD 1m - - - - error worker_BrokenProcessPool
+515bf41d3a NSXUSD 1m - - - - error worker_BrokenProcessPool
+989b8bbd59 NSXUSD 1m - - - - error worker_BrokenProcessPool
+0427861b0d NSXUSD 1m - - - - error worker_BrokenProcessPool
+50e714c4a4 NSXUSD 1m - - - - error worker_BrokenProcessPool
