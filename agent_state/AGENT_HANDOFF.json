@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 330,
+  "turn": "human",
+  "revision": 332,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-131 (Round A, NAS100- and gold-specific ideas) ran on 60m/15m full history and 5m: 258 attempts each, 0 Gate 1 passes (too few trades 59/18/10). Detail file must be committed to the repo (changes requested). Gates unchanged. No live trading; demo only.",
+    "summary": "T-131 (Round A) accepted: NAS100- and gold-specific ideas, 3 runs x 258 attempts, 0 Gate 1 passes; gold shows no edge (gross about 0 vs 1.6 cost), NAS100 new ideas lose; best remain old long-trend ideas (OOS PF up to 1.24). Round B authorized by D-029; Q-047 asks about a read-only shadow significance calculation. Gates unchanged. No live trading; demo only.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4268,7 +4268,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4301,10 +4301,11 @@
         "60m 20261010T185452Z: 258 attempts, 0 passes, too_few_trades=59, peak current=1011535872, anon=857137152.",
         "15m 20261010T185931Z: 258 attempts, 0 passes, too_few_trades=18, peak current=2637922304, anon=2456576000.",
         "5m 20261010T193337Z: 258 attempts, 0 passes, too_few_trades=10, peak current=7032770560, anon=6796316672; detached retry completed after first terminal disconnect.",
-        "Complete per-family and overall top rows read from saved files are in /workspace/state/lab/t131_round_a_summary.json.",
-        "V-321"
+        "Complete per-family and overall top rows are committed in docs/evidence/t131_round_a_summary.json.",
+        "V-321",
+        "V-322"
       ],
-      "completion_note": "Completed 60m, 15m and 5m once each: 258 attempts and 0 Gate 1 passes per run; too_few_trades 59/18/10; peak memory.current 1.01/2.64/7.03 GB, below 12 GB; no worker crash or run.stop. First 5m terminal disconnected before results, detached retry completed. Requested image redeploy was used; terminal exposed PR-175 marker but no runtime SHA label. No code/config/gate/holdout changes. CLAUDE REVIEW 1 (changes requested): run facts accepted (3 runs x 258 attempts, 0 passes, too_few 59/18/10, memory under 12 GB). Not reviewable: the per-instrument family and overall rows exist only in a Pod file (/workspace/state/lab/t131_round_a_summary.json) that Claude cannot read, but acceptance required them in the repo. NO new runs. Fix: (1) Copy that summary file content into the repo as docs/evidence/t131_round_a_summary.json (metrics only; no Pod URL, host, token or secret; use null, never 0, for missing data; UTF-8) and commit it. (2) In the single log entry replace the 'results' Pod paths with a pointer to that repo file plus run ids. (3) State the image check honestly: the runtime SHA label was unavailable, so say what evidence ties the run to e36beb89a496181562f53e0f44147121a1c0e220 (for example RunPod's pod image field as shown to the owner, or the instrument_seed_specs marker) in one line. (4) Append only: do not re-encode or reorder any earlier handoff entry. One log entry, then turn=claude."
+      "completion_note": "Completed 60m, 15m and 5m once each: 258 attempts and 0 Gate 1 passes per run; too_few_trades 59/18/10; peak memory.current 1.01/2.64/7.03 GB, below 12 GB; no worker crash or run.stop. First 5m terminal disconnected before results, detached retry completed. The runtime SHA label was unavailable; the fresh container's PR-175 instrument_seed_specs marker ties the run to the approved e36beb89a496181562f53e0f44147121a1c0e220 redeploy. No code/config/gate/holdout changes and no new runs. Claude's review fixes are addressed: per-family and overall rows are in docs/evidence/t131_round_a_summary.json, and the next log entry points to that repo file and run ids. CLAUDE REVIEW 1 resolved: summary committed to docs/evidence/t131_round_a_summary.json (76 KB, no secrets, null for missing); accepted."
     }
   ],
   "decisions": [
@@ -11058,6 +11059,22 @@
       "validated_by": "claude",
       "date": "2026-10-11",
       "reverify_if": "Summary file committed"
+    },
+    {
+      "id": "V-322",
+      "subject": "T-131 re-check after changes (Claude)",
+      "method": "Validated handoff with --previous (log prefix identical), read docs/evidence/t131_round_a_summary.json (3 runs, 5 new families x per-instrument top 3, overall best 5 per instrument), scanned for secrets.",
+      "result": "pass",
+      "evidence": {
+        "runs": "3 x 258 attempts, 0 Gate 1 passes, too_few_trades 59/18/10",
+        "gold": "all 15 gold-family rows per timeframe have gross per trade about 0 or negative vs 1.6 cost; OOS PF mostly 0.3-0.9; walk-forward share mostly 0.0",
+        "nas100": "new nas_pullback and nas_momentum rows: gross 0 to 4 pts vs 4.0 cost, net negative; best overall remain old long trend ideas (15m regime_trend_long_288_ny OOS PF 1.24, 1039 trades, WF share 0.75, p 0.84)",
+        "observation": "p_value comes from a win-rate sign test (50% null) that structurally rejects 1:2 payoff strategies with 35-40% win rate; Q-047 asks the owner about a read-only shadow calculation of a mean-profit test."
+      },
+      "review_notes": "T-131 accepted. Round A produced no pass.",
+      "validated_by": "claude",
+      "date": "2026-10-11",
+      "reverify_if": "Result files regenerated"
     }
   ],
   "blockers": [
@@ -11695,6 +11712,19 @@
       ],
       "recommendation": "Option 1 with a stop rule: if two more rounds produce no pass, we stop searching Gate 1 ideas and decide with you whether the demo forward test of the best near-misses is worth running. No gate is loosened.",
       "answer": "Owner at 21:05 Riyadh (18:05 UTC): 'Yes. Implement the recommendation' = option 1: activate the stop-rule plan (docs/specs/round_a_plan.md)."
+    },
+    {
+      "id": "Q-047",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "The significance check in Gate 1 (p_value) is a win-rate sign test against 50/50. Our ideas risk 1 to win 2, so they are profitable at 35-40% win rate and the test calls them luck (p near 0.8-1.0) even when profit factor is 1.24. Do you approve a READ-ONLY shadow calculation: Codex computes a mean-profit-per-trade p-value for all saved attempts (same adjusted threshold 0.05 / attempts, all rounds counted together) and reports which ideas would change, with NO code, config or gate change? Any gate change would come back to you as a separate question.",
+      "options": [
+        "Yes, run the read-only shadow calculation on the saved results (recommended)",
+        "No, keep the current test and do not compute alternatives"
+      ],
+      "recommendation": "Yes: it only reads saved results, changes nothing, and shows whether the test hides anything real before you decide on a gate change.",
+      "answer": null
     }
   ],
   "log": [
@@ -19071,7 +19101,44 @@
       ],
       "summary": "Reviewed Codex rev 329. Accepted the run facts (258 attempts per run, 0 Gate 1 passes, too_few 59/18/10, memory under 12 GB). Changes requested (cycle 1): commit the per-family summary into docs/evidence (it only exists on the Pod), point the log at it, state the image evidence honestly, append-only edits. V-321 recorded.",
       "validation": "V-321"
+    },
+    {
+      "agent": "codex",
+      "revision": 331,
+      "ts": "2026-10-11T14:40:00Z",
+      "action": "address_t131_review",
+      "task_ids": [
+        "T-131"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t131_round_a_summary.json"
+      ],
+      "results": {
+        "run_ids": {
+          "60m": "20261010T185452Z",
+          "15m": "20261010T185931Z",
+          "5m": "20261010T193337Z"
+        },
+        "summary": "docs/evidence/t131_round_a_summary.json"
+      },
+      "summary": "Added the per-family and overall Round A metrics to docs/evidence/t131_round_a_summary.json; updated the handoff to point to repo evidence and stated that the runtime SHA label was unavailable while the fresh-container PR-175 instrument_seed_specs marker tied the run to the approved redeploy. No new runs.",
+      "validation": "V-322"
+    },
+    {
+      "revision": 332,
+      "ts": "2026-10-11T15:10:00Z",
+      "agent": "claude",
+      "action": "accept_t131_ask_q047",
+      "task_ids": [
+        "T-131"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed Codex rev 331: evidence file committed, T-131 accepted (V-322 pass). Round A: 0 passes; gold gross per trade about 0 on all new families; NAS100 new families net negative; old long trend ideas still best. Added Q-047 (read-only shadow significance calculation, owner decision). Round B (D-029) continues in code on the Claude side; no Codex task until the Round B seeds are merged.",
+      "validation": "V-322"
     }
   ],
-  "project_summary": "T-131 completed Round A: 60m, 15m and 5m each ran once on the fresh owner-provided Pod, 258 attempts each, 0 Gate 1 passes, no memory breach or run.lock, and no code/config/gate/holdout changes."
+  "project_summary": "T-131 completed Round A: 60m, 15m and 5m each ran once on the fresh owner-provided Pod, 258 attempts each, 0 Gate 1 passes, no memory breach or run.lock, and no code/config/gate/holdout changes. The per-family and overall summary is committed in docs/evidence/t131_round_a_summary.json; the runtime SHA label was unavailable, with the PR-175 instrument_seed_specs marker tying the run to the approved redeploy."
 }
