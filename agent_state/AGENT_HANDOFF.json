@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 333,
+  "turn": "claude",
+  "revision": 334,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4316,7 +4316,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-03",
         "R-04",
@@ -4337,7 +4337,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Blocked before any run: the reachable Pod container did not expose the required image SHA 05f0bcd5fd163501fceb01c49eb73c00d291d62b and the PR-175 marker was absent. No run.lock or lab process was started. Owner must redeploy ghcr.io/tarek-assaf/ai-trader:05f0bcd5fd163501fceb01c49eb73c00d291d62b with the same volume, then Codex can continue."
     }
   ],
   "decisions": [
@@ -11115,6 +11115,22 @@
       "validated_by": "claude",
       "date": "2026-10-11",
       "reverify_if": "Result files regenerated"
+    },
+    {
+      "id": "V-323",
+      "subject": "T-132 image precondition check",
+      "method": "Used the owner-provided Pod terminal for bounded read-only checks. docker inspect returned no image value; a redacted marker search found neither the required full SHA nor the PR-175 marker. No run.lock or lab process was started.",
+      "result": "fail",
+      "evidence": {
+        "required_image": "05f0bcd5fd163501fceb01c49eb73c00d291d62b",
+        "sha_check": "not found",
+        "pr175_marker": "absent",
+        "run_started": false
+      },
+      "review_notes": "Owner redeploy with the same volume is required before starting T-132.",
+      "validated_by": "codex",
+      "date": "2026-10-11",
+      "reverify_if": "After owner redeploys the required image"
     }
   ],
   "blockers": [
@@ -11212,6 +11228,12 @@
       "resolution": "Owner supplied fresh reachable Pod; approved Round A completed.",
       "resolved_by": "codex",
       "resolved_at": "2026-10-10"
+    },
+    {
+      "id": "B-015",
+      "text": "T-132 cannot start: the reachable Pod read-only check did not find the required image SHA 05f0bcd5fd163501fceb01c49eb73c00d291d62b, and the PR-175 marker was absent. No approved Round B run was started.",
+      "raised_by": "codex",
+      "status": "open"
     }
   ],
   "questions": [
@@ -11765,6 +11787,18 @@
       ],
       "recommendation": "Yes: it only reads saved results, changes nothing, and shows whether the test hides anything real before you decide on a gate change.",
       "answer": "Owner at 18:45 Riyadh (15:45 UTC): 'Ok let's try it' = yes, run the read-only shadow calculation (no gate change)."
+    },
+    {
+      "id": "Q-048",
+      "to": "human",
+      "from": "codex",
+      "status": "open",
+      "text": "T-132 is ready but blocked before any run because the reachable Pod is not running image 05f0bcd5fd163501fceb01c49eb73c00d291d62b. Please redeploy ghcr.io/tarek-assaf/ai-trader:05f0bcd5fd163501fceb01c49eb73c00d291d62b with the same volume, then prompt Codex to continue.",
+      "options": [
+        "Redeploy the required image with the same volume (recommended)",
+        "Defer Round B"
+      ],
+      "recommendation": "Redeploy the required image with the same volume so Codex can verify the SHA and run the approved sequence without changing code, config, gates or holdout handling."
     }
   ],
   "log": [
@@ -19198,7 +19232,21 @@
         "tests/unit/test_lab_round_b.py"
       ],
       "summary": "Owner approved Q-047 (read-only shadow calculation, D-030). Merged in #182 (image 05f0bcd5fd163501fceb01c49eb73c00d291d62b): utc_minute indicator, 16 Round B ideas (8 gold_data_break, 8 nas_preopen_break), and diag-only mean-profit p-values (shadow_stats.py; payoff-aware test: a 38 percent winner / 2:1 payoff strategy gets sign-test p above 0.99 but mean-profit p below 0.05 in the unit test). No gate, config or holdout change. Added T-132 for Codex; the owner must redeploy the Pod with the new image first."
+    },
+    {
+      "agent": "codex",
+      "revision": 334,
+      "ts": "2026-10-11T16:12:00Z",
+      "action": "block_t132_image_precondition",
+      "task_ids": [
+        "T-132"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Performed bounded read-only Pod preflight. The required image SHA 05f0bcd5fd163501fceb01c49eb73c00d291d62b was not found and the PR-175 marker was absent; no run.lock or lab process was started. T-132 is blocked until the owner redeploys the required image with the same volume.",
+      "validation": "V-323"
     }
   ],
-  "project_summary": "T-131 completed Round A: 60m, 15m and 5m each ran once on the fresh owner-provided Pod, 258 attempts each, 0 Gate 1 passes, no memory breach or run.lock, and no code/config/gate/holdout changes. The per-family and overall summary is committed in docs/evidence/t131_round_a_summary.json; the runtime SHA label was unavailable, with the PR-175 instrument_seed_specs marker tying the run to the approved redeploy."
+  "project_summary": "T-131 completed Round A and T-132 Round B is blocked before any run because the reachable Pod is not running image 05f0bcd5fd163501fceb01c49eb73c00d291d62b; owner redeploy with the same volume is required."
 }
