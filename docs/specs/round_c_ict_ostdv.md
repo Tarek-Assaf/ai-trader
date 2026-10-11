@@ -58,6 +58,16 @@ what repeatedly co-occurred, not why the market moved.
 Exits: ATR stop/target (1.5/3.0 and 2.0/4.0) and a 36-five-minute-bar time stop. Long and short are separate
 seeds. No parameter tuning (no tunable parameters), so no extra variants.
 
+## Part 3: range-unit exits and per-year diagnostics (added 2026-10-12, owner authorization D-032)
+- Exit rules accept `unit="asia_range"`: distances are multiples of the overnight range width known at the
+  signal bar, so stops and targets sit on the OSTDV levels (stop one step = 0.5 or 0.35 of a range beyond the
+  entry, target 1.0 or 0.7 of a range back toward the range). Three more families use it: ostdv_fade_range_exit
+  (levels 0.5, 1, 1.5, 2), ostdv_sweep_range_exit and ict_sweep_fvg_range_exit (any / London / New York),
+  56 more seeds per market and timeframe (228 in total).
+- Every attempt now also records `diag_year_<year>_net`, `diag_year_<year>_trades`, `diag_years_traded` and
+  `diag_years_profitable` (diagnostics only, no gate reads them) so a long-only "winner" can be checked for
+  living off a few bull-market years.
+
 ## Acceptance for the Pod run (T-133)
 1. Run `scripts/ostdv_stats.py` and `scripts/ostdv_events.py` on both markets; commit the JSON/markdown
    outputs to `docs/evidence/` (training lake only).

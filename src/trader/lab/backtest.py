@@ -14,7 +14,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime
 
-from trader.analysis.indicators import atr
+from trader.analysis.indicators import asia_range, atr
 from trader.data.resample import Candle, resample_ohlc
 from trader.lab.engine import EntrySignal, IndicatorCache, evaluate_entries
 from trader.lab.spec import StrategySpec
@@ -158,14 +158,29 @@ def _uses_atr_units(spec: StrategySpec) -> bool:
     return any(getattr(rule, "unit", "points") == "atr" for rule in spec.exit_rules)
 
 
+def _uses_range_units(spec: StrategySpec) -> bool:
+    return any(getattr(rule, "unit", "points") == "asia_range" for rule in spec.exit_rules)
+
+
+def _unit_factor(unit: str, atr_value: float, range_width: float) -> float:
+    if unit == "atr":
+        return atr_value
+    if unit == "asia_range":
+        return range_width
+    return 1.0
+
+
 def _exit_rules(
     spec: StrategySpec,
     atr_value: float = 1.0,
+    range_width: float = 1.0,
 ) -> tuple[float, float | None, int | None, float | None, float | None]:
     """Return exit distances in price points.
 
     Rules with ``unit="atr"`` are multiples of ``atr_value`` (the ATR known at the
     signal bar), so one seed makes sense on every instrument and volatility level.
+    Rules with ``unit="asia_range"`` are multiples of the overnight range width
+    known at the signal bar (the OSTDV levels' own ruler).
     """
     stop: float | None = None
     target: float | None = None
@@ -174,13 +189,13 @@ def _exit_rules(
     trailing_activation: float | None = None
     for rule in spec.exit_rules:
         if rule.kind == "stop":
-            stop = float(rule.distance) * (atr_value if rule.unit == "atr" else 1.0)
+            stop = float(rule.distance) * _unit_factor(rule.unit, atr_value, range_width)
         elif rule.kind == "target":
-            target = float(rule.distance) * (atr_value if rule.unit == "atr" else 1.0)
+            target = float(rule.distance) * _unit_factor(rule.unit, atr_value, range_width)
         elif rule.kind == "time_stop":
             time_stop = rule.bars
         elif rule.kind == "trailing":
-            factor = atr_value if rule.unit == "atr" else 1.0
+            factor = _unit_factor(rule.unit, atr_value, range_width)
             trailing_distance = float(rule.distance) * factor
             trailing_activation = float(rule.activation_distance) * factor
     if stop is None:
@@ -359,6 +374,14 @@ def run_backtest(
     stop, target, time_stop, trailing_distance, trailing_activation = _exit_rules(spec)
     atr_exits = _uses_atr_units(spec)
     atr_series = atr(bars, ATR_EXIT_PERIOD) if atr_exits else ()
+    range_exits = _uses_range_units(spec)
+    range_widths: tuple[float | None, ...] = ()
+    if range_exits:
+        range_highs, range_lows = asia_range(bars)
+        range_widths = tuple(
+            None if high is None or low is None else high - low
+            for high, low in zip(range_highs, range_lows, strict=True)
+        )
     position: _OpenTrade | None = None
     trades: list[BacktestTrade] = []
     equity = starting_equity
@@ -395,11 +418,16 @@ def run_backtest(
         if position is None and index > 0 and last_exit_index != index:
             signal = signals.get(bars[index - 1].ts_utc)
             signal_atr = atr_series[index - 1] if atr_exits else None
+            signal_range = range_widths[index - 1] if range_exits else None
             if atr_exits and (signal_atr is None or signal_atr <= 0.0):
                 signal = None
-            if signal is not None and atr_exits and signal_atr is not None:
+            if range_exits and (signal_range is None or signal_range <= 0.0):
+                signal = None
+            if signal is not None and (atr_exits or range_exits):
                 stop, target, time_stop, trailing_distance, trailing_activation = _exit_rules(
-                    spec, signal_atr
+                    spec,
+                    signal_atr if signal_atr is not None else 1.0,
+                    signal_range if signal_range is not None else 1.0,
                 )
             if signal is not None and index < len(bars):
                 spread, slippage = model.for_bar(spec.instrument, bar.ts_utc)

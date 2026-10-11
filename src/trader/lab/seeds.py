@@ -1014,10 +1014,14 @@ def round_b_seed_specs(
 # -1.5/2.5 -> k 1.5, -2/3 -> k 2 (micro SMR starts), -2.272/3.272 -> k 2.272,
 # -3/4 -> k 3 (SMR).  The set is fixed up front to keep multiple testing small.
 ROUND_C_EXITS = ROUND_B_EXITS
+# Exits in Asia-range widths (the OSTDV ruler): stop one step (0.5) or 0.35 of a range beyond,
+# target two steps (1.0) or 0.7 of a range back toward the range.
+ROUND_C_RANGE_EXITS = ((0.5, 1.0), (0.35, 0.7))
 OTE_EDGE = 0.62  # outer edge of the 0.5-0.62 support/resistance zone
 OSTDV_SWEEP_DEPTHS = (0.0, 0.1111)
 OSTDV_FADE_LEVELS = (0.5, 1.0, 1.5, 2.0, 2.272, 3.0)
 OSTDV_BREAK_LEVELS = (0.5, 1.0)
+OSTDV_RANGE_FADE_LEVELS = (0.5, 1.0, 1.5, 2.0)
 # Windows in New York clock minutes: all day, London and New York kill zones.
 ROUND_C_WINDOWS: tuple[tuple[str, tuple[int, int] | None], ...] = (
     ("any", None),
@@ -1063,6 +1067,7 @@ def _round_c_spec(
     conditions: Sequence[IndicatorCondition],
     stop: float,
     target: float,
+    unit: str = "atr",
 ) -> StrategySpec:
     return StrategySpec(
         schema_version=1,
@@ -1071,8 +1076,8 @@ def _round_c_spec(
         timeframe_minutes=timeframe,  # type: ignore[arg-type]
         entry_conditions=tuple(conditions),
         exit_rules=(
-            StopExit(kind="stop", distance=stop, unit="atr"),
-            TargetExit(kind="target", distance=target, unit="atr"),
+            StopExit(kind="stop", distance=stop, unit=unit),  # type: ignore[arg-type]
+            TargetExit(kind="target", distance=target, unit=unit),  # type: ignore[arg-type]
             TimeStopExit(kind="time_stop", bars=_bars(36, timeframe)),
         ),
     )
@@ -1271,6 +1276,83 @@ def round_c_seed_specs(
                     "ict_structure_shift",
                     f"ict_structure_shift_{window_name}_{tag}",
                     _round_c_spec(instrument, timeframe, direction, conditions, stop, target),
+                )
+    # Same entries as the sweep/fade/OTE ideas above, but with exits in Asia-range widths so
+    # stops and targets sit on the OSTDV levels (stop one step beyond, target back to the range).
+    for direction in ("long", "short"):
+        long_side = direction == "long"
+        poke = "low" if long_side else "high"
+        for stop, target in ROUND_C_RANGE_EXITS:
+            tag = f"{direction}_r{stop:g}_{target:g}"
+            for depth in OSTDV_RANGE_FADE_LEVELS:
+                conditions = [
+                    IndicatorCondition(
+                        indicator=poke,  # type: ignore[arg-type]
+                        operator="lt" if long_side else "gt",
+                        **_asia_level(long_side, depth),  # type: ignore[arg-type]
+                    ),
+                    IndicatorCondition(
+                        indicator="close",
+                        operator="gt" if long_side else "lt",
+                        **_asia_level(long_side, depth),  # type: ignore[arg-type]
+                    ),
+                ]
+                add(
+                    "ostdv_fade_range_exit",
+                    f"ostdv_fade_{depth:g}_{tag}",
+                    _round_c_spec(
+                        instrument, timeframe, direction, conditions, stop, target, "asia_range"
+                    ),
+                )
+            for window_name, window in ROUND_C_WINDOWS:
+                sweep = [
+                    *_ny_window(window),
+                    IndicatorCondition(
+                        indicator=poke,  # type: ignore[arg-type]
+                        operator="lt" if long_side else "gt",
+                        **_asia_level(long_side, 0.1111),  # type: ignore[arg-type]
+                    ),
+                    IndicatorCondition(
+                        indicator="close",
+                        operator="gt" if long_side else "lt",
+                        **_asia_level(long_side, 0.0),  # type: ignore[arg-type]
+                    ),
+                ]
+                add(
+                    "ostdv_sweep_range_exit",
+                    f"ostdv_sweep_{window_name}_{tag}",
+                    _round_c_spec(
+                        instrument, timeframe, direction, sweep, stop, target, "asia_range"
+                    ),
+                )
+                sweep_bars = _bars(12, timeframe)
+                fvg = [
+                    *_ny_window(window),
+                    IndicatorCondition(
+                        indicator="rolling_low" if long_side else "rolling_high",
+                        period=sweep_bars,
+                        operator="lt" if long_side else "gt",
+                        **_asia_level(long_side, 0.0),  # type: ignore[arg-type]
+                    ),
+                    IndicatorCondition(
+                        indicator="low" if long_side else "high",
+                        operator="gt" if long_side else "lt",
+                        threshold=0.0,
+                        threshold_indicator="high" if long_side else "low",
+                        threshold_lookback=2,
+                    ),
+                    IndicatorCondition(
+                        indicator="close",
+                        operator="gt" if long_side else "lt",
+                        **_asia_level(long_side, 0.0),  # type: ignore[arg-type]
+                    ),
+                ]
+                add(
+                    "ict_sweep_fvg_range_exit",
+                    f"ict_sweep_fvg_asia_{window_name}_{tag}",
+                    _round_c_spec(
+                        instrument, timeframe, direction, fvg, stop, target, "asia_range"
+                    ),
                 )
     return tuple(result)
 
