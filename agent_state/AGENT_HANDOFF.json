@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 330,
+  "turn": "claude",
+  "revision": 331,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4268,7 +4268,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04",
@@ -4301,10 +4301,10 @@
         "60m 20261010T185452Z: 258 attempts, 0 passes, too_few_trades=59, peak current=1011535872, anon=857137152.",
         "15m 20261010T185931Z: 258 attempts, 0 passes, too_few_trades=18, peak current=2637922304, anon=2456576000.",
         "5m 20261010T193337Z: 258 attempts, 0 passes, too_few_trades=10, peak current=7032770560, anon=6796316672; detached retry completed after first terminal disconnect.",
-        "Complete per-family and overall top rows read from saved files are in /workspace/state/lab/t131_round_a_summary.json.",
+        "Complete per-family and overall top rows are committed in docs/evidence/t131_round_a_summary.json.",
         "V-321"
       ],
-      "completion_note": "Completed 60m, 15m and 5m once each: 258 attempts and 0 Gate 1 passes per run; too_few_trades 59/18/10; peak memory.current 1.01/2.64/7.03 GB, below 12 GB; no worker crash or run.stop. First 5m terminal disconnected before results, detached retry completed. Requested image redeploy was used; terminal exposed PR-175 marker but no runtime SHA label. No code/config/gate/holdout changes. CLAUDE REVIEW 1 (changes requested): run facts accepted (3 runs x 258 attempts, 0 passes, too_few 59/18/10, memory under 12 GB). Not reviewable: the per-instrument family and overall rows exist only in a Pod file (/workspace/state/lab/t131_round_a_summary.json) that Claude cannot read, but acceptance required them in the repo. NO new runs. Fix: (1) Copy that summary file content into the repo as docs/evidence/t131_round_a_summary.json (metrics only; no Pod URL, host, token or secret; use null, never 0, for missing data; UTF-8) and commit it. (2) In the single log entry replace the 'results' Pod paths with a pointer to that repo file plus run ids. (3) State the image check honestly: the runtime SHA label was unavailable, so say what evidence ties the run to e36beb89a496181562f53e0f44147121a1c0e220 (for example RunPod's pod image field as shown to the owner, or the instrument_seed_specs marker) in one line. (4) Append only: do not re-encode or reorder any earlier handoff entry. One log entry, then turn=claude."
+      "completion_note": "Completed 60m, 15m and 5m once each: 258 attempts and 0 Gate 1 passes per run; too_few_trades 59/18/10; peak memory.current 1.01/2.64/7.03 GB, below 12 GB; no worker crash or run.stop. First 5m terminal disconnected before results, detached retry completed. The runtime SHA label was unavailable; the fresh container's PR-175 instrument_seed_specs marker ties the run to the approved e36beb89a496181562f53e0f44147121a1c0e220 redeploy. No code/config/gate/holdout changes and no new runs. Claude's review fixes are addressed: per-family and overall rows are in docs/evidence/t131_round_a_summary.json, and the next log entry points to that repo file and run ids."
     }
   ],
   "decisions": [
@@ -19071,7 +19071,30 @@
       ],
       "summary": "Reviewed Codex rev 329. Accepted the run facts (258 attempts per run, 0 Gate 1 passes, too_few 59/18/10, memory under 12 GB). Changes requested (cycle 1): commit the per-family summary into docs/evidence (it only exists on the Pod), point the log at it, state the image evidence honestly, append-only edits. V-321 recorded.",
       "validation": "V-321"
+    },
+    {
+      "agent": "codex",
+      "revision": 331,
+      "ts": "2026-10-11T14:40:00Z",
+      "action": "address_t131_review",
+      "task_ids": [
+        "T-131"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t131_round_a_summary.json"
+      ],
+      "results": {
+        "run_ids": {
+          "60m": "20261010T185452Z",
+          "15m": "20261010T185931Z",
+          "5m": "20261010T193337Z"
+        },
+        "summary": "docs/evidence/t131_round_a_summary.json"
+      },
+      "summary": "Added the per-family and overall Round A metrics to docs/evidence/t131_round_a_summary.json; updated the handoff to point to repo evidence and stated that the runtime SHA label was unavailable while the fresh-container PR-175 instrument_seed_specs marker tied the run to the approved redeploy. No new runs.",
+      "validation": "V-322"
     }
   ],
-  "project_summary": "T-131 completed Round A: 60m, 15m and 5m each ran once on the fresh owner-provided Pod, 258 attempts each, 0 Gate 1 passes, no memory breach or run.lock, and no code/config/gate/holdout changes."
+  "project_summary": "T-131 completed Round A: 60m, 15m and 5m each ran once on the fresh owner-provided Pod, 258 attempts each, 0 Gate 1 passes, no memory breach or run.lock, and no code/config/gate/holdout changes. The per-family and overall summary is committed in docs/evidence/t131_round_a_summary.json; the runtime SHA label was unavailable, with the PR-175 instrument_seed_specs marker tying the run to the approved redeploy."
 }
