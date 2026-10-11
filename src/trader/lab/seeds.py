@@ -901,6 +901,109 @@ def instrument_seed_specs(
     return ()
 
 
+# --- Round B (owner approved D-029): time-of-day ideas ----------------------------
+# Gold reacts to scheduled US data (8:30 New York = 12:30 or 13:30 UTC).  NAS100 often
+# breaks the range built before the US open.  Both use the UTC minute of the day.
+
+ROUND_B_DATA_WINDOWS = ((750, 840), (810, 900))  # 12:30-14:00 and 13:30-15:00 UTC
+ROUND_B_PREOPEN_WINDOW = (810, 930)  # 13:30-15:30 UTC
+ROUND_B_EXITS = ((1.5, 3.0), (2.0, 4.0))
+
+
+def _time_window(start_minute: int, end_minute: int) -> tuple[IndicatorCondition, ...]:
+    return (
+        IndicatorCondition(indicator="utc_minute", operator="gte", threshold=float(start_minute)),
+        IndicatorCondition(indicator="utc_minute", operator="lt", threshold=float(end_minute)),
+    )
+
+
+def _windowed_break(
+    instrument: str,
+    timeframe: int,
+    *,
+    direction: str,
+    window: tuple[int, int],
+    lookback_5m_bars: int,
+    stop: float,
+    target: float,
+    with_trend: bool,
+) -> StrategySpec:
+    """Break of a recent range inside a fixed UTC time window."""
+    long_side = direction == "long"
+    conditions = [
+        *_time_window(*window),
+        IndicatorCondition(
+            indicator="close",
+            operator="gt" if long_side else "lt",
+            threshold=0.0,
+            threshold_indicator="rolling_high" if long_side else "rolling_low",
+            threshold_period=_bars(lookback_5m_bars, timeframe),
+            threshold_lookback=1,
+        ),
+    ]
+    if with_trend:
+        conditions.append(_trend_filter(long_side))
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=tuple(conditions),
+        exit_rules=(
+            StopExit(kind="stop", distance=stop, unit="atr"),
+            TargetExit(kind="target", distance=target, unit="atr"),
+            TimeStopExit(kind="time_stop", bars=_bars(36, timeframe)),
+        ),
+    )
+
+
+def round_b_seed_specs(
+    instrument: str, timeframe: int
+) -> tuple[tuple[SeedStrategy, StrategySpec], ...]:
+    """Return the Round B time-of-day ideas for one instrument (none for others)."""
+    result: list[tuple[SeedStrategy, StrategySpec]] = []
+    for direction in ("long", "short"):
+        for stop, target in ROUND_B_EXITS:
+            if instrument.startswith("XAU"):
+                for window in ROUND_B_DATA_WINDOWS:
+                    name = f"gold_data_break_{direction}_{window[0]}_{stop:g}_{target:g}"
+                    result.append(
+                        (
+                            SeedStrategy(name, "gold_data_break", "windowed_break"),
+                            _windowed_break(
+                                instrument,
+                                timeframe,
+                                direction=direction,
+                                window=window,
+                                lookback_5m_bars=12,
+                                stop=stop,
+                                target=target,
+                                with_trend=False,
+                            ),
+                        )
+                    )
+            elif instrument.startswith("NSX"):
+                for with_trend in (False, True):
+                    tag = "trend" if with_trend else "any"
+                    name = f"nas_preopen_break_{direction}_{tag}_{stop:g}_{target:g}"
+                    result.append(
+                        (
+                            SeedStrategy(name, "nas_preopen_break", "windowed_break"),
+                            _windowed_break(
+                                instrument,
+                                timeframe,
+                                direction=direction,
+                                window=ROUND_B_PREOPEN_WINDOW,
+                                lookback_5m_bars=90,
+                                stop=stop,
+                                target=target,
+                                with_trend=with_trend,
+                            ),
+                        )
+                    )
+    return tuple(result)
+
+
 __all__ = [
     "SEED_LIBRARY",
     "SLOW_CHANNELS",
@@ -909,6 +1012,7 @@ __all__ = [
     "instrument_seed_specs",
     "seed_specs",
     "level_seed_specs",
+    "round_b_seed_specs",
     "slow_seed_specs",
     "swing_seed_specs",
 ]

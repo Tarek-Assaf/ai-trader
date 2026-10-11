@@ -119,6 +119,9 @@ def _indicator_series(
     elif indicator in {"opening_range_high", "opening_range_low"}:
         range_highs, range_lows = indicators.opening_range(bars)
         values = range_highs if indicator == "opening_range_high" else range_lows
+    elif indicator == "utc_minute":
+        # Minute of the UTC day at which the bar opens (0..1439): time-of-day windows.
+        values = tuple(float(bar.ts_utc.hour * 60 + bar.ts_utc.minute) for bar in bars)
     elif indicator in {"bollinger_upper", "bollinger_lower"}:
         assert period is not None
         mean = indicators.sma(closes, period)
