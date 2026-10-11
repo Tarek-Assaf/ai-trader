@@ -108,7 +108,7 @@ def test_seed_library_is_valid_unique_and_within_limits() -> None:
         for timeframe in (1, 3, 5, 15, 60):
             seeds = round_c_seed_specs(instrument, timeframe)
             names = [seed.name for seed, _ in seeds]
-            assert len(names) == len(set(names)) == 172
+            assert len(names) == len(set(names)) == 172 + 2 * 2 * (4 + 3 + 3)
             for _, spec in seeds:
                 assert len(spec.entry_conditions) <= limits.max_conditions_per_strategy
     families = {seed.source for seed, _ in round_c_seed_specs("XAUUSD", 5)}
@@ -120,6 +120,9 @@ def test_seed_library_is_valid_unique_and_within_limits() -> None:
         "ict_sweep_fvg",
         "ict_structure_shift",
         "candle_at_level",
+        "ostdv_fade_range_exit",
+        "ostdv_sweep_range_exit",
+        "ict_sweep_fvg_range_exit",
     }
 
 
@@ -166,3 +169,24 @@ def test_ote_zone_is_support_from_above_and_resistance_from_below() -> None:
     assert [s.timestamp_utc for s in short_hits] == [
         (morning + timedelta(minutes=1)).astimezone(UTC)
     ]
+
+
+def test_range_unit_exits_use_the_asia_range_width_at_signal_time() -> None:
+    from trader.lab.backtest import run_backtest
+
+    day = datetime(2026, 1, 12)
+    bars = _evening(day)  # Asia range 100..110, width 10
+    morning = datetime(2026, 1, 13, 3, 0, tzinfo=NY)
+    # Long fade at k=0.5 (95): pokes to 94, closes 96.  Entry at next open 96.
+    bars.append(_bar(morning, 98, 98.5, 94.0, 96.0))
+    bars.append(_bar(morning + timedelta(minutes=1), 96, 96.5, 95.8, 96.2))
+    # Target = 1.0 range = 10 points above entry (106): reached on this bar; stop 5 below.
+    bars.append(_bar(morning + timedelta(minutes=2), 96.2, 106.5, 96.0, 106.0))
+    bars.append(_bar(morning + timedelta(minutes=3), 106, 106, 105.9, 106))
+    specs = {seed.name: spec for seed, spec in round_c_seed_specs("NSXUSD", 1)}
+    spec = specs["ostdv_fade_0.5_long_r0.5_1"]
+    result = run_backtest(spec, bars)
+    assert result.trades, "expected a trade"
+    trade = result.trades[0]
+    assert trade.exit_reason == "target"
+    assert abs((trade.exit_price - trade.entry_price) - 10.0) < 1e-6

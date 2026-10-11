@@ -115,7 +115,20 @@ def _cost_diagnostics(
     count = len(trades)
     days = max(1.0, (candles[-1].ts_utc - candles[0].ts_utc).total_seconds() / 86400.0)
     wins = sum(1 for trade in trades if trade.net_pnl > 0)
+    yearly_net: dict[int, float] = {}
+    yearly_count: dict[int, int] = {}
+    for trade in trades:
+        year = trade.entry_time_utc.year
+        yearly_net[year] = yearly_net.get(year, 0.0) + float(trade.net_pnl)
+        yearly_count[year] = yearly_count.get(year, 0) + 1
+    per_year: dict[str, float] = {}
+    for year in sorted(yearly_net):
+        per_year[f"diag_year_{year}_net"] = yearly_net[year]
+        per_year[f"diag_year_{year}_trades"] = float(yearly_count[year])
     return {
+        **per_year,
+        "diag_years_traded": float(len(yearly_net)),
+        "diag_years_profitable": float(sum(1 for value in yearly_net.values() if value > 0)),
         "diag_gross_pnl": float(result.gross_pnl),
         "diag_total_costs": float(result.total_costs),
         "diag_net_pnl": float(result.net_pnl),

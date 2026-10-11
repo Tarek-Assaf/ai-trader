@@ -270,6 +270,8 @@ def test_pipeline_worker_returns_slim_results_with_identical_gate_metrics() -> N
         "diag_avg_cost_per_trade",
         "diag_win_rate",
         "diag_trades_per_day",
+        "diag_years_traded",
+        "diag_years_profitable",
     ):
         assert key in compact.preliminary_metrics
     assert compact.preliminary_metrics["diag_net_pnl"] == full.net_pnl

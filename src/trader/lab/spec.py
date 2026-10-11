@@ -137,7 +137,7 @@ class TunableParameter(StrictModel):
         return self
 
 
-DistanceUnit = Literal["points", "atr"]
+DistanceUnit = Literal["points", "atr", "asia_range"]
 
 
 class StopExit(StrictModel):
