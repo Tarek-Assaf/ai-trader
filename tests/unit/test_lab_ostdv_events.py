@@ -108,3 +108,17 @@ def test_only_first_touch_per_day_side_level_and_summary_shape() -> None:
     named = summary["named"]  # type: ignore[index]
     assert "k=0.5/up" in named and "k=0.5/both" in named
     assert named["k=0.5/up"]["touches"] >= 1
+
+
+def test_fade_edge_is_about_zero_when_the_nearer_barrier_explains_the_rate() -> None:
+    from trader.lab.ostdv_events import LevelEvent, _fade_edge
+
+    def event(outcome: str, offset: float) -> LevelEvent:
+        return LevelEvent("2026-01-15", 2026, "up", 1.0, "named", outcome, offset, ())
+
+    # Confirm bar closed 0.5 ATR back inside: a fair random walk retraces 3 times in 4.
+    events = [event("retrace", -0.5)] * 3 + [event("continue", -0.5)]
+    assert abs(_fade_edge(events) or 0.0) < 1e-9
+    # Same 75% rate but closing right at the level (offset 0) would be a genuine edge.
+    assert (_fade_edge([event("retrace", 0.0)] * 3 + [event("continue", 0.0)]) or 0.0) > 0.4
+    assert _fade_edge([]) is None

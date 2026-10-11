@@ -47,6 +47,7 @@ class LevelEvent:
     level: float
     kind: str  # "named" or "placebo"
     outcome: str  # "retrace", "continue", "neither"
+    offset: float  # confirm-bar close beyond (+) or inside (-) the level, in ATR units
     features: tuple[tuple[str, str], ...]
 
 
@@ -169,6 +170,11 @@ def level_events(candles: Sequence[Candle]) -> tuple[LevelEvent, ...]:
                         level=depth,
                         kind=kind,
                         outcome=_outcome(bars, index + 2, side, level, unit),
+                        offset=(
+                            (confirm.close - level) / unit
+                            if side == "up"
+                            else (level - confirm.close) / unit
+                        ),
                         features=features,
                     )
                 )
@@ -178,6 +184,23 @@ def level_events(candles: Sequence[Candle]) -> tuple[LevelEvent, ...]:
 def _rate(counter: Counter[str]) -> float | None:
     resolved = counter["retrace"] + counter["continue"]
     return counter["retrace"] / resolved if resolved else None
+
+
+def _fade_edge(events: Sequence[LevelEvent]) -> float | None:
+    """Average result, in ATR units before costs, of fading the level from the confirm close.
+
+    Entry at the confirm bar's close, target one ATR back past the level, stop one ATR
+    beyond it, exactly the two barriers the outcome uses.  ``neither`` counts as zero.
+    A value near zero means the retrace rate is explained by where the confirm bar closed
+    (the nearer barrier is hit first), not by an edge.
+    """
+    resolved = [event for event in events if event.outcome != "neither"]
+    if not events:
+        return None
+    total = 0.0
+    for event in resolved:
+        total += (1.0 + event.offset) if event.outcome == "retrace" else -(1.0 - event.offset)
+    return total / len(events)
 
 
 def _lift_table(
@@ -224,6 +247,7 @@ def _lift_table(
                 "retrace_rate": round(rate, 4),
                 "base_retrace_rate": round(base_rate, 4),
                 "lift": round(rate - base_rate, 4),
+                "fade_edge_atr": round(_fade_edge(group) or 0.0, 4),
                 "years_agreeing": f"{agreeing}/{total}",
             }
         )
@@ -262,6 +286,7 @@ def summarise_events(events: Sequence[LevelEvent], *, top: int = 8) -> dict[str,
                     "continue": counts["continue"],
                     "neither": counts["neither"],
                     "retrace_rate": None if rate is None else round(rate, 4),
+                    "fade_edge_atr": None if not chosen else round(_fade_edge(chosen) or 0.0, 4),
                     "top_single_patterns": _lift_table(chosen, _single)[:top],
                     "top_pairs": _lift_table(chosen, _pairs)[:top],
                 }
