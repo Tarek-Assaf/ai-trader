@@ -21,6 +21,7 @@ from trader.lab.ledger import ExperimentLedger, ExperimentLedgerProtocol, Experi
 from trader.lab.metrics import gate1_metrics
 from trader.lab.miner import GateValidator, PatternCandidate
 from trader.lab.promotion import PromotionDecision, PromotionGate
+from trader.lab.shadow_stats import mean_profit_p_values
 from trader.lab.spec import IndicatorCondition, ParameterReference, StrategySpec
 from trader.lab.validator import (
     Gate1Config,
@@ -123,6 +124,7 @@ def _cost_diagnostics(
         "diag_avg_cost_per_trade": float(result.total_costs) / count if count else 0.0,
         "diag_win_rate": wins / count if count else 0.0,
         "diag_trades_per_day": count / days,
+        **mean_profit_p_values(oos_result.trades),
     }
 
 

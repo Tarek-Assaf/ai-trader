@@ -30,6 +30,7 @@ IndicatorName = Literal[
     "prior_day_low",
     "opening_range_high",
     "opening_range_low",
+    "utc_minute",
 ]
 Comparison = Literal["gt", "gte", "lt", "lte", "eq", "ne"]
 SessionName = Literal["asia", "london", "new_york", "closed"]
