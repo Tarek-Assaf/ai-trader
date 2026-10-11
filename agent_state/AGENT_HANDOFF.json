@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 344,
+  "revision": 346,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Round C: code and 228 seeds merged. T-133 (read-only history studies) can run now on the current Pod image; T-134 (lab runs) needs image 72e63f010f150a61a52c4a150f5b97b5bd8be748 which the owner must deploy (Q-051; Codex's redeploy attempt was 403). D-032: 8-hour work authorization; 15-minute handoff check running. Gates unchanged. No live trading; demo only.",
+    "summary": "T-133 accepted: in 16+ years of training history the OSTDV levels behave like arbitrary lines (about 50/50 retrace/continue, same as made-up levels) and the micro SMR zone holds 6-8% of day highs/lows, not 70-80%. T-134 (Round C lab runs plus a fade-edge/window sensitivity rerun of the studies) needs image 1a7132d157a7d90935ac1a6fd734b601506a7d34 which the owner must deploy (Q-051). D-032: 8-hour authorization; 15-minute handoff check running. Gates unchanged. No live trading; demo only.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4355,7 +4355,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4375,8 +4375,13 @@
         "docs/evidence/round_c_ostdv_events.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/round_c_ostdv_stats.json",
+        "docs/evidence/round_c_ostdv_events.json",
+        "docs/evidence/round_c_ostdv_events.md",
+        "V-330"
+      ],
+      "completion_note": "Completed the two approved read-only history studies on the current Pod image 10dcd5e02cf0af2af7d7e61dc9079776b5566b01 in paper mode with live trading disabled. Verified no run.lock and no lab process before starting; no lab runs or broker orders were started. ostdv_stats.py wrote docs/evidence/round_c_ostdv_stats.json for NSXUSD (4019 days) and XAUUSD (4460 days). ostdv_events.py wrote docs/evidence/round_c_ostdv_events.json and .md for NSXUSD (57992 events) and XAUUSD (51049 events)."
     },
     {
       "id": "T-134",
@@ -4394,14 +4399,17 @@
         "T-133"
       ],
       "acceptance_criteria": [
-        "Why: D-031/D-032. The lab part of Round C needs image ghcr.io/tarek-assaf/ai-trader:72e63f010f150a61a52c4a150f5b97b5bd8be748 (228 seeds per market/timeframe incl. range-unit exits, plus per-year diagnostics). See docs/specs/round_c_ict_ostdv.md.",
-        "IMAGE: Codex cannot redeploy (RunPod API returned 403, V-329). The owner redeploys (Q-051). Before starting, check health: if the version is not 72e63f010f150a61a52c4a150f5b97b5bd8be748, do nothing and stop. Verify no run.lock before each run. Do NOT run 1m or 3m. Do not change code, config, gates or holdout handling.",
+        "Why: D-031/D-032. The lab part of Round C needs image ghcr.io/tarek-assaf/ai-trader:1a7132d157a7d90935ac1a6fd734b601506a7d34 (228 seeds per market/timeframe incl. range-unit exits, plus per-year diagnostics). See docs/specs/round_c_ict_ostdv.md.",
+        "IMAGE: Codex cannot redeploy (RunPod API returned 403, V-329). The owner redeploys (Q-051). Before starting, check health: if the version is not 1a7132d157a7d90935ac1a6fd734b601506a7d34, do nothing and stop. Verify no run.lock before each run. Do NOT run 1m or 3m. Do not change code, config, gates or holdout handling.",
+        "Step 0 (read-only studies, rerun on this image; same rules as T-133: training months only, no lab run first, verify no run.lock, stop at 12 GB cgroup anon): (a) python scripts/ostdv_events.py --out docs/evidence/round_c_ostdv_events_v2.json (this version also reports fade_edge_atr, the average result in ATR units before costs of fading each level from the confirm close); (b) python scripts/ostdv_stats.py --windows 18:45-22:03 20:00-00:00 19:00-22:00 --out docs/evidence/round_c_ostdv_stats_windows.json (range-window sensitivity). Commit the outputs (and the .md the events script writes) to docs/evidence/.",
         "Step 2 (lab runs), sequential, once each, own results and progress files, --idea-sources round_c --max-ideas 400 --force, both instruments: (a) --timeframes 60 --years all -> results_60m_c.json / progress_60m_c.json; (b) --timeframes 15 --years all -> results_15m_c.json; (c) --timeframes 5 -> results_5m_c.json. Detached run (nohup) with the stop file and a memory watchdog (stop and record at 12 GB cgroup anon).",
         "Write ONE compact evidence file docs/evidence/t134_round_c_summary.json (UTF-8, no Pod URL, host or secret, null never 0 for missing data): per run: run id, attempts, Gate 1 passes, too_few_trades, peak cgroup anon and memory.current; per instrument per family the best 3 by lowest diag_mean_pnl_p_weekly among attempts with at least 300 trades (if fewer than 3 have 300 trades, the best 3 by out-of-sample profit factor, labelled) with trades, oos_trades, win_rate, gross_per_trade, cost_per_trade, oos_pf, holdout_pf, wf_windows, wf_share, regimes, backtest_drawdown_pct, neighbors, gate p_value, diag_oos_mean_pnl, diag_mean_pnl_p_trade, diag_mean_pnl_p_weekly and failure reasons (a missing field must be explained in a note, not silently null); per instrument per run the best 10 overall by the same ranking; counts of attempts with at least 300 trades whose diag_mean_pnl_p_weekly is <= 0.05, <= 0.001, <= 0.0001.",
         "ONE log entry that points to the evidence file, then turn=claude, then run python agent_state/validate_handoff.py --previous <copy of main>. Edit the handoff APPEND-ONLY, UTF-8 with ensure_ascii=False; do not re-encode, reorder or rewrite earlier entries; do not change current_phase (integer)."
       ],
       "deliverables": [
-        "docs/evidence/t134_round_c_summary.json"
+        "docs/evidence/t134_round_c_summary.json",
+        "docs/evidence/round_c_ostdv_events_v2.json",
+        "docs/evidence/round_c_ostdv_stats_windows.json"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -11316,6 +11324,42 @@
       "validated_by": "codex",
       "date": "2026-10-12",
       "reverify_if": "After owner redeploys the authoritative required image"
+    },
+    {
+      "id": "V-330",
+      "subject": "T-133 read-only history studies",
+      "method": "Verified no run.lock and no lab process, then ran scripts/ostdv_stats.py and scripts/ostdv_events.py with their default training lake and holdout paths on the current Pod image. Pulled the three evidence files and compared SHA-256 hashes.",
+      "result": "pass",
+      "evidence": {
+        "image": "10dcd5e02cf0af2af7d7e61dc9079776b5566b01",
+        "mode": "paper",
+        "live_enabled": false,
+        "run_lock": "absent",
+        "lab_process": "none",
+        "stats_sha256": "0db03ff690bb2c711d482dc253e9bb4b7a4d0d315878ffa718c2355cb584114c",
+        "events_sha256": "d9d69157e76ca863298d618fc3ac75c255b67f8557d5d2c94697cbadb81bc715",
+        "events_markdown_sha256": "780f938234b0581f7cfce8a5b1727ae3e9797a90ae7a5faac74cc38e54144323"
+      },
+      "review_notes": "Both read-only studies completed without starting any lab run; T-134 remains separate and still requires the owner-deployed 72e63f image.",
+      "validated_by": "codex",
+      "date": "2026-10-12",
+      "reverify_if": "After changes to the study scripts or training lake"
+    },
+    {
+      "id": "V-331",
+      "subject": "T-133 read-only history studies reviewed (accepted)",
+      "method": "Read docs/evidence/round_c_ostdv_stats.json, round_c_ostdv_events.json and .md; compared named levels with placebo levels and the micro SMR zone share with equally wide neighbouring bands.",
+      "result": "pass",
+      "evidence": {
+        "micro_smr_share_of_day_extremes": "NSXUSD high 8.2% low 6.0%; XAUUSD high 6.8% low 6.5% (claim was 70-80%); given the zone start was reached: 14-22%",
+        "retrace_rate_named_vs_placebo": "about 0.50 both (NSXUSD 0.48-0.50 vs 0.49-0.51; XAUUSD 0.49-0.54 vs 0.51-0.54)",
+        "confirm_bar_closes_back_inside": "retrace rate 0.78-0.84 on named AND placebo levels in 17/17 (NSXUSD) and 18/18 (XAUUSD) years: likely a first-passage artifact, not an edge",
+        "events": "NSXUSD 57992, XAUUSD 51049"
+      },
+      "review_notes": "No OSTDV level shows special behaviour versus made-up levels. The 80% retrace after a rejecting confirm bar is the same at placebo levels and is expected from where the bar closed (nearer barrier is hit first); it must be converted to expected profit in ATR units before it is called an edge. Follow-up added in T-134 step 0: fade_edge_atr in the event study and other range windows for the zone statistics.",
+      "validated_by": "claude",
+      "date": "2026-10-12",
+      "reverify_if": "The range window definition, the outcome definition or the data changes"
     }
   ],
   "blockers": [
@@ -12034,7 +12078,7 @@
       "to": "human",
       "from": "claude",
       "status": "open",
-      "text": "Codex tried to redeploy the Pod and RunPod rejected it (403 Unauthorized, so Codex does not have a working redeploy privilege). The Pod still runs 10dcd5e02cf0af2af7d7e61dc9079776b5566b01. Please redeploy ghcr.io/tarek-assaf/ai-trader:72e63f010f150a61a52c4a150f5b97b5bd8be748 with the same volume yourself, then prompt Codex. Meanwhile the two read-only history studies (T-133) can run on the current image.",
+      "text": "Codex tried to redeploy the Pod and RunPod rejected it (403 Unauthorized, so Codex does not have a working redeploy privilege). The Pod still runs 10dcd5e02cf0af2af7d7e61dc9079776b5566b01. Please redeploy ghcr.io/tarek-assaf/ai-trader:1a7132d157a7d90935ac1a6fd734b601506a7d34 with the same volume yourself, then prompt Codex. Meanwhile the two read-only history studies (T-133) can run on the current image.",
       "options": [
         "Redeploy the image with the same volume (recommended)",
         "Give Codex a working RunPod key in the Pod environment (not in chat or the repo)"
@@ -19627,6 +19671,38 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted Codex rev 343 (RunPod redeploy returned 403; Pod on 10dcd5e0). Split the work so progress continues: T-133 is now only the two read-only history studies, runnable on the current image; T-134 holds the lab runs and needs the 72e63f image, which the owner must deploy (Q-051)."
+    },
+    {
+      "revision": 345,
+      "ts": "2026-10-12T02:15:00+03:00",
+      "agent": "codex",
+      "action": "complete_t133_read_only_studies",
+      "task_ids": [
+        "T-133"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/round_c_ostdv_stats.json",
+        "docs/evidence/round_c_ostdv_events.json",
+        "docs/evidence/round_c_ostdv_events.md"
+      ],
+      "summary": "Ran the two T-133 read-only history studies on the current Pod image and pulled the evidence files; no lab run or broker order was started.",
+      "validation": "V-330"
+    },
+    {
+      "revision": 346,
+      "ts": "2026-10-12T02:50:00+03:00",
+      "agent": "claude",
+      "action": "accept_t133_retarget_t134",
+      "task_ids": [
+        "T-133",
+        "T-134"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-133 (V-331): named OSTDV levels retrace about 50% like made-up levels; the 80% retrace after a rejecting confirm bar is the same at placebo levels (likely first-passage artifact); the micro SMR zone holds 6-8% of day extremes. Merged the fade_edge_atr measure and range-window sensitivity; T-134 now names image 1a7132d157a7d90935ac1a6fd734b601506a7d34 and starts with a studies rerun.",
+      "validation": "V-331"
     }
   ],
   "project_summary": "T-131 completed Round A and T-132 Round B completed on image 05f0bcd5fd163501fceb01c49eb73c00d291d62b. Evidence was regenerated from the three existing Pod result/progress files after review; no new runs, broker orders or secrets."
