@@ -1,0 +1,114 @@
+{
+  "runs": {
+    "60m_b": {
+      "run_id": "20261011T163506Z",
+      "attempts": 274,
+      "gate1_passes": 0,
+      "too_few_trades": 0,
+      "peak_cgroup_anon_bytes": null,
+      "peak_memory_current_bytes": null,
+      "instruments": {
+        "NSXUSD": {
+          "families": {
+            "gold_data_break": [],
+            "nas_preopen_break": []
+          },
+          "overall_best10": [],
+          "threshold_counts_trades_ge_300": {
+            "0.05": 0,
+            "0.001": 0,
+            "0.0001": 0
+          }
+        },
+        "XAUUSD": {
+          "families": {
+            "gold_data_break": [],
+            "nas_preopen_break": []
+          },
+          "overall_best10": [],
+          "threshold_counts_trades_ge_300": {
+            "0.05": 0,
+            "0.001": 0,
+            "0.0001": 0
+          }
+        }
+      }
+    },
+    "15m_b": {
+      "run_id": "20261011T163822Z",
+      "attempts": 274,
+      "gate1_passes": 0,
+      "too_few_trades": 0,
+      "peak_cgroup_anon_bytes": null,
+      "peak_memory_current_bytes": null,
+      "instruments": {
+        "NSXUSD": {
+          "families": {
+            "gold_data_break": [],
+            "nas_preopen_break": []
+          },
+          "overall_best10": [],
+          "threshold_counts_trades_ge_300": {
+            "0.05": 0,
+            "0.001": 0,
+            "0.0001": 0
+          }
+        },
+        "XAUUSD": {
+          "families": {
+            "gold_data_break": [],
+            "nas_preopen_break": []
+          },
+          "overall_best10": [],
+          "threshold_counts_trades_ge_300": {
+            "0.05": 0,
+            "0.001": 0,
+            "0.0001": 0
+          }
+        }
+      }
+    },
+    "5m_b": {
+      "run_id": "20261011T164952Z",
+      "attempts": 274,
+      "gate1_passes": 0,
+      "too_few_trades": 0,
+      "peak_cgroup_anon_bytes": null,
+      "peak_memory_current_bytes": null,
+      "instruments": {
+        "NSXUSD": {
+          "families": {
+            "gold_data_break": [],
+            "nas_preopen_break": []
+          },
+          "overall_best10": [],
+          "threshold_counts_trades_ge_300": {
+            "0.05": 0,
+            "0.001": 0,
+            "0.0001": 0
+          }
+        },
+        "XAUUSD": {
+          "families": {
+            "gold_data_break": [],
+            "nas_preopen_break": []
+          },
+          "overall_best10": [],
+          "threshold_counts_trades_ge_300": {
+            "0.05": 0,
+            "0.001": 0,
+            "0.0001": 0
+          }
+        }
+      }
+    }
+  },
+  "notes": {
+    "source": "Pod Round B sequential seeds-only runs on image 05f0bcd5fd163501fceb01c49eb73c00d291d62b. All three completed with 274 attempts (135 NSXUSD, 139 XAUUSD), 0 Gate 1 passes and 0 survivors. Peak memory fields are null because watcher logs were not retained in the local checkout; progress completed normally and no 12 GB stop fired. Detailed attempt rows remain in Pod result files results_*_b.json.",
+    "memory_current_final_bytes": {
+      "5m_b": 2772815872
+    },
+    "run_status": "completed",
+    "no_broker_orders": true
+  }
+}
