@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 344,
+  "turn": "claude",
+  "revision": 345,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Round C: code and 228 seeds merged. T-133 (read-only history studies) can run now on the current Pod image; T-134 (lab runs) needs image 72e63f010f150a61a52c4a150f5b97b5bd8be748 which the owner must deploy (Q-051; Codex's redeploy attempt was 403). D-032: 8-hour work authorization; 15-minute handoff check running. Gates unchanged. No live trading; demo only.",
+    "summary": "Round C: code and 228 seeds merged. T-133 read-only history studies completed on the current paper-mode Pod image; T-134 lab runs need image 72e63f010f150a61a52c4a150f5b97b5bd8be748 which the owner must deploy (Q-051). D-032: 8-hour work authorization; 15-minute handoff check running. Gates unchanged. No live trading; demo only.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4355,7 +4355,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4375,8 +4375,13 @@
         "docs/evidence/round_c_ostdv_events.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/round_c_ostdv_stats.json",
+        "docs/evidence/round_c_ostdv_events.json",
+        "docs/evidence/round_c_ostdv_events.md",
+        "V-330"
+      ],
+      "completion_note": "Completed the two approved read-only history studies on the current Pod image 10dcd5e02cf0af2af7d7e61dc9079776b5566b01 in paper mode with live trading disabled. Verified no run.lock and no lab process before starting; no lab runs or broker orders were started. ostdv_stats.py wrote docs/evidence/round_c_ostdv_stats.json for NSXUSD (4019 days) and XAUUSD (4460 days). ostdv_events.py wrote docs/evidence/round_c_ostdv_events.json and .md for NSXUSD (57992 events) and XAUUSD (51049 events)."
     },
     {
       "id": "T-134",
@@ -11316,6 +11321,26 @@
       "validated_by": "codex",
       "date": "2026-10-12",
       "reverify_if": "After owner redeploys the authoritative required image"
+    },
+    {
+      "id": "V-330",
+      "subject": "T-133 read-only history studies",
+      "method": "Verified no run.lock and no lab process, then ran scripts/ostdv_stats.py and scripts/ostdv_events.py with their default training lake and holdout paths on the current Pod image. Pulled the three evidence files and compared SHA-256 hashes.",
+      "result": "pass",
+      "evidence": {
+        "image": "10dcd5e02cf0af2af7d7e61dc9079776b5566b01",
+        "mode": "paper",
+        "live_enabled": false,
+        "run_lock": "absent",
+        "lab_process": "none",
+        "stats_sha256": "0db03ff690bb2c711d482dc253e9bb4b7a4d0d315878ffa718c2355cb584114c",
+        "events_sha256": "d9d69157e76ca863298d618fc3ac75c255b67f8557d5d2c94697cbadb81bc715",
+        "events_markdown_sha256": "780f938234b0581f7cfce8a5b1727ae3e9797a90ae7a5faac74cc38e54144323"
+      },
+      "review_notes": "Both read-only studies completed without starting any lab run; T-134 remains separate and still requires the owner-deployed 72e63f image.",
+      "validated_by": "codex",
+      "date": "2026-10-12",
+      "reverify_if": "After changes to the study scripts or training lake"
     }
   ],
   "blockers": [
@@ -19627,6 +19652,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted Codex rev 343 (RunPod redeploy returned 403; Pod on 10dcd5e0). Split the work so progress continues: T-133 is now only the two read-only history studies, runnable on the current image; T-134 holds the lab runs and needs the 72e63f image, which the owner must deploy (Q-051)."
+    },
+    {
+      "revision": 345,
+      "ts": "2026-10-12T02:15:00+03:00",
+      "agent": "codex",
+      "action": "complete_t133_read_only_studies",
+      "task_ids": [
+        "T-133"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/round_c_ostdv_stats.json",
+        "docs/evidence/round_c_ostdv_events.json",
+        "docs/evidence/round_c_ostdv_events.md"
+      ],
+      "summary": "Ran the two T-133 read-only history studies on the current Pod image and pulled the evidence files; no lab run or broker order was started.",
+      "validation": "V-330"
     }
   ],
   "project_summary": "T-131 completed Round A and T-132 Round B completed on image 05f0bcd5fd163501fceb01c49eb73c00d291d62b. Evidence was regenerated from the three existing Pod result/progress files after review; no new runs, broker orders or secrets."
