@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 339,
+  "turn": "codex",
+  "revision": 340,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-132 (Round B) accepted: 3 runs x 274 attempts, 0 Gate 1 passes. Stop rule reached (Round A and B both 0 passes): waiting for the owner's decision in Q-049. Gates unchanged. No live trading; demo only.",
+    "summary": "Round A and B ended with 0 Gate 1 passes. Owner decided (D-031) to run Round C (OSTDV levels + ICT concepts + candle shapes, NAS100 and gold separate) plus two read-only history studies. Waiting for the owner to redeploy the Pod image (Q-050) and prompt Codex to run T-133. Gates unchanged. No live trading; demo only.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -104,7 +104,8 @@
         "T-129",
         "T-130",
         "T-131",
-        "T-132"
+        "T-132",
+        "T-133"
       ]
     },
     {
@@ -137,7 +138,8 @@
         "T-129",
         "T-130",
         "T-131",
-        "T-132"
+        "T-132",
+        "T-133"
       ]
     },
     {
@@ -176,7 +178,8 @@
         "T-129",
         "T-130",
         "T-131",
-        "T-132"
+        "T-132",
+        "T-133"
       ]
     },
     {
@@ -4342,6 +4345,39 @@
         "V-326"
       ],
       "completion_note": "Round B completed on owner-confirmed image 05f0bcd5fd163501fceb01c49eb73c00d291d62b in paper mode with live trading disabled. Three sequential seeds-only runs completed normally: 60m run_id=20261011T163506Z, 15m run_id=20261011T163822Z, 5m run_id=20261011T164952Z; each produced 274 attempts (135 NSXUSD, 139 XAUUSD), 0 survivors and 0 Gate 1 passes. Regenerated docs/evidence/t132_round_b_summary.json from the existing Pod result and progress files without new runs: too_few_trades=61/18/18; peak memory.current=1,021,702,144/2,716,680,192/5,073,879,040 bytes; peak cgroup anon=856,244,224/2,529,869,824/2,762,899,456 bytes; per-family best-3 rows, overall best-10 rows ranked by diagnostic weekly mean PnL, threshold counts and per-instrument trades>=300 counts are included. No run.lock or 12 GB stop fired; no broker order or secret access occurred."
+    },
+    {
+      "id": "T-133",
+      "title": "Round C run: OSTDV levels and ICT concepts, plus two read-only history studies",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-132"
+      ],
+      "acceptance_criteria": [
+        "Why: D-031. Round C = 172 new seeds per market and timeframe (families ostdv_sweep, ostdv_ote, ostdv_fade, ostdv_break, ict_sweep_fvg, ict_structure_shift, candle_at_level; see docs/specs/round_c_ict_ostdv.md) plus two read-only studies the owner asked for: zone statistics and a level event study (what repeats when price reaches an OSTDV level, retrace vs continue, with placebo levels). Image: ghcr.io/tarek-assaf/ai-trader:10dcd5e02cf0af2af7d7e61dc9079776b5566b01 (full 40-character SHA; copy and paste it).",
+        "IMAGE: Codex cannot change the Pod image itself. Before starting, check the running image; if it is not the SHA above, STOP and tell the owner in chat to redeploy (same volume), see Q-050, then continue when the owner confirms. Verify no run.lock before each run. Do NOT run 1m or 3m. Do not change code, config, gates or holdout handling.",
+        "Step 1 (read-only studies, training months only): run python scripts/ostdv_stats.py and python scripts/ostdv_events.py with the default lake and holdout paths and --out under docs/evidence/ (round_c_ostdv_stats.json, round_c_ostdv_events.json; the events script also writes round_c_ostdv_events.md). They exclude the sealed holdout months themselves. Stop and record if cgroup anon memory reaches 12 GB.",
+        "Step 2 (lab runs), sequential, once each, own results and progress files, --idea-sources round_c --max-ideas 400 --force, both instruments: (a) --timeframes 60 --years all -> results_60m_c.json / progress_60m_c.json; (b) --timeframes 15 --years all -> results_15m_c.json; (c) --timeframes 5 -> results_5m_c.json. Detached run (nohup) with the stop file and a memory watchdog (stop and record at 12 GB cgroup anon).",
+        "Write ONE compact evidence file docs/evidence/t133_round_c_summary.json (UTF-8, no Pod URL, host or secret, null never 0 for missing data): per run: run id, attempts, Gate 1 passes, too_few_trades, peak cgroup anon and memory.current; per instrument per family the best 3 by lowest diag_mean_pnl_p_weekly among attempts with at least 300 trades (if fewer than 3 have 300 trades, the best 3 by out-of-sample profit factor, labelled) with trades, oos_trades, win_rate, gross_per_trade, cost_per_trade, oos_pf, holdout_pf, wf_windows, wf_share, regimes, backtest_drawdown_pct, neighbors, gate p_value, diag_oos_mean_pnl, diag_mean_pnl_p_trade, diag_mean_pnl_p_weekly and failure reasons (a missing field must be explained in a note, not silently null); per instrument per run the best 10 overall by the same ranking; counts of attempts with at least 300 trades whose diag_mean_pnl_p_weekly is <= 0.05, <= 0.001, <= 0.0001.",
+        "ONE log entry that points to the evidence files (do not paste rows into the log or validation), then turn=claude, then run python agent_state/validate_handoff.py --previous <copy of main>. Edit the handoff APPEND-ONLY, UTF-8 with ensure_ascii=False; do not re-encode, reorder or rewrite earlier entries; do not change current_phase (integer)."
+      ],
+      "deliverables": [
+        "docs/evidence/t133_round_c_summary.json",
+        "docs/evidence/round_c_ostdv_stats.json",
+        "docs/evidence/round_c_ostdv_events.json",
+        "docs/evidence/round_c_ostdv_events.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -4583,6 +4619,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-11T15:45:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-031",
+      "statement": "Owner 2026-10-11 (Riyadh evening, answer to Q-049): the stop rule is paused for one more round. Round C tests the OSTDV overnight-range levels from the owner's pictures and ICT concepts (sweeps, fair value gaps, structure shift, candle shapes at swept levels, kill zones in New York time) on NAS100 and gold separately, plus two read-only studies (zone statistics and a level event study with placebo levels). Gates, costs and holdout handling are unchanged. Cost calibration with real spreads (T-017/B-007) and demo incubation stay open for a later decision after Round C. Spec: docs/specs/round_c_ict_ostdv.md.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-11T19:27:00Z",
       "do_not_reopen": false
     }
   ],
@@ -11877,7 +11921,7 @@
       "id": "Q-049",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "Stop rule reached: Round A and Round B both ended with 0 Gate 1 passes (about 1,300 attempts overall; gold ideas are cost-dominated with ~0 gross per trade; best NAS100 ideas are long-only trend ideas with OOS PF up to ~1.24, likely riding the 2010-2026 bull market; even with a payoff-aware test none come close to the adjusted threshold). What next? Gates stay unchanged unless you decide otherwise.",
       "options": [
         "Incubate the best 2-3 near-misses on the demo as a forward test (Gate 2 style, demo only, no gate change)",
@@ -11886,6 +11930,19 @@
         "Pause the search and keep the system running in monitoring mode only"
       ],
       "recommendation": "Cost calibration first (cheap, may change gold and NAS cost assumptions), then incubate the best 2-3 near-misses on the demo for forward evidence. Do not loosen the gate.",
+      "answer": "Owner 2026-10-11 22:27 Riyadh: continue with ICT concepts and the OSTDV levels from his four pictures (plus candle patterns), test it, then decide. Costs and gates unchanged. At 22:47 he also asked for a read-only study of the history: why price retraces or continues at the OSTDV levels, with the repeated confirmations and counts. Orientation (22:35): the Fib follows the trade (sell: 0 = high, 1 = low; buy: 0 = low, 1 = high); 0 and 1 are manipulation/sweep levels; 0.5-0.62 is support when price is above and resistance when below."
+    },
+    {
+      "id": "Q-050",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "Round C is merged. Please redeploy the Pod with image ghcr.io/tarek-assaf/ai-trader:10dcd5e02cf0af2af7d7e61dc9079776b5566b01 using the same volume, then prompt Codex to start T-133. Codex cannot change the image itself.",
+      "options": [
+        "Redeploy the image with the same volume (recommended)",
+        "Wait"
+      ],
+      "recommendation": "Redeploy the exact image so the Round C seeds and the two read-only studies are present on the Pod.",
       "answer": null
     }
   ],
@@ -19404,6 +19461,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-132 Round B evidence (0 passes of 822 attempts, none near the adjusted significance threshold). Stop rule reached; asked the owner Q-049 for the next step.",
+      "validation": "V-327"
+    },
+    {
+      "revision": 340,
+      "ts": "2026-10-11T23:20:00+03:00",
+      "agent": "claude",
+      "action": "plan_round_c",
+      "task_ids": [
+        "T-133"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Recorded owner decision D-031 and answered Q-049. Round C code (172 seeds per market/timeframe, new indicators asia_range, ny_minute, candle shapes, threshold_range_multiple), the zone statistics and the OSTDV level event study are merged and published as the image in Q-050. Created T-133 for Codex.",
       "validation": "V-327"
     }
   ],
