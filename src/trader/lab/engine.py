@@ -119,6 +119,19 @@ def _indicator_series(
     elif indicator in {"opening_range_high", "opening_range_low"}:
         range_highs, range_lows = indicators.opening_range(bars)
         values = range_highs if indicator == "opening_range_high" else range_lows
+    elif indicator in {"asia_range_high", "asia_range_low"}:
+        asia_highs, asia_lows = indicators.asia_range(bars)
+        values = asia_highs if indicator == "asia_range_high" else asia_lows
+    elif indicator == "ny_minute":
+        values = indicators.new_york_minute(bars)
+    elif indicator in {
+        "hammer_shape",
+        "inverted_shape",
+        "bull_engulfing",
+        "bear_engulfing",
+        "doji",
+    }:
+        values = indicators.candle_shape(bars, indicator)
     elif indicator == "utc_minute":
         # Minute of the UTC day at which the bar opens (0..1439): time-of-day windows.
         values = tuple(float(bar.ts_utc.hour * 60 + bar.ts_utc.minute) for bar in bars)
@@ -282,7 +295,20 @@ def evaluate_entries(
                 )
                 if reference is None or atr_value is None:
                     break
-                threshold = reference + offset_value + atr_multiple_value * atr_value
+                range_multiple = condition.threshold_range_multiple
+                range_multiple_value = (
+                    parameter_values[range_multiple.parameter]
+                    if isinstance(range_multiple, ParameterReference)
+                    else float(range_multiple)
+                )
+                range_term = 0.0
+                if range_multiple_value != 0.0:
+                    top = cache.get("asia_range_high", None)[index]
+                    bottom = cache.get("asia_range_low", None)[index]
+                    if top is None or bottom is None:
+                        break
+                    range_term = range_multiple_value * (top - bottom)
+                threshold = reference + offset_value + atr_multiple_value * atr_value + range_term
             if not _matches(values[index], condition.operator, threshold):
                 break
         else:

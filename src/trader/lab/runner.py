@@ -39,6 +39,7 @@ from trader.lab.seeds import (
     instrument_seed_specs,
     level_seed_specs,
     round_b_seed_specs,
+    round_c_seed_specs,
     seed_specs,
     slow_seed_specs,
     swing_seed_specs,
@@ -1003,6 +1004,9 @@ class LabRunner:
                 *instrument_seed_specs(instrument, timeframe),
                 *round_b_seed_specs(instrument, timeframe),
             ):
+                result.extend((f"seed:{seed.name}", variant) for variant in tune_variants(spec))
+        if "round_c" in sources or "all" in sources:
+            for seed, spec in round_c_seed_specs(instrument, timeframe):
                 result.extend((f"seed:{seed.name}", variant) for variant in tune_variants(spec))
         if ("patterns" in sources or "pattern" in sources or "all" in sources) and candles:
             mined = PatternMiner(

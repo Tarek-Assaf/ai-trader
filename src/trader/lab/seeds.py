@@ -8,6 +8,7 @@ source supplied by an idea provider.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from trader.lab.spec import (
@@ -1004,10 +1005,251 @@ def round_b_seed_specs(
     return tuple(result)
 
 
+# --- Round C: overnight-range level ideas (OSTDV) and ICT concepts -----------
+#
+# OSTDV levels are multiples of the overnight (Asia) range, 18:45-22:03 New
+# York time.  A level "k ranges beyond the Asia high" is the high plus k times
+# the range width; the Fibonacci numbers on the owner's chart map to k as
+# follows: 0 and 1 are the range edges, -0.5/1.5 -> k 0.5, -1/2 -> k 1,
+# -1.5/2.5 -> k 1.5, -2/3 -> k 2 (micro SMR starts), -2.272/3.272 -> k 2.272,
+# -3/4 -> k 3 (SMR).  The set is fixed up front to keep multiple testing small.
+ROUND_C_EXITS = ROUND_B_EXITS
+OSTDV_SWEEP_DEPTHS = (0.0, 0.1111)
+OSTDV_FADE_LEVELS = (0.5, 1.0, 1.5, 2.0, 2.272, 3.0)
+OSTDV_BREAK_LEVELS = (0.5, 1.0)
+# Windows in New York clock minutes: all day, London and New York kill zones.
+ROUND_C_WINDOWS: tuple[tuple[str, tuple[int, int] | None], ...] = (
+    ("any", None),
+    ("london", (120, 300)),
+    ("newyork", (420, 600)),
+)
+ICT_CANDLE_SHAPES = {
+    "long": (
+        ("hammer", "hammer_shape"),
+        ("invhammer", "inverted_shape"),
+        ("bullengulf", "bull_engulfing"),
+    ),
+    "short": (
+        ("hangingman", "hammer_shape"),
+        ("shootingstar", "inverted_shape"),
+        ("bearengulf", "bear_engulfing"),
+    ),
+}
+
+
+def _ny_window(window: tuple[int, int] | None) -> tuple[IndicatorCondition, ...]:
+    if window is None:
+        return ()
+    return (
+        IndicatorCondition(indicator="ny_minute", operator="gte", threshold=float(window[0])),
+        IndicatorCondition(indicator="ny_minute", operator="lt", threshold=float(window[1])),
+    )
+
+
+def _asia_level(long_side: bool, depth: float) -> dict[str, object]:
+    """Threshold fields for a level ``depth`` ranges beyond the Asia low (long) or high."""
+    return {
+        "threshold": 0.0,
+        "threshold_indicator": "asia_range_low" if long_side else "asia_range_high",
+        "threshold_range_multiple": -depth if long_side else depth,
+    }
+
+
+def _round_c_spec(
+    instrument: str,
+    timeframe: int,
+    direction: str,
+    conditions: Sequence[IndicatorCondition],
+    stop: float,
+    target: float,
+) -> StrategySpec:
+    return StrategySpec(
+        schema_version=1,
+        instrument=instrument,
+        direction=direction,  # type: ignore[arg-type]
+        timeframe_minutes=timeframe,  # type: ignore[arg-type]
+        entry_conditions=tuple(conditions),
+        exit_rules=(
+            StopExit(kind="stop", distance=stop, unit="atr"),
+            TargetExit(kind="target", distance=target, unit="atr"),
+            TimeStopExit(kind="time_stop", bars=_bars(36, timeframe)),
+        ),
+    )
+
+
+def round_c_seed_specs(
+    instrument: str, timeframe: int
+) -> tuple[tuple[SeedStrategy, StrategySpec], ...]:
+    """Return the Round C ideas (same families for every instrument)."""
+    result: list[tuple[SeedStrategy, StrategySpec]] = []
+
+    def add(family: str, name: str, spec: StrategySpec) -> None:
+        result.append((SeedStrategy(name, family, family), spec))
+
+    for direction in ("long", "short"):
+        long_side = direction == "long"
+        poke = "low" if long_side else "high"
+        for stop, target in ROUND_C_EXITS:
+            tag = f"{direction}_{stop:g}_{target:g}"
+            # 1. Sweep of the Asia edge, then a close back inside the range.
+            for depth in OSTDV_SWEEP_DEPTHS:
+                for window_name, window in ROUND_C_WINDOWS:
+                    conditions = [
+                        *_ny_window(window),
+                        IndicatorCondition(
+                            indicator=poke,  # type: ignore[arg-type]
+                            operator="lt" if long_side else "gt",
+                            **_asia_level(long_side, depth),  # type: ignore[arg-type]
+                        ),
+                        IndicatorCondition(
+                            indicator="close",
+                            operator="gt" if long_side else "lt",
+                            **_asia_level(long_side, 0.0),  # type: ignore[arg-type]
+                        ),
+                    ]
+                    add(
+                        "ostdv_sweep",
+                        f"ostdv_sweep_{depth:g}_{window_name}_{tag}",
+                        _round_c_spec(instrument, timeframe, direction, conditions, stop, target),
+                    )
+            # 2. Fade a deeper level: poke through it, close back on the near side.
+            for depth in OSTDV_FADE_LEVELS:
+                conditions = [
+                    IndicatorCondition(
+                        indicator=poke,  # type: ignore[arg-type]
+                        operator="lt" if long_side else "gt",
+                        **_asia_level(long_side, depth),  # type: ignore[arg-type]
+                    ),
+                    IndicatorCondition(
+                        indicator="close",
+                        operator="gt" if long_side else "lt",
+                        **_asia_level(long_side, depth),  # type: ignore[arg-type]
+                    ),
+                ]
+                add(
+                    "ostdv_fade",
+                    f"ostdv_fade_{depth:g}_{tag}",
+                    _round_c_spec(instrument, timeframe, direction, conditions, stop, target),
+                )
+            # 3. Break and go: a bar that opens inside and closes beyond the level.
+            for depth in OSTDV_BREAK_LEVELS:
+                # Long breaks above the Asia high + depth ranges (short mirrors it below).
+                conditions = [
+                    IndicatorCondition(
+                        indicator="open",
+                        operator="lte" if long_side else "gte",
+                        **_asia_level(not long_side, depth),  # type: ignore[arg-type]
+                    ),
+                    IndicatorCondition(
+                        indicator="close",
+                        operator="gt" if long_side else "lt",
+                        **_asia_level(not long_side, depth),  # type: ignore[arg-type]
+                    ),
+                ]
+                add(
+                    "ostdv_break",
+                    f"ostdv_break_{depth:g}_{tag}",
+                    _round_c_spec(instrument, timeframe, direction, conditions, stop, target),
+                )
+            # 4. ICT: sweep of liquidity, then a fair value gap, then a close back.
+            sweep_bars = _bars(12, timeframe)
+            for level_name in ("asia", "prior_day"):
+                level_fields: dict[str, object]
+                if level_name == "asia":
+                    level_fields = _asia_level(long_side, 0.0)
+                else:
+                    level_fields = {
+                        "threshold": 0.0,
+                        "threshold_indicator": "prior_day_low" if long_side else "prior_day_high",
+                    }
+                for window_name, window in ROUND_C_WINDOWS:
+                    conditions = [
+                        *_ny_window(window),
+                        IndicatorCondition(
+                            indicator="rolling_low" if long_side else "rolling_high",
+                            period=sweep_bars,
+                            operator="lt" if long_side else "gt",
+                            **level_fields,  # type: ignore[arg-type]
+                        ),
+                        # Fair value gap: this bar's low is above the high two bars ago.
+                        IndicatorCondition(
+                            indicator="low" if long_side else "high",
+                            operator="gt" if long_side else "lt",
+                            threshold=0.0,
+                            threshold_indicator="high" if long_side else "low",
+                            threshold_lookback=2,
+                        ),
+                        IndicatorCondition(
+                            indicator="close",
+                            operator="gt" if long_side else "lt",
+                            **level_fields,  # type: ignore[arg-type]
+                        ),
+                    ]
+                    add(
+                        "ict_sweep_fvg",
+                        f"ict_sweep_fvg_{level_name}_{window_name}_{tag}",
+                        _round_c_spec(instrument, timeframe, direction, conditions, stop, target),
+                    )
+                # 5. Candle shapes at a swept level (hammer, engulfing, ...).
+                for shape_name, shape in ICT_CANDLE_SHAPES[direction]:
+                    for window_name, window in ROUND_C_WINDOWS:
+                        conditions = [
+                            *_ny_window(window),
+                            IndicatorCondition(
+                                indicator=shape,  # type: ignore[arg-type]
+                                operator="eq",
+                                threshold=1.0,
+                            ),
+                            IndicatorCondition(
+                                indicator=poke,  # type: ignore[arg-type]
+                                operator="lt" if long_side else "gt",
+                                **level_fields,  # type: ignore[arg-type]
+                            ),
+                            IndicatorCondition(
+                                indicator="close",
+                                operator="gt" if long_side else "lt",
+                                **level_fields,  # type: ignore[arg-type]
+                            ),
+                        ]
+                        add(
+                            "candle_at_level",
+                            f"candle_{shape_name}_{level_name}_{window_name}_{tag}",
+                            _round_c_spec(
+                                instrument, timeframe, direction, conditions, stop, target
+                            ),
+                        )
+            # 6. ICT structure shift after a sweep of the Asia edge (kill zones only).
+            for window_name, window in ROUND_C_WINDOWS[1:]:
+                conditions = [
+                    *_ny_window(window),
+                    IndicatorCondition(
+                        indicator="rolling_low" if long_side else "rolling_high",
+                        period=sweep_bars,
+                        operator="lt" if long_side else "gt",
+                        **_asia_level(long_side, 0.0),  # type: ignore[arg-type]
+                    ),
+                    IndicatorCondition(
+                        indicator="close",
+                        operator="gt" if long_side else "lt",
+                        threshold=0.0,
+                        threshold_indicator="rolling_high" if long_side else "rolling_low",
+                        threshold_period=_bars(6, timeframe),
+                        threshold_lookback=1,
+                    ),
+                ]
+                add(
+                    "ict_structure_shift",
+                    f"ict_structure_shift_{window_name}_{tag}",
+                    _round_c_spec(instrument, timeframe, direction, conditions, stop, target),
+                )
+    return tuple(result)
+
+
 __all__ = [
     "SEED_LIBRARY",
     "SLOW_CHANNELS",
     "SeedStrategy",
+    "round_c_seed_specs",
     "seed_library",
     "instrument_seed_specs",
     "seed_specs",

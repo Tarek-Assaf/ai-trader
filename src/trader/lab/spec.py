@@ -31,6 +31,14 @@ IndicatorName = Literal[
     "opening_range_high",
     "opening_range_low",
     "utc_minute",
+    "ny_minute",
+    "asia_range_high",
+    "asia_range_low",
+    "hammer_shape",
+    "inverted_shape",
+    "bull_engulfing",
+    "bear_engulfing",
+    "doji",
 ]
 Comparison = Literal["gt", "gte", "lt", "lte", "eq", "ne"]
 SessionName = Literal["asia", "london", "new_york", "closed"]
@@ -70,6 +78,10 @@ class IndicatorCondition(StrictModel):
     threshold_offset: FiniteFloat | ParameterReference = 0.0
     threshold_atr_multiple: FiniteFloat | ParameterReference = 0.0
     threshold_atr_period: int = Field(default=14, ge=1, le=10_000)
+    # Adds this many widths of the overnight (Asia) range to the reference, so
+    # a level "1.5 ranges above the Asia high" is declared as
+    # threshold_indicator="asia_range_high", threshold_range_multiple=1.5.
+    threshold_range_multiple: FiniteFloat | ParameterReference = 0.0
 
     @model_validator(mode="after")
     def validate_indicator_parameters(self) -> IndicatorCondition:
@@ -102,6 +114,11 @@ class IndicatorCondition(StrictModel):
                 raise ValueError("threshold reference fields require threshold_indicator")
         elif reference_needs_period != (self.threshold_period is not None):
             raise ValueError("threshold indicator period is invalid")
+        if self.threshold_range_multiple != 0.0 and self.threshold_indicator not in {
+            "asia_range_high",
+            "asia_range_low",
+        }:
+            raise ValueError("threshold_range_multiple needs an Asia range reference")
         return self
 
 
