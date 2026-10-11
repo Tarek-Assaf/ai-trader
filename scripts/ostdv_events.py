@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 from trader.lab.ostdv_events import level_events, summarise_events
-from trader.lab.runner import INSTRUMENTS, load_histdata_candles
+from trader.lab.runner import INSTRUMENTS, holdout_months, load_histdata_candles
 
 
 def _markdown(report: dict[str, object]) -> str:
@@ -40,12 +40,15 @@ def _markdown(report: dict[str, object]) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description="What repeats when price reaches an OSTDV level")
     parser.add_argument("--lake", type=Path, default=Path("/workspace/data/lake"))
+    parser.add_argument("--holdout", type=Path, default=Path("/workspace/data/holdout"))
     parser.add_argument("--out", type=Path, default=Path("docs/evidence/round_c_ostdv_events.json"))
     parser.add_argument("--instruments", nargs="+", default=list(INSTRUMENTS))
     args = parser.parse_args()
+    # The lake still holds the sealed months; only their names are read here, never their data.
+    sealed = holdout_months(args.holdout, args.instruments)
     report: dict[str, object] = {}
     for instrument in args.instruments:
-        candles = load_histdata_candles(args.lake, instrument, 1)
+        candles = load_histdata_candles(args.lake, instrument, 5, exclude_months=sealed)
         report[instrument] = summarise_events(level_events(candles))
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=1) + "\n", encoding="utf-8")
