@@ -190,3 +190,14 @@ def test_range_unit_exits_use_the_asia_range_width_at_signal_time() -> None:
     trade = result.trades[0]
     assert trade.exit_reason == "target"
     assert abs((trade.exit_price - trade.entry_price) - 10.0) < 1e-6
+
+
+def test_zone_statistics_accept_other_range_windows() -> None:
+    from datetime import time
+
+    bars = _evening(datetime(2026, 1, 12))
+    bars.append(_bar(datetime(2026, 1, 13, 4, 0, tzinfo=NY), 105, 135.0, 70.0, 105))
+    default = ostdv_days(bars)
+    assert len(default) == 1
+    # A window that holds no bars yields no usable days.
+    assert ostdv_days(bars, window_start=time(2, 0), window_end=time(3, 0)) == ()

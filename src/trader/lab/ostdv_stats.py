@@ -51,8 +51,21 @@ class OstdvDay:
     low_extension: float
 
 
-def ostdv_days(candles: Sequence[Candle], *, min_width: float = 0.0) -> tuple[OstdvDay, ...]:
-    """One row per trading day that has a usable Asia range (width > ``min_width``)."""
+def ostdv_days(
+    candles: Sequence[Candle],
+    *,
+    min_width: float = 0.0,
+    window_start: time = _ASIA_START,
+    window_end: time = _ASIA_END,
+) -> tuple[OstdvDay, ...]:
+    """One row per trading day that has a usable range (width > ``min_width``).
+
+    The range window defaults to the owner's 18:45-22:03 New York time; other windows
+    (for example the ICT Asia range 20:00-24:00) can be passed for a sensitivity check.
+    ``window_end`` of 00:00 means midnight at the end of the day.
+    """
+    end_minute = window_end.hour * 60 + window_end.minute or 24 * 60
+    start_minute = window_start.hour * 60 + window_start.minute
     asia: dict[date, list[float]] = {}
     extremes: dict[date, list[float]] = {}
     for candle in candles:
@@ -65,7 +78,8 @@ def ostdv_days(candles: Sequence[Candle], *, min_width: float = 0.0) -> tuple[Os
         else:
             known[0] = max(known[0], candle.high)
             known[1] = min(known[1], candle.low)
-        if _ASIA_START <= local.time() < _ASIA_END:
+        minute = local.hour * 60 + local.minute
+        if start_minute <= minute < end_minute:
             window = asia.get(day)
             if window is None:
                 asia[day] = [candle.high, candle.low]
