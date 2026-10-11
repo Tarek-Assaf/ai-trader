@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime, time
+from datetime import UTC, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from trader.data.resample import Candle
@@ -402,3 +402,106 @@ def opening_range(
             highs[index] = range_high
             lows[index] = range_low
     return tuple(highs), tuple(lows)
+
+
+_ASIA_START = time(18, 45)
+_ASIA_END = time(22, 3)
+
+
+def asia_range(
+    candles: Sequence[Candle],
+) -> tuple[tuple[float | None, ...], tuple[float | None, ...]]:
+    """High and low of the overnight (Asia) window, 18:45-22:03 New York time.
+
+    The range forms from bars that open inside the window and becomes visible
+    only once the window has ended.  It then stays in force until the next
+    window starts at 18:45 New York time, so a bar never sees a range that is
+    still forming.  New York clock time is used, so US daylight saving moves
+    the UTC hours automatically.
+    """
+    ranges: dict[object, tuple[float, float]] = {}
+    highs: list[float | None] = [None] * len(candles)
+    lows: list[float | None] = [None] * len(candles)
+    for index, candle in enumerate(candles):
+        local = candle.ts_utc.astimezone(_NEW_YORK)
+        clock = local.time()
+        day = local.date()
+        if _ASIA_START <= clock < _ASIA_END:
+            known = ranges.get(day)
+            ranges[day] = (
+                (candle.high, candle.low)
+                if known is None
+                else (max(known[0], candle.high), min(known[1], candle.low))
+            )
+            continue
+        if clock >= _ASIA_END:
+            source = ranges.get(day)
+        elif clock < _ASIA_START:
+            source = ranges.get(day - timedelta(days=1))
+        else:  # pragma: no cover - the window branch above handles this
+            source = None
+        if source is not None:
+            highs[index], lows[index] = source
+    return tuple(highs), tuple(lows)
+
+
+def new_york_minute(candles: Sequence[Candle]) -> tuple[float, ...]:
+    """Minute of the New York day (0..1439) at which each bar opens."""
+    values: list[float] = []
+    for candle in candles:
+        local = candle.ts_utc.astimezone(_NEW_YORK)
+        values.append(float(local.hour * 60 + local.minute))
+    return tuple(values)
+
+
+def candle_shape(candles: Sequence[Candle], name: str) -> tuple[float | None, ...]:
+    """1.0 when a bar has the named shape, else 0.0 (None until ATR exists).
+
+    Shapes (all require a range of at least half an ATR(14) so noise is ignored):
+    hammer_shape: lower wick >= 2x body and upper wick <= 10% of the range.
+    inverted_shape: upper wick >= 2x body and lower wick <= 10% of the range.
+    bull_engulfing: bullish body covers the previous bearish body and is larger.
+    bear_engulfing: bearish body covers the previous bullish body and is larger.
+    doji: body <= 10% of the range.
+    """
+    average = atr(candles, 14)
+    values: list[float | None] = []
+    for index, candle in enumerate(candles):
+        size = average[index]
+        if size is None:
+            values.append(None)
+            continue
+        span = candle.high - candle.low
+        body = abs(candle.close - candle.open)
+        upper = candle.high - max(candle.open, candle.close)
+        lower = min(candle.open, candle.close) - candle.low
+        big_enough = span >= 0.5 * size
+        hit = False
+        if big_enough and span > 0:
+            if name == "hammer_shape":
+                hit = lower >= 2 * body and upper <= 0.1 * span
+            elif name == "inverted_shape":
+                hit = upper >= 2 * body and lower <= 0.1 * span
+            elif name == "doji":
+                hit = body <= 0.1 * span
+            elif name in {"bull_engulfing", "bear_engulfing"} and index > 0:
+                before = candles[index - 1]
+                before_body = abs(before.close - before.open)
+                if name == "bull_engulfing":
+                    hit = (
+                        before.close < before.open
+                        and candle.close > candle.open
+                        and candle.open <= before.close
+                        and candle.close >= before.open
+                        and body > before_body
+                    )
+                else:
+                    hit = (
+                        before.close > before.open
+                        and candle.close < candle.open
+                        and candle.open >= before.close
+                        and candle.close <= before.open
+                        and body > before_body
+                    )
+        values.append(1.0 if hit else 0.0)
+    return tuple(values)
