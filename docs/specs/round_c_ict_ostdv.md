@@ -12,8 +12,10 @@ are reported separately.
 - A level "k ranges beyond the Asia edge" = edge +/- k x (Asia high - Asia low). Owner chart mapping:
   0/1 edges, -0.5/1.5 -> k 0.5 (retracement), -1/2 -> 1 (SB), -1.5/2.5 -> 1.5 (LV), -2..-2.5 / 3..3.5 ->
   k 2..2.5 (micro SMR, centre 2.272), -3/4 -> 3 (SMR), -3.5..-4 / 4.5..5 -> 3.5..4 (extremes).
-  Which end is 0 on the owner's chart is unconfirmed; every level is symmetric about the range, so this
-  only matters for the OTE zone (0.5-0.62), which is not traded in this round.
+  Orientation (owner, 2026-10-11): the Fib follows the trade. For a sell, 0 is the Asia high and 1 the Asia
+  low; for a buy, 0 is the Asia low and 1 the Asia high. 0 and 1 are the manipulation/sweep levels. The
+  OTE zone 0.5-0.62 is support when price is above it and resistance when price is below it, measured from
+  the trade's own 0 edge (buy zone: low + 0.5..0.62 ranges; sell zone: high - 0.62..0.5 ranges).
 - Kill zones (New York clock): London 02:00-05:00, New York 07:00-10:00.
 - Candle shapes (range >= half an ATR(14) so noise is ignored): hammer shape (lower wick >= 2x body, upper
   wick <= 10% of range), inverted shape (mirror), bullish/bearish engulfing (body covers the previous
@@ -26,10 +28,12 @@ and per year, how often the day's high and the day's low fall in each OSTDV zone
 neighbouring bands, and (micro SMR) among days that reached k=2. Tests the claim "70-80% of day highs/lows
 form at the micro SMR". Training lake only; never the holdout.
 
-## Part 2: 160 strategies per market and timeframe (`--idea-sources round_c`)
+## Part 2: 172 strategies per market and timeframe (`--idea-sources round_c`)
 - ostdv_sweep (24): poke 0 or 0.1111 ranges beyond the Asia edge, close back inside; any time / London /
   New York window.
 - ostdv_fade (24): poke through level k (0.5, 1, 1.5, 2, 2.272, 3) and close back on the near side.
+- ostdv_ote (12): price dips into the buy zone from above (low <= zone top, close above it) or rises into the
+  sell zone from below (high >= zone bottom, close below it); any time / London / New York.
 - ostdv_break (8): bar opens at/inside and closes beyond Asia edge +/- 0.5 or 1 ranges, trade with it.
 - ict_sweep_fvg (24): liquidity (Asia edge or prior-day high/low) swept within 12 five-minute-equivalent
   bars, a fair value gap forms (this bar's low above the high two bars ago, mirrored for shorts), close back

@@ -1014,6 +1014,7 @@ def round_b_seed_specs(
 # -1.5/2.5 -> k 1.5, -2/3 -> k 2 (micro SMR starts), -2.272/3.272 -> k 2.272,
 # -3/4 -> k 3 (SMR).  The set is fixed up front to keep multiple testing small.
 ROUND_C_EXITS = ROUND_B_EXITS
+OTE_EDGE = 0.62  # outer edge of the 0.5-0.62 support/resistance zone
 OSTDV_SWEEP_DEPTHS = (0.0, 0.1111)
 OSTDV_FADE_LEVELS = (0.5, 1.0, 1.5, 2.0, 2.272, 3.0)
 OSTDV_BREAK_LEVELS = (0.5, 1.0)
@@ -1218,6 +1219,35 @@ def round_c_seed_specs(
                                 instrument, timeframe, direction, conditions, stop, target
                             ),
                         )
+            # 7. OTE zone (0.5-0.62 of the range, measured from the trade's own 0 edge)
+            # acts as support from above (buy) and resistance from below (sell).
+            for window_name, window in ROUND_C_WINDOWS:
+                if long_side:  # 0 = Asia low: zone is low + 0.5..0.62 ranges, price above it
+                    reference, edge = "asia_range_low", OTE_EDGE
+                else:  # 0 = Asia high: zone is high - 0.62..0.5 ranges, price below it
+                    reference, edge = "asia_range_high", -OTE_EDGE
+                conditions = [
+                    *_ny_window(window),
+                    IndicatorCondition(
+                        indicator="low" if long_side else "high",
+                        operator="lt" if long_side else "gt",
+                        threshold=0.0,
+                        threshold_indicator=reference,  # type: ignore[arg-type]
+                        threshold_range_multiple=edge,
+                    ),
+                    IndicatorCondition(
+                        indicator="close",
+                        operator="gt" if long_side else "lt",
+                        threshold=0.0,
+                        threshold_indicator=reference,  # type: ignore[arg-type]
+                        threshold_range_multiple=edge,
+                    ),
+                ]
+                add(
+                    "ostdv_ote",
+                    f"ostdv_ote_{window_name}_{tag}",
+                    _round_c_spec(instrument, timeframe, direction, conditions, stop, target),
+                )
             # 6. ICT structure shift after a sweep of the Asia edge (kill zones only).
             for window_name, window in ROUND_C_WINDOWS[1:]:
                 conditions = [

@@ -108,12 +108,13 @@ def test_seed_library_is_valid_unique_and_within_limits() -> None:
         for timeframe in (1, 3, 5, 15, 60):
             seeds = round_c_seed_specs(instrument, timeframe)
             names = [seed.name for seed, _ in seeds]
-            assert len(names) == len(set(names)) == 160
+            assert len(names) == len(set(names)) == 172
             for _, spec in seeds:
                 assert len(spec.entry_conditions) <= limits.max_conditions_per_strategy
     families = {seed.source for seed, _ in round_c_seed_specs("XAUUSD", 5)}
     assert families == {
         "ostdv_sweep",
+        "ostdv_ote",
         "ostdv_fade",
         "ostdv_break",
         "ict_sweep_fvg",
@@ -149,3 +150,19 @@ def test_zone_statistics_measure_extension_in_range_widths() -> None:
     assert summary["days"] == 1
     high = summary["high"]["overall"]["share_in_zone"]  # type: ignore[index]
     assert high["micro_smr_2.0_2.5"] == 1.0
+
+
+def test_ote_zone_is_support_from_above_and_resistance_from_below() -> None:
+    bars = _evening(datetime(2026, 1, 12))  # Asia range 100..110, width 10
+    morning = datetime(2026, 1, 13, 3, 0, tzinfo=NY)
+    # Buy zone: low + 0.5..0.62 ranges = 105..106.2.  Dips to 105.5, closes above at 107.
+    bars.append(_bar(morning, 108, 108.5, 105.5, 107.0))
+    # Sell zone: high - 0.62..0.5 ranges = 103.8..105.  Rises to 104.5, closes below at 103.
+    bars.append(_bar(morning + timedelta(minutes=1), 102, 104.5, 101.5, 103.0))
+    specs = {seed.name: spec for seed, spec in round_c_seed_specs("NSXUSD", 1)}
+    long_hits = evaluate_entries(specs["ostdv_ote_any_long_1.5_3"], bars)
+    short_hits = evaluate_entries(specs["ostdv_ote_any_short_1.5_3"], bars)
+    assert [s.timestamp_utc for s in long_hits] == [morning.astimezone(UTC)]
+    assert [s.timestamp_utc for s in short_hits] == [
+        (morning + timedelta(minutes=1)).astimezone(UTC)
+    ]
