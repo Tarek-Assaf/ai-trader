@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 349,
+  "turn": "codex",
+  "revision": 350,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-135 3m Round C completed (424 attempts, 0 Gate 1 passes) with 40-trial baseline; NSXUSD 1m hit the mandated 12 GB cgroup anon ceiling before result emission, so no retry/chunking was attempted and T-135 is handed to Claude for review/chunking spec. No code/config/gate/holdout changes or broker orders.",
+    "summary": "T-134 and the 3m part of T-135 accepted: no Gate 1 pass on 60m/15m/5m/3m, and the best ideas are about equal to random entries per trade. 1m is next (T-136) with the new batched evaluation (PR #203). Demo only; no gate changed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -107,7 +107,8 @@
         "T-132",
         "T-133",
         "T-134",
-        "T-135"
+        "T-135",
+        "T-136"
       ]
     },
     {
@@ -143,7 +144,8 @@
         "T-132",
         "T-133",
         "T-134",
-        "T-135"
+        "T-135",
+        "T-136"
       ]
     },
     {
@@ -185,7 +187,8 @@
         "T-132",
         "T-133",
         "T-134",
-        "T-135"
+        "T-135",
+        "T-136"
       ]
     },
     {
@@ -4431,7 +4434,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4449,7 +4452,7 @@
         "Write ONE compact evidence file per timeframe docs/evidence/t135_round_c_3m_summary.json and t135_round_c_1m_summary.json in the same format as docs/evidence/t134_round_c_summary.json (run id, attempts, Gate 1 passes, too_few_trades, peak memory, best 3 per family, best 10 per instrument, counts of weekly p <= 0.05/0.001/0.0001). UTF-8, no Pod URL, host or secret, null never 0 for missing data.",
         "ONE log entry that points to the evidence and a validation entry; set T-135 to review and hand the turn to claude. If the 3m part finishes much earlier than the 1m part, you may hand the turn back after 3m with 1m recorded as not started, and say so, so the owner can see the 3m result early."
       ],
-      "completion_note": "Completed T-135 Step 1 on verified image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0: 3m Round C both instruments run 20261012T103441Z, 424 attempts, 0 Gate 1 passes, 116 too_few_trades, no 1m/3m code/config/gate/holdout changes or broker orders. The 40-trial random baseline was recorded for the 3m top six rows; strategy net per trade remained negative but generally less negative than random (for example NSXUSD -3728.36 vs random mean -5856.07; XAUUSD -2704.04 vs -3545.49), while all remain below Gate 1. Step 2 started NSXUSD 1m run 20261012T113039Z and the watchdog stopped it at the 12 GB cgroup anon ceiling during evaluation/holdout transition (peak cgroup anon 14212386816, memory.current 14752727040, progress ideas_done 212/212, no atomic result file). Per the acceptance criterion no retry or chunking was attempted; XAUUSD 1m was not evaluated after the cap and the 1m baseline was not run because no 1m result file existed. Evidence summaries and explicit missing-result notes are committed for Claude review.",
+      "completion_note": "Completed T-135 Step 1 on verified image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0: 3m Round C both instruments run 20261012T103441Z, 424 attempts, 0 Gate 1 passes, 116 too_few_trades, no 1m/3m code/config/gate/holdout changes or broker orders. The 40-trial random baseline was recorded for the 3m top six rows; strategy net per trade remained negative but generally less negative than random (for example NSXUSD -3728.36 vs random mean -5856.07; XAUUSD -2704.04 vs -3545.49), while all remain below Gate 1. Step 2 started NSXUSD 1m run 20261012T113039Z and the watchdog stopped it at the 12 GB cgroup anon ceiling during evaluation/holdout transition (peak cgroup anon 14212386816, memory.current 14752727040, progress ideas_done 212/212, no atomic result file). Per the acceptance criterion no retry or chunking was attempted; XAUUSD 1m was not evaluated after the cap and the 1m baseline was not run because no 1m result file existed. Evidence summaries and explicit missing-result notes are committed for Claude review. Claude review (V-335): 3m accepted; the 1m part moved to T-136 because the 12 GB stop was correct and the fix is a code change (--evaluation-batch-size, PR #203).",
       "review_cycles": 0,
       "evidence": [
         "docs/evidence/t135_round_c_3m_summary.json",
@@ -4457,6 +4460,33 @@
         "docs/evidence/random_baseline_3m.json",
         "docs/evidence/random_baseline_1m.json"
       ]
+    },
+    {
+      "id": "T-136",
+      "title": "Round C on 1m with the batched evaluation (NSXUSD first, then XAUUSD) and baseline on the top 3",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-135"
+      ],
+      "acceptance_criteria": [
+        "Why: D-033. T-135 step 2 stopped correctly at the 12 GB cap after 212/212 NSXUSD 1m ideas. PR #203 adds --evaluation-batch-size. Required image: ghcr.io/tarek-assaf/ai-trader:5d446dabcbe523723498090559597caca7366e54 (check that GitHub shows the publish-image job succeeded for that SHA; if the tag is not published yet, wait and re-check, do not use another tag). If /health does not show that image with paper mode and live_enabled=false, redeploy it through the owner-authorized Chrome console, then re-verify.",
+        "Do not change code, config, gates or holdout handling. Training months only. Verify no run.lock before each run.",
+        "Step 1: NSXUSD 1m only: python scripts/lab_run.py --instruments NSXUSD --timeframes 1 --idea-sources round_c --max-ideas 400 --force --workers 2 --evaluation-batch-size 20 --results results_1m_c_nsx.json --progress progress_1m_c_nsx.json (same lock, stop file and 12 GB cgroup anon watchdog as T-135). If it stops at the cap again, record the phase and peak, then retry ONCE with --evaluation-batch-size 8 --workers 1 --years 4; if that also stops, hand back to Claude with the progress file.",
+        "Step 2: only after step 1 completed: the same for XAUUSD with its own results/progress files.",
+        "Step 3: random-entry baseline on each completed 1m results file: python scripts/lab_random_baseline.py --results <that file> --top 3 --trials 40 --out docs/evidence/random_baseline_1m_<nsx|xau>.json. Report strategy net per trade versus random net per trade.",
+        "ONE compact evidence file docs/evidence/t136_round_c_1m_summary.json in the format of t135_round_c_3m_summary.json (run ids, attempts, Gate 1 passes, too_few_trades, peak memory, best 3 per family, best 10 per instrument, counts of weekly p <= 0.05/0.001/0.0001, the exact years used). UTF-8, no Pod URL, host or secret, null never 0 for missing data. ONE log entry, a validation entry, set T-136 to review and hand the turn to claude."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -11475,40 +11505,55 @@
       "reverify_if": "The evidence files change or Gate 1 or the cost model changes"
     },
     {
-        "id": "V-334",
-        "subject": "T-135 Round C 3m run and 1m memory-cap handoff",
-        "method": "Verified origin/main rev348 and exact Pod image health before the run; checked no run.lock before each detached lab; read the 3m result/progress and 40-trial baseline; monitored the NSXUSD 1m run with a cgroup anon watchdog and stopped at the 12 GB ceiling; verified the XAUUSD run was stopped before evaluation after the cap; validated both compact UTF-8 evidence summaries contain no JSON nulls and no Pod URL, host or secret.",
-        "result": "pass",
-        "evidence": {
-            "image": "ghcr.io/tarek-assaf/ai-trader:0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0",
-            "health_mode": "paper",
-            "live_enabled": false,
-            "three_minute": {
-                "run_id": "20261012T103441Z",
-                "attempts": 424,
-                "gate1_passes": 0,
-                "too_few_trades": 116,
-                "peak_cgroup_anon_bytes": 3776647168,
-                "peak_memory_current_bytes": 4093616128,
-                "random_trials": 40
-            },
-            "one_minute_nsxusd": {
-                "run_id": "20261012T113039Z",
-                "status": "stopped_memory_cap",
-                "ideas_done": 212,
-                "ideas_total": 212,
-                "phase": "holdout:NSXUSD:1m",
-                "peak_cgroup_anon_bytes": 14212386816,
-                "peak_memory_current_bytes": 14752727040,
-                "result_file": "not emitted atomically"
-            },
-            "one_minute_xauusd": "not evaluated after the NSXUSD cap; no retry or chunking",
-            "broker_orders": 0
+      "id": "V-334",
+      "subject": "T-135 Round C 3m run and 1m memory-cap handoff",
+      "method": "Verified origin/main rev348 and exact Pod image health before the run; checked no run.lock before each detached lab; read the 3m result/progress and 40-trial baseline; monitored the NSXUSD 1m run with a cgroup anon watchdog and stopped at the 12 GB ceiling; verified the XAUUSD run was stopped before evaluation after the cap; validated both compact UTF-8 evidence summaries contain no JSON nulls and no Pod URL, host or secret.",
+      "result": "pass",
+      "evidence": {
+        "image": "ghcr.io/tarek-assaf/ai-trader:0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0",
+        "health_mode": "paper",
+        "live_enabled": false,
+        "three_minute": {
+          "run_id": "20261012T103441Z",
+          "attempts": 424,
+          "gate1_passes": 0,
+          "too_few_trades": 116,
+          "peak_cgroup_anon_bytes": 3776647168,
+          "peak_memory_current_bytes": 4093616128,
+          "random_trials": 40
         },
-        "review_notes": "T-135 is handed to Claude at the required 1m memory cap. The 3m baseline comparison is expressed per trade; no gate or holdout behavior changed.",
-        "validated_by": "codex",
-        "date": "2026-10-12",
-        "reverify_if": "If Claude requests a new run, chunking plan, or the evidence files change"
+        "one_minute_nsxusd": {
+          "run_id": "20261012T113039Z",
+          "status": "stopped_memory_cap",
+          "ideas_done": 212,
+          "ideas_total": 212,
+          "phase": "holdout:NSXUSD:1m",
+          "peak_cgroup_anon_bytes": 14212386816,
+          "peak_memory_current_bytes": 14752727040,
+          "result_file": "not emitted atomically"
+        },
+        "one_minute_xauusd": "not evaluated after the NSXUSD cap; no retry or chunking",
+        "broker_orders": 0
+      },
+      "review_notes": "T-135 is handed to Claude at the required 1m memory cap. The 3m baseline comparison is expressed per trade; no gate or holdout behavior changed.",
+      "validated_by": "codex",
+      "date": "2026-10-12",
+      "reverify_if": "If Claude requests a new run, chunking plan, or the evidence files change"
+    },
+    {
+      "id": "V-335",
+      "subject": "Claude review of T-135 (3m Round C, 40-trial baseline, 1m NSXUSD memory stop)",
+      "method": "Read docs/evidence/t135_round_c_3m_summary.json, random_baseline_3m.json and t135_round_c_1m_summary.json; recomputed strategy versus random net per trade; read src/trader/lab/runner.py to find where the 1m run exhausted memory; validate_handoff.py.",
+      "result": "pass",
+      "evidence": {
+        "three_minute": "424 attempts, 0 Gate 1 passes, 116 too_few_trades, peak cgroup anon 3.78 GB. Best NAS100 3m: gross about 0 per trade against cost 4.0 (profitable in 0-2 of 6 years); best gold 3m: gross about 0 against cost 1.6. Per trade, strategies are only about 0.1-1.1 points better than random entries and all lose after costs (NAS100 -2.7 vs -3.7; gold -1.6 vs -1.75).",
+        "one_minute": "NSXUSD 1m finished 212/212 ideas and then hit the 12 GB cap in the evaluation phase (peak anon 14.2 GB, no result file). Codex's stop without retry was correct per T-135. Cause: all ideas are evaluated in one pass and the evaluations accumulate in memory. Fix landed in PR #203: --evaluation-batch-size N evaluates N ideas per pass; the trial count stays the full count, so verdicts and the multiple-testing adjustment do not change (unit test added).",
+        "image_for_rerun": "ghcr.io/tarek-assaf/ai-trader:5d446dabcbe523723498090559597caca7366e54"
+      },
+      "review_notes": "No Gate 1 pass at 3m. 1m not yet evaluated; see T-136.",
+      "validated_by": "claude",
+      "date": "2026-10-12",
+      "reverify_if": "Evidence files change or Gate 1 or the cost model changes"
     }
   ],
   "blockers": [
@@ -19888,22 +19933,37 @@
       "validation": "V-333"
     },
     {
-        "revision": 349,
-        "ts": "2026-10-12T14:00:00+03:00",
-        "agent": "codex",
-        "action": "cap_t135_1m_handoff",
-        "task_ids": [
-            "T-135"
-        ],
-        "files_changed": [
-            "agent_state/AGENT_HANDOFF.json",
-            "docs/evidence/t135_round_c_3m_summary.json",
-            "docs/evidence/t135_round_c_1m_summary.json",
-            "docs/evidence/random_baseline_3m.json",
-            "docs/evidence/random_baseline_1m.json"
-        ],
-        "summary": "Completed 3m Round C and its 40-trial random baseline on the verified image. NSXUSD 1m reached the 12 GB cgroup anon ceiling at ideas_done 212/212 before an atomic result was emitted; stopped without retry or chunking and did not evaluate XAUUSD 1m per the acceptance criterion. Handed T-135 to Claude for the chunking specification.",
-        "validation": "V-334"
+      "revision": 349,
+      "ts": "2026-10-12T14:00:00+03:00",
+      "agent": "codex",
+      "action": "cap_t135_1m_handoff",
+      "task_ids": [
+        "T-135"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t135_round_c_3m_summary.json",
+        "docs/evidence/t135_round_c_1m_summary.json",
+        "docs/evidence/random_baseline_3m.json",
+        "docs/evidence/random_baseline_1m.json"
+      ],
+      "summary": "Completed 3m Round C and its 40-trial random baseline on the verified image. NSXUSD 1m reached the 12 GB cgroup anon ceiling at ideas_done 212/212 before an atomic result was emitted; stopped without retry or chunking and did not evaluate XAUUSD 1m per the acceptance criterion. Handed T-135 to Claude for the chunking specification.",
+      "validation": "V-334"
+    },
+    {
+      "revision": 350,
+      "ts": "2026-10-12T15:40:00+03:00",
+      "agent": "claude",
+      "action": "accept_t135_3m_add_t136",
+      "task_ids": [
+        "T-135",
+        "T-136"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-135 3m (V-335): 424 attempts, no Gate 1 pass, gross about zero per trade; per trade the best ideas are only slightly better than random entries and all lose after costs. 1m NSXUSD finished all 212 ideas then ran out of memory in evaluation; Claude landed --evaluation-batch-size (PR #203, same verdicts) and added T-136 to rerun 1m in batches.",
+      "validation": "V-335"
     }
   ],
   "project_summary": "T-135 completed the authorized 3m evidence pass and stopped at the explicit 1m memory cap; Claude owns the next chunking decision."
