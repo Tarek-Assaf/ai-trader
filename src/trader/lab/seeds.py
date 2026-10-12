@@ -15,6 +15,7 @@ from trader.lab.spec import (
     IndicatorCondition,
     IndicatorName,
     ParameterReference,
+    SessionName,
     StopExit,
     StrategySpec,
     TargetExit,
@@ -1370,3 +1371,170 @@ __all__ = [
     "slow_seed_specs",
     "swing_seed_specs",
 ]
+
+
+# --- Round D: Wyckoff ideas (docs/specs/round_d_wyckoff.md) -----------------
+#
+# Declarative approximations of Wyckoff's accumulation / distribution events.  The
+# declarative language has no event memory and at most five conditions per strategy, so:
+# the trading range + preceding trend are checked by two range indicators; "spring within
+# the last 12 bars" is expressed with rolling extremes; stops and targets are ATR multiples
+# rather than "0.25 ATR beyond the spring extreme".  All deviations are listed in the spec.
+WYCKOFF_RANGE_BARS = (48, 96, 192, 288)  # five-minute-equivalent bars
+WYCKOFF_EXITS = ((1.0, 2.0),)  # one exit keeps trials near 360 per market/timeframe
+WYCKOFF_SESSIONS: tuple[tuple[str, tuple[SessionName, ...]], ...] = (
+    ("any", ()),
+    ("london", ("london",)),
+    ("newyork", ("new_york",)),
+)
+WYCKOFF_BREAK_ATR = 0.5
+WYCKOFF_TEST_BARS = 12
+WYCKOFF_SOS_BARS = 10
+WYCKOFF_TREND_ATR = 3.0
+
+
+def round_d_seed_specs(
+    instrument: str, timeframe: int
+) -> tuple[tuple[SeedStrategy, StrategySpec], ...]:
+    """Return the Wyckoff spring/upthrust, test and sign-of-strength/weakness ideas."""
+    result: list[tuple[SeedStrategy, StrategySpec]] = []
+    for direction in ("long", "short"):
+        long_side = direction == "long"
+        sign = -1.0 if long_side else 1.0
+        edge: IndicatorName = "rolling_low" if long_side else "rolling_high"
+        poke: IndicatorName = "low" if long_side else "high"
+        for range_n5 in WYCKOFF_RANGE_BARS:
+            n = _bars(range_n5, timeframe)
+            trend = (
+                TunableParameter(
+                    name="trend_atr",
+                    value=sign * WYCKOFF_TREND_ATR,
+                    minimum=min(sign * 4.0, sign * 2.0),
+                    maximum=max(sign * 4.0, sign * 2.0),
+                ),
+            )
+            context = (
+                IndicatorCondition(
+                    indicator="pre_trend_atr",
+                    period=n,
+                    operator="lte" if long_side else "gte",
+                    threshold=ParameterReference(parameter="trend_atr"),
+                ),
+                IndicatorCondition(
+                    indicator="flat_range_width_atr",
+                    period=n,
+                    operator="gte",
+                    threshold=1.5,
+                ),
+            )
+            window = max(5, _bars(WYCKOFF_TEST_BARS * 5, timeframe))
+            recent = max(5, _bars(WYCKOFF_SOS_BARS * 5, timeframe))
+            spring = (
+                IndicatorCondition(
+                    indicator=poke,
+                    operator="lt" if long_side else "gt",
+                    threshold=0.0,
+                    threshold_indicator=edge,
+                    threshold_period=n,
+                    threshold_lookback=1,
+                ),
+                IndicatorCondition(
+                    indicator=poke,
+                    operator="gt" if long_side else "lt",
+                    threshold=0.0,
+                    threshold_indicator=edge,
+                    threshold_period=n,
+                    threshold_lookback=1,
+                    threshold_atr_multiple=sign * WYCKOFF_BREAK_ATR,
+                ),
+                IndicatorCondition(
+                    indicator="close",
+                    operator="gt" if long_side else "lt",
+                    threshold=0.0,
+                    threshold_indicator=edge,
+                    threshold_period=n,
+                    threshold_lookback=1,
+                ),
+            )
+            test = (
+                IndicatorCondition(
+                    indicator=edge,
+                    period=window,
+                    operator="lt" if long_side else "gt",
+                    threshold=0.0,
+                    threshold_indicator=edge,
+                    threshold_period=n,
+                    threshold_lookback=window,
+                ),
+                IndicatorCondition(
+                    indicator=edge,
+                    period=window,
+                    operator="gt" if long_side else "lt",
+                    threshold=0.0,
+                    threshold_indicator=edge,
+                    threshold_period=n,
+                    threshold_lookback=window,
+                    threshold_atr_multiple=sign * WYCKOFF_BREAK_ATR,
+                ),
+                IndicatorCondition(
+                    indicator=poke,
+                    operator="gt" if long_side else "lt",
+                    threshold=0.0,
+                    threshold_indicator=edge,
+                    threshold_period=window,
+                    threshold_lookback=1,
+                ),
+            )
+            sos = (
+                IndicatorCondition(
+                    indicator=edge,
+                    period=recent,
+                    operator="lt" if long_side else "gt",
+                    threshold=0.0,
+                    threshold_indicator=edge,
+                    threshold_period=n,
+                    threshold_lookback=recent,
+                ),
+                IndicatorCondition(
+                    indicator="close",
+                    operator="gt" if long_side else "lt",
+                    threshold=0.0,
+                    threshold_indicator="open",
+                    threshold_atr_multiple=-sign * 1.0,
+                ),
+                IndicatorCondition(
+                    indicator="close",
+                    operator="gt" if long_side else "lt",
+                    threshold=0.0,
+                    threshold_indicator="sma",
+                    threshold_period=n,
+                ),
+            )
+            families = (
+                ("spring" if long_side else "upthrust", spring),
+                ("spring_test" if long_side else "upthrust_test", test),
+                ("spring_sos" if long_side else "upthrust_sow", sos),
+            )
+            for family, tail in families:
+                for session_name, sessions in WYCKOFF_SESSIONS:
+                    for stop, target in WYCKOFF_EXITS:
+                        spec = StrategySpec(
+                            schema_version=1,
+                            instrument=instrument,
+                            direction=direction,
+                            timeframe_minutes=timeframe,  # type: ignore[arg-type]
+                            entry_conditions=(*context, *tail),
+                            exit_rules=(
+                                StopExit(kind="stop", distance=stop, unit="atr"),
+                                TargetExit(kind="target", distance=target, unit="atr"),
+                                TimeStopExit(kind="time_stop", bars=_bars(36, timeframe)),
+                            ),
+                            tunable_parameters=trend,
+                            session_filters=sessions,
+                        )
+                        name = (
+                            f"wyckoff_{family}_{range_n5}_{session_name}_{direction}"
+                            f"_{stop:g}_{target:g}"
+                        )
+                        result.append((SeedStrategy(name, "wyckoff", family), spec))
+    return tuple(result)
