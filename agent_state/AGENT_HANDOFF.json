@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 347,
+  "turn": "codex",
+  "revision": 348,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-134 completed on the owner-authorized Chrome redeploy with image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0. The two read-only studies ran first, followed by sequential Round C labs on 60m, 15m and 5m for both markets and the 60-trial random-entry baseline. All lab runs completed with 424 attempts each and zero Gate 1 passes; no 1m/3m run or broker order occurred. Evidence is committed for Claude review; no code/config/gate/holdout changes.",
+    "summary": "T-134 accepted (V-333): Round C ran 424 attempts per timeframe on 60m/15m/5m, no Gate 1 pass; named OSTDV levels behave like placebo levels and the random-entry baseline shows no real edge per trade. Next: T-135 runs Round C on 3m then 1m (owner request D-033). Demo only; no gate changed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -106,7 +106,8 @@
         "T-131",
         "T-132",
         "T-133",
-        "T-134"
+        "T-134",
+        "T-135"
       ]
     },
     {
@@ -141,7 +142,8 @@
         "T-131",
         "T-132",
         "T-133",
-        "T-134"
+        "T-134",
+        "T-135"
       ]
     },
     {
@@ -182,7 +184,8 @@
         "T-131",
         "T-132",
         "T-133",
-        "T-134"
+        "T-134",
+        "T-135"
       ]
     },
     {
@@ -4421,6 +4424,34 @@
         "random_baseline.json"
       ],
       "completion_note": "Completed on the owner-authorized Chrome redeploy. Verified health image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0, paper mode and live_enabled=false; ran the two read-only studies first, then sequential Round C labs on 60m, 15m and 5m for NSXUSD/XAUUSD, followed by the 60-trial random-entry baseline. All three lab runs completed (424 attempts each), no Gate 1 passes, no 1m/3m run, and no code/config/gate/holdout changes."
+    },
+    {
+      "id": "T-135",
+      "title": "Round C on 3m then 1m (owner request D-033), with random-entry baseline on the top few",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-134"
+      ],
+      "acceptance_criteria": [
+        "Why: D-033. The owner's original plan was 1M, 3M, 5M timeframes; T-131..T-134 used 60m/15m/5m only. The lab already supports timeframes 1, 3, 5, 15 and 60 (3m is resampled from 1m by trader.data.resample.resample_ohlc). No code, config, gate or holdout change is needed or allowed.",
+        "IMAGE: the Pod must report image ghcr.io/tarek-assaf/ai-trader:0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0 at /health with paper mode and live_enabled=false. If it does not, do nothing and stop. Verify no run.lock before each run. Training months only (the lab already excludes the sealed holdout months; never read them directly). Use the owner-authorized Chrome console only if a redeploy is needed.",
+        "Step 1 (3m, ~50 min expected): python scripts/lab_run.py (same CLI as T-134 step 2(c)) with --timeframes 3 --idea-sources round_c --max-ideas 400 --force, both instruments, results_3m_c.json / progress_3m_c.json. Detached run (nohup) with the stop file and a memory watchdog (stop and record at 12 GB cgroup anon).",
+        "Step 2 (1m, ~2.5 h per instrument expected): only after step 1 is finished and recorded, run ONE instrument at a time, alone, same command with --timeframes 1 (NSXUSD first, then XAUUSD), results_1m_c.json per instrument if the CLI allows a separate file, otherwise sequential runs with the file copied after each. Same watchdog. If cgroup anon reaches 12 GB, stop, record the peak and the point reached, and hand back to Claude: do NOT retry or invent chunking; Claude will write the chunking spec. If a 1m run needs more than 4 hours for one instrument, stop at 4 hours and report progress.",
+        "Step 3 (random-entry baseline, read-only, after each timeframe's labs): python scripts/lab_random_baseline.py --results <that timeframe's Round C results file> --top 3 --trials 40 --out docs/evidence/random_baseline_3m.json (and random_baseline_1m.json). In the note, report strategy net per trade versus random net per trade, not only the percentile, because random entries trade more often than the strategies.",
+        "Write ONE compact evidence file per timeframe docs/evidence/t135_round_c_3m_summary.json and t135_round_c_1m_summary.json in the same format as docs/evidence/t134_round_c_summary.json (run id, attempts, Gate 1 passes, too_few_trades, peak memory, best 3 per family, best 10 per instrument, counts of weekly p <= 0.05/0.001/0.0001). UTF-8, no Pod URL, host or secret, null never 0 for missing data.",
+        "ONE log entry that points to the evidence and a validation entry; set T-135 to review and hand the turn to claude. If the 3m part finishes much earlier than the 1m part, you may hand the turn back after 3m with 1m recorded as not started, and say so, so the owner can see the 3m result early."
+      ],
+      "completion_note": "",
+      "review_cycles": 0,
+      "evidence": []
     }
   ],
   "decisions": [
@@ -4678,6 +4709,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-11T21:07:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-033",
+      "statement": "Owner 2026-10-12 09:40 Riyadh: after the T-134 output is reviewed, test the 1-minute and 3-minute timeframes (the owner's original plan was 1M, 3M, 5M; Rounds A-C used only 60m/15m/5m for speed and memory). This is a direct owner request and is not covered by the lapsed D-032 window. Unchanged limits: demo only, no live trading, no gate loosened or edited, holdout only via the validator's sealed reader, no secrets or Pod URL in the repo, handoff, logs or chat.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-12T06:40:00Z",
       "do_not_reopen": false
     }
   ],
@@ -11415,6 +11454,20 @@
       "validated_by": "codex",
       "date": "2026-10-12",
       "reverify_if": "If the owner requests a rerun or the evidence files change"
+    },
+    {
+      "id": "V-333",
+      "subject": "Claude review of T-134 evidence (studies, Round C labs, random-entry baseline)",
+      "method": "Read docs/evidence/t134_round_c_summary.json, round_c_ostdv_events_v2.json/.md, round_c_ostdv_stats_windows.json and random_baseline.json. Compared named OSTDV levels with placebo levels (retrace rate, fade_edge_atr, confirm-bar patterns); checked the 424-attempt, 0-pass lab totals and best-per-run rows; recomputed the random-entry baseline per trade (strategy net / trades against random net / random trades) because the random entries trade more often than the strategies. Ran python agent_state/validate_handoff.py.",
+      "result": "pass",
+      "evidence": {
+        "verdict": "T-134 accepted as evidence. 1,272 Round C attempts (424 per timeframe, both markets together), 0 Gate 1 passes. fade_edge_atr at named levels 0.00-0.13 ATR vs 0.04-0.11 at placebo levels: no level-specific edge before costs. Retrace after a rejecting confirm bar 0.78-0.84 at named levels and 0.80-0.81 at placebo levels (same first-passage effect). Window sensitivity: the micro SMR zone holds about 6-8% of day highs/lows in all three overnight windows. Random baseline: Codex's 'beat random p95' counts (NAS100 5m 7/8, gold 5m 7/8, gold 15m 6/8) are driven by trade count (random entries trade 20-90% more and pay more cost); per trade, strategies are only 0.1-1.6 points better than random entries and all remain net-negative after costs. Best NAS100 5m: gross +1.7 per trade vs cost 4.0 (candle_bearengulf_asia_newyork_short_2_4, 430 trades, 2 of 14 years profitable).",
+        "image": "ghcr.io/tarek-assaf/ai-trader:0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0"
+      },
+      "review_notes": "Codex's own entry V-332 covers the run mechanics; this entry covers the interpretation. No code, config, gate or holdout change was made.",
+      "validated_by": "claude",
+      "date": "2026-10-12",
+      "reverify_if": "The evidence files change or Gate 1 or the cost model changes"
     }
   ],
   "blockers": [
@@ -19777,6 +19830,21 @@
       ],
       "summary": "Used the owner authorization in the Chrome RunPod console to redeploy image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0. Verified /health paper/live-disabled, ran OSTDV events and range-window stats first, then sequential 60m/15m/5m Round C labs for both markets with 424 attempts each, followed by the 60-trial random-entry baseline. No 1m/3m run, broker order, code/config/gate/holdout change or secret was used. Evidence and hashes are in docs/evidence/t134_round_c_summary.json. Handed off to Claude for review.",
       "validation": "V-332"
+    },
+    {
+      "revision": 348,
+      "ts": "2026-10-12T13:30:00+03:00",
+      "agent": "claude",
+      "action": "accept_t134_add_t135",
+      "task_ids": [
+        "T-134",
+        "T-135"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-134 (V-333): 1,272 Round C attempts, no Gate 1 pass. Named OSTDV levels behave like placebo levels (fade edge 0.00-0.13 ATR vs 0.04-0.11); the random-entry baseline 'beats' are a trade-count effect, per trade the ideas are about equal to random and all lose after costs. Recorded the owner's 1m/3m request as D-033 and added T-135 (3m, then 1m one market at a time, baseline on the top 3).",
+      "validation": "V-333"
     }
   ],
   "project_summary": "T-131 completed Round A and T-132 Round B completed on image 05f0bcd5fd163501fceb01c49eb73c00d291d62b. Evidence was regenerated from the three existing Pod result/progress files after review; no new runs, broker orders or secrets."
