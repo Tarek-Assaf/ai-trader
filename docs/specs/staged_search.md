@@ -43,3 +43,16 @@ is read only once at the end.
 - Run order: 15m and 5m first (3m and 1m only if the owner asks), NAS100 then gold, one process at a time.
 - Acceptance: a run that ends with zero passes is a valid result and is reported as such. The report states the
   total number of variants tried, so a pass can be judged against that number.
+
+## Implementation notes (Claude, 2026-10-13; fixed before any run)
+- Parents: every near miss so far has a NEGATIVE net after costs, so "positive net per trade" would leave no parents.
+  Parents are the best 10 by out-of-sample profit factor with at least 300 trades and a POSITIVE GROSS edge per trade;
+  the net-positive requirement applies to children (early, later and other-market windows, at least 100 trades each).
+- Mutation menu: entry delay and "skip the first 15 minutes" cannot be expressed in the declarative language and are
+  left out; the volatility filter uses the engine's own regimes (normal / high volatility). The trend filter is skipped
+  when the parent already has five conditions.
+- Ranking and confirmation windows lie inside the runner's 80% training slice; the out-of-sample slice and the holdout
+  stay unseen until the final Gate 1 call. The final call receives every distinct spec evaluated in the search plus the
+  prior attempts on that market from the supplied results files.
+- Survivors of ALL generations (at most 50, best later-window net first) go to the final Gate 1 call; this does not change
+  the trial count, which already includes every evaluated variant.
