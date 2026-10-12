@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 346,
+  "turn": "claude",
+  "revision": 347,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-133 accepted: in 16+ years of training history the OSTDV levels behave like arbitrary lines (about 50/50 retrace/continue, same as made-up levels) and the micro SMR zone holds 6-8% of day highs/lows, not 70-80%. T-134 (Round C lab runs plus a fade-edge/window sensitivity rerun of the studies) needs image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0 which the owner must deploy (Q-051). D-032: 8-hour authorization; 15-minute handoff check running. Gates unchanged. No live trading; demo only.",
+    "summary": "T-134 completed on the owner-authorized Chrome redeploy with image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0. The two read-only studies ran first, followed by sequential Round C labs on 60m, 15m and 5m for both markets and the 60-trial random-entry baseline. All lab runs completed with 424 attempts each and zero Gate 1 passes; no 1m/3m run or broker order occurred. Evidence is committed for Claude review; no code/config/gate/holdout changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4389,7 +4389,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4414,8 +4414,13 @@
         "docs/evidence/random_baseline.json"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "t134_round_c_summary.json",
+        "round_c_ostdv_events_v2.json",
+        "round_c_ostdv_stats_windows.json",
+        "random_baseline.json"
+      ],
+      "completion_note": "Completed on the owner-authorized Chrome redeploy. Verified health image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0, paper mode and live_enabled=false; ran the two read-only studies first, then sequential Round C labs on 60m, 15m and 5m for NSXUSD/XAUUSD, followed by the 60-trial random-entry baseline. All three lab runs completed (424 attempts each), no Gate 1 passes, no 1m/3m run, and no code/config/gate/holdout changes."
     }
   ],
   "decisions": [
@@ -11362,6 +11367,54 @@
       "validated_by": "claude",
       "date": "2026-10-12",
       "reverify_if": "The range window definition, the outcome definition or the data changes"
+    },
+    {
+      "id": "V-332",
+      "subject": "T-134 Round C studies, lab runs and random-entry baseline",
+      "method": "Fetched origin/main rev346 before starting. In Chrome RunPod console redeployed the exact image, checked /health, verified paper/live-disabled state and absence of run.lock before studies and each sequential lab. Ran studies first, then 60m, 15m and 5m only, with detached memory watchdogs; ran the baseline after labs. Validated JSON evidence locally and checked no Pod URL, host or secret is present in the committed summary.",
+      "result": "pass",
+      "evidence": {
+        "image": "0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0",
+        "health_mode": "paper",
+        "live_enabled": false,
+        "lab_runs": {
+          "60m_c": {
+            "run_id": "20261012T061537Z",
+            "attempts": 424,
+            "gate1_passes": 0,
+            "too_few_trades": 166,
+            "peak_cgroup_anon_bytes": 833032192,
+            "peak_memory_current_bytes": 995061760
+          },
+          "15m_c": {
+            "run_id": "20261012T062029Z",
+            "attempts": 424,
+            "gate1_passes": 0,
+            "too_few_trades": 112,
+            "peak_cgroup_anon_bytes": 2183163904,
+            "peak_memory_current_bytes": 2380517376
+          },
+          "5m_c": {
+            "run_id": "20261012T063541Z",
+            "attempts": 424,
+            "gate1_passes": 0,
+            "too_few_trades": 96,
+            "peak_cgroup_anon_bytes": 5821849600,
+            "peak_memory_current_bytes": 6058831872
+          }
+        },
+        "one_m_three_m_runs": 0,
+        "sha256": {
+          "t134_round_c_summary.json": "4981b77ee96264626a4fd98f83352e0ddbda6fc7fb4dd5f82e53e35478e89987",
+          "round_c_ostdv_events_v2.json": "758a472f401dec13e39ee287a728cdad54ba2ebd316285cd40291255fa4f45d9",
+          "round_c_ostdv_stats_windows.json": "79ea8c69b7b6ccc26ffb52d227b8e916cca8f4ada0f9136628010be53454a247",
+          "random_baseline.json": "e7b19478d1bc04471b3a5005137ec1c5cd692c21b3daacb092ffc67dfee4a5ea"
+        }
+      },
+      "review_notes": "Awaiting Claude review of the evidence summary and the baseline interpretation.",
+      "validated_by": "codex",
+      "date": "2026-10-12",
+      "reverify_if": "If the owner requests a rerun or the evidence files change"
     }
   ],
   "blockers": [
@@ -12079,14 +12132,15 @@
       "id": "Q-051",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "Codex tried to redeploy the Pod and RunPod rejected it (403 Unauthorized, so Codex does not have a working redeploy privilege). The Pod still runs 10dcd5e02cf0af2af7d7e61dc9079776b5566b01. Please redeploy ghcr.io/tarek-assaf/ai-trader:0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0 with the same volume yourself, then prompt Codex. Meanwhile the two read-only history studies (T-133) can run on the current image.",
       "options": [
         "Redeploy the image with the same volume (recommended)",
         "Give Codex a working RunPod key in the Pod environment (not in chat or the repo)"
       ],
       "recommendation": "Redeploy yourself; it takes one change of the image tag in RunPod and keeps secrets out of the repo.",
-      "answer": null
+      "answer": "Owner authorization was exercised through the Chrome RunPod console: the Pod was redeployed with the exact 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0 image and the web terminal was re-enabled.",
+      "answered_at": "2026-10-12T09:00:00+03:00"
     }
   ],
   "log": [
@@ -19705,6 +19759,24 @@
       ],
       "summary": "Accepted T-133 (V-331): named OSTDV levels retrace about 50% like made-up levels; the 80% retrace after a rejecting confirm bar is the same at placebo levels (likely first-passage artifact); the micro SMR zone holds 6-8% of day extremes. Merged the fade_edge_atr measure and range-window sensitivity; T-134 now names image 1a7132d157a7d90935ac1a6fd734b601506a7d34 and starts with a studies rerun.",
       "validation": "V-331"
+    },
+    {
+      "revision": 347,
+      "ts": "2026-10-12T09:05:00+03:00",
+      "agent": "codex",
+      "action": "complete_t134_round_c",
+      "task_ids": [
+        "T-134"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t134_round_c_summary.json",
+        "docs/evidence/round_c_ostdv_events_v2.json",
+        "docs/evidence/round_c_ostdv_stats_windows.json",
+        "docs/evidence/random_baseline.json"
+      ],
+      "summary": "Used the owner authorization in the Chrome RunPod console to redeploy image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0. Verified /health paper/live-disabled, ran OSTDV events and range-window stats first, then sequential 60m/15m/5m Round C labs for both markets with 424 attempts each, followed by the 60-trial random-entry baseline. No 1m/3m run, broker order, code/config/gate/holdout change or secret was used. Evidence and hashes are in docs/evidence/t134_round_c_summary.json. Handed off to Claude for review.",
+      "validation": "V-332"
     }
   ],
   "project_summary": "T-131 completed Round A and T-132 Round B completed on image 05f0bcd5fd163501fceb01c49eb73c00d291d62b. Evidence was regenerated from the three existing Pod result/progress files after review; no new runs, broker orders or secrets."
