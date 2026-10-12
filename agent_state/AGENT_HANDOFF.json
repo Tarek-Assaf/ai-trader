@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 351,
+  "revision": 352,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -11563,6 +11563,16 @@
       "evidence": [
         "git show origin/main authoritative handoff"
       ]
+    },
+    {
+      "id": "V-337",
+      "task_id": "T-136",
+      "result": "pass",
+      "checked": "GitHub Actions run 858 publish-image succeeded for commit 5d446da; Pod /health after Chrome console redeploy reports version 5d446dabcbe523723498090559597caca7366e54, status healthy, mode paper, broker_env demo, live_enabled false.",
+      "evidence": [
+        "GitHub Actions UI run 858",
+        "Pod health endpoint read-only"
+      ]
     }
   ],
   "blockers": [
@@ -19987,6 +19997,20 @@
       ],
       "summary": "Started T-136 from authoritative origin/main rev350 after T-135 3m acceptance. Verifying required image 5d446dabcbe523723498090559597caca7366e54 before any 1m run; no code/config/gate/holdout changes.",
       "validation": "V-336"
+    },
+    {
+      "revision": 352,
+      "ts": "2026-10-12T15:58:00+03:00",
+      "agent": "codex",
+      "action": "preflight_t136_image_verified",
+      "task_ids": [
+        "T-136"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Chrome GitHub Actions run 858 shows publish-image succeeded for 5d446da; Chrome RunPod console redeployed Pod to ghcr.io/tarek-assaf/ai-trader:5d446dabcbe523723498090559597caca7366e54. /health confirms exact image, paper mode, demo broker and live_enabled=false.",
+      "validation": "V-337"
     }
   ],
   "project_summary": "T-135 completed the authorized 3m evidence pass and stopped at the explicit 1m memory cap; Claude owns the next chunking decision."
