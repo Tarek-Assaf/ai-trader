@@ -9,6 +9,7 @@ from datetime import UTC, datetime, timedelta
 
 import pyarrow as pa
 import pyarrow.parquet as pq
+import pytest
 
 from trader.data.resample import Candle
 from trader.lab import runner as runner_module
@@ -462,3 +463,29 @@ def test_walk_forward_sizes_fit_at_least_five_windows() -> None:
                 count += 1
                 position += step
             assert count >= 5
+
+
+def test_evaluation_batching_keeps_verdicts_and_rejects_bad_size(tmp_path, monkeypatch) -> None:
+    lake = tmp_path / "lake"
+    holdout = tmp_path / "holdout"
+    _write_bars(lake)
+    _write_holdout(holdout)
+    base = _runner_spec()
+    variants = [
+        (f"seed:test{i}", base.model_copy(update={"name": f"batch-variant-{i}"})) for i in range(3)
+    ]
+    monkeypatch.setattr(LabRunner, "_candidates", lambda *args, **kwargs: variants)
+
+    def run(batch: int | None) -> list[tuple[str, str, str]]:
+        result = LabRunner(lake_root=lake, holdout_root=holdout, ledger=ExperimentLedger()).run(
+            instruments=("NSXUSD",),
+            timeframes=(1,),
+            workers=1,
+            force=True,
+            evaluation_batch_size=batch,
+        )
+        return sorted((a.source, a.verdict, a.reason) for a in result.attempts)
+
+    assert run(1) == run(None)
+    with pytest.raises(ValueError, match="evaluation_batch_size"):
+        run(0)
