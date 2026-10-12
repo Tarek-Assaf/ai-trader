@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import heapq
 import math
+from collections import deque
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -76,6 +77,56 @@ def _rolling(values: list[float], period: int, reducer: str) -> IndicatorSeries:
     return tuple(result)
 
 
+FLAT_SLOPE_ATR_PER_10_BARS = 0.25
+MAX_FLAT_RANGE_ATR = 6.0
+
+
+def _range_context(indicator: str, period: int, bars: list[Candle]) -> IndicatorSeries:
+    """Wyckoff range context measured on the ``period`` bars BEFORE the current bar.
+
+    * ``flat_range_width_atr``: (highest high - lowest low of the prior ``period`` bars) /
+      ATR(14), but only when the range is flat (absolute close drift over the range at most
+      0.25 ATR per 10 bars) and not wider than 6 ATR; otherwise None, so a condition on it
+      fails.  This keeps a Wyckoff "trading range" test inside the five-condition limit.
+    * ``pre_trend_atr``: net close move over the ``2 * period`` bars before that range,
+      divided by ATR(14); negative after a decline (accumulation), positive after a rise.
+
+    The current bar never enters the window, so a break of the range cannot hide itself.
+    """
+    atr_values = indicators.atr(bars, 14)
+    closes = [bar.close for bar in bars]
+    result: list[float | None] = [None] * len(bars)
+    highs: deque[int] = deque()  # indexes with decreasing highs (sliding maximum)
+    lows: deque[int] = deque()  # indexes with increasing lows (sliding minimum)
+    for index in range(len(bars)):
+        start = index - period  # first bar of the range
+        if index >= 1:
+            previous = index - 1  # the window ends at the previous bar
+            while highs and bars[highs[-1]].high <= bars[previous].high:
+                highs.pop()
+            highs.append(previous)
+            while lows and bars[lows[-1]].low >= bars[previous].low:
+                lows.pop()
+            lows.append(previous)
+        while highs and highs[0] < start:
+            highs.popleft()
+        while lows and lows[0] < start:
+            lows.popleft()
+        atr_value = atr_values[index]
+        if atr_value is None or atr_value <= 0 or start < 1:
+            continue
+        if indicator == "flat_range_width_atr":
+            width = (bars[highs[0]].high - bars[lows[0]].low) / atr_value
+            slope_per_10 = abs(closes[index - 1] - closes[start]) / (period / 10.0) / atr_value
+            if width <= MAX_FLAT_RANGE_ATR and slope_per_10 <= FLAT_SLOPE_ATR_PER_10_BARS:
+                result[index] = width
+        else:
+            origin = start - 1 - 2 * period
+            if origin >= 0:
+                result[index] = (closes[start - 1] - closes[origin]) / atr_value
+    return tuple(result)
+
+
 def _indicator_series(
     indicator: str, period: int | None, bars: list[Candle], lookback: int = 0
 ) -> IndicatorSeries:
@@ -113,6 +164,9 @@ def _indicator_series(
             period,
             "max" if indicator == "rolling_high" else "min",
         )
+    elif indicator in {"flat_range_width_atr", "pre_trend_atr"}:
+        assert period is not None
+        values = _range_context(indicator, period, bars)
     elif indicator in {"prior_day_high", "prior_day_low"}:
         day_highs, day_lows = indicators.prior_day_levels(bars)
         values = day_highs if indicator == "prior_day_high" else day_lows

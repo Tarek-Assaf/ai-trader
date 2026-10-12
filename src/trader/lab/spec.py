@@ -39,6 +39,8 @@ IndicatorName = Literal[
     "bull_engulfing",
     "bear_engulfing",
     "doji",
+    "flat_range_width_atr",
+    "pre_trend_atr",
 ]
 Comparison = Literal["gt", "gte", "lt", "lte", "eq", "ne"]
 SessionName = Literal["asia", "london", "new_york", "closed"]
@@ -95,6 +97,8 @@ class IndicatorCondition(StrictModel):
             "bollinger_lower",
             "rolling_high",
             "rolling_low",
+            "flat_range_width_atr",
+            "pre_trend_atr",
         }
         if needs_period != (self.period is not None):
             raise ValueError("indicator period must be supplied only for period-based indicators")
@@ -108,6 +112,8 @@ class IndicatorCondition(StrictModel):
             "bollinger_lower",
             "rolling_high",
             "rolling_low",
+            "flat_range_width_atr",
+            "pre_trend_atr",
         }
         if self.threshold_indicator is None:
             if self.threshold_lookback or self.threshold_period is not None:

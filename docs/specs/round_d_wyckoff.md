@@ -44,3 +44,15 @@ Wyckoff variant that comes close can be refined with the global trial count carr
 ## Acceptance
 Evidence summary in the T-134 format plus the per-trade comparison against random entries (`lab_random_baseline.py`
 for the top 3). A run with no pass is a valid result.
+
+## Implementation notes (Claude, 2026-10-13; deviations from the text above, fixed before any result)
+- The strategy language has no event memory and allows at most 5 conditions, so: the trading-range test (flat middle,
+  width 1.5-6 ATR) is one indicator `flat_range_width_atr`; the trend before the range is `pre_trend_atr`
+  (tunable threshold, 3 ATR, neighbours 2-4); "spring within the last 12 bars" uses rolling extremes.
+- Stops and targets are ATR multiples (stop 1.0 ATR, target 2.0 ATR, 36-bar time stop) because the exit language
+  cannot reference the spring extreme. One exit only keeps trials near 360 per market/timeframe.
+- Range lengths are 48, 96, 192, 288 five-minute-equivalent bars (4 x 3 sessions x 3 families x 2 directions = 72
+  ideas, 360 tuned variants). The strict 0.25 ATR variant exists only in the event study; the strategies use 0.5.
+- The test stage cannot compare effort with the spring bar and the SOS stage cannot use the range midpoint
+  exactly (the mean of the closes stands in for it) in strategies; the event study uses the exact definitions.
+- Event study reports the informative-volume share first; volume is not used when it is only a tick count.
