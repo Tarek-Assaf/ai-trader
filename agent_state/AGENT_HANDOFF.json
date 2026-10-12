@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 352,
+  "turn": "claude",
+  "revision": 353,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4467,7 +4467,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04",
@@ -4485,8 +4485,10 @@
         "ONE compact evidence file docs/evidence/t136_round_c_1m_summary.json in the format of t135_round_c_3m_summary.json (run ids, attempts, Gate 1 passes, too_few_trades, peak memory, best 3 per family, best 10 per instrument, counts of weekly p <= 0.05/0.001/0.0001, the exact years used). UTF-8, no Pod URL, host or secret, null never 0 for missing data. ONE log entry, a validation entry, set T-136 to review and hand the turn to claude."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Started from authoritative origin/main rev350/c9a8352. Preflight must verify published image 5d446dabcbe523723498090559597caca7366e54, paper mode, live disabled, and no lab lock before each run. Will run NSXUSD then XAUUSD with required batching and watchdog."
+      "evidence": [
+        "docs/evidence/t136_round_c_1m_summary.json"
+      ],
+      "completion_note": "NSXUSD 1m was stopped on owner request after the stop file was created. It remained in evaluating:0/212 while the active 20-idea batch ran; after the bounded grace window, only the T-136 lab process tree was terminated. Observed runtime was 04:37:37 from run 20261012T161714Z. Peak cgroup memory was 10,101,342,208 bytes; peak parent RSS was 3,539,841,024 bytes. XAUUSD 1m and baselines were intentionally skipped pending the positive-control test and later redeploy."
     }
   ],
   "decisions": [
@@ -11573,6 +11575,26 @@
         "GitHub Actions UI run 858",
         "Pod health endpoint read-only"
       ]
+    },
+    {
+      "id": "V-338",
+      "task_id": "T-136",
+      "result": "pass",
+      "checked": "Owner-requested stop was executed with the T-136 stop file; process exit and final evidence were verified; XAUUSD was not started.",
+      "evidence": {
+        "image": "ghcr.io/tarek-assaf/ai-trader:5d446dabcbe523723498090559597caca7366e54",
+        "phase": "evaluating:0/212:NSXUSD:1m",
+        "elapsed_observed": "04:37:37",
+        "peak_cgroup_bytes": 10101342208,
+        "peak_rss_bytes": 3539841024,
+        "result_file": "not emitted",
+        "xauusd": "skipped",
+        "broker_orders": 0
+      },
+      "review_notes": "Stop file was preserved and stale run.lock was removed after the process tree exited. The forced termination was limited to the T-136 lab process tree because the active batch did not respond within the bounded grace window.",
+      "validated_by": "codex",
+      "date": "2026-10-12",
+      "reverify_if": "Owner requests continuation of T-136 after the positive-control test and redeploy"
     }
   ],
   "blockers": [
@@ -11688,6 +11710,13 @@
     {
       "id": "B-017",
       "text": "T-133 cannot start on authoritative rev342: Pod health reports 10dcd5e02cf0af2af7d7e61dc9079776b5566b01 while required image is 72e63f010f150a61a52c4a150f5b97b5bd8be748. Redeployment via Pod GraphQL/runpodctl is unavailable because the terminal credential is unauthorized (403). No authoritative-image study or lab run was started.",
+      "raised_by": "codex",
+      "status": "open",
+      "resolution": ""
+    },
+    {
+      "id": "B-018",
+      "text": "T-136 NSXUSD 1m stop file was created, but the active 20-idea batch did not terminate within the bounded grace window. The lab process tree was then terminated after preserving the stop file; no result file was emitted. XAUUSD 1m was skipped pending the owner's positive-control test and later redeploy.",
       "raised_by": "codex",
       "status": "open",
       "resolution": ""
@@ -20011,7 +20040,22 @@
       ],
       "summary": "Chrome GitHub Actions run 858 shows publish-image succeeded for 5d446da; Chrome RunPod console redeployed Pod to ghcr.io/tarek-assaf/ai-trader:5d446dabcbe523723498090559597caca7366e54. /health confirms exact image, paper mode, demo broker and live_enabled=false.",
       "validation": "V-337"
+    },
+    {
+      "revision": 353,
+      "ts": "2026-10-12T20:55:00Z",
+      "agent": "codex",
+      "action": "stop_t136_nsx_skip_xau_handoff",
+      "task_ids": [
+        "T-136"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t136_round_c_1m_summary.json"
+      ],
+      "summary": "Owner requested stopping the NSXUSD 1m run. Created and preserved the stop file, recorded phase evaluating:0/212, observed runtime 04:37:37, peak cgroup memory 10,101,342,208 bytes and parent RSS 3,539,841,024 bytes. The active 20-idea batch did not exit within the grace window, so only the T-136 process tree was terminated; stale run.lock was removed. XAUUSD 1m and baselines were skipped. Handed T-136 to Claude for the positive-control test and later redeploy.",
+      "validation": "V-338"
     }
   ],
-  "project_summary": "T-135 completed the authorized 3m evidence pass and stopped at the explicit 1m memory cap; Claude owns the next chunking decision."
+  "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
 }
