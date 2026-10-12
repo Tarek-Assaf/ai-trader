@@ -1384,6 +1384,10 @@ class LabRunner:
                         )
                     )
                     gc.collect()
+                    mark_phase(
+                        f"evaluating:{min(start + batch_size, len(specs))}/{len(specs)}:"
+                        f"{instrument}:{timeframe}m"
+                    )
                 decisions = tuple(collected)
             except Exception as exc:  # noqa: BLE001
                 for source, spec in candidates:
