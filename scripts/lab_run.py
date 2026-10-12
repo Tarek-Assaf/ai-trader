@@ -36,6 +36,11 @@ def main() -> int:
     parser.add_argument("--max-ideas", type=int, default=100)
     parser.add_argument("--workers", type=int)
     parser.add_argument("--years", help="training history in years, or 'all'")
+    parser.add_argument(
+        "--evaluation-batch-size",
+        type=int,
+        help="evaluate this many ideas per pass (lower memory; same verdicts)",
+    )
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--stop-file", type=Path)
     parser.add_argument("--lock-file", type=Path, default=Path("/workspace/state/lab/run.lock"))
@@ -101,6 +106,7 @@ def main() -> int:
             idea_sources=args.idea_sources,
             max_ideas=max(1, args.max_ideas),
             workers=args.workers,
+            evaluation_batch_size=args.evaluation_batch_size,
             force=args.force,
             stop_file=args.stop_file,
             progress_path=args.progress,

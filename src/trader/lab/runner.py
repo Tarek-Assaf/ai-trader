@@ -1091,7 +1091,10 @@ class LabRunner:
         stop_event: Any | None = None,
         stop_file: str | Path | None = None,
         progress_path: str | Path | None = None,
+        evaluation_batch_size: int | None = None,
     ) -> LabRunResult:
+        if evaluation_batch_size is not None and evaluation_batch_size < 1:
+            raise ValueError("evaluation_batch_size must be a positive integer")
         started = datetime.now(UTC)
         run_name = run_id or started.strftime("%Y%m%dT%H%M%SZ")
         memory_limit = read_memory_limit()
@@ -1350,25 +1353,38 @@ class LabRunner:
             )
             mark_phase(f"evaluating:0/{len(candidates)}:{instrument}:{timeframe}m")
             try:
-                decisions = pipeline.run(
-                    specs,
-                    train,
-                    out_of_sample=test,
-                    holdout_reader=reader,
-                    holdout_path=holdout,
-                    holdout_loader=partial(
-                        _holdout_loader,
-                        root=self.holdout_root,
-                        instrument=instrument,
-                        timeframe=timeframe,
-                    ),
-                    train_bars=walk_forward_sizes(len(train))[0],
-                    test_bars=walk_forward_sizes(len(train))[1],
-                    step_bars=walk_forward_sizes(len(train))[2],
-                    workers=workers,
-                    stop_event=pipeline_stop,
-                    trials=trial_count,
-                )
+                # Candidates are independent and ``trials`` stays the full
+                # trial count, so batching changes memory use, not verdicts.
+                # Each batch rebuilds the worker pool, which releases the
+                # per-candidate evaluations kept by the previous batch.
+                batch_size = evaluation_batch_size or max(1, len(specs))
+                collected: list[Any] = []
+                for start in range(0, len(specs), batch_size):
+                    if stopped():
+                        break
+                    collected.extend(
+                        pipeline.run(
+                            specs[start : start + batch_size],
+                            train,
+                            out_of_sample=test,
+                            holdout_reader=reader,
+                            holdout_path=holdout,
+                            holdout_loader=partial(
+                                _holdout_loader,
+                                root=self.holdout_root,
+                                instrument=instrument,
+                                timeframe=timeframe,
+                            ),
+                            train_bars=walk_forward_sizes(len(train))[0],
+                            test_bars=walk_forward_sizes(len(train))[1],
+                            step_bars=walk_forward_sizes(len(train))[2],
+                            workers=workers,
+                            stop_event=pipeline_stop,
+                            trials=trial_count,
+                        )
+                    )
+                    gc.collect()
+                decisions = tuple(collected)
             except Exception as exc:  # noqa: BLE001
                 for source, spec in candidates:
                     digest = strategy_hash(spec.model_dump(mode="json"))
