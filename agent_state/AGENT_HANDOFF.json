@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 352,
+  "turn": "human",
+  "revision": 354,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4508,7 +4508,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-03",
         "R-04",
@@ -4523,11 +4523,14 @@
         "Run: python scripts/lab_positive_control.py --workdir /workspace/state/poscontrol --out docs/evidence/positive_control.json --workers 1 (target under 30 minutes, peak memory under 6 GB; verify no run.lock first and use the same stop-file/memory-watchdog practice as earlier jobs).",
         "Expected: m=+2.0 passes Gate 1; m=0.0 and m=-0.5 fail; the 200-strategy null battery has zero passes. m=+1.0 and +0.5 are reported only.",
         "If m=+2.0 does NOT pass, that is the important result: change NOTHING (no gate, threshold, cost or code), keep the evidence file, list the failing reasons in the log and hand the turn back to Claude at once.",
-        "Commit docs/evidence/positive_control.json on a branch, open a PR, hand the turn to claude with ONE log entry and a validation entry. Do not start T-138 before Claude accepts T-137 unless the log shows the m=+2.0 series passed."
+        "Commit docs/evidence/positive_control.json on a branch, open a PR, hand the turn to claude with ONE log entry and a validation entry. Do not start T-138 before Claude accepts T-137 unless the log shows the m=+2.0 series passed.",
+        "2026-10-13 blocker: neither Codex's Chrome control nor Claude's browser could redeploy the Pod. The owner redeploys it by hand to ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a (RunPod console, Pod, edit container image, restart). When the owner says it is done, Codex only re-checks /health (version ffb0a6f895463e0a754de702167ea57b4806008a, paper, live_enabled=false), then runs the T-137 steps above unchanged."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Not started."
+      "evidence": [
+        "docs/evidence/t137_positive_control_preflight.json"
+      ],
+      "completion_note": "Blocked before the synthetic lab run: the Pod is healthy and idle but still serves image 5d446dabcbe523723498090559597caca7366e54; the required ffb0a6f image is not deployed. The Chrome console is reachable, but semantic click control returns coordinate input geometry unavailable, so the authorized redeploy could not be completed. No lab, broker, or code/config/gate/holdout change was made."
     },
     {
       "id": "T-138",
@@ -11754,6 +11757,28 @@
       "reverify_if": "Owner asks to continue 1m (T-140)",
       "subject": "T-136 review and merge of the code PRs",
       "method": "Read PR #210 evidence; checked CI results of PRs #207-#209"
+    },
+    {
+      "id": "V-340",
+      "task_id": "T-137",
+      "result": "pending",
+      "checked": "Verified the T-137 preconditions without starting the study: Pod /health was healthy, paper mode, demo broker and live_enabled=false; no lab process and no run.lock were present; GitHub Actions run WY64AT for ai-trader/docker was completed and publish-image was listed for the ffb0a6f main commit. The Pod image remained 5d446da.",
+      "evidence": {
+        "health_version": "5d446dabcbe523723498090559597caca7366e54",
+        "required_image": "ffb0a6f895463e0a754de702167ea57b4806008a",
+        "run_lock": false,
+        "lab_process": false,
+        "ci_run": "WY64AT",
+        "ci_workflow": "docker",
+        "publish_image_listed": true,
+        "chrome_control_error": "coordinate input geometry is unavailable",
+        "web_terminal": "reachable"
+      },
+      "validated_by": "codex",
+      "date": "2026-10-12",
+      "reverify_if": "After the Pod is redeployed to the required ffb0a6f image; then rerun the full T-137 preflight.",
+      "subject": "T-137 image and Pod preflight",
+      "method": "Pod terminal health/process/lock checks, GitHub Actions page, and Chrome console control attempt"
     }
   ],
   "blockers": [
@@ -11876,6 +11901,13 @@
     {
       "id": "B-018",
       "text": "T-136 NSXUSD 1m stop file was created, but the active 20-idea batch did not terminate within the bounded grace window. The lab process tree was then terminated after preserving the stop file; no result file was emitted. XAUUSD 1m was skipped pending the owner's positive-control test and later redeploy.",
+      "raised_by": "codex",
+      "status": "open",
+      "resolution": ""
+    },
+    {
+      "id": "B-019",
+      "text": "T-137 is blocked before starting: bounded Pod preflight found no lab process and no /workspace/state/lab/run.lock, but /health reports image 5d446dabcbe523723498090559597caca7366e54 instead of required ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a. The owner-authorized RunPod Chrome console is readable and the web terminal works, but every semantic control click returns \"coordinate input geometry is unavailable\"; direct terminal access has no docker/runpod control. No wrong-image lab run was started.",
       "raised_by": "codex",
       "status": "open",
       "resolution": ""
@@ -20210,6 +20242,35 @@
       ],
       "summary": "Recorded D-034 and D-035; accepted T-136 as stopped (V-338, nothing run was changed); fixed V-337 fields. Merged the code for the positive control (#207), Round D Wyckoff (#208) and the staged search (#209), all CI green. Queued T-137 positive control (image ffb0a6f, redeploy allowed), T-138 Wyckoff, T-139 staged search, T-140 1m resume. If the m=+2.0 positive control fails, Codex changes nothing and hands back.",
       "validation": "V-339"
+    },
+    {
+      "revision": 353,
+      "ts": "2026-10-12T21:50:36Z",
+      "agent": "codex",
+      "action": "block_t137_image_precondition",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t137_positive_control_preflight.json"
+      ],
+      "summary": "Preflight confirmed the Pod is healthy, paper/demo, live disabled, idle and without run.lock, but it still serves 5d446da rather than required ffb0a6f. GitHub Actions docker run WY64AT completed with publish-image listed for the ffb0a6f main commit. Chrome console and web terminal are reachable, but semantic Chrome click control returns coordinate input geometry unavailable; no redeploy, lab run, broker order or code/config/gate/holdout change was made. Handed the exact blocker to Claude.",
+      "validation": "V-340"
+    },
+    {
+      "revision": 354,
+      "ts": "2026-10-12T22:15:00Z",
+      "agent": "claude",
+      "action": "t137_blocker_owner_redeploy",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted Codex's preflight blocker (V-340 stays pending). Claude's own browser could not open the RunPod console either (Chrome extension not connected, built-in pane not painting), so no redeploy was done. Turn handed to the owner: redeploy the Pod to the ffb0a6f image by hand, then tell Codex to re-check /health and run T-137 unchanged.",
+      "validation": "V-340"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
