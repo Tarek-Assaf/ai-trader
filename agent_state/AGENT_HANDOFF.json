@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 348,
+  "revision": 349,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4431,7 +4431,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -4449,7 +4449,7 @@
         "Write ONE compact evidence file per timeframe docs/evidence/t135_round_c_3m_summary.json and t135_round_c_1m_summary.json in the same format as docs/evidence/t134_round_c_summary.json (run id, attempts, Gate 1 passes, too_few_trades, peak memory, best 3 per family, best 10 per instrument, counts of weekly p <= 0.05/0.001/0.0001). UTF-8, no Pod URL, host or secret, null never 0 for missing data.",
         "ONE log entry that points to the evidence and a validation entry; set T-135 to review and hand the turn to claude. If the 3m part finishes much earlier than the 1m part, you may hand the turn back after 3m with 1m recorded as not started, and say so, so the owner can see the 3m result early."
       ],
-      "completion_note": "",
+      "completion_note": "Execution restarted from authoritative origin/main rev348 plus evaluation batching commit 5d446da; preflight image verified exact, paper mode, live disabled. Running 3m then 1m with evaluation batching and watchdog.",
       "review_cycles": 0,
       "evidence": []
     }
@@ -11468,6 +11468,15 @@
       "validated_by": "claude",
       "date": "2026-10-12",
       "reverify_if": "The evidence files change or Gate 1 or the cost model changes"
+    },
+    {
+      "id": "V-335",
+      "task_id": "T-135",
+      "result": "pass",
+      "checked": "origin/main rev348 plus 5d446da; Pod /health exact image 0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0, mode paper, broker_env demo, live_enabled false; no lab lock before start.",
+      "evidence": [
+        "preflight health endpoint read-only"
+      ]
     }
   ],
   "blockers": [
@@ -19845,6 +19854,20 @@
       ],
       "summary": "Accepted T-134 (V-333): 1,272 Round C attempts, no Gate 1 pass. Named OSTDV levels behave like placebo levels (fade edge 0.00-0.13 ATR vs 0.04-0.11); the random-entry baseline 'beats' are a trade-count effect, per trade the ideas are about equal to random and all lose after costs. Recorded the owner's 1m/3m request as D-033 and added T-135 (3m, then 1m one market at a time, baseline on the top 3).",
       "validation": "V-333"
+    },
+    {
+      "revision": 349,
+      "ts": "2026-10-12T15:23:00+03:00",
+      "agent": "codex",
+      "action": "start_t135_round_c_v2",
+      "task_ids": [
+        "T-135"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-135 from authoritative origin/main after evaluation-batching merge; exact image verified at /health, paper/live-disabled. Restarting 3m then 1m studies with memory watchdog and no code/config/gate/holdout edits.",
+      "validation": "V-335"
     }
   ],
   "project_summary": "T-131 completed Round A and T-132 Round B completed on image 05f0bcd5fd163501fceb01c49eb73c00d291d62b. Evidence was regenerated from the three existing Pod result/progress files after review; no new runs, broker orders or secrets."
