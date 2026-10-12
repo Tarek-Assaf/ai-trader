@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 353,
+  "turn": "codex",
+  "revision": 352,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-134 and the 3m part of T-135 accepted: no Gate 1 pass on 60m/15m/5m/3m, and the best ideas are about equal to random entries per trade. 1m is next (T-136) with the new batched evaluation (PR #203). Demo only; no gate changed.",
+    "summary": "T-134 and T-135 accepted: no Gate 1 pass on 60m/15m/5m/3m (about 2,500 attempts); best ideas are about equal to random entries per trade. 1m NSXUSD was stopped by the owner after 4h37 (T-136 closed, retry is T-140). Code for the positive control (T-137), Wyckoff Round D (T-138) and the staged mutate-and-retest search (T-139) is merged. Owner authorized work until 2026-10-13T05:43Z (D-035). Demo only; no gate changed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -108,7 +108,11 @@
         "T-133",
         "T-134",
         "T-135",
-        "T-136"
+        "T-136",
+        "T-137",
+        "T-138",
+        "T-139",
+        "T-140"
       ]
     },
     {
@@ -145,7 +149,11 @@
         "T-133",
         "T-134",
         "T-135",
-        "T-136"
+        "T-136",
+        "T-137",
+        "T-138",
+        "T-139",
+        "T-140"
       ]
     },
     {
@@ -188,7 +196,11 @@
         "T-133",
         "T-134",
         "T-135",
-        "T-136"
+        "T-136",
+        "T-137",
+        "T-138",
+        "T-139",
+        "T-140"
       ]
     },
     {
@@ -4467,7 +4479,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4489,6 +4501,109 @@
         "docs/evidence/t136_round_c_1m_summary.json"
       ],
       "completion_note": "NSXUSD 1m was stopped on owner request after the stop file was created. It remained in evaluating:0/212 while the active 20-idea batch ran; after the bounded grace window, only the T-136 lab process tree was terminated. Observed runtime was 04:37:37 from run 20261012T161714Z. Peak cgroup memory was 10,101,342,208 bytes; peak parent RSS was 3,539,841,024 bytes. XAUUSD 1m and baselines were intentionally skipped pending the positive-control test and later redeploy."
+    },
+    {
+      "id": "T-137",
+      "title": "Positive control on the Pod: can the lab and Gate 1 detect a planted edge?",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-136"
+      ],
+      "acceptance_criteria": [
+        "Why: D-034. About 2,500 attempts passed nothing; prove the pipeline would recognise a real edge. Spec: docs/specs/lab_positive_control.md. Script: scripts/lab_positive_control.py (synthetic data only, separate temp lake, no real data, no broker).",
+        "IMAGE: ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a (main commit ffb0a6f895463e0a754de702167ea57b4806008a; contains PRs #205 per-batch counter, #207 positive control, #208 Round D, #209 staged search). Check on GitHub that CI on main shows publish-image succeeded for that SHA (wait and re-check, do not use another tag). If /health does not show that version with paper mode and live_enabled=false, redeploy through the owner-authorized Chrome console (D-035) only when no lab job is running and no run.lock exists, then re-verify /health. Do not change code, config, gates or holdout handling. Training months only.",
+        "Run: python scripts/lab_positive_control.py --workdir /workspace/state/poscontrol --out docs/evidence/positive_control.json --workers 1 (target under 30 minutes, peak memory under 6 GB; verify no run.lock first and use the same stop-file/memory-watchdog practice as earlier jobs).",
+        "Expected: m=+2.0 passes Gate 1; m=0.0 and m=-0.5 fail; the 200-strategy null battery has zero passes. m=+1.0 and +0.5 are reported only.",
+        "If m=+2.0 does NOT pass, that is the important result: change NOTHING (no gate, threshold, cost or code), keep the evidence file, list the failing reasons in the log and hand the turn back to Claude at once.",
+        "Commit docs/evidence/positive_control.json on a branch, open a PR, hand the turn to claude with ONE log entry and a validation entry. Do not start T-138 before Claude accepts T-137 unless the log shows the m=+2.0 series passed."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Not started."
+    },
+    {
+      "id": "T-138",
+      "title": "Wyckoff Round D: event study versus placebo, then the 72 strategies per market and timeframe",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-137"
+      ],
+      "acceptance_criteria": [
+        "Why: D-034. Spec: docs/specs/round_d_wyckoff.md (see its implementation notes). Image as in T-137 (no redeploy needed if already running that SHA).",
+        "Step 1 (read-only, minutes): python scripts/wyckoff_events.py --out docs/evidence/round_d_wyckoff_events.json (also writes the .md next to it). Report the informative-volume share.",
+        "Step 2: NSXUSD: python scripts/lab_run.py --instruments NSXUSD --timeframes 60 15 5 --idea-sources round_d --max-ideas 400 --force --workers 2 --evaluation-batch-size 40 --results results_d_nsx.json --progress progress_d_nsx.json (same lock, stop file and 12 GB watchdog as T-135; 360 tuned variants per timeframe).",
+        "Step 3: only after step 2 completed: the same for XAUUSD with results_d_xau.json / progress_d_xau.json.",
+        "Step 4: random-entry baseline on each completed results file: python scripts/lab_random_baseline.py --results <file> --top 3 --trials 40 --out docs/evidence/random_baseline_d_<nsx|xau>.json.",
+        "ONE compact evidence file docs/evidence/t138_round_d_summary.json in the format of t134_round_c_summary.json (run ids, attempts, Gate 1 passes, too_few_trades, peak memory, best 3 per family, best 10 per market, weekly p counts, years used; null never 0 for missing data). Keep the results_d_*.json files on the Pod for T-139. PR, ONE log entry, validation entry, set T-138 to review and hand the turn to claude."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Not started."
+    },
+    {
+      "id": "T-139",
+      "title": "Staged mutate-and-retest search on NAS100 and gold (15m and 5m first)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-138"
+      ],
+      "acceptance_criteria": [
+        "Why: D-034. Spec: docs/specs/staged_search.md (see its implementation notes). Script: scripts/lab_staged_search.py. Parents come from the existing results files on the Pod (Rounds A-D); list them with ls under the lab state/working directory and pass every file that has an 'attempts' list with strategy_hash values.",
+        "Run one process at a time (same lock file as lab_run.py), in this order: NSXUSD 15, NSXUSD 5, XAUUSD 15, XAUUSD 5, then 60 for both: python scripts/lab_staged_search.py --instrument NSXUSD --timeframe 15 --results <all results files> --workers 2 --evaluation-batch-size 50 (writes docs/evidence/staged_search_nsxusd_15m.json etc.; progress file is the default /workspace/state/lab/progress.json). Use --stop-file for owner stop requests.",
+        "A run with zero parents or zero survivors is a valid result; do not tune anything. Report per run: parents, trials per generation, survivors, total trials, final Gate 1 passes.",
+        "ONE compact summary docs/evidence/t139_staged_search_summary.json (per market/timeframe: parents, generations, total trials, survivors, best 3 survivors with early/later/other-market net per trade, Gate 1 passes and their reasons). PR, ONE log entry, validation entry, set T-139 to review and hand the turn to claude. If any Gate 1 pass appears, stop further runs, do NOT start paper trading, and hand to claude immediately."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Not started."
+    },
+    {
+      "id": "T-140",
+      "title": "1-minute Round C resume with the new image (only after T-139 and only if time remains in the D-035 window)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-139"
+      ],
+      "acceptance_criteria": [
+        "Why: D-033 is still open for 1m. The first T-136 attempt stayed at evaluating:0/212 for 4h37 (stopped by owner, V-338). The new image shows a counter after every batch.",
+        "Run NSXUSD only: python scripts/lab_run.py --instruments NSXUSD --timeframes 1 --idea-sources round_c --max-ideas 400 --force --workers 2 --evaluation-batch-size 5 --years 2 --results results_1m_c_nsx.json --progress progress_1m_c_nsx.json. If no batch completes within 60 minutes or the 12 GB watchdog trips, stop, record phase and peak memory, and hand to claude; do not retry with other settings. XAUUSD 1m only if NSXUSD completed.",
+        "Evidence docs/evidence/t140_round_c_1m_summary.json in the t135 format; PR, ONE log entry, validation entry, set to review, hand the turn to claude."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Not started."
     }
   ],
   "decisions": [
@@ -4754,6 +4869,22 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-12T06:40:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-034",
+      "statement": "Owner 2026-10-12 19:20-19:22 Riyadh approved four additions: (a) a per-batch progress counter in the lab (done, PR #205); (b) a positive-control test (a planted edge must pass Gate 1 and the null must fail; specs: docs/specs/lab_positive_control.md); (c) a staged mutate-and-retest search with one global trial counter and the sealed holdout only at the end (docs/specs/staged_search.md); (d) a Wyckoff Round D (event study versus placebo, then strategies; docs/specs/round_d_wyckoff.md). Unchanged limits: demo only, no live trading, no gate loosened or edited, holdout only via the validator's sealed reader, no secrets or Pod URL in the repo, handoff, logs or chat.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-12T16:22:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-035",
+      "statement": "Owner 2026-10-12 23:43 Riyadh authorized Claude and Codex to do everything required to complete the D-033 and D-034 work for 9 hours, until 2026-10-13T05:43:00Z (08:43 Riyadh). Codex may redeploy the Pod to the image named in a task through the owner-authorized Chrome console (only when no lab job is running), run the queued lab jobs and stop them on owner request. Unchanged limits: demo only, no live trading, no gate loosened or edited, holdout only via the validator's sealed reader, no secrets or Pod URL in the repo, handoff, logs or chat.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-12T20:43:00Z",
       "do_not_reopen": false
     }
   ],
@@ -11564,7 +11695,11 @@
       "checked": "origin/main rev350, T-135 done, T-136 todo/turn codex; prior stale T-135 process stopped after main advanced. Required image publication still needs verification before Pod redeploy.",
       "evidence": [
         "git show origin/main authoritative handoff"
-      ]
+      ],
+      "subject": "T-136 start",
+      "method": "Preflight read of origin/main and task queue before any 1m run",
+      "validated_by": "codex",
+      "reverify_if": "Owner or Claude changes the T-136 plan"
     },
     {
       "id": "V-337",
@@ -11574,7 +11709,12 @@
       "evidence": [
         "GitHub Actions UI run 858",
         "Pod health endpoint read-only"
-      ]
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-12",
+      "reverify_if": "A different image is deployed to the Pod",
+      "subject": "T-136 image and Pod health",
+      "method": "GitHub Actions run 858 and read-only Pod /health"
     },
     {
       "id": "V-338",
@@ -11594,7 +11734,26 @@
       "review_notes": "Stop file was preserved and stale run.lock was removed after the process tree exited. The forced termination was limited to the T-136 lab process tree because the active batch did not respond within the bounded grace window.",
       "validated_by": "codex",
       "date": "2026-10-12",
-      "reverify_if": "Owner requests continuation of T-136 after the positive-control test and redeploy"
+      "reverify_if": "Owner requests continuation of T-136 after the positive-control test and redeploy",
+      "subject": "T-136 owner-requested stop",
+      "method": "Stop file, process-tree check and final evidence file"
+    },
+    {
+      "id": "V-339",
+      "task_id": "T-136",
+      "result": "pass",
+      "checked": "Reviewed PR #210 evidence: image, phase evaluating:0/212, runtime 04:37:37, peak cgroup 10.1 GB, no result file, XAUUSD skipped, no broker orders. Code PRs #207, #208, #209 merged after green quality CI (the pyarrow smoke test of the positive control ran in CI).",
+      "evidence": [
+        "PR #210",
+        "PR #207",
+        "PR #208",
+        "PR #209"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-13",
+      "reverify_if": "Owner asks to continue 1m (T-140)",
+      "subject": "T-136 review and merge of the code PRs",
+      "method": "Read PR #210 evidence; checked CI results of PRs #207-#209"
     }
   ],
   "blockers": [
@@ -20015,37 +20174,9 @@
     },
     {
       "revision": 351,
-      "ts": "2026-10-12T15:45:00+03:00",
-      "agent": "codex",
-      "action": "start_t136_batched_1m",
-      "task_ids": [
-        "T-136"
-      ],
-      "files_changed": [
-        "agent_state/AGENT_HANDOFF.json"
-      ],
-      "summary": "Started T-136 from authoritative origin/main rev350 after T-135 3m acceptance. Verifying required image 5d446dabcbe523723498090559597caca7366e54 before any 1m run; no code/config/gate/holdout changes.",
-      "validation": "V-336"
-    },
-    {
-      "revision": 352,
-      "ts": "2026-10-12T15:58:00+03:00",
-      "agent": "codex",
-      "action": "preflight_t136_image_verified",
-      "task_ids": [
-        "T-136"
-      ],
-      "files_changed": [
-        "agent_state/AGENT_HANDOFF.json"
-      ],
-      "summary": "Chrome GitHub Actions run 858 shows publish-image succeeded for 5d446da; Chrome RunPod console redeployed Pod to ghcr.io/tarek-assaf/ai-trader:5d446dabcbe523723498090559597caca7366e54. /health confirms exact image, paper mode, demo broker and live_enabled=false.",
-      "validation": "V-337"
-    },
-    {
-      "revision": 353,
       "ts": "2026-10-12T20:55:00Z",
       "agent": "codex",
-      "action": "stop_t136_nsx_skip_xau_handoff",
+      "action": "t136_preflight_and_owner_stop_handoff",
       "task_ids": [
         "T-136"
       ],
@@ -20053,8 +20184,32 @@
         "agent_state/AGENT_HANDOFF.json",
         "docs/evidence/t136_round_c_1m_summary.json"
       ],
-      "summary": "Owner requested stopping the NSXUSD 1m run. Created and preserved the stop file, recorded phase evaluating:0/212, observed runtime 04:37:37, peak cgroup memory 10,101,342,208 bytes and parent RSS 3,539,841,024 bytes. The active 20-idea batch did not exit within the grace window, so only the T-136 process tree was terminated; stale run.lock was removed. XAUUSD 1m and baselines were skipped. Handed T-136 to Claude for the positive-control test and later redeploy.",
+      "summary": "Codex's three unmerged entries (rev 351 start, rev 352 preflight, rev 353 stop) combined by Claude into one because the handoff validator needs alternating agents. Original wording: (351) Started T-136 from authoritative origin/main rev350 after T-135 3m acceptance. Verifying required image 5d446dabcbe523723498090559597caca7366e54 before any 1m run; no code/config/gate/holdout changes. (352) Chrome GitHub Actions run 858 shows publish-image succeeded for 5d446da; Chrome RunPod console redeployed Pod to ghcr.io/tarek-assaf/ai-trader:5d446dabcbe523723498090559597caca7366e54. /health confirms exact image, paper mode, demo broker and live_enabled=false. (353) Owner requested stopping the NSXUSD 1m run. Created and preserved the stop file, recorded phase evaluating:0/212, observed runtime 04:37:37, peak cgroup memory 10,101,342,208 bytes and parent RSS 3,539,841,024 bytes. The active 20-idea batch did not exit within the grace window, so only the T-136 process tree was terminated; stale run.lock was removed. XAUUSD 1m and baselines were skipped. Handed T-136 to Claude for the positive-control test and later redeploy.",
       "validation": "V-338"
+    },
+    {
+      "revision": 352,
+      "ts": "2026-10-12T21:30:00Z",
+      "agent": "claude",
+      "action": "accept_t136_stop_queue_t137_t140",
+      "task_ids": [
+        "T-136",
+        "T-137",
+        "T-138",
+        "T-139",
+        "T-140"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/lab/positive_control.py",
+        "src/trader/lab/staged.py",
+        "src/trader/lab/wyckoff_events.py",
+        "scripts/lab_positive_control.py",
+        "scripts/lab_staged_search.py",
+        "scripts/wyckoff_events.py"
+      ],
+      "summary": "Recorded D-034 and D-035; accepted T-136 as stopped (V-338, nothing run was changed); fixed V-337 fields. Merged the code for the positive control (#207), Round D Wyckoff (#208) and the staged search (#209), all CI green. Queued T-137 positive control (image ffb0a6f, redeploy allowed), T-138 Wyckoff, T-139 staged search, T-140 1m resume. If the m=+2.0 positive control fails, Codex changes nothing and hands back.",
+      "validation": "V-339"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
