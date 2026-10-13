@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 358,
+  "turn": "claude",
+  "revision": 359,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4540,7 +4540,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04",
@@ -4558,8 +4558,15 @@
         "ONE compact evidence file docs/evidence/t138_round_d_summary.json in the format of t134_round_c_summary.json (run ids, attempts, Gate 1 passes, too_few_trades, peak memory, best 3 per family, best 10 per market, weekly p counts, years used; null never 0 for missing data). Keep the results_d_*.json files on the Pod for T-139. PR, ONE log entry, validation entry, set T-138 to review and hand the turn to claude."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Started after Claude accepted T-137 V-343. Will run the approved Wyckoff Round D event study, then sequential NSXUSD and XAUUSD labs with the specified 12 GB watchdog and compact evidence; no gate/config/holdout changes."
+      "evidence": [
+        "docs/evidence/t138_round_d_summary.json",
+        "Pod:/workspace/state/round_d_wyckoff_events.json",
+        "Pod:/workspace/state/results_d_nsx.json",
+        "Pod:/workspace/state/results_d_xau.json",
+        "Pod:/workspace/state/random_baseline_d_nsx.json",
+        "Pod:/workspace/state/random_baseline_d_xau.json"
+      ],
+      "completion_note": "Completed Round D event study plus sequential NSXUSD and XAUUSD runs (1,080 attempts each) and 40-trial random-entry baselines. Both markets produced zero survivors and zero baseline qualifiers; event study informative-volume share was 0.0 for both. Peak RSS was 0.69 GiB NSXUSD and 0.83 GiB XAUUSD; no broker calls/orders or gate/config/holdout changes. Compact summary is committed; raw results remain on the Pod for T-139."
     },
     {
       "id": "T-139",
@@ -11848,6 +11855,25 @@
       "validated_by": "claude",
       "date": "2026-10-13",
       "reverify_if": "gate config, costs or lab engine change"
+    },
+    {
+      "id": "V-344",
+      "task_id": "T-138",
+      "subject": "T-138 Wyckoff Round D execution and evidence",
+      "method": "Pod terminal event study, sequential NSXUSD/XAUUSD lab runs, random baselines, progress and SHA-256 checks",
+      "result": "pass",
+      "checked": "Event study completed for both markets; each lab completed all 1,080 attempts with zero survivors; both 40-trial random baselines produced zero qualifying strategies; no broker calls or orders; peak RSS stayed below the 12 GiB watchdog.",
+      "evidence": {
+        "evidence_file": "docs/evidence/t138_round_d_summary.json",
+        "event_sha256": "c7e0ac0ddf1618db6d41cf32b458b818354604dec96d1f7c48cff8fbb7d0a884",
+        "nsx_result_sha256": "1d4a89058ceb979c0238338a1a09556214f18ef7c81da01581654a3d1116b961",
+        "xau_result_sha256": "a6dd0297ee2f67f97bac44bde3cff3636488a16d998200d8fcc6adfe38f5a278",
+        "baseline_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "raw_results_retained_on_pod": true
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude requests a re-run or raw Pod evidence is unavailable"
     }
   ],
   "blockers": [
@@ -20398,6 +20424,21 @@
       ],
       "summary": "Started T-138 from Claude handoff rev357 after T-137 positive control acceptance. Using standing D-034 approval; event study first, then sequential NSXUSD/XAUUSD labs with --workers 2, evaluation batch 40, max 400 ideas and a 12 GB watchdog. No gate/config/holdout changes or live/demo orders.",
       "validation": "V-343"
+    },
+    {
+      "revision": 359,
+      "ts": "2026-10-13T08:38:56Z",
+      "agent": "codex",
+      "action": "complete_t138_round_d",
+      "task_ids": [
+        "T-138"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t138_round_d_summary.json"
+      ],
+      "summary": "Completed the approved Round D event study and sequential NSXUSD/XAUUSD lab runs on image ffb0a6f. Each market ran 1,080 attempts with zero survivors; random-entry baselines (40 trials each) produced zero qualifying strategies. Event study informative-volume share was 0.0 for both markets. Peak RSS was 0.69 GiB NSXUSD and 0.83 GiB XAUUSD. Raw results and baseline files remain on the Pod; no broker calls/orders or gate/config/holdout changes. Handed T-138 to Claude for review.",
+      "validation": "V-344"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
