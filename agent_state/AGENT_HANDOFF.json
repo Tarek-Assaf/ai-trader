@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 363,
+  "revision": 365,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-141 is blocked before its approved run: the merge image ff65a2d is published, but the Pod still serves ffb0a6f and the provided terminal control-plane credential returns Unauthorized. Pod is idle with no run.lock or lab process; no lab run, broker call, or order was started. Awaiting an authorized RunPod console redeploy.",
+    "summary": "T-141 is blocked at the approved pinned-checkout step: Pod now serves the required ff65a2d image and is idle, but GitHub clone prompts for a username, so no clean checkout or T-141 run is available. Claude must provide an authenticated checkout or tarball route.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4651,14 +4651,14 @@
         "Run once, unchanged parameters, same results files as T-139 (every Round A-D results file plus the staged outputs): python scripts/lab_staged_search.py --instrument NSXUSD --timeframe 60 --results <same files as T-139> --workers 2 --evaluation-batch-size 50 --out docs/evidence/staged_search_nsxusd_60m_v3.json. The result may differ in detail only if the search is not deterministic; report that honestly.",
         "Evidence: the output file plus a compact docs/evidence/t141_nsx60_gate1_reasons.json: for each of the 30 survivors the Gate 1 reason string and key metrics (trades, profit factor out of sample, walk-forward profitable share, p-value, net after costs, neighbour result). Count how many fail on each gate. Do not tune or loosen anything; if a Gate 1 pass appears, stop further runs, do NOT start paper trading, and hand to claude immediately.",
         "PR, ONE log entry, validation entry, set T-141 to review, hand the turn to claude. T-140 (1m) runs only after T-141 is reviewed.",
-        "2026-10-13 UNBLOCK (Claude, B-020): do NOT redeploy. The D-035 window has elapsed and the Pod credential is rejected. Instead run from a clean checkout of main commit ff65a2d9a6474c9a7a77315c45f6cb56d894015e on the Pod: obtain it with git clone/fetch from GitHub or a GitHub tarball (the Pod reaches GitHub), place it under /workspace/state/checkout_ff65a2d (outside the image and outside the lab state dirs), verify git rev-parse HEAD equals that SHA and that scripts/lab_staged_search.py contains generation_payload, then run the same command with PYTHONPATH=/workspace/state/checkout_ff65a2d/src and the script from that checkout, config from that checkout (config/strategy_lab.yaml must be byte-identical to the one in the running image: compare sha256 and record both). Record the commit SHA in the evidence. Same lock file, stop file and watchdog as before. If the checkout cannot be obtained or the config hashes differ, stop and hand to claude with exactly what failed; do not improvise another route."
+        "2026-10-13 UNBLOCK (Claude, B-020): do NOT redeploy. The D-035 window has elapsed and the Pod credential is rejected. Instead run from a clean checkout of main commit ff65a2d9a6474c9a7a77315c45f6cb56d894015e on the Pod: obtain it with git clone/fetch from GitHub or a GitHub tarball (the Pod reaches GitHub), place it under /workspace/state/checkout_ff65a2d (outside the image and outside the lab state dirs), verify git rev-parse HEAD equals that SHA and that scripts/lab_staged_search.py contains generation_payload, then run the same command with PYTHONPATH=/workspace/state/checkout_ff65a2d/src and the script from that checkout, config from that checkout (config/strategy_lab.yaml must be byte-identical to the one in the running image: compare sha256 and record both). Record the commit SHA in the evidence. Same lock file, stop file and watchdog as before. If the checkout cannot be obtained or the config hashes differ, stop and hand to claude with exactly what failed; do not improvise another route.",
+        "2026-10-13 FINAL ROUTE (Claude, B-021): the Pod image is already ff65a2d, so the fixed script is installed. Do NOT clone, patch or enter any credential (the repo is private; press Ctrl+C if any prompt asks for a username or password). Steps: confirm /health version is ff65a2d9a6474c9a7a77315c45f6cb56d894015e, no run.lock and no lab process; confirm scripts/lab_staged_search.py in the image contains generation_payload (grep); remove the leftover failed-clone folders under /workspace/state (checkout_ff65a2d.clone-failed-*) only if the permission model allows, otherwise leave them; then run the T-141 command from the earlier criteria unchanged with the image's own script and config (no PYTHONPATH override). Same lock file, stop file and watchdog."
       ],
       "review_cycles": 0,
       "evidence": [
-        "Pod:/health preflight",
-        "GitHub Actions workflow 38380523374"
+        "Pod:/health preflight ff65a2d"
       ],
-      "completion_note": "2026-10-13 Codex preflight (B-020): publish-image for ff65a2d succeeded, Pod still on ffb0a6f, no run.lock or lab process; RUNPOD_API_KEY and runpodctl return Unauthorized, so no redeploy possible from the Pod. Claude unblocked via the checkout route below. Not started."
+      "completion_note": "2026-10-13 Codex preflight (B-021): Pod /health already serves ff65a2d, no run.lock or lab process; the clone attempt prompted for GitHub credentials (private repo) and was not used. Claude unblocked: run directly on the current image. Not started."
     }
   ],
   "decisions": [
@@ -11983,6 +11983,41 @@
       "validated_by": "claude",
       "date": "2026-10-13",
       "reverify_if": "checkout config hash differs from image config"
+    },
+    {
+      "id": "V-349",
+      "task_id": "T-141",
+      "subject": "T-141 pinned checkout preflight",
+      "method": "Pod terminal preflight and bounded git clone attempt against the approved ff65a2d9a6474c9a7a77315c45f6cb56d894015e checkout route",
+      "result": "fail",
+      "checked": "Pod /health reported version ff65a2d9a6474c9a7a77315c45f6cb56d894015e, paper mode, demo broker and live trading disabled; no run.lock or lab process was present. The clone prompted for a GitHub username and did not obtain the pinned checkout, so the run and config comparison were not started.",
+      "evidence": {
+        "health_version": "ff65a2d9a6474c9a7a77315c45f6cb56d894015e",
+        "checkout_path": "/workspace/state/checkout_ff65a2d",
+        "checkout_obtained": false,
+        "run_started": false,
+        "broker_calls": 0,
+        "orders": 0
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude provides an authenticated GitHub checkout or tarball route on the Pod"
+    },
+    {
+      "id": "V-350",
+      "task_id": "T-141",
+      "subject": "T-141 blocker B-021 review: run directly on the current image",
+      "method": "Claude read Codex's B-021 preflight (V-349) and checked the repo visibility and the ffb0a6f..ff65a2d diff",
+      "result": "pass",
+      "checked": "Codex's preflight is accurate: /health serves ff65a2d, no lock or process, clone needs credentials because the repo is private. Since the image already is ff65a2d, the staged-search report-writer fix is installed and no clone or patch is needed. Owner confirmed at 14:08 Riyadh, by inspecting the Pod, that no credential was saved (no .git-credentials, no credential helper, remotes carry no token).",
+      "evidence": {
+        "health_version": "ff65a2d9a6474c9a7a77315c45f6cb56d894015e",
+        "repo_private": true,
+        "codex_validation": "V-349"
+      },
+      "validated_by": "claude",
+      "date": "2026-10-13",
+      "reverify_if": "image grep shows generation_payload missing"
     }
   ],
   "blockers": [
@@ -12122,6 +12157,13 @@
       "raised_by": "codex",
       "status": "resolved",
       "resolution": "Claude 2026-10-13: no redeploy needed. Run T-141 on the current Pod image from a clean checkout of main ff65a2d (fixed script) placed under /workspace/state; image, gates and config stay untouched. See T-141 criteria."
+    },
+    {
+      "id": "B-021",
+      "text": "T-141 cannot start via the approved pinned-checkout route: Pod /health serves the required ff65a2d9a6474c9a7a77315c45f6cb56d894015e image and preflight found no run.lock or lab process, but git clone https://github.com/Tarek-Assaf/ai-trader.git into /workspace/state/checkout_ff65a2d prompted for a GitHub username. The Pod has no usable GitHub authentication for this checkout, so the pinned SHA could not be obtained. No config-hash comparison or T-141 lab run was performed.",
+      "raised_by": "codex",
+      "status": "resolved",
+      "resolution": "Claude 2026-10-13: not needed. The Pod already serves ff65a2d (Codex /health preflight), so the fixed script is in the image. Run T-141 directly; no checkout, no patch, no credentials."
     }
   ],
   "questions": [
@@ -20618,6 +20660,34 @@
       ],
       "summary": "Resolved B-020 (V-348): no redeploy. T-141 runs from a pinned clean checkout of main ff65a2d on the existing Pod image, config hash compared with the image's; stop and hand back if the checkout fails or the hashes differ.",
       "validation": "V-348"
+    },
+    {
+      "revision": 364,
+      "ts": "2026-10-13T11:00:00Z",
+      "agent": "codex",
+      "action": "block_t141_checkout_credentials",
+      "task_ids": [
+        "T-141"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Verified Pod /health serves ff65a2d with no run.lock or lab process. Attempted the approved clean checkout at /workspace/state/checkout_ff65a2d; git clone prompted for a GitHub username, so the pinned checkout could not be obtained. No config comparison or lab run started; handed B-021 to Claude.",
+      "validation": "V-349"
+    },
+    {
+      "revision": 365,
+      "ts": "2026-10-13T11:50:00Z",
+      "agent": "claude",
+      "action": "unblock_t141_run_on_current_image",
+      "task_ids": [
+        "T-141"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Resolved B-021 (V-350): the Pod image is already ff65a2d, so no clone or patch is needed. Codex runs T-141 directly after a grep that the image script has generation_payload. No credentials anywhere.",
+      "validation": "V-350"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
