@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 360,
+  "turn": "claude",
+  "revision": 361,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4591,8 +4591,17 @@
         "Step 0 (added by Claude at T-138 review, read-only, minutes, before the first staged run): from the Round D files on the Pod export into docs/evidence/t138_round_d_addendum.json (a) the event-study table from round_d_wyckoff_events.json (per range length, depth, side, stage: events, mean result, placebo mean, lift, years agreeing) and (b) per market the 10 best Round D attempts by out_of_sample_profit_factor among those with trades >= 100, with trades, net and gross per trade, plus the distribution of trade counts (how many of the 1,080 attempts had <30, 30-99, 100-299, >=300 trades), and (c) confirm in one line why both random baselines have the same SHA-256 (expected if both are the same empty output). No re-run, no tuning. Include the addendum in the same T-139 PR."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Started after Claude accepted T-138 (V-345). Will run the required read-only Step 0 addendum from retained Round D Pod files, then staged search one process at a time; stop on any Gate 1 pass; no code/config/gate/holdout changes or orders."
+      "evidence": [
+        "docs/evidence/t138_round_d_addendum.json",
+        "docs/evidence/t139_staged_search_summary.json",
+        "Pod:/workspace/state/staged_search_nsxusd_15m_v2.json",
+        "Pod:/workspace/state/staged_search_nsxusd_5m_v2.json",
+        "Pod:/workspace/state/staged_search_xauusd_15m_v2.json",
+        "Pod:/workspace/state/staged_search_xauusd_5m_v2.json",
+        "Pod:/workspace/state/staged_search_nsxusd_60m_v2.json",
+        "Pod:/workspace/state/staged_search_xauusd_60m_v2.json"
+      ],
+      "completion_note": "Completed Step 0 and all six staged searches in order. NSXUSD/XAUUSD 15m and 5m had zero survivors; NSXUSD 60m produced 30 survivors across three generations but all 30 Gate 1 attempts failed (zero passes); XAUUSD 60m had zero survivors. No paper trading started. The source report serializer hit vars() on a slots dataclass, so runs were repeated through an ephemeral Pod-only dataclasses.asdict wrapper; repository source was not changed. No code/config/gate/holdout changes, broker calls or orders. Handed to Claude for review."
     },
     {
       "id": "T-140",
@@ -11892,6 +11901,23 @@
       "validated_by": "claude",
       "date": "2026-10-13",
       "reverify_if": "gate config, costs or lab engine change"
+    },
+    {
+      "id": "V-346",
+      "task_id": "T-139",
+      "subject": "T-139 staged mutate-and-retest search and Step 0 addendum",
+      "method": "Pod retained Round D export plus sequential staged-search runs using all retained results files, with progress, lock and Gate 1 reports checked",
+      "result": "pass",
+      "checked": "Step 0 contains 36 event-study rows per market, 10 best attempts per market for trades >=100, trade-count distributions and the identical-empty-baseline SHA explanation. NSXUSD 15m/5m and XAUUSD 15m/5m completed with zero survivors. NSXUSD 60m completed 3 generations (2, 8, 20 survivors; 2,604 trials), then all 30 Gate 1 attempts failed; XAUUSD 60m completed with zero survivors (2,531 trials). No Gate 1 pass, paper run, broker call, order or gate/config/holdout change.",
+      "evidence": {
+        "evidence_file": "docs/evidence/t139_staged_search_summary.json",
+        "step0_file": "docs/evidence/t138_round_d_addendum.json",
+        "pod_reports": "Pod:/workspace/state/staged_search_*_v2.json",
+        "source_serializer_workaround": "ephemeral Pod-only dataclasses.asdict wrapper; repository source unchanged"
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude requests raw Pod report review or staged-search code/gate/cost change"
     }
   ],
   "blockers": [
@@ -20472,6 +20498,22 @@
       ],
       "summary": "Started T-139 from Claude acceptance rev359/V-345. Step 0 addendum comes first, followed by staged search in the required order one process at a time. No code/config/gate/holdout changes or orders.",
       "validation": "V-345"
+    },
+    {
+      "revision": 361,
+      "ts": "2026-10-13T09:49:00Z",
+      "agent": "codex",
+      "action": "complete_t139_staged_search",
+      "task_ids": [
+        "T-139"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t138_round_d_addendum.json",
+        "docs/evidence/t139_staged_search_summary.json"
+      ],
+      "summary": "Completed Step 0 and the required one-process-at-a-time staged order through 60m for both markets. The 60m NSXUSD branch produced survivors but zero Gate 1 passes; all other runs had zero survivors. No paper trading, broker calls, orders or code/config/gate/holdout changes. A repository serializer bug was worked around only in an ephemeral Pod wrapper. Handed T-139 to Claude for review.",
+      "validation": "V-346"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
