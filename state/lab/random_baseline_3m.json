@@ -1,0 +1,122 @@
+[
+ {
+  "instrument": "NSXUSD",
+  "timeframe": 3,
+  "source": "seed:ostdv_sweep_0.1111_newyork_long_2_4",
+  "name": "ostdv_sweep_0.1111_newyork_long_2_4",
+  "baseline": {
+   "signals": 1792,
+   "trades": 1312,
+   "trials": 40,
+   "strategy_net": -5804.32,
+   "strategy_profit_factor": 0.666,
+   "random_net_mean": -6661.46,
+   "random_net_sd": 819.09,
+   "random_net_p95": -5341.04,
+   "random_profit_factor_mean": 0.639,
+   "random_trades_mean": 1645.3,
+   "strategy_percentile": 0.8,
+   "z_vs_random": 1.05
+  }
+ },
+ {
+  "instrument": "NSXUSD",
+  "timeframe": 3,
+  "source": "seed:ostdv_sweep_newyork_long_r0.5_1",
+  "name": "ostdv_sweep_newyork_long_r0.5_1",
+  "baseline": {
+   "signals": 1792,
+   "trades": 1401,
+   "trials": 40,
+   "strategy_net": -3728.36,
+   "strategy_profit_factor": 0.762,
+   "random_net_mean": -5856.07,
+   "random_net_sd": 1147.89,
+   "random_net_p95": -4369.63,
+   "random_profit_factor_mean": 0.738,
+   "random_trades_mean": 1586.8,
+   "strategy_percentile": 1.0,
+   "z_vs_random": 1.85
+  }
+ },
+ {
+  "instrument": "NSXUSD",
+  "timeframe": 3,
+  "source": "seed:ostdv_sweep_newyork_long_r0.35_0.7",
+  "name": "ostdv_sweep_newyork_long_r0.35_0.7",
+  "baseline": {
+   "signals": 1792,
+   "trades": 1562,
+   "trials": 40,
+   "strategy_net": -4313.51,
+   "strategy_profit_factor": 0.685,
+   "random_net_mean": -5916.41,
+   "random_net_sd": 915.47,
+   "random_net_p95": -4610.09,
+   "random_profit_factor_mean": 0.674,
+   "random_trades_mean": 1633.9,
+   "strategy_percentile": 0.975,
+   "z_vs_random": 1.75
+  }
+ },
+ {
+  "instrument": "XAUUSD",
+  "timeframe": 3,
+  "source": "seed:ostdv_sweep_newyork_long_r0.5_1",
+  "name": "ostdv_sweep_newyork_long_r0.5_1",
+  "baseline": {
+   "signals": 2320,
+   "trades": 1690,
+   "trials": 40,
+   "strategy_net": -2704.04,
+   "strategy_profit_factor": 0.388,
+   "random_net_mean": -3545.49,
+   "random_net_sd": 252.21,
+   "random_net_p95": -3168.03,
+   "random_profit_factor_mean": 0.449,
+   "random_trades_mean": 2028.3,
+   "strategy_percentile": 1.0,
+   "z_vs_random": 3.34
+  }
+ },
+ {
+  "instrument": "XAUUSD",
+  "timeframe": 3,
+  "source": "seed:ict_sweep_fvg_asia_newyork_long_r0.35_0.7",
+  "name": "ict_sweep_fvg_asia_newyork_long_r0.35_0.7",
+  "baseline": {
+   "signals": 5393,
+   "trades": 2834,
+   "trials": 40,
+   "strategy_net": -4748.36,
+   "strategy_profit_factor": 0.288,
+   "random_net_mean": -7573.81,
+   "random_net_sd": 246.73,
+   "random_net_p95": -7154.01,
+   "random_profit_factor_mean": 0.355,
+   "random_trades_mean": 4379.2,
+   "strategy_percentile": 1.0,
+   "z_vs_random": 11.45
+  }
+ },
+ {
+  "instrument": "XAUUSD",
+  "timeframe": 3,
+  "source": "seed:ostdv_sweep_newyork_long_r0.35_0.7",
+  "name": "ostdv_sweep_newyork_long_r0.35_0.7",
+  "baseline": {
+   "signals": 2320,
+   "trades": 1920,
+   "trials": 40,
+   "strategy_net": -3137.39,
+   "strategy_profit_factor": 0.274,
+   "random_net_mean": -3716.13,
+   "random_net_sd": 224.9,
+   "random_net_p95": -3376.29,
+   "random_profit_factor_mean": 0.358,
+   "random_trades_mean": 2109.2,
+   "strategy_percentile": 1.0,
+   "z_vs_random": 2.57
+  }
+ }
+]
