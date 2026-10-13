@@ -1,0 +1,23 @@
+{
+  "task": "T-142",
+  "diagnostic_zero_cost": true,
+  "cost_multiplier": 0.0,
+  "generated_at": "2026-10-13T19:43:21.390092+00:00",
+  "order": ["60m", "5m", "3m", "1m"],
+  "markets": ["NSXUSD", "XAUUSD"],
+  "original_trial_count": 2628,
+  "strategies_evaluated": 1272,
+  "gate1_passes": 0,
+  "missing_definitions": 523,
+  "pod_result_sha256": "59f9a6414cef5b2733d96bbb26a185403e966cabcf453fd7630e708feaab28eb",
+  "groups": {
+    "NSXUSD:60": {"strategies_evaluated": 347, "missing_strategy_definitions": 0, "total_trades": 134245, "average_profit_per_trade_points": 0.00398057466106681, "best_trade_points": 618.07, "worst_trade_points": -444.1048551038948, "gate1_passes": 0, "gate1_failure_counts": {"adjusted_significance_failed": 121, "cost_stress_failed": 84, "neighbor_parameters_not_profitable": 112, "out_of_sample_profit_factor_below_gate": 102, "profit_concentration_above_gate": 14, "too_few_out_of_sample_trades": 59, "too_few_profitable_regimes": 90, "too_few_trades": 50, "walk_forward_share_below_gate": 116}},
+    "XAUUSD:60": {"strategies_evaluated": 351, "missing_strategy_definitions": 139, "total_trades": 112564, "average_profit_per_trade_points": -0.005711815199170564, "best_trade_points": 69.60111082010849, "worst_trade_points": -54.99, "gate1_passes": 0, "gate1_failure_counts": {"adjusted_significance_failed": 212, "cost_stress_failed": 120, "neighbor_parameters_not_profitable": 181, "out_of_sample_profit_factor_below_gate": 179, "profit_concentration_above_gate": 16, "too_few_out_of_sample_trades": 144, "too_few_profitable_regimes": 132, "too_few_trades": 102, "walk_forward_share_below_gate": 198}},
+    "NSXUSD:5": {"strategies_evaluated": 347, "missing_strategy_definitions": 135, "total_trades": 324409, "average_profit_per_trade_points": 0.36098944784924836, "best_trade_points": 395.44850801256325, "worst_trade_points": -252.602, "gate1_passes": 0, "gate1_failure_counts": {"adjusted_significance_failed": 212, "cost_stress_failed": 116, "neighbor_parameters_not_profitable": 176, "out_of_sample_profit_factor_below_gate": 183, "profit_concentration_above_gate": 9, "too_few_out_of_sample_trades": 64, "too_few_profitable_regimes": 128, "too_few_trades": 52, "walk_forward_share_below_gate": 184}},
+    "XAUUSD:5": {"strategies_evaluated": 351, "missing_strategy_definitions": 139, "total_trades": 284535, "average_profit_per_trade_points": -0.08831940149969643, "best_trade_points": 47.333, "worst_trade_points": -26.235, "gate1_passes": 0, "gate1_failure_counts": {"adjusted_significance_failed": 212, "cost_stress_failed": 142, "neighbor_parameters_not_profitable": 178, "out_of_sample_profit_factor_below_gate": 201, "profit_concentration_above_gate": 8, "too_few_out_of_sample_trades": 81, "too_few_profitable_regimes": 142, "too_few_trades": 53, "walk_forward_share_below_gate": 198}},
+    "NSXUSD:3": {"strategies_evaluated": 212, "missing_strategy_definitions": 0, "total_trades": 384342, "average_profit_per_trade_points": 0.4876445970169723, "best_trade_points": 357.4047511222161, "worst_trade_points": -292.8660000000018, "gate1_passes": 0, "gate1_failure_counts": {"adjusted_significance_failed": 212, "cost_stress_failed": 98, "neighbor_parameters_not_profitable": 163, "out_of_sample_profit_factor_below_gate": 186, "profit_concentration_above_gate": 5, "too_few_out_of_sample_trades": 68, "too_few_profitable_regimes": 100, "too_few_trades": 52, "walk_forward_share_below_gate": 189}},
+    "XAUUSD:3": {"strategies_evaluated": 212, "missing_strategy_definitions": 0, "total_trades": 343651, "average_profit_per_trade_points": -0.06414182351664184, "best_trade_points": 43.7, "worst_trade_points": -26.235, "gate1_passes": 0, "gate1_failure_counts": {"adjusted_significance_failed": 212, "cost_stress_failed": 146, "neighbor_parameters_not_profitable": 186, "out_of_sample_profit_factor_below_gate": 190, "profit_concentration_above_gate": 7, "too_few_out_of_sample_trades": 78, "too_few_profitable_regimes": 152, "too_few_trades": 48, "walk_forward_share_below_gate": 198}},
+    "NSXUSD:1": {"strategies_evaluated": 55, "missing_strategy_definitions": 55, "total_trades": 0, "average_profit_per_trade_points": 0.0, "best_trade_points": 0.0, "worst_trade_points": 0.0, "gate1_passes": 0, "gate1_failure_counts": {}},
+    "XAUUSD:1": {"strategies_evaluated": 55, "missing_strategy_definitions": 55, "total_trades": 0, "average_profit_per_trade_points": 0.0, "best_trade_points": 0.0, "worst_trade_points": 0.0, "gate1_passes": 0, "gate1_failure_counts": {}}
+  }
+}
