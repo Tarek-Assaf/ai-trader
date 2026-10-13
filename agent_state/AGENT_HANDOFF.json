@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 357,
+  "revision": 358,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -11784,8 +11784,8 @@
     {
       "id": "V-341",
       "task_id": "T-137",
-      "result": "pending",
-      "checked": "RunPod GraphQL podEditJob accepted the owner-authorized image update for Pod pbkmi8nx193x3w. The API response set imageName to the required ffb0a6f image and desiredStatus remained RUNNING; the prior terminal session then returned 502 during restart. No lab process, broker action, or code/config/gate/holdout change was started.",
+      "result": "pass",
+      "checked": "Re-checked the Pod through its exposed HTTP service after restart. /health reports the exact required ffb0a6f image, paper mode, demo broker and live_enabled=false; DB and Redis are reachable. The data recorder is currently degraded because ping_reply_ok=false after one ConnectionClosedError, so the positive-control study has not started.",
       "evidence": {
         "required_image": "ffb0a6f895463e0a754de702167ea57b4806008a",
         "base_commit": "7e8812a98c9f6a163665adfcb0bd5edb857fad3a",
@@ -11793,11 +11793,17 @@
         "study_started": false,
         "graphql_update": "accepted",
         "desired_status": "RUNNING",
-        "old_terminal_http": "502_during_restart"
+        "old_terminal_http": "502_during_restart",
+        "health_version": "ffb0a6f895463e0a754de702167ea57b4806008a",
+        "health_status": "degraded",
+        "data_recorder_status": "degraded",
+        "ping_reply_ok": false,
+        "db": "reachable",
+        "redis": "reachable"
       },
       "validated_by": "codex",
       "date": "2026-10-13",
-      "reverify_if": "After redeploy route completes; verify /health exact required image, paper mode, live_enabled=false, no run.lock, then run unchanged T-137 command.",
+      "reverify_if": "Before starting the lab, obtain a working terminal route, confirm no run.lock/lab process, and re-check /health safety flags; do not start while recorder remains unsafe.",
       "subject": "T-137 authorized redeploy start",
       "method": "Authoritative handoff reconciliation and fresh branch preflight"
     }
@@ -20333,6 +20339,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Used the owner-authorized RunPod control-plane route from the connected Pod terminal. GraphQL podEditJob accepted the exact ffb0a6f image for pbkmi8nx193x3w; the old web-terminal session returned HTTP 502 during the restart. No lab run, broker action or code/config/gate/holdout change was made. Waiting for the new container route so /health can be verified before T-137 starts.",
+      "validation": "V-341"
+    },
+    {
+      "revision": 358,
+      "ts": "2026-10-13T05:32:00Z",
+      "agent": "codex",
+      "action": "t137_image_verified",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Verified the redeployed Pod through port 8000: exact ffb0a6f image, paper mode, demo broker and live_enabled=false; DB/Redis reachable. The data recorder reports degraded ping_reply_ok=false after one ConnectionClosedError, so no positive-control run started. The old web-terminal port still returns 502; a working terminal route is required for lock/process check and study launch.",
       "validation": "V-341"
     }
   ],
