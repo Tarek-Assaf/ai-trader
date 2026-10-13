@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 357,
+  "revision": 359,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-137 positive control accepted: m=+2 passed Gate 1, m=0 and m=-0.5 failed, null battery 0/200 passes, so Gate 1 detects a real edge and does not pass noise. T-138 (Wyckoff Round D), T-139 (staged search) and T-140 (1m resume) are next, run by Codex on the Pod.",
+    "summary": "T-137 positive control accepted (Gate 1 detects a planted 2x-cost edge, no false passes). T-138 Wyckoff Round D accepted: 2,160 attempts, zero Gate 1 passes, but about 98% had too few trades to judge and volume data carries no information. Next: T-139 staged search (with a read-only step 0 export), then T-140 1m resume, run by Codex on the Pod.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4540,7 +4540,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4558,8 +4558,15 @@
         "ONE compact evidence file docs/evidence/t138_round_d_summary.json in the format of t134_round_c_summary.json (run ids, attempts, Gate 1 passes, too_few_trades, peak memory, best 3 per family, best 10 per market, weekly p counts, years used; null never 0 for missing data). Keep the results_d_*.json files on the Pod for T-139. PR, ONE log entry, validation entry, set T-138 to review and hand the turn to claude."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Not started."
+      "evidence": [
+        "docs/evidence/t138_round_d_summary.json",
+        "Pod:/workspace/state/round_d_wyckoff_events.json",
+        "Pod:/workspace/state/results_d_nsx.json",
+        "Pod:/workspace/state/results_d_xau.json",
+        "Pod:/workspace/state/random_baseline_d_nsx.json",
+        "Pod:/workspace/state/random_baseline_d_xau.json"
+      ],
+      "completion_note": "Completed Round D event study plus sequential NSXUSD and XAUUSD runs (1,080 attempts each) and 40-trial random-entry baselines. Both markets produced zero survivors and zero baseline qualifiers; event study informative-volume share was 0.0 for both. Peak RSS was 0.69 GiB NSXUSD and 0.83 GiB XAUUSD; no broker calls/orders or gate/config/holdout changes. Compact summary is committed; raw results remain on the Pod for T-139."
     },
     {
       "id": "T-139",
@@ -4580,7 +4587,8 @@
         "Why: D-034. Spec: docs/specs/staged_search.md (see its implementation notes). Script: scripts/lab_staged_search.py. Parents come from the existing results files on the Pod (Rounds A-D); list them with ls under the lab state/working directory and pass every file that has an 'attempts' list with strategy_hash values.",
         "Run one process at a time (same lock file as lab_run.py), in this order: NSXUSD 15, NSXUSD 5, XAUUSD 15, XAUUSD 5, then 60 for both: python scripts/lab_staged_search.py --instrument NSXUSD --timeframe 15 --results <all results files> --workers 2 --evaluation-batch-size 50 (writes docs/evidence/staged_search_nsxusd_15m.json etc.; progress file is the default /workspace/state/lab/progress.json). Use --stop-file for owner stop requests.",
         "A run with zero parents or zero survivors is a valid result; do not tune anything. Report per run: parents, trials per generation, survivors, total trials, final Gate 1 passes.",
-        "ONE compact summary docs/evidence/t139_staged_search_summary.json (per market/timeframe: parents, generations, total trials, survivors, best 3 survivors with early/later/other-market net per trade, Gate 1 passes and their reasons). PR, ONE log entry, validation entry, set T-139 to review and hand the turn to claude. If any Gate 1 pass appears, stop further runs, do NOT start paper trading, and hand to claude immediately."
+        "ONE compact summary docs/evidence/t139_staged_search_summary.json (per market/timeframe: parents, generations, total trials, survivors, best 3 survivors with early/later/other-market net per trade, Gate 1 passes and their reasons). PR, ONE log entry, validation entry, set T-139 to review and hand the turn to claude. If any Gate 1 pass appears, stop further runs, do NOT start paper trading, and hand to claude immediately.",
+        "Step 0 (added by Claude at T-138 review, read-only, minutes, before the first staged run): from the Round D files on the Pod export into docs/evidence/t138_round_d_addendum.json (a) the event-study table from round_d_wyckoff_events.json (per range length, depth, side, stage: events, mean result, placebo mean, lift, years agreeing) and (b) per market the 10 best Round D attempts by out_of_sample_profit_factor among those with trades >= 100, with trades, net and gross per trade, plus the distribution of trade counts (how many of the 1,080 attempts had <30, 30-99, 100-299, >=300 trades), and (c) confirm in one line why both random baselines have the same SHA-256 (expected if both are the same empty output). No re-run, no tuning. Include the addendum in the same T-139 PR."
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -11844,6 +11852,42 @@
         "evidence_file": "docs/evidence/positive_control.json",
         "codex_validation": "V-342",
         "raw_sha256": "de1603c5651b3531b78e9f5449cd26b30caadef3a3a833e4c40e0fcd652946f0"
+      },
+      "validated_by": "claude",
+      "date": "2026-10-13",
+      "reverify_if": "gate config, costs or lab engine change"
+    },
+    {
+      "id": "V-344",
+      "task_id": "T-138",
+      "subject": "T-138 Wyckoff Round D execution and evidence",
+      "method": "Pod terminal event study, sequential NSXUSD/XAUUSD lab runs, random baselines, progress and SHA-256 checks",
+      "result": "pass",
+      "checked": "Event study completed for both markets; each lab completed all 1,080 attempts with zero survivors; both 40-trial random baselines produced zero qualifying strategies; no broker calls or orders; peak RSS stayed below the 12 GiB watchdog.",
+      "evidence": {
+        "evidence_file": "docs/evidence/t138_round_d_summary.json",
+        "event_sha256": "c7e0ac0ddf1618db6d41cf32b458b818354604dec96d1f7c48cff8fbb7d0a884",
+        "nsx_result_sha256": "1d4a89058ceb979c0238338a1a09556214f18ef7c81da01581654a3d1116b961",
+        "xau_result_sha256": "a6dd0297ee2f67f97bac44bde3cff3636488a16d998200d8fcc6adfe38f5a278",
+        "baseline_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+        "raw_results_retained_on_pod": true
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude requests a re-run or raw Pod evidence is unavailable"
+    },
+    {
+      "id": "V-345",
+      "task_id": "T-138",
+      "subject": "T-138 review: Wyckoff Round D accepted",
+      "method": "Claude reviewed docs/evidence/t138_round_d_summary.json and V-344 against T-138 acceptance criteria",
+      "result": "pass",
+      "checked": "Both markets ran all 1,080 attempts with zero Gate 1 passes and zero baseline qualifiers; no broker calls, orders, gate/config/holdout changes. Caveats for the owner: 1,057 (NSXUSD) and 1,053 (XAUUSD) of 1,080 attempts failed for too few trades, so Round D mostly could not be judged rather than being judged bad; informative-volume share is 0.0, so volume-based Wyckoff logic cannot be tested on this data; the event-study lift table and best-10 lists are not in the committed summary, and both baseline files share one SHA-256. These three gaps are added as T-139 step 0 (read-only) instead of blocking T-139.",
+      "evidence": {
+        "evidence_file": "docs/evidence/t138_round_d_summary.json",
+        "codex_validation": "V-344",
+        "nsx_result_sha256": "1d4a89058ceb979c0238338a1a09556214f18ef7c81da01581654a3d1116b961",
+        "xau_result_sha256": "a6dd0297ee2f67f97bac44bde3cff3636488a16d998200d8fcc6adfe38f5a278"
       },
       "validated_by": "claude",
       "date": "2026-10-13",
@@ -20384,6 +20428,36 @@
       ],
       "summary": "Accepted T-137 (V-343): m=+2 passed, m=0/-0.5 failed, null 0/200, no gate changed. B-019 resolved. Codex: start T-138 now (D-035 window has elapsed, so use the standing D-034 approval for Wyckoff Round D); do not start T-139/T-140 before T-138 is reviewed.",
       "validation": "V-343"
+    },
+    {
+      "revision": 358,
+      "ts": "2026-10-13T08:38:56Z",
+      "agent": "codex",
+      "action": "t138_round_d_run_and_evidence",
+      "task_ids": [
+        "T-138"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t138_round_d_summary.json"
+      ],
+      "summary": "Merged by Claude from two consecutive Codex entries (original wording, original time and number in brackets) because the log must alternate agents. [358, 2026-10-13T06:30:00Z, start_t138_round_d] Started T-138 from Claude handoff rev357 after T-137 positive control acceptance. Using standing D-034 approval; event study first, then sequential NSXUSD/XAUUSD labs with --workers 2, evaluation batch 40, max 400 ideas and a 12 GB watchdog. No gate/config/holdout changes or live/demo orders. [359, 2026-10-13T08:38:56Z, complete_t138_round_d] Completed the approved Round D event study and sequential NSXUSD/XAUUSD lab runs on image ffb0a6f. Each market ran 1,080 attempts with zero survivors; random-entry baselines (40 trials each) produced zero qualifying strategies. Event study informative-volume share was 0.0 for both markets. Peak RSS was 0.69 GiB NSXUSD and 0.83 GiB XAUUSD. Raw results and baseline files remain on the Pod; no broker calls/orders or gate/config/holdout changes. Handed T-138 to Claude for review.",
+      "validation": "V-344"
+    },
+    {
+      "revision": 359,
+      "ts": "2026-10-13T08:55:00Z",
+      "agent": "claude",
+      "action": "accept_t138_round_d",
+      "task_ids": [
+        "T-138",
+        "T-139"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-138 (V-345): 2,160 attempts, zero passes, zero baseline qualifiers, no gate changed; but ~98% of attempts had too few trades and volume is uninformative. Added read-only step 0 to T-139 (event-study lift table, best 10 per market, trade-count distribution, baseline hash explanation). Codex: start T-139 under standing D-034 approval; one process at a time.",
+      "validation": "V-345"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
