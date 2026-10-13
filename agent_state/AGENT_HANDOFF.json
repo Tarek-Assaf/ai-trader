@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 365,
+  "revision": 367,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-141 is blocked at the approved pinned-checkout step: Pod now serves the required ff65a2d image and is idle, but GitHub clone prompts for a username, so no clean checkout or T-141 run is available. Claude must provide an authenticated checkout or tarball route.",
+    "summary": "Positive control accepted (Gate 1 detects a planted 2x-cost edge, no false passes). Wyckoff Round D, staged search and the NSXUSD 60m reasons run accepted: about 5,000 attempts this round, zero Gate 1 passes. The closest candidates (e.g. 495 trades, +5,689 net after costs, 75% of walk-forward windows profitable) fail only the multiple-testing significance check. T-140 (1m resume) is next.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4637,7 +4637,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4656,9 +4656,13 @@
       ],
       "review_cycles": 0,
       "evidence": [
-        "Pod:/health preflight ff65a2d"
+        "docs/evidence/staged_search_nsxusd_60m_v3.json",
+        "docs/evidence/t141_nsx60_gate1_reasons.json",
+        "Pod copied image application tree to /workspace/state/checkout_ff65a2d; image unchanged",
+        "desktop git-show and copied-file SHA-256 values recorded in compact evidence",
+        "Pod command, config hash comparison and safety summary recorded in compact evidence"
       ],
-      "completion_note": "2026-10-13 Codex preflight (B-021): Pod /health already serves ff65a2d, no run.lock or lab process; the clone attempt prompted for GitHub credentials (private repo) and was not used. Claude unblocked: run directly on the current image. Not started."
+      "completion_note": "Completed T-141 using the corrected private-repo route. Copied the image application tree to /workspace/state/checkout_ff65a2d without changing the image. Both patched files matched the desktop git-show ff65a2d SHA-256 values. Ran the unchanged NSXUSD 60m staged search from the copy with PYTHONPATH=/workspace/state/checkout_ff65a2d/src, workers 2 and evaluation batch 50. Parents=10, survivors=30, Gate 1 attempts=30, passes=0; adjusted_significance_failed=30, too_few_out_of_sample_trades=19, out_of_sample_profit_factor_below_gate=10, walk_forward_share_below_gate=1. Paper mode, live disabled, broker calls=0 and orders=0. Raw output SHA-256 and both patched-file hashes are in the compact evidence. Handed to Claude for review; T-140 waits."
     }
   ],
   "decisions": [
@@ -12018,6 +12022,56 @@
       "validated_by": "claude",
       "date": "2026-10-13",
       "reverify_if": "image grep shows generation_payload missing"
+    },
+    {
+      "id": "V-351",
+      "task_id": "T-141",
+      "subject": "T-141 corrected copied-tree run and Gate 1 reasons",
+      "method": "Copied image application tree on Pod, verified desktop git-show hashes, ran unchanged staged search from the copy, and recorded raw and compact SHA-256 evidence",
+      "result": "pass",
+      "checked": "No Pod clone or credentials were used and the image was unchanged. Both patched-file hashes matched desktop ff65a2d git-show hashes. The run completed with 30 survivors, 0 Gate 1 passes and 30 adjusted-significance failures; paper/live safety held with zero broker calls and orders.",
+      "evidence": {
+        "raw_file": "docs/evidence/staged_search_nsxusd_60m_v3.json",
+        "compact_file": "docs/evidence/t141_nsx60_gate1_reasons.json",
+        "raw_sha256": "86aaefb11b1c2376b47a82988eeeb4dcb3d9643d12b427b73e7a52556243bfad",
+        "patched_file_sha256": {
+          "scripts/lab_staged_search.py": "a5fa4bc3d617984bff965d201795638f664c75f3820954af444d7e77b29be44d",
+          "src/trader/lab/staged.py": "9f4e06768d13d2d12ee6f959bde983f82b3a2472a1c7e66c7f3e1e2bae067fdf"
+        },
+        "desktop_git_blob_sha256": {
+          "scripts/lab_staged_search.py": "a5fa4bc3d617984bff965d201795638f664c75f3820954af444d7e77b29be44d",
+          "src/trader/lab/staged.py": "9f4e06768d13d2d12ee6f959bde983f82b3a2472a1c7e66c7f3e1e2bae067fdf"
+        },
+        "config_sha256": {
+          "checkout": "fadd445119e5247145369503bf5dc04745cc5d6b644c3babb593571392aebda9",
+          "image": "fadd445119e5247145369503bf5dc04745cc5d6b644c3babb593571392aebda9"
+        },
+        "parents": 10,
+        "survivors": 30,
+        "gate1_attempts": 30,
+        "gate1_passes": 0,
+        "broker_calls": 0,
+        "orders": 0
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude requests review or the staged-search code, config or gate changes"
+    },
+    {
+      "id": "V-352",
+      "task_id": "T-141",
+      "subject": "T-141 review: NSXUSD 60m Gate 1 reasons accepted",
+      "method": "Claude read docs/evidence/t141_nsx60_gate1_reasons.json and staged_search_nsxusd_60m_v3.json against T-141 criteria; checked file hashes and config hash recorded by Codex",
+      "result": "pass",
+      "checked": "Run valid: patched-file SHA-256 equal to desktop git-show of ff65a2d, config hash identical to the image's, no clone or credentials, paper/live safety held, 0 broker calls/orders. Result: 30 survivors, 0 Gate 1 passes; reasons: adjusted_significance_failed 30, too_few_out_of_sample_trades 19, out_of_sample_profit_factor_below_gate 10, walk_forward_share_below_gate 1; 9 of 30 fail on significance alone. Best (index 12): 495 trades, OOS PF 1.61, 75% walk-forward profitable, net +5,689 after costs, raw p 0.016, but raw p is the best of 2,549 trials so it is expected by chance; the multiple-testing correction is the gate working as designed. Trial count this run 2,549 (earlier run 2,604: the search is not exactly reproducible, probably because the ledger of prior attempts differed; both are far above 2,000). No gate loosened.",
+      "evidence": {
+        "compact": "docs/evidence/t141_nsx60_gate1_reasons.json",
+        "raw": "docs/evidence/staged_search_nsxusd_60m_v3.json",
+        "codex_validation": "V-351"
+      },
+      "validated_by": "claude",
+      "date": "2026-10-13",
+      "reverify_if": "gate config or staged-search code change"
     }
   ],
   "blockers": [
@@ -12163,7 +12217,9 @@
       "text": "T-141 cannot start via the approved pinned-checkout route: Pod /health serves the required ff65a2d9a6474c9a7a77315c45f6cb56d894015e image and preflight found no run.lock or lab process, but git clone https://github.com/Tarek-Assaf/ai-trader.git into /workspace/state/checkout_ff65a2d prompted for a GitHub username. The Pod has no usable GitHub authentication for this checkout, so the pinned SHA could not be obtained. No config-hash comparison or T-141 lab run was performed.",
       "raised_by": "codex",
       "status": "resolved",
-      "resolution": "Claude 2026-10-13: not needed. The Pod already serves ff65a2d (Codex /health preflight), so the fixed script is in the image. Run T-141 directly; no checkout, no patch, no credentials."
+      "resolution": "Owner/Claude correction: never clone the private repo on Pod. Copied the image application tree to /workspace/state/checkout_ff65a2d, applied no image changes, verified both patched files against desktop git-show SHA-256, and ran T-141 from the copy with PYTHONPATH=/workspace/state/checkout_ff65a2d/src.",
+      "resolved_by": "codex",
+      "resolved_at": "2026-10-13"
     }
   ],
   "questions": [
@@ -20688,6 +20744,37 @@
       ],
       "summary": "Resolved B-021 (V-350): the Pod image is already ff65a2d, so no clone or patch is needed. Codex runs T-141 directly after a grep that the image script has generation_payload. No credentials anywhere.",
       "validation": "V-350"
+    },
+    {
+      "revision": 366,
+      "ts": "2026-10-13T12:10:00Z",
+      "agent": "codex",
+      "action": "complete_t141_corrected_copy_run",
+      "task_ids": [
+        "T-141"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/staged_search_nsxusd_60m_v3.json",
+        "docs/evidence/t141_nsx60_gate1_reasons.json"
+      ],
+      "summary": "Followed the owner/Claude correction for the private repo: no Pod clone or credentials. Copied the image tree to /workspace/state/checkout_ff65a2d, verified both patched-file SHA-256 values against desktop git-show ff65a2d, and ran the unchanged T-141 command from the copy. Parents=10, survivors=30, Gate 1 attempts=30, passes=0; all 30 failed adjusted significance. Config hashes matched; paper/live safety held; broker calls/orders=0. Handed T-141 to Claude for review and left T-140 waiting.",
+      "validation": "V-351"
+    },
+    {
+      "revision": 367,
+      "ts": "2026-10-13T12:25:00Z",
+      "agent": "claude",
+      "action": "accept_t141_gate1_reasons",
+      "task_ids": [
+        "T-141",
+        "T-140"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-141 (V-352): 30 survivors, 0 Gate 1 passes, all fail adjusted significance; 9 fail on that alone; best raw p 0.016 among 2,549 trials. No gate loosened. Codex: start T-140 (1m NSXUSD resume) as written; stop if no batch completes in 60 minutes.",
+      "validation": "V-352"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
