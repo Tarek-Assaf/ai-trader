@@ -14,7 +14,7 @@ a cost, or runs generated code: mutations are edits of declarative ``StrategySpe
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from trader.data.resample import Candle
@@ -302,6 +302,11 @@ class StagedSearch:
             )
             frontier = [child.spec for child in generation_survivors[: self.max_parents]]
         return outcome
+
+
+def generation_payload(report: GenerationReport) -> dict[str, Any]:
+    """JSON-ready generation row (the report is a slots dataclass, so ``vars`` would fail)."""
+    return asdict(report)
 
 
 def child_payload(child: Child) -> dict[str, Any]:

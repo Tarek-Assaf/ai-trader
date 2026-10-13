@@ -36,6 +36,7 @@ from trader.lab.spec import StrategySpec
 from trader.lab.staged import (
     StagedSearch,
     child_payload,
+    generation_payload,
     spec_hash,
     split_windows,
     window_evaluator,
@@ -229,7 +230,7 @@ def main() -> int:
                 should_stop=stopped,
                 prior_hashes=prior,
             ).run(parents)
-            report["generations"] = [vars(item) for item in outcome.generations]
+            report["generations"] = [generation_payload(item) for item in outcome.generations]
             report["total_trials"] = outcome.trials
             ranked = sorted(
                 outcome.survivors,
@@ -273,8 +274,18 @@ def main() -> int:
                 )
                 payload = result.payload()
                 report["final_gate1"] = {
-                    "attempts": payload["attempts"],
+                    "attempts": len(payload["attempts"]),
                     "passes": len(payload["survivors"]),
+                    "attempt_details": [
+                        {
+                            "strategy_hash": row.get("strategy_hash"),
+                            "source": row.get("source"),
+                            "verdict": row.get("verdict"),
+                            "reason": row.get("reason"),
+                            "metrics": row.get("metrics"),
+                        }
+                        for row in payload["attempts"]
+                    ],
                 }
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(report, indent=2, default=str), encoding="utf-8")
