@@ -6,6 +6,7 @@ never feeds trial or promotion state.  Candidate definitions are regenerated
 from the deterministic seed families and selected by the hashes recorded in the
 append-only result files.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -13,8 +14,6 @@ import gc
 import glob
 import json
 import os
-import sys
-import time
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
 from functools import partial
@@ -29,7 +28,6 @@ from trader.lab.runner import (
     _holdout_loader,
     _parquet_files,
     load_histdata_candles,
-    pessimistic_cost_model,
     walk_forward_sizes,
 )
 from trader.lab.validator import Gate1Config, open_sealed_reader, strategy_hash
@@ -72,17 +70,20 @@ def _describe(spec: Any) -> str:
     entries = []
     for condition in spec.entry_conditions:
         threshold = getattr(condition, "threshold", "")
-        entries.append(
-            f"{getattr(condition, 'indicator', '?')} {getattr(condition, 'operator', '?')} {threshold}"
-        )
+        indicator = getattr(condition, "indicator", "?")
+        operator = getattr(condition, "operator", "?")
+        entries.append(f"{indicator} {operator} {threshold}")
     exits = []
     for rule in spec.exit_rules:
         if getattr(rule, "kind", "") == "time_stop":
             exits.append(f"time_stop {getattr(rule, 'bars', '?')} bars")
         else:
-            text = f"{getattr(rule, 'kind', '?')} {getattr(rule, 'distance', '?')} {getattr(rule, 'unit', 'points')}"
+            kind = getattr(rule, "kind", "?")
+            distance = getattr(rule, "distance", "?")
+            unit = getattr(rule, "unit", "points")
+            text = f"{kind} {distance} {unit}"
             if hasattr(rule, "activation_distance"):
-                text += f" activation {getattr(rule, 'activation_distance')}"
+                text += f" activation {rule.activation_distance}"
             exits.append(text)
     return f"{spec.direction}; entry: {', '.join(entries)}; exits: {', '.join(exits)}"
 
@@ -128,7 +129,11 @@ def run(args: argparse.Namespace) -> int:
     output_path = Path(args.output)
     attempts = _load_attempts(state_root)
     total_trials = max(1, len({digest for group in attempts.values() for digest in group}))
-    checkpoint: dict[str, Any] = {"completed": {}, "started_at": _stamp(), "total_trials": total_trials}
+    checkpoint: dict[str, Any] = {
+        "completed": {},
+        "started_at": _stamp(),
+        "total_trials": total_trials,
+    }
     if checkpoint_path.exists():
         try:
             checkpoint.update(json.loads(checkpoint_path.read_text(encoding="utf-8")))
@@ -158,7 +163,9 @@ def run(args: argparse.Namespace) -> int:
             split = max(1, int(len(candles) * 0.8))
             train, evaluation = candles[:split], candles[split:]
             train_bars, test_bars, step_bars = walk_forward_sizes(len(train))
-            candidates = runner._candidates(instrument, timeframe, ("seeds", "round_c", "round_d"), train)
+            candidates = runner._candidates(
+                instrument, timeframe, ("seeds", "round_c", "round_d"), train
+            )
             by_hash: dict[str, tuple[str, Any]] = {}
             for source, spec in candidates:
                 by_hash.setdefault(strategy_hash(spec.model_dump(mode="json")), (source, spec))
@@ -169,12 +176,15 @@ def run(args: argparse.Namespace) -> int:
             ledger = ExperimentLedger()
             reader = open_sealed_reader(args.holdout, ledger)
             zero = _zero_cost(instrument)
-            pipeline = ValidationPipeline(ledger=ledger, config=config, cost_model=zero, cost_stress_pct=0.0)
+            pipeline = ValidationPipeline(
+                ledger=ledger, config=config, cost_model=zero, cost_stress_pct=0.0
+            )
             counts = Counter()
             group_rows: list[dict[str, Any]] = [
                 row
                 for row in rows
-                if row.get("instrument") == instrument and int(row.get("timeframe", -1)) == timeframe
+                if row.get("instrument") == instrument
+                and int(row.get("timeframe", -1)) == timeframe
             ]
             missing: list[str] = []
             pending: list[tuple[str, dict[str, Any], str, Any]] = []
@@ -194,10 +204,16 @@ def run(args: argparse.Namespace) -> int:
             for offset in range(0, len(pending), batch_size):
                 batch = pending[offset : offset + batch_size]
                 decisions = pipeline.run(
-                    [item[3] for item in batch], train,
+                    [item[3] for item in batch],
+                    train,
                     holdout_reader=reader,
                     holdout_path=holdout_path,
-                    holdout_loader=partial(_holdout_loader, root=Path(args.holdout), instrument=instrument, timeframe=timeframe),
+                    holdout_loader=partial(
+                        _holdout_loader,
+                        root=Path(args.holdout),
+                        instrument=instrument,
+                        timeframe=timeframe,
+                    ),
                     out_of_sample=evaluation,
                     train_bars=train_bars,
                     test_bars=test_bars,
@@ -208,7 +224,14 @@ def run(args: argparse.Namespace) -> int:
                 decisions_by_hash = {decision.strategy_hash: decision for decision in decisions}
                 for digest, stored, source, spec in batch:
                     decision = decisions_by_hash[digest]
-                    full = run_backtest(spec, train, cost_model=zero, train_bars=train_bars, test_bars=test_bars, step_bars=step_bars)
+                    full = run_backtest(
+                        spec,
+                        train,
+                        cost_model=zero,
+                        train_bars=train_bars,
+                        test_bars=test_bars,
+                        step_bars=step_bars,
+                    )
                     stats = _trade_stats(full)
                     reasons = list(decision.validation.reasons)
                     counts.update(reasons)
@@ -229,9 +252,20 @@ def run(args: argparse.Namespace) -> int:
                     group_rows.append(row)
                     rows.append(row)
                     done.add(f"{group_key}:{digest}")
-                checkpoint.update({"updated_at": _stamp(), "completed": {k: True for k in done}, "rows": rows})
+                checkpoint.update(
+                    {"updated_at": _stamp(), "completed": {k: True for k in done}, "rows": rows}
+                )
                 _write_json(checkpoint_path, checkpoint)
-                _write_json(progress_path, {"status": "running", "updated_at": _stamp(), "group": group_key, "completed": len(done), "total": sum(len(group) for group in attempts.values())})
+                _write_json(
+                    progress_path,
+                    {
+                        "status": "running",
+                        "updated_at": _stamp(),
+                        "group": group_key,
+                        "completed": len(done),
+                        "total": sum(len(group) for group in attempts.values()),
+                    },
+                )
                 gc.collect()
             passes = [r for r in group_rows if r["gate1_pass"]]
             summary[group_key] = {
@@ -239,11 +273,22 @@ def run(args: argparse.Namespace) -> int:
                 "missing_strategy_definitions": len(missing),
                 "total_trades": sum(int(r["zero_cost_trade_stats"]["trades"]) for r in group_rows),
                 "average_profit_per_trade_points": (
-                    sum(float(r["zero_cost_trade_stats"]["average_profit_per_trade_points"]) for r in group_rows) / len(group_rows)
-                    if group_rows else 0.0
+                    sum(
+                        float(r["zero_cost_trade_stats"]["average_profit_per_trade_points"])
+                        for r in group_rows
+                    )
+                    / len(group_rows)
+                    if group_rows
+                    else 0.0
                 ),
-                "best_trade_points": max((float(r["zero_cost_trade_stats"]["best_trade_points"]) for r in group_rows), default=0.0),
-                "worst_trade_points": min((float(r["zero_cost_trade_stats"]["worst_trade_points"]) for r in group_rows), default=0.0),
+                "best_trade_points": max(
+                    (float(r["zero_cost_trade_stats"]["best_trade_points"]) for r in group_rows),
+                    default=0.0,
+                ),
+                "worst_trade_points": min(
+                    (float(r["zero_cost_trade_stats"]["worst_trade_points"]) for r in group_rows),
+                    default=0.0,
+                ),
                 "gate1_passes": len(passes),
                 "gate1_failure_counts": dict(counts),
             }
@@ -260,7 +305,15 @@ def run(args: argparse.Namespace) -> int:
         "missing_definitions": sorted(set(checkpoint.get("missing_definitions", []))),
     }
     _write_json(output_path, payload)
-    _write_json(progress_path, {"status": "completed", "updated_at": _stamp(), "strategies": len(rows), "output": str(output_path)})
+    _write_json(
+        progress_path,
+        {
+            "status": "completed",
+            "updated_at": _stamp(),
+            "strategies": len(rows),
+            "output": str(output_path),
+        },
+    )
     return 0
 
 
@@ -271,9 +324,15 @@ def main() -> int:
     parser.add_argument("--holdout", type=Path, default=Path("/workspace/data/holdout"))
     parser.add_argument("--cache", type=Path, default=Path("/workspace/state/lab/cache"))
     parser.add_argument("--config", type=Path, default=Path("config/strategy_lab.yaml"))
-    parser.add_argument("--output", type=Path, default=Path("/workspace/state/lab/results_zero_cost.json"))
-    parser.add_argument("--checkpoint", type=Path, default=Path("/workspace/state/lab/t142_checkpoint.json"))
-    parser.add_argument("--progress", type=Path, default=Path("/workspace/state/lab/t142_progress.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("/workspace/state/lab/results_zero_cost.json")
+    )
+    parser.add_argument(
+        "--checkpoint", type=Path, default=Path("/workspace/state/lab/t142_checkpoint.json")
+    )
+    parser.add_argument(
+        "--progress", type=Path, default=Path("/workspace/state/lab/t142_progress.json")
+    )
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--years", type=int, default=6)

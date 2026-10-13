@@ -25,4 +25,9 @@ def test_trade_stats_reports_points() -> None:
 
 def test_with_cost_average_prefers_stored_net() -> None:
     assert _with_cost_average({"metrics": {"trades": 4, "diag_net_pnl": 10}}) == 2.5
-    assert _with_cost_average({"metrics": {"trades": 2, "diag_avg_gross_per_trade": 3, "diag_avg_cost_per_trade": 1}}) == 2.0
+    assert (
+        _with_cost_average(
+            {"metrics": {"trades": 2, "diag_avg_gross_per_trade": 3, "diag_avg_cost_per_trade": 1}}
+        )
+        == 2.0
+    )
