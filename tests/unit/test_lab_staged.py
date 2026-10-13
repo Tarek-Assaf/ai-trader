@@ -142,3 +142,19 @@ def test_script_picks_parents_with_trades_and_gross_edge_and_seeds_the_ledger() 
         {"a", "b"}, datetime(2024, 1, 1, tzinfo=UTC), datetime(2024, 2, 1, tzinfo=UTC)
     )
     assert ledger.count() == 2
+
+
+def test_generation_payload_is_json_ready_for_slots_dataclass() -> None:
+    import json
+
+    from trader.lab.staged import GenerationReport, generation_payload
+
+    row = generation_payload(GenerationReport(1, 10, 120, 2, 2506))
+    assert row == {
+        "generation": 1,
+        "parents": 10,
+        "children_evaluated": 120,
+        "survivors": 2,
+        "trials_so_far": 2506,
+    }
+    assert json.loads(json.dumps(row)) == row

@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 359,
+  "revision": 361,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-137 positive control accepted (Gate 1 detects a planted 2x-cost edge, no false passes). T-138 Wyckoff Round D accepted: 2,160 attempts, zero Gate 1 passes, but about 98% had too few trades to judge and volume data carries no information. Next: T-139 staged search (with a read-only step 0 export), then T-140 1m resume, run by Codex on the Pod.",
+    "summary": "Positive control accepted (Gate 1 detects a planted 2x-cost edge, no false passes). Wyckoff Round D and staged search accepted: about 5,000 attempts in this round, zero Gate 1 passes. One lead: 30 NSXUSD 60m variants were profitable after costs in all test windows but failed Gate 1; T-141 reruns that search with a fixed report writer to learn why. T-140 (1m resume) follows.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -112,7 +112,8 @@
         "T-137",
         "T-138",
         "T-139",
-        "T-140"
+        "T-140",
+        "T-141"
       ]
     },
     {
@@ -153,7 +154,8 @@
         "T-137",
         "T-138",
         "T-139",
-        "T-140"
+        "T-140",
+        "T-141"
       ]
     },
     {
@@ -200,7 +202,8 @@
         "T-137",
         "T-138",
         "T-139",
-        "T-140"
+        "T-140",
+        "T-141"
       ]
     },
     {
@@ -4574,7 +4577,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4591,8 +4594,17 @@
         "Step 0 (added by Claude at T-138 review, read-only, minutes, before the first staged run): from the Round D files on the Pod export into docs/evidence/t138_round_d_addendum.json (a) the event-study table from round_d_wyckoff_events.json (per range length, depth, side, stage: events, mean result, placebo mean, lift, years agreeing) and (b) per market the 10 best Round D attempts by out_of_sample_profit_factor among those with trades >= 100, with trades, net and gross per trade, plus the distribution of trade counts (how many of the 1,080 attempts had <30, 30-99, 100-299, >=300 trades), and (c) confirm in one line why both random baselines have the same SHA-256 (expected if both are the same empty output). No re-run, no tuning. Include the addendum in the same T-139 PR."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Not started."
+      "evidence": [
+        "docs/evidence/t138_round_d_addendum.json",
+        "docs/evidence/t139_staged_search_summary.json",
+        "Pod:/workspace/state/staged_search_nsxusd_15m_v2.json",
+        "Pod:/workspace/state/staged_search_nsxusd_5m_v2.json",
+        "Pod:/workspace/state/staged_search_xauusd_15m_v2.json",
+        "Pod:/workspace/state/staged_search_xauusd_5m_v2.json",
+        "Pod:/workspace/state/staged_search_nsxusd_60m_v2.json",
+        "Pod:/workspace/state/staged_search_xauusd_60m_v2.json"
+      ],
+      "completion_note": "Completed Step 0 and all six staged searches in order. NSXUSD/XAUUSD 15m and 5m had zero survivors; NSXUSD 60m produced 30 survivors across three generations but all 30 Gate 1 attempts failed (zero passes); XAUUSD 60m had zero survivors. No paper trading started. The source report serializer hit vars() on a slots dataclass, so runs were repeated through an ephemeral Pod-only dataclasses.asdict wrapper; repository source was not changed. No code/config/gate/holdout changes, broker calls or orders. Handed to Claude for review."
     },
     {
       "id": "T-140",
@@ -4607,12 +4619,38 @@
         "R-05"
       ],
       "depends_on": [
-        "T-139"
+        "T-139",
+        "T-141"
       ],
       "acceptance_criteria": [
         "Why: D-033 is still open for 1m. The first T-136 attempt stayed at evaluating:0/212 for 4h37 (stopped by owner, V-338). The new image shows a counter after every batch.",
         "Run NSXUSD only: python scripts/lab_run.py --instruments NSXUSD --timeframes 1 --idea-sources round_c --max-ideas 400 --force --workers 2 --evaluation-batch-size 5 --years 2 --results results_1m_c_nsx.json --progress progress_1m_c_nsx.json. If no batch completes within 60 minutes or the 12 GB watchdog trips, stop, record phase and peak memory, and hand to claude; do not retry with other settings. XAUUSD 1m only if NSXUSD completed.",
         "Evidence docs/evidence/t140_round_c_1m_summary.json in the t135 format; PR, ONE log entry, validation entry, set to review, hand the turn to claude."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Not started."
+    },
+    {
+      "id": "T-141",
+      "title": "Rerun NSXUSD 60m staged search with the fixed report writer to capture why the 30 survivors failed Gate 1",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-139"
+      ],
+      "acceptance_criteria": [
+        "Why: T-139 found 30 NSXUSD 60m variants that were profitable after costs on early, later and other-market windows but passed Gate 1 zero times; the reasons were lost because scripts/lab_staged_search.py crashed on vars() of a slots dataclass (fixed by Claude in this PR: generation_payload plus final_gate1.attempt_details with verdict, reason and metrics per attempt). Use the new image once the publish-image run for the merge commit of this PR has succeeded (check GitHub, full SHA, do not use another tag; redeploy only if no lab job runs and no run.lock exists, as in T-137); no wrapper is needed any more.",
+        "Run once, unchanged parameters, same results files as T-139 (every Round A-D results file plus the staged outputs): python scripts/lab_staged_search.py --instrument NSXUSD --timeframe 60 --results <same files as T-139> --workers 2 --evaluation-batch-size 50 --out docs/evidence/staged_search_nsxusd_60m_v3.json. The result may differ in detail only if the search is not deterministic; report that honestly.",
+        "Evidence: the output file plus a compact docs/evidence/t141_nsx60_gate1_reasons.json: for each of the 30 survivors the Gate 1 reason string and key metrics (trades, profit factor out of sample, walk-forward profitable share, p-value, net after costs, neighbour result). Count how many fail on each gate. Do not tune or loosen anything; if a Gate 1 pass appears, stop further runs, do NOT start paper trading, and hand to claude immediately.",
+        "PR, ONE log entry, validation entry, set T-141 to review, hand the turn to claude. T-140 (1m) runs only after T-141 is reviewed."
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -11892,6 +11930,40 @@
       "validated_by": "claude",
       "date": "2026-10-13",
       "reverify_if": "gate config, costs or lab engine change"
+    },
+    {
+      "id": "V-346",
+      "task_id": "T-139",
+      "subject": "T-139 staged mutate-and-retest search and Step 0 addendum",
+      "method": "Pod retained Round D export plus sequential staged-search runs using all retained results files, with progress, lock and Gate 1 reports checked",
+      "result": "pass",
+      "checked": "Step 0 contains 36 event-study rows per market, 10 best attempts per market for trades >=100, trade-count distributions and the identical-empty-baseline SHA explanation. NSXUSD 15m/5m and XAUUSD 15m/5m completed with zero survivors. NSXUSD 60m completed 3 generations (2, 8, 20 survivors; 2,604 trials), then all 30 Gate 1 attempts failed; XAUUSD 60m completed with zero survivors (2,531 trials). No Gate 1 pass, paper run, broker call, order or gate/config/holdout change.",
+      "evidence": {
+        "evidence_file": "docs/evidence/t139_staged_search_summary.json",
+        "step0_file": "docs/evidence/t138_round_d_addendum.json",
+        "pod_reports": "Pod:/workspace/state/staged_search_*_v2.json",
+        "source_serializer_workaround": "ephemeral Pod-only dataclasses.asdict wrapper; repository source unchanged"
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude requests raw Pod report review or staged-search code/gate/cost change"
+    },
+    {
+      "id": "V-347",
+      "task_id": "T-139",
+      "subject": "T-139 review: staged search accepted, Gate 1 reasons outstanding",
+      "method": "Claude reviewed docs/evidence/t139_staged_search_summary.json, the Round D addendum and V-346 against T-139 acceptance criteria",
+      "result": "pass",
+      "checked": "All six staged runs completed in the required order with one process at a time; zero Gate 1 passes; trials counted globally (2,502 to 2,604 per run); no paper trading, broker calls, orders or gate/config/holdout changes. Finding: NSXUSD 60m produced 30 survivors (net positive after costs on early, later and other-market windows, e.g. +12 to +33 points per trade on NSXUSD, +2.3 to +2.5 on XAUUSD) but 0 of 30 passed Gate 1; every other run had zero survivors. Gap: the Gate 1 failure reasons for those 30 were not saved, because the report writer crashed on vars() of a slots dataclass (my bug in scripts/lab_staged_search.py; Codex correctly worked around it in an ephemeral wrapper without touching the repository). Fixed in this PR with a test; reasons are requested as T-141. Round D event study: lift against placebo is mostly negative or about zero with about half of years agreeing, i.e. no Wyckoff edge visible.",
+      "evidence": {
+        "evidence_file": "docs/evidence/t139_staged_search_summary.json",
+        "addendum": "docs/evidence/t138_round_d_addendum.json",
+        "codex_validation": "V-346",
+        "fix": "src/trader/lab/staged.py generation_payload, scripts/lab_staged_search.py, tests/unit/test_lab_staged.py"
+      },
+      "validated_by": "claude",
+      "date": "2026-10-13",
+      "reverify_if": "gate config, costs or staged-search code change"
     }
   ],
   "blockers": [
@@ -20458,6 +20530,40 @@
       ],
       "summary": "Accepted T-138 (V-345): 2,160 attempts, zero passes, zero baseline qualifiers, no gate changed; but ~98% of attempts had too few trades and volume is uninformative. Added read-only step 0 to T-139 (event-study lift table, best 10 per market, trade-count distribution, baseline hash explanation). Codex: start T-139 under standing D-034 approval; one process at a time.",
       "validation": "V-345"
+    },
+    {
+      "revision": 360,
+      "ts": "2026-10-13T09:49:00Z",
+      "agent": "codex",
+      "action": "t139_staged_search_run_and_evidence",
+      "task_ids": [
+        "T-139"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t138_round_d_addendum.json",
+        "docs/evidence/t139_staged_search_summary.json"
+      ],
+      "summary": "Merged by Claude from two consecutive Codex entries (original wording, original time and number in brackets) because the log must alternate agents. [360, 2026-10-13T08:58:00Z, start_t139_staged_search] Started T-139 from Claude acceptance rev359/V-345. Step 0 addendum comes first, followed by staged search in the required order one process at a time. No code/config/gate/holdout changes or orders. [361, 2026-10-13T09:49:00Z, complete_t139_staged_search] Completed Step 0 and the required one-process-at-a-time staged order through 60m for both markets. The 60m NSXUSD branch produced survivors but zero Gate 1 passes; all other runs had zero survivors. No paper trading, broker calls, orders or code/config/gate/holdout changes. A repository serializer bug was worked around only in an ephemeral Pod wrapper. Handed T-139 to Claude for review.",
+      "validation": "V-346"
+    },
+    {
+      "revision": 361,
+      "ts": "2026-10-13T10:05:00Z",
+      "agent": "claude",
+      "action": "accept_t139_queue_t141",
+      "task_ids": [
+        "T-139",
+        "T-141"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/lab/staged.py",
+        "scripts/lab_staged_search.py",
+        "tests/unit/test_lab_staged.py"
+      ],
+      "summary": "Accepted T-139 (V-347): six staged runs, zero Gate 1 passes; NSXUSD 60m had 30 survivors that failed Gate 1 for unknown reasons because the report writer crashed (my bug, fixed with a test). Queued T-141 to rerun NSXUSD 60m with the fixed script after the new image is published; T-140 now waits for T-141.",
+      "validation": "V-347"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
