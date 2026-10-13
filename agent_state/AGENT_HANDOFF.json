@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 372,
+  "revision": 373,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Positive control accepted (Gate 1 detects a planted 2x-cost edge, no false passes). Wyckoff Round D, staged search, the NSXUSD 60m reasons run and the zero-cost diagnostic accepted: zero Gate 1 passes, even with spread and slippage removed (60m, 5m, 3m; 1m not covered). The best lead (NSXUSD 60m, +5,689 points net) fails only the multiple-testing check. T-140 (1m) is blocked by B-022. Waiting for the owner's choice on the next step (Q-052).",
+    "summary": "T-143 in progress on codex/t143-recent-zero-cost from authoritative origin/main. Rebuilding T-138 Round D and T-139 staged strategies from code for recent 2025-2026 data at zero and configured costs; diagnostic only, no holdout/gate/ledger/promotion/broker changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4710,7 +4710,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -4729,7 +4729,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": "Not started."
+      "completion_note": "Codex started T-143 from authoritative origin/main revision 371 plus D-037 queue entry. Will rebuild T-138/T-139 strategies from code and evaluate 2025-2026 pre-holdout data at zero and configured costs across NSXUSD/XAUUSD 60m/5m/3m/1m. Diagnostic only; sealed holdout, gates, trial ledger, promotion files, broker and paper trading remain untouched."
     }
   ],
   "decisions": [
@@ -21022,6 +21022,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner answered Q-052 with a specific request (D-037): test the 2026-10-12 strategies (Wyckoff Round D and staged variants) on 2025-2026 data at zero cost on all timeframes, especially 1m. Queued T-143 for Codex with the sealed holdout untouched, diagnostic only, 1m rebuilt from code because no stored 1m definitions exist, checkpointed and resumable."
+    },
+    {
+      "revision": 373,
+      "ts": "2026-10-13T20:55:00Z",
+      "agent": "codex",
+      "action": "start_t143_recent_zero_cost",
+      "task_ids": [
+        "T-143"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-143 from origin/main after owner D-037. Rebuilds T-138/T-139 strategies from code for NSXUSD/XAUUSD and 60m/5m/3m/1m over 2025-2026 pre-holdout data at zero and configured costs. Diagnostic only; sealed holdout and gates remain untouched."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
