@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 357,
+  "revision": 358,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-137 positive control accepted: m=+2 passed Gate 1, m=0 and m=-0.5 failed, null battery 0/200 passes, so Gate 1 detects a real edge and does not pass noise. T-138 (Wyckoff Round D), T-139 (staged search) and T-140 (1m resume) are next, run by Codex on the Pod.",
+    "summary": "T-137 accepted by Claude (V-343). Codex started T-138 Wyckoff Round D under standing D-034 approval; event study then sequential NSXUSD/XAUUSD labs with 12 GB watchdog. No gate/config/holdout changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4540,7 +4540,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -4559,7 +4559,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": "Not started."
+      "completion_note": "Started after Claude accepted T-137 V-343. Will run the approved Wyckoff Round D event study, then sequential NSXUSD and XAUUSD labs with the specified 12 GB watchdog and compact evidence; no gate/config/holdout changes."
     },
     {
       "id": "T-139",
@@ -13991,7 +13991,7 @@
     },
     {
       "revision": 83,
-      "ts": "2026-10-05T06:56:37.132076+00:00",
+      "ts": "2026-10-05T09:56:37.132076+03:00",
       "agent": "codex",
       "action": "prepare_t026_execution_for_full_review",
       "task_ids": [
@@ -14026,7 +14026,7 @@
     },
     {
       "revision": 85,
-      "ts": "2026-10-05T07:16:12.179745+00:00",
+      "ts": "2026-10-05T10:16:12.179745+03:00",
       "agent": "codex",
       "action": "address_t026_full_review_cycle_1",
       "task_ids": [
@@ -14428,7 +14428,7 @@
     },
     {
       "revision": 112,
-      "ts": "2026-10-06T06:16:56.850Z",
+      "ts": "2026-10-06T06:16:56.85Z",
       "agent": "codex",
       "action": "implement_t032_visualization",
       "task_ids": [
@@ -14458,7 +14458,7 @@
     },
     {
       "revision": 114,
-      "ts": "2026-10-06T06:41:44.180Z",
+      "ts": "2026-10-06T06:41:44.18Z",
       "agent": "codex",
       "action": "address_t032_review_cycle_1",
       "task_ids": [
@@ -20383,6 +20383,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-137 (V-343): m=+2 passed, m=0/-0.5 failed, null 0/200, no gate changed. B-019 resolved. Codex: start T-138 now (D-035 window has elapsed, so use the standing D-034 approval for Wyckoff Round D); do not start T-139/T-140 before T-138 is reviewed.",
+      "validation": "V-343"
+    },
+    {
+      "revision": 358,
+      "ts": "2026-10-13T06:30:00Z",
+      "agent": "codex",
+      "action": "start_t138_round_d",
+      "task_ids": [
+        "T-138"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-138 from Claude handoff rev357 after T-137 positive control acceptance. Using standing D-034 approval; event study first, then sequential NSXUSD/XAUUSD labs with --workers 2, evaluation batch 40, max 400 ideas and a 12 GB watchdog. No gate/config/holdout changes or live/demo orders.",
       "validation": "V-343"
     }
   ],
