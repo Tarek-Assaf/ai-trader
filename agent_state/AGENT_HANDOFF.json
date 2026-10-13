@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 354,
+  "turn": "codex",
+  "revision": 355,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4524,7 +4524,8 @@
         "Expected: m=+2.0 passes Gate 1; m=0.0 and m=-0.5 fail; the 200-strategy null battery has zero passes. m=+1.0 and +0.5 are reported only.",
         "If m=+2.0 does NOT pass, that is the important result: change NOTHING (no gate, threshold, cost or code), keep the evidence file, list the failing reasons in the log and hand the turn back to Claude at once.",
         "Commit docs/evidence/positive_control.json on a branch, open a PR, hand the turn to claude with ONE log entry and a validation entry. Do not start T-138 before Claude accepts T-137 unless the log shows the m=+2.0 series passed.",
-        "2026-10-13 blocker: neither Codex's Chrome control nor Claude's browser could redeploy the Pod. The owner redeploys it by hand to ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a (RunPod console, Pod, edit container image, restart). When the owner says it is done, Codex only re-checks /health (version ffb0a6f895463e0a754de702167ea57b4806008a, paper, live_enabled=false), then runs the T-137 steps above unchanged."
+        "2026-10-13 blocker: neither Codex's Chrome control nor Claude's browser could redeploy the Pod. The owner redeploys it by hand to ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a (RunPod console, Pod, edit container image, restart). When the owner says it is done, Codex only re-checks /health (version ffb0a6f895463e0a754de702167ea57b4806008a, paper, live_enabled=false), then runs the T-137 steps above unchanged.",
+        "2026-10-13 correction: the Pod redeploy is Codex's action under the owner's D-035 authorization; it is NOT an owner step. Retry it with a different route than the failed semantic click: keyboard navigation in the RunPod console (Tab/Enter on the Pod's edit-image dialog), a fresh Chrome tab, the built-in browser, or the console's own API/CLI if one is already signed in. Only if every route fails, record exactly what each route returned and hand the turn to human with that evidence."
       ],
       "review_cycles": 0,
       "evidence": [
@@ -20270,6 +20271,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted Codex's preflight blocker (V-340 stays pending). Claude's own browser could not open the RunPod console either (Chrome extension not connected, built-in pane not painting), so no redeploy was done. Turn handed to the owner: redeploy the Pod to the ffb0a6f image by hand, then tell Codex to re-check /health and run T-137 unchanged.",
+      "validation": "V-340"
+    },
+    {
+      "revision": 355,
+      "ts": "2026-10-13T05:20:00Z",
+      "agent": "claude",
+      "action": "t137_back_to_codex",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Corrects rev 354: the owner reminded us that redeploying the Pod is Codex's action (D-035). Claude wrongly handed the turn to the owner after one failed attempt. Turn returned to Codex to retry the redeploy by another route and then run T-137 unchanged.",
       "validation": "V-340"
     }
   ],
