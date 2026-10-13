@@ -1,0 +1,123 @@
+{
+  "task": "T-138",
+  "round": "D",
+  "mode": "read_only_paper_no_orders",
+  "image": "ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a",
+  "event_study": {
+    "source": "round_d_wyckoff_events.json",
+    "sha256": "c7e0ac0ddf1618db6d41cf32b458b818354604dec96d1f7c48cff8fbb7d0a884",
+    "markets": {
+      "NSXUSD": {
+        "bars": 974951,
+        "summary_events": 20867,
+        "rows": 36,
+        "informative_volume_share": 0.0
+      },
+      "XAUUSD": {
+        "bars": 1188948,
+        "summary_events": 22278,
+        "rows": 36,
+        "informative_volume_share": 0.0
+      }
+    }
+  },
+  "runs": {
+    "NSXUSD": {
+      "run_id": "20261013T064633Z",
+      "status": "completed",
+      "attempts": 1080,
+      "survivors": 0,
+      "verdict_counts": {
+        "fail": 1080
+      },
+      "peak_rss_bytes": 744886272,
+      "result_sha256": "1d4a89058ceb979c0238338a1a09556214f18ef7c81da01581654a3d1116b961",
+      "gate1_passes": 0,
+      "too_few_trades": 1057,
+      "weekly_p_le_0_05": 0,
+      "weekly_p_le_0_001": 0,
+      "years_used": {
+        "diag_years_traded": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "diag_years_profitable": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    "XAUUSD": {
+      "run_id": "20261013T072643Z",
+      "status": "completed",
+      "attempts": 1080,
+      "survivors": 0,
+      "verdict_counts": {
+        "fail": 1080
+      },
+      "peak_rss_bytes": 891576320,
+      "result_sha256": "a6dd0297ee2f67f97bac44bde3cff3636488a16d998200d8fcc6adfe38f5a278",
+      "gate1_passes": 0,
+      "too_few_trades": 1053,
+      "weekly_p_le_0_05": 0,
+      "weekly_p_le_0_001": 0,
+      "years_used": {
+        "diag_years_traded": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "diag_years_profitable": [
+          0,
+          1,
+          2,
+          3,
+          4
+        ]
+      }
+    }
+  },
+  "random_baselines": {
+    "trials": 40,
+    "top": 3,
+    "NSXUSD": {
+      "qualifying_strategies": 0,
+      "output_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    "XAUUSD": {
+      "qualifying_strategies": 0,
+      "output_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    }
+  },
+  "safety": {
+    "orders_placed": false,
+    "broker_calls": false,
+    "code_or_config_changed": false,
+    "holdout_or_gate_changed": false,
+    "raw_results_retained_on_pod": true,
+    "memory_watchdog_bytes": 12884901888
+  },
+  "ranking": {
+    "best3_per_family": {
+      "wyckoff": []
+    },
+    "best10_per_market": {
+      "NSXUSD": [],
+      "XAUUSD": []
+    },
+    "note": "All 2,160 attempts failed and produced no survivors; raw attempt rows remain on the Pod for T-139 review, so no passing best-3/best-10 set is exported here."
+  }
+}
