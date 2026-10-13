@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 354,
+  "turn": "codex",
+  "revision": 356,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -1084,7 +1084,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط·آ´أ¢â€¢ع¾ط·آ´ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¢آ¤ط·آ¬ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط¢آ£ط·آ¸ط¸â‚¬ط£آ¹ط·آ¸ط¢آ¤ط·طŒأ¢â€‌ع©ط¸â€™1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b4\u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00b4\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00a3\u0622\u00b9\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0637\u0152\u0623\u00a2\u00e2\u20ac\u200c\u0639\u00a9\u0637\u00b8\u00e2\u20ac\u21221 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -4508,7 +4508,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -4524,13 +4524,14 @@
         "Expected: m=+2.0 passes Gate 1; m=0.0 and m=-0.5 fail; the 200-strategy null battery has zero passes. m=+1.0 and +0.5 are reported only.",
         "If m=+2.0 does NOT pass, that is the important result: change NOTHING (no gate, threshold, cost or code), keep the evidence file, list the failing reasons in the log and hand the turn back to Claude at once.",
         "Commit docs/evidence/positive_control.json on a branch, open a PR, hand the turn to claude with ONE log entry and a validation entry. Do not start T-138 before Claude accepts T-137 unless the log shows the m=+2.0 series passed.",
-        "2026-10-13 blocker: neither Codex's Chrome control nor Claude's browser could redeploy the Pod. The owner redeploys it by hand to ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a (RunPod console, Pod, edit container image, restart). When the owner says it is done, Codex only re-checks /health (version ffb0a6f895463e0a754de702167ea57b4806008a, paper, live_enabled=false), then runs the T-137 steps above unchanged."
+        "2026-10-13 blocker: neither Codex's Chrome control nor Claude's browser could redeploy the Pod. The owner redeploys it by hand to ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a (RunPod console, Pod, edit container image, restart). When the owner says it is done, Codex only re-checks /health (version ffb0a6f895463e0a754de702167ea57b4806008a, paper, live_enabled=false), then runs the T-137 steps above unchanged.",
+        "2026-10-13 correction: the Pod redeploy is Codex's action under the owner's D-035 authorization; it is NOT an owner step. Retry it with a different route than the failed semantic click: keyboard navigation in the RunPod console (Tab/Enter on the Pod's edit-image dialog), a fresh Chrome tab, the built-in browser, or the console's own API/CLI if one is already signed in. Only if every route fails, record exactly what each route returned and hand the turn to human with that evidence."
       ],
       "review_cycles": 0,
       "evidence": [
         "docs/evidence/t137_positive_control_preflight.json"
       ],
-      "completion_note": "Blocked before the synthetic lab run: the Pod is healthy and idle but still serves image 5d446dabcbe523723498090559597caca7366e54; the required ffb0a6f image is not deployed. The Chrome console is reachable, but semantic click control returns coordinate input geometry unavailable, so the authorized redeploy could not be completed. No lab, broker, or code/config/gate/holdout change was made."
+      "completion_note": "Authorized redeploy attempt started under rev355 correction; no lab run started. Required image and Pod health still pending verification."
     },
     {
       "id": "T-138",
@@ -5687,7 +5688,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ¢â€¢ع¾ط·آ«ط·آ¸ط¢â‚¬ط¢آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00ab\u0637\u00b7\u0622\u00b8\u0637\u00a2\u00e2\u201a\u00ac\u0637\u00a2\u0622\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -11779,6 +11780,23 @@
       "reverify_if": "After the Pod is redeployed to the required ffb0a6f image; then rerun the full T-137 preflight.",
       "subject": "T-137 image and Pod preflight",
       "method": "Pod terminal health/process/lock checks, GitHub Actions page, and Chrome console control attempt"
+    },
+    {
+      "id": "V-341",
+      "task_id": "T-137",
+      "result": "pending",
+      "checked": "Started the owner-authorized Pod redeploy path from a fresh branch based on authoritative origin/main. No lab process, broker action, or code/config/gate/holdout change was started; required image verification remains pending.",
+      "evidence": {
+        "required_image": "ffb0a6f895463e0a754de702167ea57b4806008a",
+        "base_commit": "7e8812a98c9f6a163665adfcb0bd5edb857fad3a",
+        "redeploy_status": "pending",
+        "study_started": false
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "After redeploy route completes; verify /health exact required image, paper mode, live_enabled=false, no run.lock, then run unchanged T-137 command.",
+      "subject": "T-137 authorized redeploy start",
+      "method": "Authoritative handoff reconciliation and fresh branch preflight"
     }
   ],
   "blockers": [
@@ -13642,7 +13660,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -20271,6 +20289,34 @@
       ],
       "summary": "Accepted Codex's preflight blocker (V-340 stays pending). Claude's own browser could not open the RunPod console either (Chrome extension not connected, built-in pane not painting), so no redeploy was done. Turn handed to the owner: redeploy the Pod to the ffb0a6f image by hand, then tell Codex to re-check /health and run T-137 unchanged.",
       "validation": "V-340"
+    },
+    {
+      "revision": 355,
+      "ts": "2026-10-13T05:20:00Z",
+      "agent": "claude",
+      "action": "t137_back_to_codex",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Corrects rev 354: the owner reminded us that redeploying the Pod is Codex's action (D-035). Claude wrongly handed the turn to the owner after one failed attempt. Turn returned to Codex to retry the redeploy by another route and then run T-137 unchanged.",
+      "validation": "V-340"
+    },
+    {
+      "revision": 356,
+      "ts": "2026-10-13T05:20:00Z",
+      "agent": "codex",
+      "action": "start_t137_authorized_redeploy",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-137 from authoritative rev355 after its correction that the Pod redeploy is Codex's action under the owner's D-035 authorization. Fresh branch is based on origin/main 7e8812a; no lab run, broker action or code/config/gate/holdout change was made. Redeploy and exact /health verification are pending.",
+      "validation": "V-341"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
