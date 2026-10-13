@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 367,
+  "revision": 369,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Positive control accepted (Gate 1 detects a planted 2x-cost edge, no false passes). Wyckoff Round D, staged search and the NSXUSD 60m reasons run accepted: about 5,000 attempts this round, zero Gate 1 passes. The closest candidates (e.g. 495 trades, +5,689 net after costs, 75% of walk-forward windows profitable) fail only the multiple-testing significance check. T-140 (1m resume) is next.",
+    "summary": "Positive control accepted (Gate 1 detects a planted 2x-cost edge, no false passes). Wyckoff Round D, staged search and the NSXUSD 60m reasons run accepted: about 5,000 attempts this round, zero Gate 1 passes. The closest candidates (e.g. 495 trades, +5,689 net after costs, 75% of walk-forward windows profitable) fail only the multiple-testing significance check. T-140 (1m resume) was interrupted at 90/212 with no result (B-022); the owner-approved zero-cost diagnostic (T-142, D-036) is next.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -113,7 +113,8 @@
         "T-138",
         "T-139",
         "T-140",
-        "T-141"
+        "T-141",
+        "T-142"
       ]
     },
     {
@@ -155,7 +156,8 @@
         "T-138",
         "T-139",
         "T-140",
-        "T-141"
+        "T-141",
+        "T-142"
       ]
     },
     {
@@ -203,7 +205,8 @@
         "T-138",
         "T-139",
         "T-140",
-        "T-141"
+        "T-141",
+        "T-142"
       ]
     },
     {
@@ -4612,7 +4615,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-03",
         "R-04",
@@ -4628,8 +4631,11 @@
         "Evidence docs/evidence/t140_round_c_1m_summary.json in the t135 format; PR, ONE log entry, validation entry, set to review, hand the turn to claude."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Not started."
+      "evidence": [
+        "docs/evidence/t140_round_c_1m_summary.json",
+        "Pod progress_1m_c_nsx.json and t140_round_c_1m.log (not committed; summarized in evidence)"
+      ],
+      "completion_note": "NSXUSD-only Round C 1m run advanced through evaluating:90/212 with batches completing, then the lab process exited unexpectedly without traceback or an atomic result file. Peak cgroup anon 3.02 GB, peak memory_current 3.77 GB, well below 12 GB. Stale run.lock was removed after confirming PID 8311 exited. No retry; handed to Claude for diagnosis. Claude review: evidence accepted as an interrupted run with no result (V-354). Blocked by B-022; 1m resume is re-planned after the zero-cost results (D-036)."
     },
     {
       "id": "T-141",
@@ -4663,6 +4669,32 @@
         "Pod command, config hash comparison and safety summary recorded in compact evidence"
       ],
       "completion_note": "Completed T-141 using the corrected private-repo route. Copied the image application tree to /workspace/state/checkout_ff65a2d without changing the image. Both patched files matched the desktop git-show ff65a2d SHA-256 values. Ran the unchanged NSXUSD 60m staged search from the copy with PYTHONPATH=/workspace/state/checkout_ff65a2d/src, workers 2 and evaluation batch 50. Parents=10, survivors=30, Gate 1 attempts=30, passes=0; adjusted_significance_failed=30, too_few_out_of_sample_trades=19, out_of_sample_profit_factor_below_gate=10, walk_forward_share_below_gate=1. Paper mode, live disabled, broker calls=0 and orders=0. Raw output SHA-256 and both patched-file hashes are in the compact evidence. Handed to Claude for review; T-140 waits."
+    },
+    {
+      "id": "T-142",
+      "title": "Zero-cost diagnostic: re-evaluate stored strategies with spread and slippage removed, all timeframes, both markets",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-141"
+      ],
+      "acceptance_criteria": [
+        "Why (D-036): the owner asked whether costs are what stops strategies from passing. Diagnostic only. A zero-cost result is never a Gate 1 pass, never feeds the trial counter, ledger or any promotion file, and no gate or cost config is edited (backtest already supports cost_multiplier; use 0).",
+        "Build scripts/lab_zero_cost.py with unit tests (Codex writes, Claude reviews). Input: every strategy stored in the existing results files for NSXUSD and XAUUSD on 1m, 3m, 5m and 60m (Rounds A-D plus the staged outputs; list any instrument/timeframe with none). Re-evaluate each at cost multiplier 0 with the same data windows and the same sealed-holdout reader. Gate 1 runs unchanged, with the original trial count for the multiple-testing correction (record that count). Output flag diagnostic_zero_cost=true on every row.",
+        "Report per instrument and timeframe: strategies evaluated, total trades, and in points the average profit per trade, the single best trade and the single worst trade; the same three numbers per strategy; also the stored with-cost average per trade for comparison. List every strategy that passes Gate 1 at zero cost with its rules in plain language, trades, out-of-sample profit factor, total profit, max drawdown and p-value; for the rest, count how many fail each Gate 1 check.",
+        "Execution safety (B-022): start the job with setsid and a wrapper that writes the exit code to a file; write a checkpoint after every batch and support resume; if the process exits early, resume once from the checkpoint, then stop and hand to claude. 12 GB watchdog; stop and hand over if no progress for 30 minutes. Order: 60m, 5m, 3m, 1m; hand over partial results with a clear list of what is missing if later timeframes do not finish.",
+        "Evidence docs/evidence/t142_zero_cost_summary.json plus a short plain-language table the owner can read. PR, ONE log entry, validation entry, set to review, hand the turn to claude. No paper trading, no broker calls, no live."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Not started."
     }
   ],
   "decisions": [
@@ -4944,6 +4976,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-12T20:43:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-036",
+      "statement": "Owner 2026-10-13 15:58-15:59 Riyadh approved a zero-cost diagnostic: remove spread and slippage, re-run all timeframes, and report which strategies pass Gate 1 plus the average, maximum and minimum profit per trade. Diagnostic only: results are labelled zero-cost, never count as a Gate 1 pass, never feed the trial counter or any promotion file, no gate or cost config is edited, no paper trading.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-13T12:58:00Z",
       "do_not_reopen": false
     }
   ],
@@ -12072,6 +12112,37 @@
       "validated_by": "claude",
       "date": "2026-10-13",
       "reverify_if": "gate config or staged-search code change"
+    },
+    {
+      "id": "V-353",
+      "task_id": "T-140",
+      "subject": "T-140 NSXUSD 1m run interrupted at evaluating 90/212",
+      "method": "Verified ff65a2d health version before start; monitored progress and memory; confirmed process PID 8311 absent, no result file, no traceback, and stale lock removed only after process exit.",
+      "result": "fail",
+      "checked": "Run made normal progress through 90/212 with peak cgroup anon 3021221888 bytes and peak memory_current 3771043840 bytes, below the 12 GB watchdog, but exited unexpectedly before emitting results.",
+      "evidence": {
+        "summary": "docs/evidence/t140_round_c_1m_summary.json",
+        "progress_phase": "evaluating:90/212:NSXUSD:1m",
+        "result_file": "not emitted"
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude identifies and fixes the process-exit cause"
+    },
+    {
+      "id": "V-354",
+      "task_id": "T-140",
+      "subject": "T-140 review: interrupted 1m run accepted as evidence, no result",
+      "method": "Claude read docs/evidence/t140_round_c_1m_summary.json and V-353 against the T-140 criteria",
+      "result": "pass",
+      "checked": "Codex followed the criteria: the run made progress (90 of 212 ideas, batches completing), peak memory about 3.8 GB against the 12 GB limit, process exit confirmed before removing the stale lock, no retry with other settings, no broker calls or orders. The run itself produced no result because the process vanished without a traceback; cause unknown (B-022). The pass is for the accuracy and procedure of the report, not for a strategy result.",
+      "evidence": {
+        "summary": "docs/evidence/t140_round_c_1m_summary.json",
+        "codex_validation": "V-353"
+      },
+      "validated_by": "claude",
+      "date": "2026-10-13",
+      "reverify_if": "a 1m rerun produces a result or the cause of the exit is found"
     }
   ],
   "blockers": [
@@ -12220,6 +12291,13 @@
       "resolution": "Owner/Claude correction: never clone the private repo on Pod. Copied the image application tree to /workspace/state/checkout_ff65a2d, applied no image changes, verified both patched files against desktop git-show SHA-256, and ran T-141 from the copy with PYTHONPATH=/workspace/state/checkout_ff65a2d/src.",
       "resolved_by": "codex",
       "resolved_at": "2026-10-13"
+    },
+    {
+      "id": "B-022",
+      "text": "T-140 NSXUSD 1m process PID 8311 exited unexpectedly after progress evaluating:90/212. The progress file remained status=running, no result JSON was emitted, the log contained no traceback or terminal failure, and peak memory was well below the 12 GB watchdog limit. The stale run.lock was removed only after /proc/8311 confirmed the process was gone. No retry was started.",
+      "raised_by": "codex",
+      "status": "open",
+      "resolution": "Claude 2026-10-13: cause not determinable from the repo (no traceback, memory far below the limit). Likeliest causes: the process was tied to the web-terminal session or was killed from outside the container. Mitigation is built into T-142: start with setsid and an exit-code wrapper, checkpoint after every batch, resume once from the checkpoint. T-140 stays blocked until the owner has seen the zero-cost results (D-036)."
     }
   ],
   "questions": [
@@ -20775,6 +20853,36 @@
       ],
       "summary": "Accepted T-141 (V-352): 30 survivors, 0 Gate 1 passes, all fail adjusted significance; 9 fail on that alone; best raw p 0.016 among 2,549 trials. No gate loosened. Codex: start T-140 (1m NSXUSD resume) as written; stop if no batch completes in 60 minutes.",
       "validation": "V-352"
+    },
+    {
+      "revision": 368,
+      "ts": "2026-10-13T13:47:00Z",
+      "agent": "codex",
+      "action": "complete_t140_round_c_1m_interrupted",
+      "task_ids": [
+        "T-140"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t140_round_c_1m_summary.json"
+      ],
+      "summary": "Merged from two consecutive Codex entries, original wording. Start: \"Started exact NSXUSD Round C 1m command on verified ff65a2d image after confirming health version, no run.lock/lab process, and generation_payload present. 60-minute and 12 GB stop conditions active.\" Finish: \"NSXUSD-only T-140 run advanced through evaluating:90/212 with batches completing, then PID 8311 exited unexpectedly without traceback or result JSON. Peak memory remained below 4 GB; stale run.lock removed after confirming process exit. No retry; handed to Claude for diagnosis.\"",
+      "validation": "V-353"
+    },
+    {
+      "revision": 369,
+      "ts": "2026-10-13T13:58:00Z",
+      "agent": "claude",
+      "action": "review_t140_interrupted_queue_t142",
+      "task_ids": [
+        "T-140",
+        "T-142"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-140 evidence accepted as an interrupted run with no result (V-354); T-140 blocked by B-022 (cause not found; mitigation is setsid, exit-code file, per-batch checkpoint and resume). Recorded D-036: owner approved a zero-cost diagnostic. Queued T-142 for Codex: re-evaluate stored strategies at zero cost on 1m/3m/5m/60m for both markets, report Gate 1 passes plus average, best and worst trade. Diagnostic only; no gate or cost config edited.",
+      "validation": "V-354"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
