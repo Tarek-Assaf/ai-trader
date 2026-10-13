@@ -1,9 +1,18 @@
 from __future__ import annotations
 
+import importlib.util
 from datetime import UTC, datetime
+from pathlib import Path
 from types import SimpleNamespace
 
-from scripts.lab_zero_cost import _trade_stats, _with_cost_average, _zero_cost
+_path = Path(__file__).parents[2] / "scripts" / "lab_zero_cost.py"
+_spec = importlib.util.spec_from_file_location("lab_zero_cost", _path)
+assert _spec is not None and _spec.loader is not None
+_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_module)
+_trade_stats = _module._trade_stats
+_with_cost_average = _module._with_cost_average
+_zero_cost = _module._zero_cost
 
 
 def test_zero_cost_model_is_explicitly_zero() -> None:
