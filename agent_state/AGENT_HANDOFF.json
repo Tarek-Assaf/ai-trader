@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 358,
+  "revision": 359,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -11785,7 +11785,7 @@
       "id": "V-341",
       "task_id": "T-137",
       "result": "pass",
-      "checked": "Re-checked the Pod through its exposed HTTP service after restart. /health reports the exact required ffb0a6f image, paper mode, demo broker and live_enabled=false; DB and Redis are reachable. The data recorder is currently degraded because ping_reply_ok=false after one ConnectionClosedError, so the positive-control study has not started.",
+      "checked": "Follow-up /health recheck after the restart now reports healthy status and recorder healthy with ping_reply_ok=true. The exact ffb0a6f image, paper mode, demo broker and live_enabled=false remain confirmed. The old web-terminal route still returns HTTP 502, so no lock/process check or study launch was attempted.",
       "evidence": {
         "required_image": "ffb0a6f895463e0a754de702167ea57b4806008a",
         "base_commit": "7e8812a98c9f6a163665adfcb0bd5edb857fad3a",
@@ -11799,11 +11799,14 @@
         "data_recorder_status": "degraded",
         "ping_reply_ok": false,
         "db": "reachable",
-        "redis": "reachable"
+        "redis": "reachable",
+        "health_status_followup": "healthy",
+        "data_recorder_status_followup": "healthy",
+        "terminal_http": "502"
       },
       "validated_by": "codex",
       "date": "2026-10-13",
-      "reverify_if": "Before starting the lab, obtain a working terminal route, confirm no run.lock/lab process, and re-check /health safety flags; do not start while recorder remains unsafe.",
+      "reverify_if": "Before starting the lab, obtain a working terminal route, confirm no run.lock/lab process, and re-check /health safety flags.",
       "subject": "T-137 authorized redeploy start",
       "method": "Authoritative handoff reconciliation and fresh branch preflight"
     }
@@ -20353,6 +20356,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Verified the redeployed Pod through port 8000: exact ffb0a6f image, paper mode, demo broker and live_enabled=false; DB/Redis reachable. The data recorder reports degraded ping_reply_ok=false after one ConnectionClosedError, so no positive-control run started. The old web-terminal port still returns 502; a working terminal route is required for lock/process check and study launch.",
+      "validation": "V-341"
+    },
+    {
+      "revision": 359,
+      "ts": "2026-10-13T05:33:00Z",
+      "agent": "codex",
+      "action": "t137_health_followup",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Follow-up /health check is healthy again: exact ffb0a6f image, paper/demo, live disabled and recorder ping healthy. The old terminal URL still returns HTTP 502 after redeploy, so no run.lock/process check or T-137 launch was attempted. No broker or code/config/gate/holdout change.",
       "validation": "V-341"
     }
   ],
