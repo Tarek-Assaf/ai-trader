@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 361,
+  "turn": "claude",
+  "revision": 362,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Positive control accepted (Gate 1 detects a planted 2x-cost edge, no false passes). Wyckoff Round D and staged search accepted: about 5,000 attempts in this round, zero Gate 1 passes. One lead: 30 NSXUSD 60m variants were profitable after costs in all test windows but failed Gate 1; T-141 reruns that search with a fixed report writer to learn why. T-140 (1m resume) follows.",
+    "summary": "T-141 is blocked before its approved run: the merge image ff65a2d is published, but the Pod still serves ffb0a6f and the provided terminal control-plane credential returns Unauthorized. Pod is idle with no run.lock or lab process; no lab run, broker call, or order was started. Awaiting an authorized RunPod console redeploy.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4637,7 +4637,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-03",
         "R-04",
@@ -4653,8 +4653,11 @@
         "PR, ONE log entry, validation entry, set T-141 to review, hand the turn to claude. T-140 (1m) runs only after T-141 is reviewed."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Not started."
+      "evidence": [
+        "Pod:/health preflight",
+        "GitHub Actions workflow 38380523374"
+      ],
+      "completion_note": "Blocked before the approved run: main commit ff65a2d9a6474c9a7a77315c45f6cb56d894015e published successfully (workflow 38380523374, publish-image success), but Pod /health still reports image ffb0a6f895463e0a754de702167ea57b4806008a. Bounded preflight found no /workspace/state/lab/run.lock and no lab process. The provided terminal RUNPOD_API_KEY and runpodctl control-plane calls return Unauthorized; no authorized redeploy console control is available in this runtime. No T-141 lab run started."
     }
   ],
   "decisions": [
@@ -12096,6 +12099,13 @@
       "raised_by": "codex",
       "status": "resolved",
       "resolution": "Codex redeployed the Pod to the ffb0a6f image (V-341) and ran T-137 (V-342); redeploy was Codex action under D-035."
+    },
+    {
+      "id": "B-020",
+      "text": "T-141 is blocked before the approved run: main commit ff65a2d9a6474c9a7a77315c45f6cb56d894015e published successfully (workflow 38380523374, publish-image success), but Pod /health still reports image ffb0a6f895463e0a754de702167ea57b4806008a. Bounded preflight found no /workspace/state/lab/run.lock and no lab process. The provided terminal RUNPOD_API_KEY and runpodctl control-plane calls return Unauthorized; no authorized redeploy console control is available in this runtime. No T-141 lab run started.",
+      "raised_by": "codex",
+      "status": "open",
+      "resolution": ""
     }
   ],
   "questions": [
@@ -20564,6 +20574,20 @@
       ],
       "summary": "Accepted T-139 (V-347): six staged runs, zero Gate 1 passes; NSXUSD 60m had 30 survivors that failed Gate 1 for unknown reasons because the report writer crashed (my bug, fixed with a test). Queued T-141 to rerun NSXUSD 60m with the fixed script after the new image is published; T-140 now waits for T-141.",
       "validation": "V-347"
+    },
+    {
+      "revision": 362,
+      "ts": "2026-10-13T10:35:00Z",
+      "agent": "codex",
+      "action": "block_t141_image_redeploy",
+      "task_ids": [
+        "T-141"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-141 cannot start until the published ff65a2d image is redeployed. GitHub Actions workflow 38380523374 publish-image succeeded, but Pod /health remains on ffb0a6f. Preflight found no run.lock or lab process. The provided terminal control-plane credential and runpodctl return Unauthorized; handed to Claude/human for an authorized console redeploy. No lab, broker or order action.",
+      "validation": "Preflight only; no task run"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
