@@ -171,8 +171,13 @@ def run(args: argparse.Namespace) -> int:
             zero = _zero_cost(instrument)
             pipeline = ValidationPipeline(ledger=ledger, config=config, cost_model=zero, cost_stress_pct=0.0)
             counts = Counter()
-            group_rows: list[dict[str, Any]] = []
+            group_rows: list[dict[str, Any]] = [
+                row
+                for row in rows
+                if row.get("instrument") == instrument and int(row.get("timeframe", -1)) == timeframe
+            ]
             missing: list[str] = []
+            pending: list[tuple[str, dict[str, Any], str, Any]] = []
             for digest, stored in targets.items():
                 key = f"{group_key}:{digest}"
                 if key in done:
@@ -181,10 +186,15 @@ def run(args: argparse.Namespace) -> int:
                 if item is None:
                     missing.append(digest)
                     done.add(key)
+                    checkpoint.setdefault("missing_definitions", []).append(key)
                     continue
                 source, spec = item
-                decision_tuple = pipeline.run(
-                    [spec], train,
+                pending.append((digest, stored, source, spec))
+            batch_size = max(1, args.batch_size)
+            for offset in range(0, len(pending), batch_size):
+                batch = pending[offset : offset + batch_size]
+                decisions = pipeline.run(
+                    [item[3] for item in batch], train,
                     holdout_reader=reader,
                     holdout_path=holdout_path,
                     holdout_loader=partial(_holdout_loader, root=Path(args.holdout), instrument=instrument, timeframe=timeframe),
@@ -195,31 +205,33 @@ def run(args: argparse.Namespace) -> int:
                     workers=max(1, args.workers),
                     trials=total_trials,
                 )
-                decision = decision_tuple[0]
-                full = run_backtest(spec, train, cost_model=zero, train_bars=train_bars, test_bars=test_bars, step_bars=step_bars)
-                stats = _trade_stats(full)
-                reasons = list(decision.validation.reasons)
-                counts.update(reasons)
-                row = {
-                    "instrument": instrument,
-                    "timeframe": timeframe,
-                    "strategy_hash": digest,
-                    "source": stored.get("source", source),
-                    "rules": _describe(spec),
-                    "diagnostic_zero_cost": True,
-                    "gate1_pass": bool(decision.validation.passed),
-                    "gate1_failure_reasons": reasons,
-                    "original_trial_count": total_trials,
-                    "zero_cost_metrics": dict(decision.metrics),
-                    "zero_cost_trade_stats": stats,
-                    "stored_with_cost_average_per_trade": _with_cost_average(stored),
-                }
-                group_rows.append(row)
-                rows.append(row)
-                done.add(key)
+                decisions_by_hash = {decision.strategy_hash: decision for decision in decisions}
+                for digest, stored, source, spec in batch:
+                    decision = decisions_by_hash[digest]
+                    full = run_backtest(spec, train, cost_model=zero, train_bars=train_bars, test_bars=test_bars, step_bars=step_bars)
+                    stats = _trade_stats(full)
+                    reasons = list(decision.validation.reasons)
+                    counts.update(reasons)
+                    row = {
+                        "instrument": instrument,
+                        "timeframe": timeframe,
+                        "strategy_hash": digest,
+                        "source": stored.get("source", source),
+                        "rules": _describe(spec),
+                        "diagnostic_zero_cost": True,
+                        "gate1_pass": bool(decision.validation.passed),
+                        "gate1_failure_reasons": reasons,
+                        "original_trial_count": total_trials,
+                        "zero_cost_metrics": dict(decision.metrics),
+                        "zero_cost_trade_stats": stats,
+                        "stored_with_cost_average_per_trade": _with_cost_average(stored),
+                    }
+                    group_rows.append(row)
+                    rows.append(row)
+                    done.add(f"{group_key}:{digest}")
                 checkpoint.update({"updated_at": _stamp(), "completed": {k: True for k in done}, "rows": rows})
                 _write_json(checkpoint_path, checkpoint)
-                _write_json(progress_path, {"status": "running", "updated_at": _stamp(), "group": group_key, "completed": len(done), "total": total_trials * len(ORDER) * len(INSTRUMENTS)})
+                _write_json(progress_path, {"status": "running", "updated_at": _stamp(), "group": group_key, "completed": len(done), "total": sum(len(group) for group in attempts.values())})
                 gc.collect()
             passes = [r for r in group_rows if r["gate1_pass"]]
             summary[group_key] = {
@@ -263,6 +275,7 @@ def main() -> int:
     parser.add_argument("--checkpoint", type=Path, default=Path("/workspace/state/lab/t142_checkpoint.json"))
     parser.add_argument("--progress", type=Path, default=Path("/workspace/state/lab/t142_progress.json"))
     parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--years", type=int, default=6)
     return run(parser.parse_args())
 
