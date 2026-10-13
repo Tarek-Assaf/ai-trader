@@ -5,9 +5,9 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 368,
-  "current_phase": "T-140 1m Round C NSXUSD run",
+  "turn": "claude",
+  "revision": 369,
+  "current_phase": "T-140 interrupted; Claude diagnosis required",
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
     "read_first": [
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-140 started: NSXUSD-only Round C 1m resume on verified ff65a2d image; stop at 60 minutes or 12 GB watchdog, then record evidence and hand to Claude.",
+    "summary": "T-140 NSXUSD 1m run advanced to evaluating:90/212 with normal batch progress, then exited unexpectedly without a traceback or result file. Peak memory stayed below 4 GB; no retry was started. Claude must diagnose the unexplained process exit before any further run.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4612,7 +4612,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04",
@@ -4628,8 +4628,11 @@
         "Evidence docs/evidence/t140_round_c_1m_summary.json in the t135 format; PR, ONE log entry, validation entry, set to review, hand the turn to claude."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Started NSXUSD Round C 1m resume on the verified ff65a2d image; bounded 60-minute/12-GB watchdog active."
+      "evidence": [
+        "docs/evidence/t140_round_c_1m_summary.json",
+        "Pod progress_1m_c_nsx.json and t140_round_c_1m.log (not committed; summarized in evidence)"
+      ],
+      "completion_note": "NSXUSD-only Round C 1m run advanced through evaluating:90/212 with batches completing, then the lab process exited unexpectedly without traceback or an atomic result file. Peak cgroup anon 3.02 GB, peak memory_current 3.77 GB, well below 12 GB. Stale run.lock was removed after confirming PID 8311 exited. No retry; handed to Claude for diagnosis."
     },
     {
       "id": "T-141",
@@ -12072,6 +12075,22 @@
       "validated_by": "claude",
       "date": "2026-10-13",
       "reverify_if": "gate config or staged-search code change"
+    },
+    {
+      "id": "V-353",
+      "task_id": "T-140",
+      "subject": "T-140 NSXUSD 1m run interrupted at evaluating 90/212",
+      "method": "Verified ff65a2d health version before start; monitored progress and memory; confirmed process PID 8311 absent, no result file, no traceback, and stale lock removed only after process exit.",
+      "result": "fail",
+      "checked": "Run made normal progress through 90/212 with peak cgroup anon 3021221888 bytes and peak memory_current 3771043840 bytes, below the 12 GB watchdog, but exited unexpectedly before emitting results.",
+      "evidence": {
+        "summary": "docs/evidence/t140_round_c_1m_summary.json",
+        "progress_phase": "evaluating:90/212:NSXUSD:1m",
+        "result_file": "not emitted"
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude identifies and fixes the process-exit cause"
     }
   ],
   "blockers": [
@@ -12220,6 +12239,13 @@
       "resolution": "Owner/Claude correction: never clone the private repo on Pod. Copied the image application tree to /workspace/state/checkout_ff65a2d, applied no image changes, verified both patched files against desktop git-show SHA-256, and ran T-141 from the copy with PYTHONPATH=/workspace/state/checkout_ff65a2d/src.",
       "resolved_by": "codex",
       "resolved_at": "2026-10-13"
+    },
+    {
+      "id": "B-022",
+      "text": "T-140 NSXUSD 1m process PID 8311 exited unexpectedly after progress evaluating:90/212. The progress file remained status=running, no result JSON was emitted, the log contained no traceback or terminal failure, and peak memory was well below the 12 GB watchdog limit. The stale run.lock was removed only after /proc/8311 confirmed the process was gone. No retry was started.",
+      "raised_by": "codex",
+      "status": "open",
+      "resolution": "Awaiting Claude diagnosis; inspect container/process termination cause before any rerun."
     }
   ],
   "questions": [
@@ -20789,6 +20815,21 @@
       ],
       "summary": "Started exact NSXUSD Round C 1m command on verified ff65a2d image after confirming health version, no run.lock/lab process, and generation_payload present. 60-minute and 12 GB stop conditions active.",
       "validation": "V-353 pending"
+    },
+    {
+      "revision": 369,
+      "ts": "2026-10-13T13:47:00Z",
+      "agent": "codex",
+      "action": "complete_t140_round_c_1m_interrupted",
+      "task_ids": [
+        "T-140"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t140_round_c_1m_summary.json"
+      ],
+      "summary": "NSXUSD-only T-140 run advanced through evaluating:90/212 with batches completing, then PID 8311 exited unexpectedly without traceback or result JSON. Peak memory remained below 4 GB; stale run.lock removed after confirming process exit. No retry; handed to Claude for diagnosis.",
+      "validation": "V-353"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
