@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 359,
+  "turn": "claude",
+  "revision": 360,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-134 and T-135 accepted: no Gate 1 pass on 60m/15m/5m/3m (about 2,500 attempts); best ideas are about equal to random entries per trade. 1m NSXUSD was stopped by the owner after 4h37 (T-136 closed, retry is T-140). Code for the positive control (T-137), Wyckoff Round D (T-138) and the staged mutate-and-retest search (T-139) is merged. Owner authorized work until 2026-10-13T05:43Z (D-035). Demo only; no gate changed.",
+    "summary": "T-137 positive control completed: m=+2 passed Gate 1, m=0 and m=-0.5 failed, and the 200-strategy null battery had zero passes. Phase took 1453.1s with 2.24 GiB peak cgroup memory. No broker or live-order action; no gate changed. T-138 and T-139 remain queued pending review.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -1084,7 +1084,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b4\u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00b4\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00a3\u0622\u00b9\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0637\u0152\u0623\u00a2\u00e2\u20ac\u200c\u0639\u00a9\u0637\u00b8\u00e2\u20ac\u21221 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط·آ´أ¢â€¢ع¾ط·آ´ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¢آ¤ط·آ¬ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط¢آ£ط·آ¸ط¸â‚¬ط£آ¹ط·آ¸ط¢آ¤ط·طŒأ¢â€‌ع©ط¸â€™1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -4508,7 +4508,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04",
@@ -4529,9 +4529,10 @@
       ],
       "review_cycles": 0,
       "evidence": [
-        "docs/evidence/t137_positive_control_preflight.json"
+        "docs/evidence/t137_positive_control_preflight.json",
+        "docs/evidence/positive_control.json"
       ],
-      "completion_note": "Authorized redeploy attempt started under rev355 correction; no lab run started. Required image and Pod health still pending verification."
+      "completion_note": "Ran the unchanged synthetic positive-control command on the verified ffb0a6f Pod. Phase completed in 1453.1 seconds with peak cgroup memory 2,404,134,912 bytes (~2.24 GiB); m=+2.0 passed (1), +1.0/+0.5/0.0/-0.5 failed, and the 200-strategy null battery had 0 passes. No broker calls, live orders, code/config/gate/holdout changes. Raw Pod evidence SHA-256: de1603c5651b3531b78e9f5449cd26b30caadef3a3a833e4c40e0fcd652946f0."
     },
     {
       "id": "T-138",
@@ -5688,7 +5689,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00ab\u0637\u00b7\u0622\u00b8\u0637\u00a2\u00e2\u201a\u00ac\u0637\u00a2\u0622\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ¢â€¢ع¾ط·آ«ط·آ¸ط¢â‚¬ط¢آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -11809,6 +11810,28 @@
       "reverify_if": "Before starting the lab, obtain a working terminal route, confirm no run.lock/lab process, and re-check /health safety flags.",
       "subject": "T-137 authorized redeploy start",
       "method": "Authoritative handoff reconciliation and fresh branch preflight"
+    },
+    {
+      "id": "V-342",
+      "task_id": "T-137",
+      "result": "pass",
+      "checked": "Ran T-137 unchanged on the verified Pod image with one worker. The planted m=+2.0 series passed Gate 1; m=+1.0 and +0.5 were reported; m=0.0 and -0.5 failed; the 200-strategy null battery had zero passes.",
+      "evidence": {
+        "image": "ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a",
+        "phase": "positive_control",
+        "phase_elapsed_seconds": 1453.1,
+        "peak_cgroup_bytes": 2404134912,
+        "peak_cgroup_gib": 2.24,
+        "series": "m=+2 pass; +1/+0.5/0/-0.5 fail",
+        "null_battery": "0/200 passes",
+        "raw_sha256": "de1603c5651b3531b78e9f5449cd26b30caadef3a3a833e4c40e0fcd652946f0",
+        "broker_orders": 0
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude review requests re-run",
+      "subject": "T-137 positive control",
+      "method": "Pod terminal run, output summary, cgroup peak memory and raw evidence hash"
     }
   ],
   "blockers": [
@@ -13672,7 +13695,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -13952,7 +13975,7 @@
     },
     {
       "revision": 83,
-      "ts": "2026-10-05T06:56:37.132076+00:00",
+      "ts": "2026-10-05T09:56:37.132076+03:00",
       "agent": "codex",
       "action": "prepare_t026_execution_for_full_review",
       "task_ids": [
@@ -13987,7 +14010,7 @@
     },
     {
       "revision": 85,
-      "ts": "2026-10-05T07:16:12.179745+00:00",
+      "ts": "2026-10-05T10:16:12.179745+03:00",
       "agent": "codex",
       "action": "address_t026_full_review_cycle_1",
       "task_ids": [
@@ -14389,7 +14412,7 @@
     },
     {
       "revision": 112,
-      "ts": "2026-10-06T06:16:56.850Z",
+      "ts": "2026-10-06T06:16:56.85Z",
       "agent": "codex",
       "action": "implement_t032_visualization",
       "task_ids": [
@@ -14419,7 +14442,7 @@
     },
     {
       "revision": 114,
-      "ts": "2026-10-06T06:41:44.180Z",
+      "ts": "2026-10-06T06:41:44.18Z",
       "agent": "codex",
       "action": "address_t032_review_cycle_1",
       "task_ids": [
@@ -20371,6 +20394,21 @@
       ],
       "summary": "Follow-up /health check is healthy again: exact ffb0a6f image, paper/demo, live disabled and recorder ping healthy. The old terminal URL still returns HTTP 502 after redeploy, so no run.lock/process check or T-137 launch was attempted. No broker or code/config/gate/holdout change.",
       "validation": "V-341"
+    },
+    {
+      "revision": 360,
+      "ts": "2026-10-13T06:18:47Z",
+      "agent": "codex",
+      "action": "complete_t137_positive_control",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/positive_control.json"
+      ],
+      "summary": "Completed the unchanged synthetic positive-control run on verified image ffb0a6f. m=+2 passed Gate 1; m=0 and m=-0.5 failed as expected; m=+1/+0.5 were reported; null battery 0/200. Phase took 1453.1s; peak cgroup memory 2.24 GiB. No broker calls or live orders; no code/config/gate/holdout changes.",
+      "validation": "V-342"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
