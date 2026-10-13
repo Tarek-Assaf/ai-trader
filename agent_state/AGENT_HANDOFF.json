@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 354,
+  "turn": "codex",
+  "revision": 357,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-134 and T-135 accepted: no Gate 1 pass on 60m/15m/5m/3m (about 2,500 attempts); best ideas are about equal to random entries per trade. 1m NSXUSD was stopped by the owner after 4h37 (T-136 closed, retry is T-140). Code for the positive control (T-137), Wyckoff Round D (T-138) and the staged mutate-and-retest search (T-139) is merged. Owner authorized work until 2026-10-13T05:43Z (D-035). Demo only; no gate changed.",
+    "summary": "T-137 positive control accepted: m=+2 passed Gate 1, m=0 and m=-0.5 failed, null battery 0/200 passes, so Gate 1 detects a real edge and does not pass noise. T-138 (Wyckoff Round D), T-139 (staged search) and T-140 (1m resume) are next, run by Codex on the Pod.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4508,7 +4508,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4524,13 +4524,15 @@
         "Expected: m=+2.0 passes Gate 1; m=0.0 and m=-0.5 fail; the 200-strategy null battery has zero passes. m=+1.0 and +0.5 are reported only.",
         "If m=+2.0 does NOT pass, that is the important result: change NOTHING (no gate, threshold, cost or code), keep the evidence file, list the failing reasons in the log and hand the turn back to Claude at once.",
         "Commit docs/evidence/positive_control.json on a branch, open a PR, hand the turn to claude with ONE log entry and a validation entry. Do not start T-138 before Claude accepts T-137 unless the log shows the m=+2.0 series passed.",
-        "2026-10-13 blocker: neither Codex's Chrome control nor Claude's browser could redeploy the Pod. The owner redeploys it by hand to ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a (RunPod console, Pod, edit container image, restart). When the owner says it is done, Codex only re-checks /health (version ffb0a6f895463e0a754de702167ea57b4806008a, paper, live_enabled=false), then runs the T-137 steps above unchanged."
+        "2026-10-13 blocker: neither Codex's Chrome control nor Claude's browser could redeploy the Pod. The owner redeploys it by hand to ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a (RunPod console, Pod, edit container image, restart). When the owner says it is done, Codex only re-checks /health (version ffb0a6f895463e0a754de702167ea57b4806008a, paper, live_enabled=false), then runs the T-137 steps above unchanged.",
+        "2026-10-13 correction: the Pod redeploy is Codex's action under the owner's D-035 authorization; it is NOT an owner step. Retry it with a different route than the failed semantic click: keyboard navigation in the RunPod console (Tab/Enter on the Pod's edit-image dialog), a fresh Chrome tab, the built-in browser, or the console's own API/CLI if one is already signed in. Only if every route fails, record exactly what each route returned and hand the turn to human with that evidence."
       ],
       "review_cycles": 0,
       "evidence": [
-        "docs/evidence/t137_positive_control_preflight.json"
+        "docs/evidence/t137_positive_control_preflight.json",
+        "docs/evidence/positive_control.json"
       ],
-      "completion_note": "Blocked before the synthetic lab run: the Pod is healthy and idle but still serves image 5d446dabcbe523723498090559597caca7366e54; the required ffb0a6f image is not deployed. The Chrome console is reachable, but semantic click control returns coordinate input geometry unavailable, so the authorized redeploy could not be completed. No lab, broker, or code/config/gate/holdout change was made."
+      "completion_note": "Ran the unchanged synthetic positive-control command on the verified ffb0a6f Pod. Phase completed in 1453.1 seconds with peak cgroup memory 2,404,134,912 bytes (~2.24 GiB); m=+2.0 passed (1), +1.0/+0.5/0.0/-0.5 failed, and the 200-strategy null battery had 0 passes. No broker calls, live orders, code/config/gate/holdout changes. Raw Pod evidence SHA-256: de1603c5651b3531b78e9f5449cd26b30caadef3a3a833e4c40e0fcd652946f0."
     },
     {
       "id": "T-138",
@@ -11779,6 +11781,73 @@
       "reverify_if": "After the Pod is redeployed to the required ffb0a6f image; then rerun the full T-137 preflight.",
       "subject": "T-137 image and Pod preflight",
       "method": "Pod terminal health/process/lock checks, GitHub Actions page, and Chrome console control attempt"
+    },
+    {
+      "id": "V-341",
+      "task_id": "T-137",
+      "result": "pass",
+      "checked": "Follow-up /health recheck after the restart now reports healthy status and recorder healthy with ping_reply_ok=true. The exact ffb0a6f image, paper mode, demo broker and live_enabled=false remain confirmed. The old web-terminal route still returns HTTP 502, so no lock/process check or study launch was attempted.",
+      "evidence": {
+        "required_image": "ffb0a6f895463e0a754de702167ea57b4806008a",
+        "base_commit": "7e8812a98c9f6a163665adfcb0bd5edb857fad3a",
+        "redeploy_status": "pending",
+        "study_started": false,
+        "graphql_update": "accepted",
+        "desired_status": "RUNNING",
+        "old_terminal_http": "502_during_restart",
+        "health_version": "ffb0a6f895463e0a754de702167ea57b4806008a",
+        "health_status": "degraded",
+        "data_recorder_status": "degraded",
+        "ping_reply_ok": false,
+        "db": "reachable",
+        "redis": "reachable",
+        "health_status_followup": "healthy",
+        "data_recorder_status_followup": "healthy",
+        "terminal_http": "502"
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Before starting the lab, obtain a working terminal route, confirm no run.lock/lab process, and re-check /health safety flags.",
+      "subject": "T-137 authorized redeploy start",
+      "method": "Authoritative handoff reconciliation and fresh branch preflight"
+    },
+    {
+      "id": "V-342",
+      "task_id": "T-137",
+      "result": "pass",
+      "checked": "Ran T-137 unchanged on the verified Pod image with one worker. The planted m=+2.0 series passed Gate 1; m=+1.0 and +0.5 were reported; m=0.0 and -0.5 failed; the 200-strategy null battery had zero passes.",
+      "evidence": {
+        "image": "ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a",
+        "phase": "positive_control",
+        "phase_elapsed_seconds": 1453.1,
+        "peak_cgroup_bytes": 2404134912,
+        "peak_cgroup_gib": 2.24,
+        "series": "m=+2 pass; +1/+0.5/0/-0.5 fail",
+        "null_battery": "0/200 passes",
+        "raw_sha256": "de1603c5651b3531b78e9f5449cd26b30caadef3a3a833e4c40e0fcd652946f0",
+        "broker_orders": 0
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude review requests re-run",
+      "subject": "T-137 positive control",
+      "method": "Pod terminal run, output summary, cgroup peak memory and raw evidence hash"
+    },
+    {
+      "id": "V-343",
+      "task_id": "T-137",
+      "subject": "T-137 review: positive control accepted",
+      "method": "Claude reviewed docs/evidence/positive_control.json and V-342 against T-137 acceptance criteria",
+      "result": "pass",
+      "checked": "m=+2.0 passed Gate 1; m=0.0 and m=-0.5 failed; m=+1.0 and +0.5 failed (reported only); null battery 0/200 passes. Image ffb0a6f, gates_changed=false, no broker calls or live orders. Reading: the unchanged lab and Gate 1 recognise an edge worth 2x round-trip cost and give no false passes on pure noise; edges of 1x cost or less do not pass, so Gate 1 needs a clear edge. Limitation: committed file is a summary; per-series calibration and reasons stay in the raw Pod file (sha256 in V-342).",
+      "evidence": {
+        "evidence_file": "docs/evidence/positive_control.json",
+        "codex_validation": "V-342",
+        "raw_sha256": "de1603c5651b3531b78e9f5449cd26b30caadef3a3a833e4c40e0fcd652946f0"
+      },
+      "validated_by": "claude",
+      "date": "2026-10-13",
+      "reverify_if": "gate config, costs or lab engine change"
     }
   ],
   "blockers": [
@@ -11909,8 +11978,8 @@
       "id": "B-019",
       "text": "T-137 is blocked before starting: bounded Pod preflight found no lab process and no /workspace/state/lab/run.lock, but /health reports image 5d446dabcbe523723498090559597caca7366e54 instead of required ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a. The owner-authorized RunPod Chrome console is readable and the web terminal works, but every semantic control click returns \"coordinate input geometry is unavailable\"; direct terminal access has no docker/runpod control. No wrong-image lab run was started.",
       "raised_by": "codex",
-      "status": "open",
-      "resolution": ""
+      "status": "resolved",
+      "resolution": "Codex redeployed the Pod to the ffb0a6f image (V-341) and ran T-137 (V-342); redeploy was Codex action under D-035."
     }
   ],
   "questions": [
@@ -20271,6 +20340,50 @@
       ],
       "summary": "Accepted Codex's preflight blocker (V-340 stays pending). Claude's own browser could not open the RunPod console either (Chrome extension not connected, built-in pane not painting), so no redeploy was done. Turn handed to the owner: redeploy the Pod to the ffb0a6f image by hand, then tell Codex to re-check /health and run T-137 unchanged.",
       "validation": "V-340"
+    },
+    {
+      "revision": 355,
+      "ts": "2026-10-13T05:20:00Z",
+      "agent": "claude",
+      "action": "t137_back_to_codex",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Corrects rev 354: the owner reminded us that redeploying the Pod is Codex's action (D-035). Claude wrongly handed the turn to the owner after one failed attempt. Turn returned to Codex to retry the redeploy by another route and then run T-137 unchanged.",
+      "validation": "V-340"
+    },
+    {
+      "revision": 356,
+      "ts": "2026-10-13T06:18:47Z",
+      "agent": "codex",
+      "action": "t137_redeploy_and_positive_control",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/positive_control.json"
+      ],
+      "summary": "Merged by Claude from five consecutive Codex entries (original wording, original time and number in brackets) because the log must alternate agents. [356, 2026-10-13T05:20:00Z, start_t137_authorized_redeploy] Started T-137 from authoritative rev355 after its correction that the Pod redeploy is Codex's action under the owner's D-035 authorization. Fresh branch is based on origin/main 7e8812a; no lab run, broker action or code/config/gate/holdout change was made. Redeploy and exact /health verification are pending. [357, 2026-10-13T05:28:00Z, t137_redeploy_requested] Used the owner-authorized RunPod control-plane route from the connected Pod terminal. GraphQL podEditJob accepted the exact ffb0a6f image for pbkmi8nx193x3w; the old web-terminal session returned HTTP 502 during the restart. No lab run, broker action or code/config/gate/holdout change was made. Waiting for the new container route so /health can be verified before T-137 starts. [358, 2026-10-13T05:32:00Z, t137_image_verified] Verified the redeployed Pod through port 8000: exact ffb0a6f image, paper mode, demo broker and live_enabled=false; DB/Redis reachable. The data recorder reports degraded ping_reply_ok=false after one ConnectionClosedError, so no positive-control run started. The old web-terminal port still returns 502; a working terminal route is required for lock/process check and study launch. [359, 2026-10-13T05:33:00Z, t137_health_followup] Follow-up /health check is healthy again: exact ffb0a6f image, paper/demo, live disabled and recorder ping healthy. The old terminal URL still returns HTTP 502 after redeploy, so no run.lock/process check or T-137 launch was attempted. No broker or code/config/gate/holdout change. [360, 2026-10-13T06:18:47Z, complete_t137_positive_control] Completed the unchanged synthetic positive-control run on verified image ffb0a6f. m=+2 passed Gate 1; m=0 and m=-0.5 failed as expected; m=+1/+0.5 were reported; null battery 0/200. Phase took 1453.1s; peak cgroup memory 2.24 GiB. No broker calls or live orders; no code/config/gate/holdout changes.",
+      "validation": "V-342"
+    },
+    {
+      "revision": 357,
+      "ts": "2026-10-13T06:40:00Z",
+      "agent": "claude",
+      "action": "accept_t137_positive_control",
+      "task_ids": [
+        "T-137",
+        "T-138"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-137 (V-343): m=+2 passed, m=0/-0.5 failed, null 0/200, no gate changed. B-019 resolved. Codex: start T-138 now (D-035 window has elapsed, so use the standing D-034 approval for Wyckoff Round D); do not start T-139/T-140 before T-138 is reviewed.",
+      "validation": "V-343"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
