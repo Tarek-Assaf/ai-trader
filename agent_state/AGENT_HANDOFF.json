@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 370,
+  "turn": "claude",
+  "revision": 371,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-140 was accepted as interrupted at 90/212 with no result (B-022); no retry. T-142 zero-cost diagnostic is now in progress from the authoritative Claude review branch under D-036, with no gate/config/holdout or broker changes.",
+    "summary": "T-142 completed the zero-cost diagnostic with zero Gate 1 passes; awaiting Claude review. No gate/config/holdout or broker changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -1090,7 +1090,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط·آ´أ¢â€¢ع¾ط·آ´ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¢آ¤ط·آ¬ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط¢آ£ط·آ¸ط¸â‚¬ط£آ¹ط·آ¸ط¢آ¤ط·طŒأ¢â€‌ع©ط¸â€™1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b4\u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00b4\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00a3\u0622\u00b9\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0637\u0152\u0623\u00a2\u00e2\u20ac\u200c\u0639\u00a9\u0637\u00b8\u00e2\u20ac\u21221 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -4676,7 +4676,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04",
@@ -4693,8 +4693,12 @@
         "Evidence docs/evidence/t142_zero_cost_summary.json plus a short plain-language table the owner can read. PR, ONE log entry, validation entry, set to review, hand the turn to claude. No paper trading, no broker calls, no live."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Started from Claude revision 369. Running the owner-approved diagnostic only: stored strategies, zero-cost evaluation across 60m/5m/3m/1m for both markets, with checkpoints/resume and no gate/config/holdout edits."
+      "evidence": [
+        "docs/evidence/t142_zero_cost_summary.json",
+        "scripts/lab_zero_cost.py",
+        "tests/unit/test_lab_zero_cost.py"
+      ],
+      "completion_note": "Completed the owner-approved diagnostic on the verified ff65a2d image. The Pod result evaluated 1,272 stored strategy definitions from 2,628 original trials at cost multiplier 0.0 across NSXUSD/XAUUSD and 60m/5m/3m/1m. Zero Gate 1 passes; 523 stored definitions were missing. The run used setsid, exit-code wrapper, per-batch checkpoint/resume, sealed holdout reader and stayed below the 12 GB watchdog. No gate/config/holdout, broker, paper or live changes."
     }
   ],
   "decisions": [
@@ -5783,7 +5787,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ¢â€¢ع¾ط·آ«ط·آ¸ط¢â‚¬ط¢آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00ab\u0637\u00b7\u0622\u00b8\u0637\u00a2\u00e2\u201a\u00ac\u0637\u00a2\u0622\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -12143,6 +12147,27 @@
       "validated_by": "claude",
       "date": "2026-10-13",
       "reverify_if": "a 1m rerun produces a result or the cause of the exit is found"
+    },
+    {
+      "id": "V-355",
+      "task_id": "T-142",
+      "subject": "T-142 zero-cost diagnostic completion",
+      "method": "Ran the setsid-wrapped batched diagnostic on the verified ff65a2d Pod image, monitored checkpoints and memory, then checked the completed result and artifact hash.",
+      "result": "pass",
+      "checked": "All 2,628 original trials were accounted for; 1,272 stored definitions evaluated, 523 missing definitions recorded, zero Gate 1 passes, and no broker calls or orders. Peak observed cgroup memory remained below 12 GB and the process exited with code 0.",
+      "evidence": {
+        "summary": "docs/evidence/t142_zero_cost_summary.json",
+        "pod_result_sha256": "59f9a6414cef5b2733d96bbb26a185403e966cabcf453fd7630e708feaab28eb",
+        "original_trial_count": 2628,
+        "strategies_evaluated": 1272,
+        "missing_definitions": 523,
+        "gate1_passes": 0,
+        "broker_calls": 0,
+        "orders": 0
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude requests review or the diagnostic script, holdout reader or cost path changes"
     }
   ],
   "blockers": [
@@ -14029,7 +14054,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -20897,6 +20922,21 @@
       ],
       "summary": "Started T-142 from authoritative Claude revision 369. Diagnostic re-evaluates stored strategies at cost multiplier 0 in order 60m, 5m, 3m, 1m for NSXUSD and XAUUSD, with checkpoints/resume and 12 GB/30-minute no-progress stop conditions. No gate, cost config, holdout, broker, paper or live changes.",
       "validation": "pending"
+    },
+    {
+      "revision": 371,
+      "ts": "2026-10-13T19:45:00Z",
+      "agent": "codex",
+      "action": "complete_t142_zero_cost_diagnostic",
+      "task_ids": [
+        "T-142"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t142_zero_cost_summary.json"
+      ],
+      "summary": "Completed the zero-cost diagnostic on the verified ff65a2d image. 2,628 original trials, 1,272 stored definitions evaluated, 523 missing definitions, zero Gate 1 passes. Per-batch checkpoints and the exit-code wrapper completed successfully; no broker calls/orders or gate/config/holdout changes. Handed T-142 to Claude for review.",
+      "validation": "V-355"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
