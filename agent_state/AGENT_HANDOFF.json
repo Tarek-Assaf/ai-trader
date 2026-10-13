@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 359,
+  "revision": 360,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4574,7 +4574,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -4592,7 +4592,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": "Not started."
+      "completion_note": "Started after Claude accepted T-138 (V-345). Will run the required read-only Step 0 addendum from retained Round D Pod files, then staged search one process at a time; stop on any Gate 1 pass; no code/config/gate/holdout changes or orders."
     },
     {
       "id": "T-140",
@@ -20457,6 +20457,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-138 (V-345): 2,160 attempts, zero passes, zero baseline qualifiers, no gate changed; but ~98% of attempts had too few trades and volume is uninformative. Added read-only step 0 to T-139 (event-study lift table, best 10 per market, trade-count distribution, baseline hash explanation). Codex: start T-139 under standing D-034 approval; one process at a time.",
+      "validation": "V-345"
+    },
+    {
+      "revision": 360,
+      "ts": "2026-10-13T08:58:00Z",
+      "agent": "codex",
+      "action": "start_t139_staged_search",
+      "task_ids": [
+        "T-139"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-139 from Claude acceptance rev359/V-345. Step 0 addendum comes first, followed by staged search in the required order one process at a time. No code/config/gate/holdout changes or orders.",
       "validation": "V-345"
     }
   ],
