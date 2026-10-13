@@ -19,11 +19,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Iterable
 
+from trader.lab.engine import IndicatorCache
 from trader.lab.backtest import CostModel, run_backtest
 from trader.lab.runner import load_histdata_candles, pessimistic_cost_model, tune_variants
 from trader.lab.seeds import round_d_seed_specs
 from trader.lab.staged import mutations, spec_hash
-from trader.lab.engine import IndicatorCache
 
 ORDER = (60, 5, 3, 1)
 INSTRUMENTS = ("NSXUSD", "XAUUSD")
@@ -37,13 +37,18 @@ def _stamp() -> str:
 def _write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    temporary.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8")
+    temporary.write_text(
+        json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8"
+    )
     os.replace(temporary, path)
 
 
 def _memory_bytes() -> int | None:
     """Return the cgroup memory figure when available, otherwise None."""
-    for filename in ("/sys/fs/cgroup/memory.current", "/sys/fs/cgroup/memory/memory.usage_in_bytes"):
+    for filename in (
+        "/sys/fs/cgroup/memory.current",
+        "/sys/fs/cgroup/memory/memory.usage_in_bytes",
+    ):
         try:
             return int(Path(filename).read_text(encoding="ascii").strip())
         except (OSError, ValueError):
@@ -52,7 +57,11 @@ def _memory_bytes() -> int | None:
 
 
 def _zero_cost(instrument: str) -> CostModel:
-    return CostModel(spread_points={instrument: 0.0}, slippage_points={instrument: 0.0}, provisional=False)
+    return CostModel(
+        spread_points={instrument: 0.0},
+        slippage_points={instrument: 0.0},
+        provisional=False,
+    )
 
 
 def _trade_stats(result: Any) -> dict[str, Any]:
@@ -86,7 +95,10 @@ def _describe(spec: Any) -> str:
             text = f"{kind} {getattr(rule, 'distance', '?')} {getattr(rule, 'unit', 'points')}"
             exits.append(text)
     sessions = ",".join(getattr(spec, "session_filters", ())) or "any"
-    return f"{spec.direction}; sessions={sessions}; entry: {'; '.join(entries)}; exits: {'; '.join(exits)}"
+    return (
+        f"{spec.direction}; sessions={sessions}; entry: {'; '.join(entries)}; "
+        f"exits: {'; '.join(exits)}"
+    )
 
 
 def _candidate_specs(
@@ -328,7 +340,12 @@ def run(args: argparse.Namespace) -> int:
                 if memory is not None and memory > args.memory_limit_gb * 1024**3:
                     _write_json(
                         Path(args.progress),
-                        {"status": "stopped", "reason": "memory_limit", "memory_bytes": memory, "group": group},
+                        {
+                            "status": "stopped",
+                            "reason": "memory_limit",
+                            "memory_bytes": memory,
+                            "group": group,
+                        },
                     )
                     return 2
                 if idle_seconds > args.no_progress_seconds:
@@ -351,7 +368,10 @@ def run(args: argparse.Namespace) -> int:
                 gc.collect()
             rows = [row for key, row in completed.items() if key.startswith(f"{group}:")]
             summaries[group] = _group_summary(rows, min_trades=args.min_trades)
-            _write_json(checkpoint_path, {"updated_at": _stamp(), "completed": completed, "summaries": summaries})
+            _write_json(
+                checkpoint_path,
+                {"updated_at": _stamp(), "completed": completed, "summaries": summaries},
+            )
 
     payload = {
         "task": "T-143",
@@ -374,7 +394,15 @@ def run(args: argparse.Namespace) -> int:
         "strategies": list(completed.values()),
     }
     _write_json(Path(args.output), payload)
-    _write_json(Path(args.progress), {"status": "completed", "updated_at": _stamp(), "strategies": len(completed), "output": str(args.output)})
+    _write_json(
+        Path(args.progress),
+        {
+            "status": "completed",
+            "updated_at": _stamp(),
+            "strategies": len(completed),
+            "output": str(args.output),
+        },
+    )
     return 0
 
 
@@ -382,17 +410,27 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--lake", type=Path, default=Path("/workspace/data/lake"))
     parser.add_argument("--config", type=Path, default=Path("config/strategy_lab.yaml"))
-    parser.add_argument("--output", type=Path, default=Path("/workspace/state/lab/t143_recent_zero_cost.json"))
-    parser.add_argument("--checkpoint", type=Path, default=Path("/workspace/state/lab/t143_checkpoint.json"))
-    parser.add_argument("--progress", type=Path, default=Path("/workspace/state/lab/t143_progress.json"))
+    parser.add_argument(
+        "--output", type=Path, default=Path("/workspace/state/lab/t143_recent_zero_cost.json")
+    )
+    parser.add_argument(
+        "--checkpoint", type=Path, default=Path("/workspace/state/lab/t143_checkpoint.json")
+    )
+    parser.add_argument(
+        "--progress", type=Path, default=Path("/workspace/state/lab/t143_progress.json")
+    )
     parser.add_argument("--start-date", default="2025-01-01")
     parser.add_argument("--end-date", default="2026-07-01")
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--staged-generations", type=int, default=3)
     parser.add_argument("--max-staged-parents", type=int, default=10)
     parser.add_argument("--min-trades", type=int, default=MIN_GROUP_TRADES)
-    parser.add_argument("--instruments", nargs="+", choices=list(INSTRUMENTS), default=list(INSTRUMENTS))
-    parser.add_argument("--timeframes", nargs="+", type=int, choices=list(ORDER), default=list(ORDER))
+    parser.add_argument(
+        "--instruments", nargs="+", choices=list(INSTRUMENTS), default=list(INSTRUMENTS)
+    )
+    parser.add_argument(
+        "--timeframes", nargs="+", type=int, choices=list(ORDER), default=list(ORDER)
+    )
     parser.add_argument("--memory-limit-gb", type=float, default=12.0)
     parser.add_argument("--no-progress-seconds", type=float, default=1800.0)
     args = parser.parse_args()
