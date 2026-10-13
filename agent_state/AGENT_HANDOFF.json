@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 356,
+  "revision": 357,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -11785,12 +11785,15 @@
       "id": "V-341",
       "task_id": "T-137",
       "result": "pending",
-      "checked": "Started the owner-authorized Pod redeploy path from a fresh branch based on authoritative origin/main. No lab process, broker action, or code/config/gate/holdout change was started; required image verification remains pending.",
+      "checked": "RunPod GraphQL podEditJob accepted the owner-authorized image update for Pod pbkmi8nx193x3w. The API response set imageName to the required ffb0a6f image and desiredStatus remained RUNNING; the prior terminal session then returned 502 during restart. No lab process, broker action, or code/config/gate/holdout change was started.",
       "evidence": {
         "required_image": "ffb0a6f895463e0a754de702167ea57b4806008a",
         "base_commit": "7e8812a98c9f6a163665adfcb0bd5edb857fad3a",
         "redeploy_status": "pending",
-        "study_started": false
+        "study_started": false,
+        "graphql_update": "accepted",
+        "desired_status": "RUNNING",
+        "old_terminal_http": "502_during_restart"
       },
       "validated_by": "codex",
       "date": "2026-10-13",
@@ -20316,6 +20319,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-137 from authoritative rev355 after its correction that the Pod redeploy is Codex's action under the owner's D-035 authorization. Fresh branch is based on origin/main 7e8812a; no lab run, broker action or code/config/gate/holdout change was made. Redeploy and exact /health verification are pending.",
+      "validation": "V-341"
+    },
+    {
+      "revision": 357,
+      "ts": "2026-10-13T05:28:00Z",
+      "agent": "codex",
+      "action": "t137_redeploy_requested",
+      "task_ids": [
+        "T-137"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Used the owner-authorized RunPod control-plane route from the connected Pod terminal. GraphQL podEditJob accepted the exact ffb0a6f image for pbkmi8nx193x3w; the old web-terminal session returned HTTP 502 during the restart. No lab run, broker action or code/config/gate/holdout change was made. Waiting for the new container route so /health can be verified before T-137 starts.",
       "validation": "V-341"
     }
   ],
