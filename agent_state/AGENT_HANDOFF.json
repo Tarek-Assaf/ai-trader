@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 371,
+  "turn": "codex",
+  "revision": 372,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -114,7 +114,8 @@
         "T-139",
         "T-140",
         "T-141",
-        "T-142"
+        "T-142",
+        "T-143"
       ]
     },
     {
@@ -157,7 +158,8 @@
         "T-139",
         "T-140",
         "T-141",
-        "T-142"
+        "T-142",
+        "T-143"
       ]
     },
     {
@@ -206,7 +208,8 @@
         "T-139",
         "T-140",
         "T-141",
-        "T-142"
+        "T-142",
+        "T-143"
       ]
     },
     {
@@ -4700,6 +4703,33 @@
         "docs/evidence/t142_zero_cost_table.md"
       ],
       "completion_note": "Completed the owner-approved diagnostic on the verified ff65a2d image. The Pod result evaluated 1,272 stored strategy definitions from 2,628 original trials at cost multiplier 0.0 across NSXUSD/XAUUSD and 60m/5m/3m/1m. Zero Gate 1 passes; 523 stored definitions were missing. The run used setsid, exit-code wrapper, per-batch checkpoint/resume, sealed holdout reader and stayed below the 12 GB watchdog. No gate/config/holdout, broker, paper or live changes. Claude review: accepted as a diagnostic (V-356)."
+    },
+    {
+      "id": "T-143",
+      "title": "Zero-cost diagnostic on the 2026-10-12 strategies, 2025-2026 data, all timeframes incl. 1m",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-142"
+      ],
+      "acceptance_criteria": [
+        "Why (D-037): T-142 covered mostly the older stored strategies and none on 1m. The owner wants the strategies added on 2026-10-12 tested on recent data. Diagnostic only; nothing here counts as a Gate 1 pass, feeds the trial counter, ledger or any promotion file; no gate or cost config is edited; the sealed 3-month holdout stays sealed (do not read it, not even via the sealed reader); no paper trading, no broker calls.",
+        "Strategies: rebuild from code (not from the stored result files) every Wyckoff Round D strategy (round_d_seed_specs, T-138) and every staged-search variant (T-139, mutation menu, staged.py) for NSXUSD and XAUUSD on 1m, 3m, 5m and 60m. Report per source and timeframe how many were rebuilt, so the owner can see that 1m is covered.",
+        "Data window: 2025-01-01 up to the day before the sealed holdout starts (state the exact end date). Run each strategy at cost multiplier 0 (same as T-142) and, for comparison, at the normal configured costs. Gate 1 cannot be judged on this short window (trade and walk-forward minimums): do not report pass/fail; instead report whether each group would meet the minimum trade count.",
+        "Report per market and timeframe: strategies rebuilt, total trades, average, best and worst trade in points (zero cost and normal cost), number of strategies profitable at zero cost and at normal cost, and the 10 best strategies by zero-cost profit factor with their rules in plain language, trades, profit factor, net points, max drawdown. Separate table for 2025 and for 2026 if the code allows; otherwise one combined table and say so.",
+        "Execution safety (B-022): setsid plus exit-code wrapper, checkpoint after every batch with resume, 12 GB watchdog, stop and hand over if no progress for 30 minutes. Order: 60m, 5m, 3m, then 1m last, with smaller batches on 1m (owner priority is 1m, so if time allows run 1m first for NSXUSD right after 60m and hand over what is done). Do not retry with other settings after a failure: hand over with what finished.",
+        "Evidence docs/evidence/t143_recent_zero_cost_summary.json plus a short plain-language table. Script changes need unit tests that CI can import (load scripts by path, as tests/unit/test_lab_zero_cost.py does) and must pass ruff check and ruff format. PR, ONE log entry, validation entry, set to review, hand the turn to claude."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Not started."
     }
   ],
   "decisions": [
@@ -4989,6 +5019,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-13T12:58:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-037",
+      "statement": "Owner 2026-10-13 23:47 Riyadh asked for the strategies added on 2026-10-12 (Wyckoff Round D, T-138, and the staged-search variants, T-139) to be tested on 2025 and 2026 data with the same settings as the zero-cost test (spread and slippage removed), on all timeframes and especially 1m. Diagnostic only: results never count as a Gate 1 pass, nothing feeds the trial counter or any promotion file, the sealed 3-month holdout stays sealed, no gate or cost config is edited, no paper trading.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-13T20:47:00Z",
       "do_not_reopen": false
     }
   ],
@@ -12953,7 +12991,7 @@
       "id": "Q-052",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "The zero-cost diagnostic found no Gate 1 pass on 60m, 5m or 3m (1m was not covered). The average stored strategy earns about 0 to 0.5 points per trade before costs on NSXUSD and slightly less than 0 on XAUUSD, against about 3-4 points of cost, so costs are not the only problem. What should we do next?",
       "options": [
         "Measure real Capital.com demo costs, then test one pre-registered rule (the best NSXUSD 60m candidate) on fresh data (recommended)",
@@ -12962,8 +13000,8 @@
         "Pause the search and keep what we have"
       ],
       "recommendation": "Option 1: it is cheap, honest and answers whether the one lead is real before any new build.",
-      "answer": null,
-      "answered_at": null
+      "answer": "Owner 2026-10-13 23:47 Riyadh: test the strategies added on 2026-10-12 on 2025 and 2026 data with the same settings as the zero-cost test, on all timeframes and especially 1m. (Recorded as D-037; the earlier options stay open for later.)",
+      "answered_at": "2026-10-13T20:47:00Z"
     }
   ],
   "log": [
@@ -20971,6 +21009,19 @@
       ],
       "summary": "Accepted T-142 as a diagnostic (V-356): zero Gate 1 passes on 60m, 5m and 3m even with spread and slippage removed; the average stored strategy has about zero edge before costs. 1m not covered (no stored definitions). Asked the owner what to do next (Q-052) and recommended measuring real demo costs plus one pre-registered fresh-data test. No gate loosened.",
       "validation": "V-356"
+    },
+    {
+      "revision": 372,
+      "ts": "2026-10-13T20:50:00Z",
+      "agent": "claude",
+      "action": "queue_t143_recent_zero_cost",
+      "task_ids": [
+        "T-143"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner answered Q-052 with a specific request (D-037): test the 2026-10-12 strategies (Wyckoff Round D and staged variants) on 2025-2026 data at zero cost on all timeframes, especially 1m. Queued T-143 for Codex with the sealed holdout untouched, diagnostic only, 1m rebuilt from code because no stored 1m definitions exist, checkpointed and resumable."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
