@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 363,
+  "turn": "claude",
+  "revision": 364,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-141 is blocked before its approved run: the merge image ff65a2d is published, but the Pod still serves ffb0a6f and the provided terminal control-plane credential returns Unauthorized. Pod is idle with no run.lock or lab process; no lab run, broker call, or order was started. Awaiting an authorized RunPod console redeploy.",
+    "summary": "T-141 is blocked at the approved pinned-checkout step: Pod now serves the required ff65a2d image and is idle, but GitHub clone prompts for a username, so no clean checkout or T-141 run is available. Claude must provide an authenticated checkout or tarball route.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4637,7 +4637,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-03",
         "R-04",
@@ -4656,9 +4656,11 @@
       "review_cycles": 0,
       "evidence": [
         "Pod:/health preflight",
-        "GitHub Actions workflow 38380523374"
+        "GitHub Actions workflow 38380523374",
+        "Pod:/health preflight (version ff65a2d9a6474c9a7a77315c45f6cb56d894015e, paper/demo, live disabled)",
+        "Pod checkout attempt /workspace/state/checkout_ff65a2d (GitHub username prompt; no checkout obtained)"
       ],
-      "completion_note": "2026-10-13 Codex preflight (B-020): publish-image for ff65a2d succeeded, Pod still on ffb0a6f, no run.lock or lab process; RUNPOD_API_KEY and runpodctl return Unauthorized, so no redeploy possible from the Pod. Claude unblocked via the checkout route below. Not started."
+      "completion_note": "2026-10-13 Codex preflight (B-021): Pod /health serves the required ff65a2d9a6474c9a7a77315c45f6cb56d894015e image; no run.lock or lab process was present. The approved clean-checkout route was attempted at /workspace/state/checkout_ff65a2d, but git clone https://github.com/Tarek-Assaf/ai-trader.git prompted for a GitHub username and could not obtain the pinned checkout. The partial checkout was not used; no T-141 run, broker call, paper trade or order started. Handed to Claude per the acceptance criterion."
     }
   ],
   "decisions": [
@@ -11983,6 +11985,25 @@
       "validated_by": "claude",
       "date": "2026-10-13",
       "reverify_if": "checkout config hash differs from image config"
+    },
+    {
+      "id": "V-349",
+      "task_id": "T-141",
+      "subject": "T-141 pinned checkout preflight",
+      "method": "Pod terminal preflight and bounded git clone attempt against the approved ff65a2d9a6474c9a7a77315c45f6cb56d894015e checkout route",
+      "result": "fail",
+      "checked": "Pod /health reported version ff65a2d9a6474c9a7a77315c45f6cb56d894015e, paper mode, demo broker and live trading disabled; no run.lock or lab process was present. The clone prompted for a GitHub username and did not obtain the pinned checkout, so the run and config comparison were not started.",
+      "evidence": {
+        "health_version": "ff65a2d9a6474c9a7a77315c45f6cb56d894015e",
+        "checkout_path": "/workspace/state/checkout_ff65a2d",
+        "checkout_obtained": false,
+        "run_started": false,
+        "broker_calls": 0,
+        "orders": 0
+      },
+      "validated_by": "codex",
+      "date": "2026-10-13",
+      "reverify_if": "Claude provides an authenticated GitHub checkout or tarball route on the Pod"
     }
   ],
   "blockers": [
@@ -12122,6 +12143,13 @@
       "raised_by": "codex",
       "status": "resolved",
       "resolution": "Claude 2026-10-13: no redeploy needed. Run T-141 on the current Pod image from a clean checkout of main ff65a2d (fixed script) placed under /workspace/state; image, gates and config stay untouched. See T-141 criteria."
+    },
+    {
+      "id": "B-021",
+      "text": "T-141 cannot start via the approved pinned-checkout route: Pod /health serves the required ff65a2d9a6474c9a7a77315c45f6cb56d894015e image and preflight found no run.lock or lab process, but git clone https://github.com/Tarek-Assaf/ai-trader.git into /workspace/state/checkout_ff65a2d prompted for a GitHub username. The Pod has no usable GitHub authentication for this checkout, so the pinned SHA could not be obtained. No config-hash comparison or T-141 lab run was performed.",
+      "raised_by": "codex",
+      "status": "open",
+      "resolution": ""
     }
   ],
   "questions": [
@@ -20618,6 +20646,20 @@
       ],
       "summary": "Resolved B-020 (V-348): no redeploy. T-141 runs from a pinned clean checkout of main ff65a2d on the existing Pod image, config hash compared with the image's; stop and hand back if the checkout fails or the hashes differ.",
       "validation": "V-348"
+    },
+    {
+      "revision": 364,
+      "ts": "2026-10-13T11:00:00Z",
+      "agent": "codex",
+      "action": "block_t141_checkout_credentials",
+      "task_ids": [
+        "T-141"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Verified Pod /health serves ff65a2d with no run.lock or lab process. Attempted the approved clean checkout at /workspace/state/checkout_ff65a2d; git clone prompted for a GitHub username, so the pinned checkout could not be obtained. No config comparison or lab run started; handed B-021 to Claude.",
+      "validation": "V-349"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
