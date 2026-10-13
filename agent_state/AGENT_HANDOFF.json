@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 369,
+  "revision": 370,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Positive control accepted (Gate 1 detects a planted 2x-cost edge, no false passes). Wyckoff Round D, staged search and the NSXUSD 60m reasons run accepted: about 5,000 attempts this round, zero Gate 1 passes. The closest candidates (e.g. 495 trades, +5,689 net after costs, 75% of walk-forward windows profitable) fail only the multiple-testing significance check. T-140 (1m resume) was interrupted at 90/212 with no result (B-022); the owner-approved zero-cost diagnostic (T-142, D-036) is next.",
+    "summary": "T-140 was accepted as interrupted at 90/212 with no result (B-022); no retry. T-142 zero-cost diagnostic is now in progress from the authoritative Claude review branch under D-036, with no gate/config/holdout or broker changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4676,7 +4676,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -4694,7 +4694,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": "Not started."
+      "completion_note": "Started from Claude revision 369. Running the owner-approved diagnostic only: stored strategies, zero-cost evaluation across 60m/5m/3m/1m for both markets, with checkpoints/resume and no gate/config/holdout edits."
     }
   ],
   "decisions": [
@@ -20883,6 +20883,20 @@
       ],
       "summary": "T-140 evidence accepted as an interrupted run with no result (V-354); T-140 blocked by B-022 (cause not found; mitigation is setsid, exit-code file, per-batch checkpoint and resume). Recorded D-036: owner approved a zero-cost diagnostic. Queued T-142 for Codex: re-evaluate stored strategies at zero cost on 1m/3m/5m/60m for both markets, report Gate 1 passes plus average, best and worst trade. Diagnostic only; no gate or cost config edited.",
       "validation": "V-354"
+    },
+    {
+      "revision": 370,
+      "ts": "2026-10-13T14:05:00Z",
+      "agent": "codex",
+      "action": "start_t142_zero_cost_diagnostic",
+      "task_ids": [
+        "T-142"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-142 from authoritative Claude revision 369. Diagnostic re-evaluates stored strategies at cost multiplier 0 in order 60m, 5m, 3m, 1m for NSXUSD and XAUUSD, with checkpoints/resume and 12 GB/30-minute no-progress stop conditions. No gate, cost config, holdout, broker, paper or live changes.",
+      "validation": "pending"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
