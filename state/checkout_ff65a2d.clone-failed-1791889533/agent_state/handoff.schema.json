@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AGENT_HANDOFF",
+  "type": "object",
+  "required": ["meta", "turn", "revision", "current_phase", "protocol", "project_state", "requirements", "tasks", "decisions", "validations", "blockers", "questions", "log"],
+  "properties": {
+    "meta": {"type": "object", "required": ["project", "schema_version"]},
+    "turn": {"enum": ["claude", "codex", "human"]},
+    "revision": {"type": "integer", "minimum": 1},
+    "current_phase": {"type": "integer", "minimum": 0, "maximum": 10},
+    "protocol": {"type": "object"},
+    "project_state": {"type": "object", "required": ["summary"]},
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "status", "covered_by"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^R-\\d{2}$"},
+          "status": {"enum": ["not_started", "in_progress", "done"]},
+          "covered_by": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "phase", "owner", "reviewer", "status", "requirements", "depends_on", "acceptance_criteria", "review_cycles", "evidence", "completion_note"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[CT]-\\d{3}$"},
+          "owner": {"enum": ["claude", "codex"]},
+          "reviewer": {"enum": ["claude", "codex"]},
+          "status": {"enum": ["todo", "in_progress", "review", "changes_requested", "done", "blocked"]},
+          "review_cycles": {"type": "integer", "minimum": 0},
+          "acceptance_criteria": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+          "evidence": {"type": "array", "items": {"type": "string"}},
+          "completion_note": {"type": "string"}
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement", "status", "decided_by", "do_not_reopen"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^D-\\d{3}$"},
+          "status": {"enum": ["final", "proposed", "superseded"]},
+          "do_not_reopen": {"type": "boolean"}
+        }
+      }
+    },
+    "validations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "subject", "method", "result", "evidence", "validated_by", "reverify_if"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^V-\\d{3}$"},
+          "result": {"enum": ["pass", "fail", "pending"]}
+        }
+      }
+    },
+    "blockers": {"type": "array", "items": {"type": "object", "required": ["id", "text", "raised_by", "status"]}},
+    "questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "to", "from", "text", "status", "answer"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^Q-\\d{3}$"},
+          "to": {"enum": ["claude", "codex", "human"]},
+          "from": {"enum": ["claude", "codex", "human"]},
+          "status": {"enum": ["open", "answered"]}
+        }
+      }
+    },
+    "log": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["revision", "ts", "agent", "action", "task_ids", "files_changed", "summary"],
+        "properties": {
+          "revision": {"type": "integer", "minimum": 1},
+          "agent": {"enum": ["claude", "codex", "human"]},
+          "task_ids": {"type": "array", "items": {"type": "string"}},
+          "files_changed": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

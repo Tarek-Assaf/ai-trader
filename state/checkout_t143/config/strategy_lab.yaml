@@ -1,0 +1,65 @@
+# Strategy Lab: how strategies are tested and promoted. Gates agreed with the owner (D-019).
+# Read-only to every agent. Changed only through the SettingsService, never below risk_ceilings.yaml floors.
+
+version: 1
+
+stages: [idea, backtest, paper, micro_live, live, retired]
+
+data:
+  holdout_months: 3                # most recent months sealed away; only the validator may read them
+  max_training_years: 6            # bounded walk-forward history; use all only for an explicit full-history run
+  hypothesis_source: histdata      # ideas come from HistData and the own data lake
+  confirmation_source: capital_demo
+  timeframes: [1m, 3m, 5m, 15m, 1h]  # all built from 1m; 15m and 1h added 2026-10-10 by owner approval
+
+cost_defaults:
+  # Deliberately pessimistic until T-017 calibration replaces this section.
+  spread_points: {NSXUSD: 2.0, XAUUSD: 0.8}
+  slippage_points: {NSXUSD: 1.0, XAUUSD: 0.4}
+
+complexity_limits:
+  max_conditions_per_strategy: 5
+  max_tunable_parameters: 4
+
+gate1_backtest_to_paper:
+  min_trades: 300
+  min_out_of_sample_trades: 100
+  min_walk_forward_windows: 5
+  min_validation_periods: 3
+  min_out_of_sample_profit_factor: 1.3     # after costs
+  min_holdout_profit_factor: 1.2
+  min_profitable_walk_forward_share: 0.70
+  cost_stress_increase_pct: 50             # must stay profitable with costs 50% higher
+  require_neighbor_parameters_profitable: true
+  require_multiple_testing_correction: true
+  min_profitable_regimes: 2
+  max_top5pct_trades_profit_share: 0.40
+  max_backtest_drawdown_pct: 20
+
+gate2_paper_to_micro_live:
+  min_weeks: 4
+  min_trades: 200
+  require_within_backtest_confidence_band: true
+  require_costs_match_model: true
+  max_risk_rule_violations: 0
+
+gate3_micro_to_live:
+  min_weeks: 4
+  min_trades: 100
+  max_drawdown_vs_backtest_ratio: 1.0
+  slippage_tolerance_vs_paper_pct: 25
+
+stage_capital:
+  micro_live_size_pct_of_target: 20        # 10 to 25 percent is the agreed range
+  live_ramp_pct: [25, 50, 100]
+  ramp_min_trades_per_step: 50
+
+demotion:
+  live_drawdown_vs_backtest_max_ratio: 1.5
+  rolling_expectancy_window_trades: 30
+  size_reduction_on_demotion: 0.5
+  retire_on_second_demotion_within_days: 90
+
+portfolio:
+  max_concurrent_live_strategies: 3        # mirrors risk.yaml; the stricter value applies
+  min_strategy_diversity: 0.3              # live strategies must not be near-duplicates

@@ -1,0 +1,41 @@
+{
+  "instrument": "XAUUSD",
+  "timeframe": 60,
+  "created_at": "2026-10-13T09:46:46.800158+00:00",
+  "spec": "docs/specs/staged_search.md",
+  "gates_changed": false,
+  "parents": 10,
+  "prior_attempts_on_market": 2400,
+  "results_files": [
+    "/workspace/state/lab/results.json",
+    "/workspace/state/lab/results_15m.json",
+    "/workspace/state/lab/results_15m_a.json",
+    "/workspace/state/lab/results_15m_all.json",
+    "/workspace/state/lab/results_15m_b.json",
+    "/workspace/state/lab/results_15m_c.json",
+    "/workspace/state/lab/results_3m_c.json",
+    "/workspace/state/lab/results_5m_a.json",
+    "/workspace/state/lab/results_5m_b.json",
+    "/workspace/state/lab/results_5m_c.json",
+    "/workspace/state/lab/results_5m_levels.json",
+    "/workspace/state/lab/results_60m.json",
+    "/workspace/state/lab/results_60m_a.json",
+    "/workspace/state/lab/results_60m_all.json",
+    "/workspace/state/lab/results_60m_b.json",
+    "/workspace/state/lab/results_60m_c.json",
+    "/workspace/state/lab/results_swing.json",
+    "/workspace/state/results_d_nsx.json",
+    "/workspace/state/results_d_xau.json"
+  ],
+  "generations": [
+    {
+      "generation": 1,
+      "parents": 10,
+      "children_evaluated": 135,
+      "survivors": 0,
+      "trials_so_far": 2531
+    }
+  ],
+  "total_trials": 2531,
+  "survivors": []
+}

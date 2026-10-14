@@ -1,0 +1,11 @@
+# Paper execution defaults are provisional until T-017 calibrates them from
+# overlapping HistData and Capital.com recorder data.
+version: 1
+starting_cash: 10000
+currency: USD
+spread_points:
+  US100: 2.0
+  GOLD: 0.5
+slippage_points:
+  US100: 1.0
+  GOLD: 0.3

@@ -1,0 +1,496 @@
+{
+  "task": "T-141",
+  "source_commit": "ff65a2d9a6474c9a7a77315c45f6cb56d894015e",
+  "instrument": "NSXUSD",
+  "timeframe": 60,
+  "parents": 10,
+  "total_trials": 2549,
+  "survivors": 30,
+  "gate1_attempts": 30,
+  "gate1_passes": 0,
+  "verdict_counts": {
+    "fail": 30
+  },
+  "reason_counts": {
+    "too_few_out_of_sample_trades": 19,
+    "adjusted_significance_failed": 30,
+    "out_of_sample_profit_factor_below_gate": 10,
+    "walk_forward_share_below_gate": 1
+  },
+  "attempts": [
+    {
+      "strategy_hash": "8eea94b231e186697d05ad3c9cb3fe14ab6d72777d484eae51c3c6b64c0f9b33",
+      "source": "staged:volatility_normal_volatility",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 380,
+        "out_of_sample_profit_factor": 1.5494324766630332,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.3746645016011403,
+        "net_after_costs": 6449.11616140841,
+        "out_of_sample_net_after_costs": 3729.5959540647345,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "0e785e4948f6a5a45a8aa6d5cd84424bb0e8753492cd5d32be14d9378aee87b1",
+      "source": "staged:trend_with",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 318,
+        "out_of_sample_profit_factor": 1.0495519816586736,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.8996608984353072,
+        "net_after_costs": 4256.496762635799,
+        "out_of_sample_net_after_costs": 303.4753451535762,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "90edbe82a5b81e0d50f2632cd6a1da8ebc4dfb26805a0e94a266d0df51af3cfe",
+      "source": "staged:session_new_york",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 381,
+        "out_of_sample_profit_factor": 1.4778230249480735,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.4585202598262355,
+        "net_after_costs": 8060.446786623796,
+        "out_of_sample_net_after_costs": 3824.9673869783983,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "7db9f399299f7db141285eebc534125af0f0dfb12cf8ca4d1133c593e36fa570",
+      "source": "staged:exit_atr_3_6",
+      "verdict": "fail",
+      "reason": "adjusted_significance_failed",
+      "metrics": {
+        "trades": 456,
+        "out_of_sample_profit_factor": 1.460272879449429,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.46097441381321547,
+        "net_after_costs": 8258.499091950556,
+        "out_of_sample_net_after_costs": 4190.997646839187,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "18cb0f1e3e4f374b2b4d10e05dcba4173157a2ab84189de2a18107a187aa6f44",
+      "source": "staged:session_london+new_york",
+      "verdict": "fail",
+      "reason": "adjusted_significance_failed",
+      "metrics": {
+        "trades": 448,
+        "out_of_sample_profit_factor": 1.4851622756940384,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.42194882762643093,
+        "net_after_costs": 9051.04731135827,
+        "out_of_sample_net_after_costs": 4343.5934128726185,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "adec9def786861054153d9dd8e18157cbc3003541ef3946bd65c152651d0ca11",
+      "source": "staged:exit_atr_2.5_5",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 429,
+        "out_of_sample_profit_factor": 1.224232784691508,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.9928051834964522,
+        "net_after_costs": 4892.376290171069,
+        "out_of_sample_net_after_costs": 2440.128727865307,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "6a855fe58e83df88a8cec8bf74b392d3b9b2dc315449dac8197cb4a8758ac899",
+      "source": "staged:session_london+new_york",
+      "verdict": "fail",
+      "reason": "out_of_sample_profit_factor_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 485,
+        "out_of_sample_profit_factor": 1.2618699696390365,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.8089370947353901,
+        "net_after_costs": 8174.117808851464,
+        "out_of_sample_net_after_costs": 2549.745346877018,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "74e14ce5a0ab772ad20c3607e7d106f074c7134b6f458c2cc42ace289f3b1292",
+      "source": "staged:exit_atr_2.5_5",
+      "verdict": "fail",
+      "reason": "out_of_sample_profit_factor_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 492,
+        "out_of_sample_profit_factor": 1.2455179645959145,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.8331474419012805,
+        "net_after_costs": 7643.927272048599,
+        "out_of_sample_net_after_costs": 2421.9155418491573,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "fb15f765fe86c5603cab7c1d80d0c0bd3baa89f796f942a65975aed1e96563d4",
+      "source": "staged:session_new_york",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 403,
+        "out_of_sample_profit_factor": 1.3089927690960457,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.7647539425548147,
+        "net_after_costs": 7636.777156475255,
+        "out_of_sample_net_after_costs": 2600.5278934241906,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "b053f439a42557d233dcd240ef23065cb9e4fe79843f175b930fe6cdc34d65e0",
+      "source": "staged:session_london+new_york",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 423,
+        "out_of_sample_profit_factor": 1.2387845024439177,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.9907833235342687,
+        "net_after_costs": 5066.0593506364185,
+        "out_of_sample_net_after_costs": 2567.958532893168,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "8aefc5b0fea20403bd3eb47b9ff858b584d5fef9cea691948d8881446912d3db",
+      "source": "staged:session_new_york",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 350,
+        "out_of_sample_profit_factor": 1.2648135541316807,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.9762375553717341,
+        "net_after_costs": 7457.166364380637,
+        "out_of_sample_net_after_costs": 2489.8717870180735,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "fd76d5f2e251d70e28b81e4b3eb4c8cde1946f42048ead58fa7bf064191a4f83",
+      "source": "staged:time_stop_24",
+      "verdict": "fail",
+      "reason": "adjusted_significance_failed",
+      "metrics": {
+        "trades": 495,
+        "out_of_sample_profit_factor": 1.613378501327781,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.01647333014991347,
+        "net_after_costs": 5689.050891257319,
+        "out_of_sample_net_after_costs": 4734.885501339257,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "fa4ad79558cee3d034bd969abcc96084aef7773ac53a3c602030094645732da2",
+      "source": "staged:session_london",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 359,
+        "out_of_sample_profit_factor": 1.3877253551756454,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.5,
+        "net_after_costs": 6640.740371912052,
+        "out_of_sample_net_after_costs": 2648.33638051675,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "b3cc1ecd0b9e0d80f12db7e2de4c285f1399457c7c2bbe620e76e45d3851476f",
+      "source": "staged:trend_with",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 335,
+        "out_of_sample_profit_factor": 1.4240594908346211,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.9401953321850576,
+        "net_after_costs": 3360.579598692035,
+        "out_of_sample_net_after_costs": 2309.3252763904675,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "e367e4143059f92ec80043f70c2eecdcd096e9a7079a471aef9a0125d0a8b38b",
+      "source": "staged:time_stop_24",
+      "verdict": "fail",
+      "reason": "adjusted_significance_failed",
+      "metrics": {
+        "trades": 525,
+        "out_of_sample_profit_factor": 1.466721025948317,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.12514100234596087,
+        "net_after_costs": 4860.985133280241,
+        "out_of_sample_net_after_costs": 3864.0614900912587,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "5dc562fa55c38b2e491801d6a68a18819c9a4d505d7ea970044ada5939c1227f",
+      "source": "staged:session_london+new_york",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 331,
+        "out_of_sample_profit_factor": 1.4515304720806013,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.9259839096536209,
+        "net_after_costs": 3336.611165278491,
+        "out_of_sample_net_after_costs": 2412.389120412754,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "71226fd18f58a156c81fd8605b1629cc4521cd6861b7cf424109e988b183340e",
+      "source": "staged:volatility_normal_volatility",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 412,
+        "out_of_sample_profit_factor": 1.2243011718013195,
+        "profitable_walk_forward_share": 0.75,
+        "p_value": 0.8527651077157334,
+        "net_after_costs": 5992.253351910929,
+        "out_of_sample_net_after_costs": 1737.4970140657497,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "821c04ad8310b39b4f1e101899ffe56e4d293a112b4ee1aefa67e4a3cc3e7f51",
+      "source": "staged:volatility_normal_volatility",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,walk_forward_share_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 371,
+        "out_of_sample_profit_factor": 1.1147444267748616,
+        "profitable_walk_forward_share": 0.5,
+        "p_value": 0.9941827729400371,
+        "net_after_costs": 3204.487667205418,
+        "out_of_sample_net_after_costs": 1027.0404435747587,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "06063a84c29226b4e076f170f66ac8c9e577dd8834ee21fc1bb258d0999c9379",
+      "source": "staged:trend_with",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 352,
+        "out_of_sample_profit_factor": 1.23649294074317,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.9201441584409902,
+        "net_after_costs": 2769.833943160216,
+        "out_of_sample_net_after_costs": 1224.8866486815896,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "5cf3c11ec943646f37adc7f8e2ef2cfd64ab5eb5b2382fd690bb78ecc2757582",
+      "source": "staged:volatility_normal_volatility",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 322,
+        "out_of_sample_profit_factor": 1.3447262909299662,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.9544067547164943,
+        "net_after_costs": 3858.5989678318056,
+        "out_of_sample_net_after_costs": 1846.1179784644155,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "df77e8c3b1634a3566ba0529d3ff644bf39e9075bec44cd780cd3cddf439050f",
+      "source": "staged:trend_with",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,adjusted_significance_failed",
+      "metrics": {
+        "trades": 340,
+        "out_of_sample_profit_factor": 1.1885828531885179,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.9496781612398821,
+        "net_after_costs": 3276.688833556078,
+        "out_of_sample_net_after_costs": 979.1223012684495,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "1e84c91d5d0610f285683f5927fd530ca19e0fea7612ccee82aa05498fcbf82f",
+      "source": "staged:session_london+new_york",
+      "verdict": "fail",
+      "reason": "adjusted_significance_failed",
+      "metrics": {
+        "trades": 507,
+        "out_of_sample_profit_factor": 1.6525406873107944,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.8643734879630827,
+        "net_after_costs": 6293.500030777923,
+        "out_of_sample_net_after_costs": 5368.067250029846,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "dd6f72419e147478173cc66c284d02c1fe8a636d1151667f76b6fd779569813d",
+      "source": "staged:time_stop_72",
+      "verdict": "fail",
+      "reason": "adjusted_significance_failed",
+      "metrics": {
+        "trades": 515,
+        "out_of_sample_profit_factor": 1.6320931538445087,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.8838497678576307,
+        "net_after_costs": 6008.700444531978,
+        "out_of_sample_net_after_costs": 5265.0034060075595,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "6f69335e8d18c8e06eeb451db4b515f80f38a53e849c8325ccfd2f91c525fd8d",
+      "source": "staged:session_london+new_york",
+      "verdict": "fail",
+      "reason": "adjusted_significance_failed",
+      "metrics": {
+        "trades": 541,
+        "out_of_sample_profit_factor": 1.3830525328583354,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.877054342693658,
+        "net_after_costs": 5652.988050912367,
+        "out_of_sample_net_after_costs": 3187.9626112383667,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "79075af614d940251689c97b53e2af2058cd50644d002024f053c6bc3c663e7c",
+      "source": "staged:time_stop_36",
+      "verdict": "fail",
+      "reason": "adjusted_significance_failed",
+      "metrics": {
+        "trades": 549,
+        "out_of_sample_profit_factor": 1.3661346904490297,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.894617103010609,
+        "net_after_costs": 5327.795072934103,
+        "out_of_sample_net_after_costs": 3084.89876721608,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "fce5a99db6763c148b769153ebe774b985244dcd65ec94ad76e5be662ef1fe73",
+      "source": "staged:time_stop_24",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 371,
+        "out_of_sample_profit_factor": 1.4483685650230969,
+        "profitable_walk_forward_share": 1.0,
+        "p_value": 0.5450267740627378,
+        "net_after_costs": 2258.054055049077,
+        "out_of_sample_net_after_costs": 2035.5555962813196,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "dc86d3ea0c114b1e0e280b8119ce0b5d1112c6a9ba7cb26ba99030138a2456b8",
+      "source": "staged:time_stop_24",
+      "verdict": "fail",
+      "reason": "adjusted_significance_failed",
+      "metrics": {
+        "trades": 562,
+        "out_of_sample_profit_factor": 1.634358811665261,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.3168778240095792,
+        "net_after_costs": 4408.587557892442,
+        "out_of_sample_net_after_costs": 4572.976912950649,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "666eee04e2627409f56342d6d71fbd7cf49264ac0aad12805c65c4d13998c02b",
+      "source": "staged:volatility_normal_volatility",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 459,
+        "out_of_sample_profit_factor": 1.3154324225679979,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.9125080507685193,
+        "net_after_costs": 5434.225654937063,
+        "out_of_sample_net_after_costs": 2125.7726252185785,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "401a35160047ac0736ae40e499250cd3ec7ac996cadda9abe78cc256cc470c59",
+      "source": "staged:volatility_normal_volatility",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 453,
+        "out_of_sample_profit_factor": 1.3358619078097316,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.895912788809412,
+        "net_after_costs": 5540.657237406616,
+        "out_of_sample_net_after_costs": 2228.836469240865,
+        "neighbor_result": true
+      }
+    },
+    {
+      "strategy_hash": "582806625c2663d552feefa592a65f79700239b305aa87c9c0b05eca4b8b8b54",
+      "source": "staged:session_new_york",
+      "verdict": "fail",
+      "reason": "too_few_out_of_sample_trades,adjusted_significance_failed",
+      "metrics": {
+        "trades": 440,
+        "out_of_sample_profit_factor": 1.517394099836163,
+        "profitable_walk_forward_share": 0.875,
+        "p_value": 0.7308029868539159,
+        "net_after_costs": 5314.022482839058,
+        "out_of_sample_net_after_costs": 3763.0533831611247,
+        "neighbor_result": true
+      }
+    }
+  ],
+  "raw_output_sha256": "86aaefb11b1c2376b47a82988eeeb4dcb3d9643d12b427b73e7a52556243bfad",
+  "patched_file_sha256": {
+    "scripts/lab_staged_search.py": "a5fa4bc3d617984bff965d201795638f664c75f3820954af444d7e77b29be44d",
+    "src/trader/lab/staged.py": "9f4e06768d13d2d12ee6f959bde983f82b3a2472a1c7e66c7f3e1e2bae067fdf"
+  },
+  "desktop_git_blob_sha256": {
+    "scripts/lab_staged_search.py": "a5fa4bc3d617984bff965d201795638f664c75f3820954af444d7e77b29be44d",
+    "src/trader/lab/staged.py": "9f4e06768d13d2d12ee6f959bde983f82b3a2472a1c7e66c7f3e1e2bae067fdf"
+  },
+  "config_sha256": {
+    "checkout": "fadd445119e5247145369503bf5dc04745cc5d6b644c3babb593571392aebda9",
+    "image": "fadd445119e5247145369503bf5dc04745cc5d6b644c3babb593571392aebda9"
+  },
+  "safety": {
+    "paper": true,
+    "live_enabled": false,
+    "broker_calls": 0,
+    "orders": 0
+  },
+  "preflight_attempt": {
+    "file": "docs/evidence/staged_search_nsxusd_60m_v3_preflight.json",
+    "parents": 0,
+    "used_for_acceptance": false
+  }
+}

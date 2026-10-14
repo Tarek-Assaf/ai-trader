@@ -1,0 +1,14 @@
+# UTC reporting windows for calibration only. Broker openingHours still decides
+# whether an individual minute is tradable; these names are labels for reports.
+version: 1
+timezone: UTC
+sessions:
+  asia:
+    start: "00:00"
+    end: "08:00"
+  london:
+    start: "08:00"
+    end: "13:00"
+  new_york:
+    start: "13:00"
+    end: "22:00"

@@ -1,0 +1,34 @@
+{
+  "authorization_expires_at": "2026-10-06T20:08:00Z",
+  "demo_only": true,
+  "attempts": [
+    {
+      "attempt": 1,
+      "time": "2026-10-06T13:30:14.950069Z",
+      "result": "aborted",
+      "error": "ConfigLoadError",
+      "order_submitted": false,
+      "note": "Copied script resolved configuration from its workspace path and failed before client/order initialization."
+    },
+    {
+      "attempt": 2,
+      "time": "2026-10-06T13:32:46Z",
+      "result": "success",
+      "report": "docs/evidence/t028_round_trip_20261006.json",
+      "order_submitted": true,
+      "flat_confirmed": true,
+      "positions_remaining": 0,
+      "working_orders_remaining": 0
+    }
+  ],
+  "preflight_report": "docs/evidence/t028_preflight_20261006.json",
+  "pod_image_tag": "ghcr.io/tarek-assaf/ai-trader:c72ed3c125193402ef409b6352a2e6f5445d1126",
+  "pod_image_tag_observed": "unavailable_in_container",
+  "pod_container_hostname": "37badd7c6a02",
+  "workspace_reports": [
+    "/workspace/demo_round_trip_20261006T132441Z_231aa5e2.json",
+    "/workspace/demo_round_trip_20261006T133015Z_11b279e9.json",
+    "/workspace/demo_round_trip_20261006T133246Z_d96d2407.json",
+    "/workspace/t028_attempts_20261006.json"
+  ]
+}

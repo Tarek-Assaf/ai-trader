@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "result": "preflight",
+  "created_at": "2026-10-06T13:24:41.095552Z",
+  "environment": "demo",
+  "mode": "paper",
+  "live_trading_enabled": false,
+  "symbol": "NAS100",
+  "epic": "US100",
+  "requested_size": "0.001",
+  "quote": {
+    "bid": "31257.5",
+    "ask": "31259.3",
+    "spread": "1.8"
+  },
+  "account_observations": {
+    "before_open": {
+      "account_count": 1,
+      "accounts": [
+        {
+          "currency": "USD",
+          "fields_present": ["available", "balance", "deposit", "profitLoss"],
+          "observed_values": {
+            "available": "0",
+            "balance": "0",
+            "deposit": "1000.0",
+            "profitLoss": "-1000.0"
+          }
+        }
+      ]
+    }
+  },
+  "stop_levels": {
+    "minimum_stop_distance": "3.12593",
+    "minimum_stop_distance_rule": {
+      "reference_price": "31259.3",
+      "unit": "PERCENTAGE",
+      "value": "0.01"
+    },
+    "open_requested": "31252.5",
+    "open_observed": "31252.5",
+    "tightened_requested": "31252.6",
+    "tightened_observed": "31252.6",
+    "tightened_distance_from_bid": "4.9",
+    "safety_margin": "1.8",
+    "tick_size": "0.1"
+  },
+  "broker_observations": [],
+  "cleanup": {"attempted": false},
+  "error": null,
+  "pod_image_tag": "ghcr.io/tarek-assaf/ai-trader:c72ed3c125193402ef409b6352a2e6f5445d1126",
+  "pod_image_tag_observed": "unavailable_in_container",
+  "pod_container_hostname": "37badd7c6a02",
+  "workspace_report": "/workspace/demo_round_trip_20261006T132441Z_231aa5e2.json"
+}

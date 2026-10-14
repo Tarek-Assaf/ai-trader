@@ -1,0 +1,39 @@
+# General settings.
+
+version: 1
+
+mode: paper                  # paper or auto. Real money also needs LIVE_TRADING_ENABLED=true and an earned strategy stage.
+broker: capital_com
+broker_env: demo             # demo or live
+
+instruments_enabled: [NAS100, XAUUSD]
+
+timeframes:
+  base: 1m                   # the only timeframe stored natively
+  derived: [3m, 5m]          # built from 1m by data/resample.py (Capital.com has no 3-minute candles)
+  # to add 15m later, add it to derived and nothing else needs to change
+
+decision_triggers:
+  on_bar_close: [1m, 3m, 5m]
+  on_session_open: true
+  on_news_event: true
+  on_price_alert: true
+  position_check_seconds: 10
+
+agents:
+  max_steps_per_cycle: 12
+  max_critic_revisions: 2
+  default_on_low_confidence: no_trade
+
+log_level: INFO
+report_timezone: UTC         # change when the owner chooses a local reporting time
+
+# V-178 verified map: balance includes unrealised P&L; cash and margin are derived.
+capital_account_mapping:
+  balance: balance
+  equity: balance
+  profit_loss: profitLoss
+  margin_used: derived
+  available: available
+  # Verified against docs/evidence/t028_q040_held_open_round_trip_20261006.json.
+  verified: true

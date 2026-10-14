@@ -1,0 +1,22 @@
+# Report and maintenance schedule. Times are in report_timezone from settings.yaml (UTC for now).
+
+version: 1
+
+reports:
+  daily:   {at: "21:30", channels: [telegram, email]}
+  weekly:  {day: friday, at: "21:45", channels: [telegram, email]}
+  monthly: {day_of_month: 1, at: "08:00", channels: [telegram, email]}
+
+email:
+  method: smtp               # smtp or api. Credentials only from environment secrets.
+  recipient_env: REPORT_EMAIL_TO
+
+status_digest:
+  telegram_every_hours: 6
+
+recorder_health:
+  digest_hours: [2, 24]       # once per boot at these recorder uptimes
+  repeat_hours: 24             # continue one digest every 24 hours
+  degraded_minutes: 5          # alert after sustained open-market degradation
+
+event_blackouts_source: economic_calendar   # see risk.yaml for the minutes before and after

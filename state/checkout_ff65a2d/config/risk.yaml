@@ -1,0 +1,41 @@
+# Risk limits. These are the values the agent works within.
+# Defaults proposed by Claude. The owner confirmed the first four starting values.
+# They can be changed from Telegram (see docs/specs/settings_service.md) but never above risk_ceilings.yaml.
+# Percentages are percent of account equity (balance plus open profit/loss).
+
+version: 1
+
+# --- Owner-confirmed starting values ---
+risk_per_trade_pct: 0.5            # most you can lose on one trade if the stop is hit
+max_daily_loss_pct: 2.0            # trading stops for the day when reached
+max_drawdown_pct: 10.0             # drop from the equity peak that halts everything until you reset it
+max_concurrent_live_strategies: 3  # strategies allowed to trade real money at once
+
+# --- Proposed by Claude, not yet confirmed by the owner (question Q-010) ---
+max_weekly_loss_pct: 5.0
+max_open_positions_total: 3
+max_open_positions_per_instrument: 2
+max_combined_risk_pct: 1.0         # combined risk of NAS100 and Gold positions open together
+max_margin_usage_pct: 40.0
+max_effective_leverage: 5.0        # position value divided by equity
+
+min_reward_risk: 1.5
+min_stop_atr: 0.5                  # stop must be at least this many ATRs away
+max_stop_atr: 3.0                  # and no more than this many
+max_spread_atr_ratio: 0.20         # skip when spread is more than 20% of a typical bar's range
+stale_data_max_seconds: 20         # reject if the latest price is older than this
+max_orders_per_hour: 600           # Capital.com demo allows 1000 position requests per hour
+blackout_before_min: 30            # no new trades this long before high-impact news
+blackout_after_min: 15             # and this long after
+consecutive_loss_pause: 4          # losses in a row that trigger a pause
+loss_cooldown_minutes: 30
+min_trade_quality_score: 0.70      # 0 to 1, see docs/specs/phase2.md
+
+trade_quality_weights:             # must add up to 1.0
+  stop_distance_atr: 0.15
+  spread_to_atr: 0.20
+  regime_fit: 0.15
+  timeframe_agreement: 0.20
+  event_proximity: 0.10
+  liquidity_session: 0.10
+  strategy_reliability: 0.10

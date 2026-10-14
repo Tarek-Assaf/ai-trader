@@ -1,0 +1,22 @@
+tools:
+  web_search: {permission: read}
+  fetch_url: {permission: read}
+  news_feed: {permission: read}
+  calendar: {permission: read}
+  macro_series: {permission: read}
+  get_snapshot: {permission: read}
+  get_candles: {permission: read}
+  run_indicator: {permission: read}
+  query_memory: {permission: read}
+  quick_backtest: {permission: read}
+  query_trades: {permission: read}
+  make_chart: {permission: read}
+agents:
+  Orchestrator: []
+  Researcher: [web_search, fetch_url, news_feed, calendar, macro_series]
+  Technical Analyst: [get_snapshot, get_candles, run_indicator]
+  News and Macro Analyst: [news_feed, calendar, macro_series, fetch_url]
+  Strategist: [get_snapshot, query_memory, quick_backtest]
+  Critic: [query_memory, calendar]
+  Performance Analyst: [query_trades]
+  Reporter: [query_trades, make_chart]

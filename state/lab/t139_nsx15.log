@@ -1,0 +1,9 @@
+nohup: ignoring input
+Traceback (most recent call last):
+  File "/app/scripts/lab_staged_search.py", line 287, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/app/scripts/lab_staged_search.py", line 232, in main
+    report["generations"] = [vars(item) for item in outcome.generations]
+                             ^^^^^^^^^^
+TypeError: vars() argument must have __dict__ attribute

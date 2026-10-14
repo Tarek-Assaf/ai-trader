@@ -1,0 +1,23 @@
+# How extra worker pods are added when the system is busy. Phase 7. Disabled at the start.
+
+version: 1
+
+enabled: false               # one pod (ROLE=all) at the start
+min_workers: 0
+max_workers: 3
+max_hourly_spend_usd: 2.00   # hard cap on extra pod cost; confirm with the owner before enabling
+
+scale_up_when:
+  queue_depth_above: 20
+  for_minutes: 3
+  oldest_task_age_seconds_above: 120
+scale_down_when:
+  idle_minutes: 15
+
+priorities:                  # lower number is more important and is never shed first
+  P0: [position_management, risk_checks]
+  P1: [decision_cycles]
+  P2: [research]
+  P3: [lab_experiments, backtests, reports]
+
+singletons_never_scaled: [risk_guardian, execution_service, decision_loop]

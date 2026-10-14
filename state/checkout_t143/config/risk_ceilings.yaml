@@ -1,0 +1,43 @@
+# HARD LIMITS. Baked into the container image.
+# Nothing in chat, no agent and no config override can go beyond these.
+# Changing this file needs a code change and a redeploy (through Claude and Codex).
+#
+# For keys where "higher is riskier" the value is a MAXIMUM.
+# For keys where "lower is riskier" the value is a MINIMUM (a floor).
+
+version: 1
+
+# --- Confirmed by the owner (D-017) ---
+max:
+  risk_per_trade_pct: 1.0
+  max_daily_loss_pct: 4.0
+  max_drawdown_pct: 15.0
+  max_concurrent_live_strategies: 5
+
+# --- Proposed by Claude, awaiting owner confirmation (Q-010) ---
+  max_weekly_loss_pct: 8.0
+  max_open_positions_total: 5
+  max_open_positions_per_instrument: 3
+  max_combined_risk_pct: 2.0
+  max_margin_usage_pct: 60.0
+  max_effective_leverage: 10.0
+  max_spread_atr_ratio: 0.35
+  max_orders_per_hour: 900          # stay under Capital.com's 1000 per hour demo limit
+
+min:
+  min_reward_risk: 1.0
+  min_trade_quality_score: 0.50
+  stale_data_max_seconds_floor: 5   # the stale-data limit may not be set below this (too jumpy)
+  loss_cooldown_minutes: 10
+  blackout_before_min: 10
+  blackout_after_min: 5
+
+# Strategy Lab gates may be raised freely but not loosened below these floors.
+strategy_lab_floors:
+  gate1_min_trades: 200
+  gate1_min_out_of_sample_trades: 60
+  gate1_min_walk_forward_windows: 4
+  gate2_min_weeks: 3
+  gate2_min_paper_trades: 100
+  gate3_min_weeks: 3
+  gate3_min_micro_trades: 50

@@ -1,0 +1,43 @@
+{
+  "image": "ghcr.io/tarek-assaf/ai-trader:5d446dabcbe523723498090559597caca7366e54",
+  "timeframes": [
+    1
+  ],
+  "instruments": [
+    "NSXUSD",
+    "XAUUSD"
+  ],
+  "runs": {
+    "nsxusd_1m": {
+      "run_id": "20261012T161714Z",
+      "status": "stopped_by_owner_after_stop_file_grace_timeout",
+      "started_at": "2026-10-12T16:17:14.212645+00:00",
+      "elapsed_observed_seconds": 16657,
+      "elapsed_observed": "04:37:37",
+      "phase": "evaluating:0/212:NSXUSD:1m",
+      "ideas_done": 0,
+      "ideas_total": 212,
+      "peak_cgroup_bytes": 10101342208,
+      "peak_rss_bytes": 3539841024,
+      "last_worker_pss_bytes": 7326069760,
+      "memory_limit_bytes": 16000000000,
+      "stop_file": "/workspace/state/lab/stop_t136_1m_nsx",
+      "result_file": "not emitted"
+    },
+    "xauusd_1m": {
+      "status": "skipped_by_owner",
+      "reason": "Run stopped before Step 2; positive-control test comes first."
+    }
+  },
+  "families": {},
+  "overall_best10": {},
+  "random_baseline": {
+    "status": "skipped",
+    "reason": "No NSXUSD result file and XAUUSD was skipped."
+  },
+  "notes": [
+    "No code, config, gate, holdout or broker changes; no orders.",
+    "Stop file was created first and preserved. The active 20-idea worker batch did not terminate within the bounded grace window, so only the T-136 lab process tree was terminated afterward.",
+    "The stale run.lock was removed after process exit. XAUUSD 1m remains unrun."
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "task": "T-137",
+  "created_at": "2026-10-12T21:50:36Z",
+  "status": "blocked_preflight",
+  "synthetic_lab_started": false,
+  "required_image": "ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a",
+  "health": {
+    "status": "healthy",
+    "version": "5d446dabcbe523723498090559597caca7366e54",
+    "mode": "paper",
+    "broker_env": "demo",
+    "live_enabled": false
+  },
+  "run_lock_present": false,
+  "lab_process_present": false,
+  "ci": {
+    "run": "WY64AT",
+    "workflow": "ai-trader/docker",
+    "status": "completed",
+    "publish_image_listed": true,
+    "commit": "ffb0a6f895463e0a754de702167ea57b4806008a"
+  },
+  "chrome_console": {
+    "page_reachable": true,
+    "web_terminal_reachable": true,
+    "semantic_click_error": "coordinate input geometry is unavailable"
+  },
+  "safety": {
+    "wrong_image_run_started": false,
+    "broker_orders": 0,
+    "code_config_gate_holdout_changed": false,
+    "secrets_used": false
+  },
+  "blocker": "The required image is not deployed and the authorized Chrome console control could not be invoked through the available semantic UI channel. Direct terminal access has no Docker or RunPod management command."
+}

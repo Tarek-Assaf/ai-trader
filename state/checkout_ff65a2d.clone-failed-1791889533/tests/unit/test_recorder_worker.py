@@ -1,0 +1,91 @@
+"""Worker-side Capital.com market-status validation tests."""
+
+from __future__ import annotations
+
+from datetime import date, time
+from pathlib import Path
+
+import pytest
+
+from trader.workers.recorder import (
+    _combined_market_status,
+    _market_status,
+    _next_stream_restart,
+    _session_settings,
+)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        None,
+        [],
+        {},
+        {"marketStatus": ""},
+        {"marketStatus": 123},
+        {"market": {"marketStatus": "x" * 31}},
+    ],
+)
+def test_invalid_market_status_is_unknown(payload: object) -> None:
+    assert _market_status(payload) == "unknown"
+
+
+def test_market_status_accepts_top_level_or_market_shape() -> None:
+    assert _market_status({"marketStatus": " TRADEABLE "}) == "TRADEABLE"
+    assert _market_status({"market": {"marketStatus": "CLOSED"}}) == "CLOSED"
+
+
+def test_combined_status_fails_closed_for_missing_or_oversized_values() -> None:
+    assert _combined_market_status([]) == "unknown"
+    assert _combined_market_status(["TRADEABLE", "unknown"]) == "unknown"
+    assert _combined_market_status(["x" * 30, "y" * 11]) == "unknown"
+
+
+def test_combined_status_reports_each_configured_epic() -> None:
+    assert _combined_market_status(["TRADEABLE", "CLOSED"]) == "TRADEABLE,CLOSED"
+
+
+def test_market_status_reads_capital_com_snapshot_shape() -> None:
+    assert _market_status({"snapshot": {"marketStatus": "TRADEABLE"}}) == "TRADEABLE"
+    assert _market_status({"snapshot": {"marketStatus": "CLOSED"}}) == "CLOSED"
+    assert _market_status({"snapshot": {"marketStatus": "UNRECOGNIZED"}}) == "unknown"
+
+
+def test_session_settings_loads_verified_date_overrides_and_stale_limit(tmp_path: Path) -> None:
+    config = tmp_path / "instruments.yaml"
+    config.write_text(
+        """instruments:
+  NAS100:
+    capital_epic: US100
+    session:
+      timezone: America/New_York
+      holiday_dates: ["2026-11-26"]
+      early_closes:
+        "2026-11-27": "13:00"
+      stale_after_seconds: 120
+""",
+        encoding="utf-8",
+    )
+
+    result = _session_settings(config)
+
+    assert result["US100"]["holidays"] == (date(2026, 11, 26),)
+    assert result["US100"]["early_closes"] == {date(2026, 11, 27): time(13, 0)}
+    assert result["US100"]["stale_after_seconds"] == 120.0
+
+
+def test_stream_restart_backoff_doubles_caps_and_resets_after_health() -> None:
+    def no_jitter(_low: float, _high: float) -> float:
+        return 0.0
+
+    jitter = no_jitter
+    wait, backoff = _next_stream_restart(3.0, 0.0, jitter=jitter)
+    assert (wait, backoff) == (3.0, 6.0)
+    wait, backoff = _next_stream_restart(backoff, 0.0, jitter=jitter)
+    assert (wait, backoff) == (6.0, 12.0)
+    wait, backoff = _next_stream_restart(192.0, 0.0, jitter=jitter)
+    assert (wait, backoff) == (192.0, 300.0)
+    wait, backoff = _next_stream_restart(backoff, 0.0, jitter=jitter)
+    assert (wait, backoff) == (300.0, 300.0)
+    wait, backoff = _next_stream_restart(backoff, 300.0, jitter=jitter)
+    assert (wait, backoff) == (3.0, 6.0)
