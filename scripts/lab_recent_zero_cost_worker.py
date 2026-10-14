@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import gc
 import json
+import os
 import time
 from datetime import UTC, datetime
 from pathlib import Path
@@ -32,6 +33,15 @@ from scripts.lab_recent_zero_cost import (
     pessimistic_cost_model,
     spec_hash,
 )
+
+
+def _worker_memory_bytes() -> int | None:
+    """Return this worker's RSS, keeping the limit independent per process."""
+    try:
+        rss_pages = int(Path("/proc/self/statm").read_text(encoding="ascii").split()[1])
+        return rss_pages * os.sysconf("SC_PAGE_SIZE")
+    except (OSError, ValueError, IndexError):
+        return None
 
 
 def run(args: argparse.Namespace) -> int:
@@ -96,12 +106,12 @@ def run(args: argparse.Namespace) -> int:
                 "candidate_start": args.candidate_start,
                 "candidate_end": args.candidate_end,
                 "last_progress_seconds": time.monotonic() - started,
-                "memory_bytes": _memory_bytes(),
+                "memory_bytes": _worker_memory_bytes(),
             },
         )
         idle_seconds = time.monotonic() - last_progress
         last_progress = time.monotonic()
-        memory = _memory_bytes()
+        memory = _worker_memory_bytes()
         if memory is not None and memory > args.memory_limit_gb * 1024**3:
             _write_json(
                 Path(args.progress),
