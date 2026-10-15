@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 374,
+  "revision": 375,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143 accepted for 60m and 1m on both markets (9,480 strategies, zero-cost average per trade: NSXUSD 1m -0.39, XAUUSD 1m +1.41, normal costs make both negative; trade counts per strategy are very thin). T-144 queued for 5m, 3m and top-10 tables for all groups. Gate 1 passes remain zero. Owner parked questions about his own trading method until the tests finish; screenshot coaching loop and movement-matching study are queued after.",
+    "summary": "T-144 in progress on codex/t144-5m-3m-top10: completing the missing 5m/3m groups and top-10 tables after T-143 review.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4743,7 +4743,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04",
@@ -4762,7 +4762,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Started T-144 from Claude review revision 374. Will run the missing 5m and 3m groups in disjoint parallel ranges with per-worker RSS monitoring, then generate the required top-10 tables. No broker, gate, cost-config or sealed-holdout access."
     }
   ],
   "decisions": [
@@ -21141,6 +21141,19 @@
         "docs/evidence/t143_recent_zero_cost_table.md"
       ],
       "summary": "Reviewed T-143: accepted for 60m and 1m on both markets (V-358), lint fixes applied to Codex's scripts (import order, unused import, line length). 5m, 3m and top-10 tables were not delivered, so Q-053 answered with option 1 and T-144 queued with a parallel-work plan (container 16 GB / 8 CPUs, disjoint ranges, 13 GB cap). Findings: XAUUSD 1m is the only group with a positive zero-cost average (+1.41 points per trade) but on very few trades."
+    },
+    {
+      "revision": 375,
+      "ts": "2026-10-15T10:14:00Z",
+      "agent": "codex",
+      "action": "start_t144_5m_3m_top10",
+      "task_ids": [
+        "T-144"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-144 from Claude review revision 374. Will run disjoint 5m/3m workers with per-worker RSS monitoring and produce top-10 tables; no broker, gate, cost-config or sealed-holdout access."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
