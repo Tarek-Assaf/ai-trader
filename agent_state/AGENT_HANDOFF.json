@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 376,
+  "turn": "codex",
+  "revision": 377,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143 and T-144 accepted: all eight market/timeframe groups tested at zero cost on 2025-2026 data (17,592 strategies). Averages are negative or near zero; about 18-38% of strategies are profitable before costs but most traded under 10 times. Best candidates are short-side Wyckoff upthrust variants on NSXUSD 5m and 3m (profit factor about 1.4-1.7, 40-90 trades) but they are near-duplicates of one idea and the top of ~2,000 tries, so they prove nothing yet. Gate 1 passes remain zero. Next: owner decision on the by-year table (2022 to today) for the best candidates, then diagnosis and the movement-matching study; screenshot coaching loop queued after.",
+    "summary": "T-143 and T-144 accepted: all eight market/timeframe groups tested at zero cost on 2025-2026 data (17,592 strategies); no Gate 1 pass. Owner chose (D-038) to run the by-year table first (T-145, 2022 separate, 2023 to today, all timeframes, both markets), then the movement-matching study (T-146, price only, no news yet). Owner will share trade screenshots later; his methods are one example, not the limit. Screenshot coaching loop queued after T-146.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -116,7 +116,9 @@
         "T-141",
         "T-142",
         "T-143",
-        "T-144"
+        "T-144",
+        "T-145",
+        "T-146"
       ]
     },
     {
@@ -161,7 +163,9 @@
         "T-141",
         "T-142",
         "T-143",
-        "T-144"
+        "T-144",
+        "T-145",
+        "T-146"
       ]
     },
     {
@@ -212,7 +216,8 @@
         "T-141",
         "T-142",
         "T-143",
-        "T-144"
+        "T-144",
+        "T-145"
       ]
     },
     {
@@ -4766,6 +4771,59 @@
         "docs/evidence/t144_5m_3m_top10_table.md"
       ],
       "completion_note": "Accepted (V-360). All eight groups covered (17,592 unique rows, zero overlaps). 5m and 3m have fewer strategies than 60m/1m (1,869 / 2,010 / 2,032 / 2,201 vs 2,370) because candidate generation depends on timeframe (Q-054, accepted). Only six groups have strategies with 30 or more trades; XAUUSD 1m has none. Rule text in the table is raw and not plain language; Claude's report translates it."
+    },
+    {
+      "id": "T-145",
+      "title": "By-year table (2022 separate, 2023 to today) for the best distinct candidates, all timeframes, both markets",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04",
+        "R-05"
+      ],
+      "depends_on": [
+        "T-144"
+      ],
+      "acceptance_criteria": [
+        "Why (D-038): T-143/T-144 showed a few short-side Wyckoff upthrust variants and some others with profit factor 1.3-1.7 on 2025-2026, but they are the top of about 2,000 tries on thin trade counts. The owner wants to see whether the same strategies also win in other years. Diagnostic only: nothing counts as a Gate 1 pass, nothing feeds the trial counter, ledger or promotion files, no gate or cost config is edited, the sealed 3-month holdout is not read (not even via the sealed reader), no paper trading, no broker calls.",
+        "Candidates (pre-registered here, do not add after seeing results): from docs/evidence/t144_5m_3m_top10_summary.json take, for each of the groups NSXUSD 1m/3m/5m/60m and XAUUSD 3m/5m/60m, the top 3 DISTINCT strategies (distinct strategy_hash and distinct trades/profit-factor pair, so exact duplicates count once), ranked as in the evidence. For XAUUSD 1m (no strategy had 30 trades) take the top 3 by zero-cost net points among strategies with at least 10 trades and say so. Add the earlier NSXUSD 60m overnight (Asian) range breakout as a comparison row: locate it from src/trader/lab/seeds.py (overnight range break once London trades, about line 775) and the earlier results; if the exact variant that won 5 of 6 years cannot be identified, say so, use the closest seed with its parameters stated, and do not guess. Report the final candidate list with hashes before running.",
+        "Years: 2022 as its own column, then 2023, 2024, 2025, and 2026 up to the day before the sealed holdout. Mark 2023 and 2024 as not fresh data (we have looked at them before); 2022 is shown separately because the earlier candidate lost 2,083 points in it. Per candidate and year report trades, net points at zero cost and at normal cost, profit factor at zero cost, and max drawdown, plus a continuous 2023-to-today total. Report how many of the five years each candidate wins at zero cost and at normal cost.",
+        "All four timeframes (1m, 3m, 5m, 60m), both markets, 1m mandatory: every group with candidates must appear. If data for a year is missing for a timeframe (check HistData coverage first), state exactly which years are missing instead of skipping silently.",
+        "Control: for each candidate also run its opposite-direction mirror over the same years (long instead of short, same exits) as a sanity check and report it, so we can see whether the short side is a real feature of the market or a feature of the test period. If the code cannot build the mirror cleanly, say so.",
+        "Execution safety (B-022, B-023): container has 8 CPUs and 16 GB RAM (the 714 GB figure is the host). Report CPU and RAM before starting. Plan any parallel split BEFORE launching, give each worker a disjoint set of candidate-years, never a range another running process already covers, total memory cap 13 GB with a per-worker RSS watchdog, measured per-worker memory stated. setsid plus exit-code wrapper, checkpoint after every batch with resume, stop and hand over if no progress for 30 minutes, hand over what finished instead of retrying with other settings.",
+        "Evidence docs/evidence/t145_by_year_summary.json plus a plain-language table with the rules written in readable words (no raw 'parameter=...' or '0.0' text). Script changes need CI-importable unit tests (load scripts by path) and must pass ruff check and ruff format. PR, ONE log entry, validation entry, set to review, hand the turn to claude. Time estimate expected: report an estimate after the first group and update it."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-146",
+      "title": "Movement-matching study: how often did the same price movement repeat and what followed",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04"
+      ],
+      "depends_on": [
+        "T-145"
+      ],
+      "acceptance_criteria": [
+        "Why (D-038 and owner request 2026-10-13): the owner wants the agent to find out how many times a market movement repeated in past years and what followed, comparing the shape of movement, not exact values. Price only; no news or macro inputs. Diagnostic only: nothing counts as a Gate 1 pass or feeds the trial counter, ledger or promotion files, no gate or cost config is edited, the sealed 3-month holdout stays sealed, no paper trading, no broker calls. Claude writes the detailed design note docs/specs/t146_movement_matching.md before Codex starts; this task starts only after that note exists and T-145 is accepted.",
+        "Method (fixed in advance): cut each series into windows of N candles (N chosen from a small pre-registered set, for example 30, 60, 120); express each window as moves from its start divided by ATR at that time so quiet and wild periods are comparable; measure similarity with an elastic distance (dynamic time warping with a band limit) and also a plain correlation baseline; match only against data strictly before the window being matched (no look-ahead); remove overlapping matches (a match within one window length of a better match counts once); for each match record the forward move at fixed horizons (for example 6, 12, 30 candles) in ATR and points, the direction, and the time it took.",
+        "Statistics: report per shape-cluster how many distinct matches there were, the share that went up and down, the average forward move, and the same numbers for matched random windows (same count, same time spread) so we can see if the shape beats random. Count every shape and parameter tried (the number of trials) and report it next to every result. Net the forward move of costs (NSXUSD about 4 points, XAUUSD about 1.6 points per trade, from the T-143 evidence) before calling anything useful.",
+        "Scope: NSXUSD and XAUUSD on 1m, 3m, 5m (main) and 60m (extra), 1m mandatory; history 2022 through the day before the sealed holdout, with a clear in-sample period and a later out-of-sample period fixed in advance (state the split date). Report a result as found only if it holds in the out-of-sample period.",
+        "Execution safety as in T-145: report CPU and RAM first, plan disjoint parallel work before launching, 13 GB total cap, per-worker RSS watchdog, checkpoints, no-progress stop, exit-code wrapper. Evidence docs/evidence/t146_matching_summary.json plus a plain-language report with a few example charts (shape, its matches, what followed). CI-importable unit tests, ruff check and format clean. PR, ONE log entry, validation entry, set to review, hand the turn to claude."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -5063,6 +5121,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-13T20:47:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-038",
+      "statement": "Owner 2026-10-15 18:27 Riyadh chose: run the by-year table (2022 separate, 2023 to today) on the best distinct candidates across all four timeframes and both markets first, then the movement-matching study. No news or macro inputs for now: the agent should first learn to study the market from price; news is added later once the agent is mature enough to mix both analyses. Diagnostics only; sealed holdout stays sealed; no gate or cost config edits.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-15T15:27:00Z",
       "do_not_reopen": false
     }
   ],
@@ -13142,7 +13208,7 @@
       "id": "Q-055",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "All eight groups are tested on 2025-2026 (T-143, T-144). No strategy passed anything; the best look like near-duplicates of one short-side Wyckoff upthrust idea on NSXUSD 5m and 3m. You asked for the 2023-2024 tests (and 2022 as a separate column) only if the results were promising. Do you want them now?",
       "options": [
         "Run the by-year table (2022 separate, 2023 to today) on the best distinct candidates across all four timeframes and both markets, plus the earlier NSXUSD 60m Asian-range breakout as comparison (recommended)",
@@ -13150,7 +13216,7 @@
         "Do both, by-year table first"
       ],
       "recommendation": "Run the by-year table first: it is the cheapest way to see whether the 2025-2026 winners also win in other years or were luck.",
-      "answer": ""
+      "answer": "Owner 2026-10-15 18:27 Riyadh: go with the recommendation (by-year table first, then diagnosis and the movement-matching study). No news inputs for now; study the market first, add news later when the agent is mature."
     }
   ],
   "log": [
@@ -21240,6 +21306,20 @@
         "docs/evidence/t144_5m_3m_top10_table.md"
       ],
       "summary": "Reviewed T-144: accepted (V-360), Q-054 answered with option 1. Caveats recorded: smaller populations at 5m/3m, thin trade counts, top-10 lists are near-duplicate variants of one short-side Wyckoff upthrust idea, rules text not readable, no 2025/2026 split. Handing the turn to the owner for the next-step decision. Q-055 asks the owner whether to run the by-year table now."
+    },
+    {
+      "revision": 377,
+      "ts": "2026-10-15T15:28:02Z",
+      "agent": "claude",
+      "action": "queue_t145_t146",
+      "task_ids": [
+        "T-145",
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner answered Q-055 (D-038): by-year table first, then movement matching, no news yet. Queued T-145 (by-year table: pre-registered top-3 distinct candidates per group plus the Asian range breakout comparison, 2022 separate, all four timeframes, mirror-direction control, parallel-work rules for the 16 GB / 8 CPU Pod) and T-146 (movement matching, depends on T-145 and on a design note I still have to write)."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
