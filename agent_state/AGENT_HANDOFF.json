@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 374,
+  "turn": "human",
+  "revision": 376,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143 accepted for 60m and 1m on both markets (9,480 strategies, zero-cost average per trade: NSXUSD 1m -0.39, XAUUSD 1m +1.41, normal costs make both negative; trade counts per strategy are very thin). T-144 queued for 5m, 3m and top-10 tables for all groups. Gate 1 passes remain zero. Owner parked questions about his own trading method until the tests finish; screenshot coaching loop and movement-matching study are queued after.",
+    "summary": "T-143 and T-144 accepted: all eight market/timeframe groups tested at zero cost on 2025-2026 data (17,592 strategies). Averages are negative or near zero; about 18-38% of strategies are profitable before costs but most traded under 10 times. Best candidates are short-side Wyckoff upthrust variants on NSXUSD 5m and 3m (profit factor about 1.4-1.7, 40-90 trades) but they are near-duplicates of one idea and the top of ~2,000 tries, so they prove nothing yet. Gate 1 passes remain zero. Next: owner decision on the by-year table (2022 to today) for the best candidates, then diagnosis and the movement-matching study; screenshot coaching loop queued after.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4743,7 +4743,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4761,8 +4761,11 @@
         "Execution safety (B-022): setsid plus exit-code wrapper, checkpoint after every batch with resume, stop and hand over if no progress for 30 minutes, hand over what finished instead of retrying with other settings. Evidence docs/evidence/t144_5m_3m_top10_summary.json and a plain-language table. Script changes need CI-importable unit tests (load scripts by path) and must pass ruff check and ruff format. PR, ONE log entry, validation entry, set to review, hand the turn to claude."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t144_5m_3m_top10_summary.json",
+        "docs/evidence/t144_5m_3m_top10_table.md"
+      ],
+      "completion_note": "Accepted (V-360). All eight groups covered (17,592 unique rows, zero overlaps). 5m and 3m have fewer strategies than 60m/1m (1,869 / 2,010 / 2,032 / 2,201 vs 2,370) because candidate generation depends on timeframe (Q-054, accepted). Only six groups have strategies with 30 or more trades; XAUUSD 1m has none. Rule text in the table is raw and not plain language; Claude's report translates it."
     }
   ],
   "decisions": [
@@ -12290,6 +12293,36 @@
       "validated_by": "claude",
       "date": "2026-10-15",
       "reverify_if": "5m or 3m results are added, or the 1m zero-cost averages are used to justify a strategy"
+    },
+    {
+      "id": "V-359",
+      "task_id": "T-144",
+      "subject": "T-144 5m/3m run completion and evidence reconciliation",
+      "method": "Pod worker outputs were merged by (instrument,timeframe,strategy_hash); disjoint source ranges were checked, duplicate rows were compared, and the top-10 evidence was generated from all eight groups at the stated threshold.",
+      "result": "pass",
+      "checked": "NSXUSD 5m 1,869; XAUUSD 5m 2,010; NSXUSD 3m 2,032; XAUUSD 3m 2,201; T-143 60m/1m 2,370 each. Combined rows=17,592, overlap_count=0, overlaps_identical=true. No broker calls/orders, Gate 1 evaluation, cost-config edits, or sealed-holdout reads. Worker B stop/restart is recorded in B-023.",
+      "evidence": [
+        "docs/evidence/t144_5m_3m_top10_summary.json",
+        "docs/evidence/t144_5m_3m_top10_table.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-15",
+      "reverify_if": "Claude requests a rerun or changes the expected candidate-count criterion"
+    },
+    {
+      "id": "V-360",
+      "task_id": "T-144",
+      "subject": "T-144 review: accepted as a diagnostic",
+      "method": "Claude read docs/evidence/t144_5m_3m_top10_summary.json and table, the merge metadata and the Q-054 note",
+      "result": "pass",
+      "checked": "Eight groups present; group counts sum to 17,592 with overlap_count 0 and overlaps identical; diagnostic flags show no Gate 1 evaluation, holdout read, broker call or order. Findings, not defects: (1) 5m/3m populations are smaller than 60m/1m so groups are not strictly comparable; (2) most strategies have very few trades (median 0 to 14), only six groups have strategies with at least 30 trades and XAUUSD 1m has none; (3) the top-10 lists are dominated by near-identical variants of one idea (Wyckoff upthrust, short), several rows are exact duplicates in trades and profit factor; (4) the rules column prints thresholds as 0.0 and 'parameter=trend_atr', so it is not readable as plain language; (5) no 2025 versus 2026 split was provided; (6) the best profit factors come from picking the top of about 2,000 strategies per group, so they overstate what to expect.",
+      "evidence": [
+        "docs/evidence/t144_5m_3m_top10_summary.json",
+        "docs/evidence/t144_5m_3m_top10_table.md"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-15",
+      "reverify_if": "any top-10 strategy is used as a candidate, or the rules text or a 2025/2026 split is added"
     }
   ],
   "blockers": [
@@ -12445,6 +12478,15 @@
       "raised_by": "codex",
       "status": "open",
       "resolution": "Claude 2026-10-13: cause not determinable from the repo (no traceback, memory far below the limit). Likeliest causes: the process was tied to the web-terminal session or was killed from outside the container. Mitigation is built into T-142: start with setsid and an exit-code wrapper, checkpoint after every batch, resume once from the checkpoint. T-140 stays blocked until the owner has seen the zero-cost results (D-036)."
+    },
+    {
+      "id": "B-023",
+      "text": "XAUUSD 3m worker B PID 73770 was killed during initialization before its first checkpoint; its peak RSS monitor recorded 5,788,140 KB and no output/checkpoint was emitted. Worker A was left running.",
+      "raised_by": "codex",
+      "status": "resolved",
+      "resolution": "Restarted only worker B with setsid and --memory-limit-gb 4 after confirming the container had recovered memory; the resumed worker completed its disjoint 1,100-row range. Final B peak monitor recorded 6,272,676 KB.",
+      "resolved_by": "codex",
+      "resolved_at": "2026-10-15"
     }
   ],
   "questions": [
@@ -13082,6 +13124,32 @@
       ],
       "recommendation": "Queue a 5m/3m continuation if the all-timeframe acceptance criterion is still required; otherwise accept this owner-stopped scope as the recorded diagnostic.",
       "answer": "Claude 2026-10-15: queue the 5m/3m continuation as T-144 (the owner wants all timeframes), with top-10 tables for all eight groups."
+    },
+    {
+      "id": "Q-054",
+      "to": "claude",
+      "from": "codex",
+      "status": "answered",
+      "text": "T-144 completed the requested 5m/3m ranges, but verified candidate generation produced 1,869 NSXUSD 5m, 2,010 XAUUSD 5m, 2,032 NSXUSD 3m and 2,201 XAUUSD 3m rows instead of the criterion's 2,370 each. Should Claude accept the timeframe-dependent counts or require a rerun/criterion change?",
+      "options": [
+        "Accept the verified timeframe-dependent counts and review the top-10 evidence (recommended)",
+        "Require a rerun or code change to force 2,370 rows per group"
+      ],
+      "recommendation": "Accept the measured counts because they match the generated candidate lists and the disjoint merge has zero overlaps; changing generation would alter the diagnostic population.",
+      "answer": "Claude 2026-10-15: accept the timeframe-dependent counts (option 1). The population differs by timeframe, so groups are not strictly comparable."
+    },
+    {
+      "id": "Q-055",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "All eight groups are tested on 2025-2026 (T-143, T-144). No strategy passed anything; the best look like near-duplicates of one short-side Wyckoff upthrust idea on NSXUSD 5m and 3m. You asked for the 2023-2024 tests (and 2022 as a separate column) only if the results were promising. Do you want them now?",
+      "options": [
+        "Run the by-year table (2022 separate, 2023 to today) on the best distinct candidates across all four timeframes and both markets, plus the earlier NSXUSD 60m Asian-range breakout as comparison (recommended)",
+        "Skip it and go to the diagnosis of why the nearest strategies fail and the movement-matching study",
+        "Do both, by-year table first"
+      ],
+      "recommendation": "Run the by-year table first: it is the cheapest way to see whether the 2025-2026 winners also win in other years or were luck."
     }
   ],
   "log": [
@@ -21141,6 +21209,36 @@
         "docs/evidence/t143_recent_zero_cost_table.md"
       ],
       "summary": "Reviewed T-143: accepted for 60m and 1m on both markets (V-358), lint fixes applied to Codex's scripts (import order, unused import, line length). 5m, 3m and top-10 tables were not delivered, so Q-053 answered with option 1 and T-144 queued with a parallel-work plan (container 16 GB / 8 CPUs, disjoint ranges, 13 GB cap). Findings: XAUUSD 1m is the only group with a positive zero-cost average (+1.41 points per trade) but on very few trades."
+    },
+    {
+      "revision": 375,
+      "ts": "2026-10-15T14:00:00Z",
+      "agent": "codex",
+      "action": "complete_t144_5m_3m_top10",
+      "task_ids": [
+        "T-144"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t144_5m_3m_top10_summary.json",
+        "docs/evidence/t144_5m_3m_top10_table.md"
+      ],
+      "summary": "Started T-144 (2026-10-15T10:14:00Z): Started T-144 from Claude review revision 374. Will run disjoint 5m/3m workers with per-worker RSS monitoring and produce top-10 tables; no broker, gate, cost-config or sealed-holdout access. Completed (2026-10-15T14:00:00Z): Completed NSXUSD/XAUUSD 5m and 3m disjoint workers and generated top-10 evidence for all eight groups. Actual candidate counts: NSXUSD 5m 1,869; XAUUSD 5m 2,010; NSXUSD 3m 2,032; XAUUSD 3m 2,201; T-143 60m/1m remain 2,370 each. Combined unique rows=17,592 with zero overlaps. XAUUSD 3m worker B was killed once during initialization at 5,788,140 KB RSS; restarted with a 4 GB cap and completed. Final peaks A/B=6,320,780/6,272,676 KB. No broker/gate/cost-config/holdout access. Handed T-144 to Claude for review; Q-054 records the 2,370-count discrepancy."
+    },
+    {
+      "revision": 376,
+      "ts": "2026-10-15T14:26:33Z",
+      "agent": "claude",
+      "action": "review_t144",
+      "task_ids": [
+        "T-144"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t144_5m_3m_top10_summary.json",
+        "docs/evidence/t144_5m_3m_top10_table.md"
+      ],
+      "summary": "Reviewed T-144: accepted (V-360), Q-054 answered with option 1. Caveats recorded: smaller populations at 5m/3m, thin trade counts, top-10 lists are near-duplicate variants of one short-side Wyckoff upthrust idea, rules text not readable, no 2025/2026 split. Handing the turn to the owner for the next-step decision. Q-055 asks the owner whether to run the by-year table now."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
