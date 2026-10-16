@@ -82,3 +82,25 @@ tables["llm_usage"] = Table(
     Column("outcome", String(32), nullable=False),
 )
 Index("ix_llm_usage_created_at", tables["llm_usage"].c.created_at)
+
+tables["analysis_journal"] = Table(
+    "analysis_journal",
+    metadata,
+    Column("id", String(36), primary_key=True),
+    Column("created_at", DateTime(timezone=True), nullable=False),
+    Column("symbol", String(64), nullable=False),
+    Column("timeframe", String(16), nullable=False),
+    Column("source", String(32), nullable=False),
+    Column("image_ref", String(512), nullable=True),
+    Column("market_state", String(32), nullable=False),
+    Column("bias", String(16), nullable=False),
+    Column("key_levels", _JSON, nullable=False),
+    Column("plan", _JSON, nullable=False),
+    Column("reasons", String(600), nullable=False),
+    Column("confidence", Numeric(5, 4), nullable=False),
+    Column("status", String(16), nullable=False),
+    Column("outcome", _JSON, nullable=True),
+    Column("resolved_at", DateTime(timezone=True), nullable=True),
+    Column("lesson", String(600), nullable=True),
+)
+Index("ix_analysis_journal_created_at", tables["analysis_journal"].c.created_at)
