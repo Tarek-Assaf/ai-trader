@@ -67,3 +67,54 @@ Positive values below mean the dashboard accounting is higher than the real scal
 Each group includes one-factor-at-a-time ablations for EMA, ADX, VWAP direction, the don't-chase distance, swing stop, refresh entries, and the scale-out/single-exit accounting. Variant trials are counted explicitly and the best result is selected by 2025-to-holdout normal-cost net points only.
 
 All values are diagnostic evidence; no candidate is a Gate 1 pass or promotion recommendation.
+
+## Full-inversion mirror control
+
+T-148 adds mirror_full to the JSON above for all eight groups and six registered periods. The original T-147 baseline and mirror numbers remain unchanged.
+
+## Full-inversion mirror control
+
+This separate section adds the full inversion (signal direction and EMA/ADX/VWAP filter sides) for the five T-147 periods. Existing T-147 numbers above are unchanged.
+
+| Group | Period | Trades | Win rate | Net zero | Net normal | Total R normal |
+|---|---|---:|---:|---:|---:|---:|
+| NSXUSD:1 | 2022 | 6 | 0.333 | -5.525 | -29.525 | -2.677 |
+| NSXUSD:1 | 2023 | 5 | 0.200 | -8.894 | -28.894 | -8.947 |
+| NSXUSD:1 | 2024 | 8 | 0.125 | 6.285 | -25.715 | -209.623 |
+| NSXUSD:1 | 2025 | 9 | 0.111 | 17.089 | -18.911 | -15.807 |
+| NSXUSD:1 | 2026_to_holdout | 6 | 0.333 | 16.861 | -7.139 | 0.568 |
+| NSXUSD:3 | 2022 | 4 | 0.500 | 97.495 | 81.495 | 3.084 |
+| NSXUSD:3 | 2023 | 5 | 0.200 | -3.668 | -23.668 | -3.072 |
+| NSXUSD:3 | 2024 | 7 | 0.429 | 104.551 | 76.551 | 1.837 |
+| NSXUSD:3 | 2025 | 9 | 0.222 | 13.769 | -22.231 | -3.492 |
+| NSXUSD:3 | 2026_to_holdout | 3 | 0.667 | 125.009 | 113.009 | 4.523 |
+| NSXUSD:5 | 2022 | 5 | 0.200 | 99.707 | 79.707 | -2.958 |
+| NSXUSD:5 | 2023 | 4 | 0.250 | -5.532 | -21.532 | -1.024 |
+| NSXUSD:5 | 2024 | 5 | 0.000 | -99.159 | -119.159 | -6.085 |
+| NSXUSD:5 | 2025 | 6 | 0.333 | 63.085 | 39.085 | 0.385 |
+| NSXUSD:5 | 2026_to_holdout | 3 | 0.000 | -86.466 | -98.466 | -3.768 |
+| NSXUSD:60 | 2022 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| NSXUSD:60 | 2023 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| NSXUSD:60 | 2024 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| NSXUSD:60 | 2025 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| NSXUSD:60 | 2026_to_holdout | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| XAUUSD:1 | 2022 | 8 | 0.250 | 2.276 | -10.524 | -22.795 |
+| XAUUSD:1 | 2023 | 6 | 0.333 | 0.722 | -8.878 | -17.052 |
+| XAUUSD:1 | 2024 | 8 | 0.250 | -2.007 | -14.807 | -10.756 |
+| XAUUSD:1 | 2025 | 6 | 0.333 | 2.453 | -7.147 | -28.493 |
+| XAUUSD:1 | 2026_to_holdout | 3 | 0.000 | -12.291 | -17.091 | -4.315 |
+| XAUUSD:3 | 2022 | 5 | 0.400 | 1.387 | -6.613 | -7.025 |
+| XAUUSD:3 | 2023 | 12 | 0.250 | -4.360 | -23.560 | -21.701 |
+| XAUUSD:3 | 2024 | 4 | 0.250 | 5.810 | -0.590 | -5.285 |
+| XAUUSD:3 | 2025 | 4 | 0.250 | -3.416 | -9.816 | -2.501 |
+| XAUUSD:3 | 2026_to_holdout | 2 | 0.000 | -6.217 | -9.417 | -3.380 |
+| XAUUSD:5 | 2022 | 9 | 0.444 | 4.948 | -9.452 | -7.060 |
+| XAUUSD:5 | 2023 | 9 | 0.111 | -5.269 | -19.669 | -22.855 |
+| XAUUSD:5 | 2024 | 2 | 0.000 | -3.337 | -6.537 | -4.109 |
+| XAUUSD:5 | 2025 | 5 | 0.000 | -20.568 | -28.568 | -7.332 |
+| XAUUSD:5 | 2026_to_holdout | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| XAUUSD:60 | 2022 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| XAUUSD:60 | 2023 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| XAUUSD:60 | 2024 | 0 | 0.000 | 0.000 | 0.000 | 0.000 |
+| XAUUSD:60 | 2025 | 1 | 1.000 | 71.429 | 69.829 | 2.933 |
+| XAUUSD:60 | 2026_to_holdout | 0 | 0.000 | 0.000 | 0.000 | 0.000 |

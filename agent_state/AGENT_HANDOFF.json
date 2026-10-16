@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 384,
+  "revision": 386,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143 to T-145 and T-147 accepted as diagnostics. Owner chose option A (D-039): T-148 (exit study with the owner's scale-out idea on our best candidates, plus mirror fix) is with Codex; T-146 movement matching follows after its design note. Option B waits for the owner's trade list.",
+    "summary": "T-143 to T-145, T-147 and T-148 accepted as diagnostics (the owner's scale-out exit does not help consistently). T-149 (Tai Smart Filter on the Pod-recorded Capital.com data) is with Codex; T-146 movement matching follows after its design note. Option B waits for the owner's trade list.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4866,7 +4866,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04"
@@ -4876,6 +4876,35 @@
       ],
       "acceptance_criteria": [
         "Follow docs/specs/t148_exit_study.md exactly (D-039). Part 1: replace the degenerate T-147 mirror with a full inversion and add it as mirror_full without changing existing T-147 numbers. Part 2: the 24 pre-registered T-145 candidates plus the Tai baseline row per group, 7 exit schemes (E0 original, E1-E3 single targets, E4 owner scale-out, E5 stop to entry after 2R, E6 halves), paired comparisons, market-condition buckets (>= 30 trades), trial total, plain-language section. Diagnostic only: sealed holdout never read, no broker calls, no Gate 1 or ledger or trial-counter writes, no edits to risk, gate or cost files. All 8 groups, 1m mandatory, never 60m only. CPU/RAM first, plan parallel split with disjoint ranges, 13 GB cap. Run ruff check and ruff format (line length 100) before handing over; keep UTF-8 intact and do not rewrite old handoff entries."
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/specs/t148_exit_study.md",
+        "scripts/lab_t148_exit_study.py",
+        "tests/unit/test_t148_scripts.py",
+        "docs/evidence/t148_exit_study_summary.json",
+        "docs/evidence/t148_exit_study_table.md",
+        "docs/evidence/t147_tai_filter_summary.json",
+        "docs/evidence/t147_tai_filter_summary.md"
+      ],
+      "completion_note": "Completed the diagnostic-only T-148 study on all 8 groups (NSXUSD and XAUUSD at 1m/3m/5m/60m). The fixed mirror adds five T-147 periods without changing prior numbers. The exit study evaluates 24 pre-registered T-145 candidates plus the Tai baseline per group (224 trials: 32 entries x 7 schemes), with zero/normal costs, four paired comparisons, market buckets and group summaries. Safety flags are clean: sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0, orders=0. Pod RSS ended at 0.69 GB under the 13 GB cap. Ruff check, Ruff format, py_compile and git diff --check pass. Desktop pytest and make check remain unavailable because pytest and GNU make are not installed; CI is the test gate. Accepted by Claude 2026-10-16 (V-368)."
+    },
+    {
+      "id": "T-149",
+      "title": "Tai Smart Filter rules unchanged on the Pod-recorded Capital.com bid/ask data, 5-16 Oct 2026 (NAS100 and XAUUSD, 1m/3m/5m)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04"
+      ],
+      "depends_on": [
+        "T-147"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t149_recorded_data_tai.md exactly (owner request 2026-10-16: Yes do it for T149). Confirm the recorded dates are outside the sealed holdout first; data check; Tai rules unchanged from T-147; fills on the real bid/ask side; 1m, 3m, 5m for both symbols (60m is too short for this window and is stated as such; 1m mandatory); trade list CSV readable by a non-programmer; side-by-side with the owner trade list only if docs/owner/ holds it. Diagnostic only: no broker calls, orders, Gate 1, ledger, trial-counter or promotion writes, no lake writes, no edits to risk, gate or cost files. Run ruff check and ruff format (line length 100) before handing over; keep UTF-8 intact; do not rewrite old handoff entries."
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -12544,6 +12573,43 @@
       "validated_by": "claude",
       "date": "2026-10-16",
       "reverify_if": "The simulator rules, the cost model or the higher-timeframe bar construction change."
+    },
+    {
+      "id": "V-367",
+      "task_id": "T-148",
+      "subject": "T-148 exit study and full-inversion mirror",
+      "method": "Reviewed the fixed-entry simulator and evidence schema; ran the corrected Pod training-lake diagnostic; ran Ruff check/format at line length 100, py_compile and git diff --check.",
+      "result": "pass",
+      "checked": "All 8 groups completed with 4 candidates each (24 T-145 plus Tai baseline), 7 schemes, trial_total=224, paired E4-E0/E4-E2/E5-E4/E6-E4 deltas, session/trend/volatility-tercile buckets and mirror_full for five T-147 periods. Safety flags are sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0 and orders=0; RSS end 738709504 bytes under the 13 GB cap.",
+      "evidence": [
+        "docs/evidence/t148_exit_study_summary.json",
+        "docs/evidence/t148_exit_study_table.md",
+        "docs/evidence/t147_tai_filter_summary.json",
+        "docs/evidence/t147_tai_filter_summary.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-16",
+      "reverify_if": "Any T-148 result is used for Gate 1 or promotion, or the simulator rules, candidate list, periods or mirror definition change."
+    },
+    {
+      "id": "V-368",
+      "task_id": "T-148",
+      "subject": "Claude review of T-148 exit study and full-inversion mirror",
+      "method": "Checked old handoff entries/decisions/validations byte-identical to main; ruff check and ruff format --check at line length 100 on both new files; compared T-147 summary to main (only mirror_full added, existing keys unchanged); read the schema and group summaries; confirmed safety flags in the evidence; CI quality check on the PR.",
+      "result": "pass",
+      "checked": "8 groups (NSXUSD and XAUUSD on 1m/3m/5m/60m), 4 candidate rows each (3 T-145 candidates plus Tai baseline), 7 schemes, trial_total=224, four paired comparisons, market buckets with >=30 trades, mirror_full for 5 periods x 8 groups. sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0, orders=0. Finding: the scale-out (E4) does not help consistently. It improves fewer than half the candidates at 1m/3m(NSX)/5m and XAUUSD 1m/3m, and about half at the 60m groups; median change is negative in 1m and 5m NSXUSD. Diagnostic only, not a Gate 1 result. Note: the table markdown plain-language section was generic, so a findings section was added on review.",
+      "evidence": [
+        "docs/specs/t148_exit_study.md",
+        "scripts/lab_t148_exit_study.py",
+        "tests/unit/test_t148_scripts.py",
+        "docs/evidence/t148_exit_study_summary.json",
+        "docs/evidence/t148_exit_study_table.md",
+        "docs/evidence/t147_tai_filter_summary.json",
+        "docs/evidence/t147_tai_filter_summary.md"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-16",
+      "reverify_if": "Any T-148 result is used for Gate 1 or promotion, or the simulator rules, candidate list, periods or mirror definition change."
     }
   ],
   "blockers": [
@@ -21605,6 +21671,40 @@
         "docs/specs/t148_exit_study.md"
       ],
       "summary": "Owner answered Q-056 with option A (D-039). Queued T-148: fix the degenerate T-147 mirror and test seven exit schemes (including the owner's scale-out) on the 24 pre-registered T-145 candidates plus the Tai baseline, all four timeframes, both markets, with paired comparisons and market-condition buckets. T-146 stays parked until its design note is written. Option B waits for the owner's trade list."
+    },
+    {
+      "revision": 385,
+      "ts": "2026-10-16T10:24:58.170092Z",
+      "agent": "codex",
+      "action": "start_and_complete_t148_exit_study",
+      "task_ids": [
+        "T-148"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t147_tai_filter_summary.json",
+        "docs/evidence/t147_tai_filter_summary.md",
+        "docs/evidence/t148_exit_study_summary.json",
+        "docs/evidence/t148_exit_study_table.md",
+        "scripts/lab_t148_exit_study.py",
+        "tests/unit/test_t148_scripts.py"
+      ],
+      "summary": "Started T-148 from accepted T-147. Will implement the fixed full-inversion mirror and seven pre-registered exit schemes on the 24 T-145 candidates plus Tai baseline across all 8 groups, with diagnostic-only safety flags. Completed the corrected T-148 diagnostic across all 8 groups. Added the full-inversion T-147 mirror section, 224 exit-scheme trials, paired comparisons, market-condition buckets, group summaries and readable evidence. No holdout, gate, broker, ledger, trial-counter or risk/config activity. Ruff, format, py_compile and diff checks pass; pytest and make check are unavailable on desktop. Handing to Claude for review."
+    },
+    {
+      "revision": 386,
+      "ts": "2026-10-16T13:50:00+03:00",
+      "agent": "claude",
+      "action": "accept_t148_queue_t149",
+      "task_ids": [
+        "T-148",
+        "T-149"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t148_exit_study_table.md"
+      ],
+      "summary": "Accepted T-148 (V-368): checks pass, safety flags clean, old entries intact, Codex's two consecutive log entries merged into one. Scale-out did not help consistently on the pre-registered candidates. Queued the owner-approved T-149 (Tai rules on recorded bid/ask data 5-16 Oct) for Codex; T-146 still waits for its design note."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
