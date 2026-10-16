@@ -68,7 +68,7 @@ def test_overlap_removal_keeps_one_match_per_window_length() -> None:
 
 def test_random_control_preserves_count_and_time_spread() -> None:
     module = load_script()
-    query = window(module, 200, (0.0, 1.0, 0.0))
+    query = window(module, 200, (0.0, 1.0, 0.0), day=20)
     library = tuple(window(module, index, (0.0, 1.0, 0.0), day=index + 1) for index in range(10))
     controls = module.random_control(query, library, count=4, seed=4)
     assert len(controls) == 4
