@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 393,
+  "turn": "codex",
+  "revision": 394,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143 to T-150 accepted. Tai trade-validation tests are parked (T-151, T-152, Q-057) until the owner finishes validating his trades (D-040). T-150 analysis journal is built. T-146 movement matching needs its design note; next non-testing build tasks to be chosen with the owner.",
+    "summary": "T-143 to T-150 accepted. Tai trade-validation tests are parked (T-151, T-152, Q-057) until the owner finishes validating his trades (D-040). T-146 movement matching now has its design note (including shape-card charts) and is ready for Codex. Owner asked about reading trade images; not built yet (proposed T-153).",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4834,11 +4834,15 @@
         "Method (fixed in advance): cut each series into windows of N candles (N chosen from a small pre-registered set, for example 30, 60, 120); express each window as moves from its start divided by ATR at that time so quiet and wild periods are comparable; measure similarity with an elastic distance (dynamic time warping with a band limit) and also a plain correlation baseline; match only against data strictly before the window being matched (no look-ahead); remove overlapping matches (a match within one window length of a better match counts once); for each match record the forward move at fixed horizons (for example 6, 12, 30 candles) in ATR and points, the direction, and the time it took.",
         "Statistics: report per shape-cluster how many distinct matches there were, the share that went up and down, the average forward move, and the same numbers for matched random windows (same count, same time spread) so we can see if the shape beats random. Count every shape and parameter tried (the number of trials) and report it next to every result. Net the forward move of costs (NSXUSD about 4 points, XAUUSD about 1.6 points per trade, from the T-143 evidence) before calling anything useful.",
         "Scope: NSXUSD and XAUUSD on 1m, 3m, 5m (main) and 60m (extra), 1m mandatory; history 2022 through the day before the sealed holdout, with a clear in-sample period and a later out-of-sample period fixed in advance (state the split date). Report a result as found only if it holds in the out-of-sample period.",
-        "Execution safety as in T-145: report CPU and RAM first, plan disjoint parallel work before launching, 13 GB total cap, per-worker RSS watchdog, checkpoints, no-progress stop, exit-code wrapper. Evidence docs/evidence/t146_matching_summary.json plus a plain-language report with a few example charts (shape, its matches, what followed). CI-importable unit tests, ruff check and format clean. PR, ONE log entry, validation entry, set to review, hand the turn to claude."
+        "Execution safety as in T-145: report CPU and RAM first, plan disjoint parallel work before launching, 13 GB total cap, per-worker RSS watchdog, checkpoints, no-progress stop, exit-code wrapper. Evidence docs/evidence/t146_matching_summary.json plus a plain-language report with a few example charts (shape, its matches, what followed). CI-importable unit tests, ruff check and format clean. PR, ONE log entry, validation entry, set to review, hand the turn to claude.",
+        "Design note written: follow docs/specs/t146_movement_matching.md (split dates, parameters, shape cards and overview charts per owner request 2026-10-16 22:36). Where this list and the note differ, the note is the newer one."
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "",
+      "deliverables": [
+        "docs/specs/t146_movement_matching.md"
+      ]
     },
     {
       "id": "T-147",
@@ -22065,6 +22069,20 @@
         "tests/unit/test_analysis_journal.py"
       ],
       "summary": "T-150 analysis journal accepted (V-375) after lint/format fixes and an added import-boundary test; Codex's two consecutive log entries merged. Nothing is queued for Codex now: T-146 needs my design note, Tai tests are parked (D-040). Turn to human."
+    },
+    {
+      "revision": 394,
+      "ts": "2026-10-16T22:50:00+03:00",
+      "agent": "claude",
+      "action": "write_t146_design_note",
+      "task_ids": [
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t146_movement_matching.md"
+      ],
+      "summary": "Wrote the T-146 design note: fixed split (in-sample 2022-2024, out-of-sample 2025 to the day before the holdout), normalised windows, DTW plus correlation baseline, random control, trial counting, and shape-card charts requested by the owner. T-146 is ready for Codex."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
