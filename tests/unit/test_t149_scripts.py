@@ -31,6 +31,10 @@ def test_runner_declares_recorded_side_fill_and_safety_outputs() -> None:
     assert '"orders": 0' in source
     assert '"sealed_holdout_read": False' in source
     assert '"gate1_evaluated": False' in source
+    assert "_clock_bars" in source
+    assert "closed_signal_timeframe_blocks" in source
+    assert "blocks_dropped_missing_minutes" in source
+    assert "recorded_spread_points" in source
 
 
 def test_trade_csv_keeps_owner_comparison_columns() -> None:
@@ -51,3 +55,10 @@ def test_trade_csv_keeps_owner_comparison_columns() -> None:
         "spread_at_entry",
     ):
         assert f'"{column}"' in source
+
+
+def test_runner_uses_explicit_iso_times_and_exit_reasons() -> None:
+    source = SOURCE.read_text(encoding="utf-8")
+    assert "value.isoformat()" in source
+    assert '"stop_initial"' in source
+    assert '"stop_at_entry_after_1R"' in source

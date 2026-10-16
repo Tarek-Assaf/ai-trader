@@ -23,26 +23,33 @@ from typing import Any
 
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
+from trader.analysis import indicators
 from trader.data.resample import Candle, resample_ohlc
 
 try:
     from scripts.lab_tai_smart_filter import (
         TaiParams,
+        Features,
         _dashboard_r,
         _passes,
         _real_r,
         _risk,
-        build_features,
+        directional_index,
+        fallback_vwap,
+        heikin_ashi,
     )
 except ModuleNotFoundError:  # direct ``python scripts/lab_t149_recorded_tai.py`` execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from scripts.lab_tai_smart_filter import (
         TaiParams,
+        Features,
         _dashboard_r,
         _passes,
         _real_r,
         _risk,
-        build_features,
+        directional_index,
+        fallback_vwap,
+        heikin_ashi,
     )
 
 END_HOLDOUT = datetime(2026, 7, 1, tzinfo=UTC)
@@ -51,6 +58,7 @@ END = datetime(2026, 10, 17, tzinfo=UTC)
 INSTRUMENTS = ("NAS100", "XAUUSD")
 TIMEFRAMES = (1, 3, 5)
 WARMUP_CHART_BARS = 200
+ASSUMED_COSTS = {"NAS100": 4.0, "XAUUSD": 1.6}
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,6 +73,8 @@ class RecordedFeatures:
     mid: Any
     bid: tuple[Candle, ...]
     ask: tuple[Candle, ...]
+    signal_indices: tuple[int, ...]
+    signal_funnel: dict[str, int]
 
 
 @dataclass(frozen=True, slots=True)
@@ -95,8 +105,16 @@ def stamp() -> str:
 def write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    tmp.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8")
+    tmp.write_text(
+        json.dumps(payload, indent=2, sort_keys=True, default=_json_default), encoding="utf-8"
+    )
     os.replace(tmp, path)
+
+
+def _json_default(value: Any) -> str:
+    if isinstance(value, datetime):
+        return value.isoformat()
+    raise TypeError(f"unsupported JSON value: {type(value).__name__}")
 
 
 def rss_bytes() -> int | None:
@@ -163,38 +181,163 @@ def mid_candles(minutes: tuple[RecordedMinute, ...], symbol: str) -> tuple[Candl
     return tuple(result)
 
 
+def _clock_bars(candles: tuple[Candle, ...], timeframe: int) -> tuple[Candle, ...]:
+    """Aggregate observed minutes by clock bucket, retaining incomplete buckets.
+
+    Recorder gaps are data, not a reason to discard a signal-timeframe bucket.
+    The resulting bar is closed from the observed members and carries its
+    actual member count for the funnel diagnostics.
+    """
+    return tuple(
+        Candle(
+            bar.ts_utc,
+            bar.open,
+            bar.high,
+            bar.low,
+            bar.close,
+            bar.volume,
+            bar.series_key,
+            True,
+            bar.n_minutes,
+        )
+        for bar in resample_ohlc(candles, timeframe)
+    )
+
+
+def _clock_signals(
+    chart: tuple[Candle, ...], params: TaiParams, timeframe: int
+) -> tuple[tuple[str | None, ...], tuple[int, ...], dict[str, int]]:
+    """Build Tai signal directions from fixed clock buckets and expose a funnel."""
+    signal_multiplier = params.signal_multiplier
+    higher: list[Candle] = []
+    dropped_missing = 0
+    closed_blocks = 0
+    for start in range(0, len(chart), signal_multiplier):
+        group = chart[start : start + signal_multiplier]
+        if len(group) < signal_multiplier:
+            dropped_missing += 1
+            continue
+        closed_blocks += 1
+        higher.append(
+            Candle(
+                group[0].ts_utc,
+                group[0].open,
+                max(item.high for item in group),
+                min(item.low for item in group),
+                group[-1].close,
+                sum(item.volume for item in group),
+                group[0].series_key,
+                True,
+                sum(item.n_minutes for item in group),
+            )
+        )
+    ha = heikin_ashi(tuple(higher))
+    signal_tf = signal_multiplier * timeframe
+    crosses: list[tuple[datetime, str]] = []
+    for previous, current in zip(ha[:-1], ha[1:], strict=True):
+        if previous.close <= previous.open and current.close > current.open:
+            crosses.append((current.ts_utc + timedelta(minutes=signal_tf), "long"))
+        elif previous.close >= previous.open and current.close < current.open:
+            crosses.append((current.ts_utc + timedelta(minutes=signal_tf), "short"))
+    signals: list[str | None] = [None] * len(chart)
+    signal_indices: list[int] = []
+    cursor = 0
+    for index, bar in enumerate(chart):
+        while cursor < len(crosses) and crosses[cursor][0] <= bar.ts_utc:
+            signals[index] = crosses[cursor][1]
+            signal_indices.append(index)
+            cursor += 1
+        if cursor and signals[index] is None:
+            signals[index] = crosses[cursor - 1][1]
+    return (
+        tuple(signals),
+        tuple(signal_indices),
+        {
+            "closed_signal_timeframe_blocks": closed_blocks,
+            "blocks_dropped_missing_minutes": dropped_missing,
+            "heikin_ashi_crosses": len(crosses),
+        },
+    )
+
+
 def build_recorded_features(
     minutes: tuple[RecordedMinute, ...], symbol: str, timeframe: int
 ) -> RecordedFeatures:
-    mid = build_features(mid_candles(minutes, symbol), timeframe, TaiParams())
-    bid = tuple(
-        bar for bar in resample_ohlc((item.bid for item in minutes), timeframe) if bar.complete
-    )
-    ask = tuple(
-        bar for bar in resample_ohlc((item.ask for item in minutes), timeframe) if bar.complete
-    )
-    bid_by_time = {bar.ts_utc: bar for bar in bid}
-    ask_by_time = {bar.ts_utc: bar for bar in ask}
-    keep = [
-        bar.ts_utc for bar in mid.bars if bar.ts_utc in bid_by_time and bar.ts_utc in ask_by_time
-    ]
-    aligned_mid = tuple(bar for bar in mid.bars if bar.ts_utc in set(keep))
-    # Features arrays are indexed with the chart bars; preserve the indicator
-    # values already computed by T-147 while dropping incomplete side bars.
-    indexes = [index for index, bar in enumerate(mid.bars) if bar.ts_utc in set(keep)]
-    aligned = type(mid)(
-        aligned_mid,
-        tuple(mid.atr[index] for index in indexes),
-        tuple(mid.ema[index] for index in indexes),
-        tuple(mid.adx[index] for index in indexes),
-        tuple(mid.plus_di[index] for index in indexes),
-        tuple(mid.minus_di[index] for index in indexes),
-        tuple(mid.vwap[index] for index in indexes),
-        tuple(mid.signals[index] for index in indexes),
+    params = TaiParams()
+    mid_raw = _clock_bars(mid_candles(minutes, symbol), timeframe)
+    bid_raw = _clock_bars(tuple(item.bid for item in minutes), timeframe)
+    ask_raw = _clock_bars(tuple(item.ask for item in minutes), timeframe)
+    bid_by_time = {bar.ts_utc: bar for bar in bid_raw}
+    ask_by_time = {bar.ts_utc: bar for bar in ask_raw}
+    keep = [bar.ts_utc for bar in mid_raw if bar.ts_utc in bid_by_time and bar.ts_utc in ask_by_time]
+    chart = tuple(bar for bar in mid_raw if bar.ts_utc in set(keep))
+    signals, signal_indices, signal_funnel = _clock_signals(chart, params, timeframe)
+    plus_di, minus_di = directional_index(chart, params.adx_period)
+    mid = Features(
+        chart,
+        indicators.atr(chart, params.atr_period),
+        indicators.ema([bar.close for bar in chart], params.ema_period),
+        indicators.adx(chart, params.adx_period),
+        plus_di,
+        minus_di,
+        fallback_vwap(chart),
+        signals,
     )
     return RecordedFeatures(
-        aligned, tuple(bid_by_time[ts] for ts in keep), tuple(ask_by_time[ts] for ts in keep)
+        mid,
+        tuple(bid_by_time[ts] for ts in keep),
+        tuple(ask_by_time[ts] for ts in keep),
+        signal_indices,
+        signal_funnel,
     )
+
+
+def funnel_counts(
+    features: RecordedFeatures, trades: tuple[RecordedTrade, ...], params: TaiParams
+) -> dict[str, int]:
+    """Count each Tai gate on actual Heikin-Ashi cross candidate bars."""
+    counts = dict(features.signal_funnel)
+    counts.update(
+        {
+            "after_ema200": 0,
+            "after_adx": 0,
+            "after_vwap": 0,
+            "after_no_chase": 0,
+            "after_risk_cap": 0,
+            "after_refresh": len(trades),
+        }
+    )
+    for index in features.signal_indices:
+        direction = features.mid.signals[index]
+        if direction is None:
+            continue
+        if not _passes(
+            features.mid,
+            index,
+            direction,
+            params,
+            disabled=frozenset({"adx", "vwap_direction", "dont_chase"}),
+        ):
+            continue
+        counts["after_ema200"] += 1
+        if not _passes(
+            features.mid,
+            index,
+            direction,
+            params,
+            disabled=frozenset({"vwap_direction", "dont_chase"}),
+        ):
+            continue
+        counts["after_adx"] += 1
+        if not _passes(features.mid, index, direction, params, disabled=frozenset({"dont_chase"})):
+            continue
+        counts["after_vwap"] += 1
+        if not _passes(features.mid, index, direction, params):
+            continue
+        counts["after_no_chase"] += 1
+        if _risk(features.mid, index, direction, params) is not None:
+            counts["after_risk_cap"] += 1
+    return counts
 
 
 def simulate_recorded(
@@ -224,7 +367,7 @@ def simulate_recorded(
                 real_r = _real_r(level, True, params.target_multiple)
                 dashboard_r = _dashboard_r(level, True)
                 exit_price = stop
-                reason = "stop"
+                reason = "stop_at_entry_after_1R" if level == 1 else "stop_initial"
             elif reached:
                 level = max(reached)
                 if level >= 3:
@@ -455,6 +598,9 @@ def main() -> int:
                 "bars": len(features.mid.bars),
                 "warmup_chart_bars": WARMUP_CHART_BARS,
                 "first_trade_time": trades[0].entry_time if trades else None,
+                "recorded_spread_points": checks[symbol]["spread_points"],
+                "assumed_cost_points": ASSUMED_COSTS[symbol],
+                "funnel": funnel_counts(features, trades, TaiParams()),
                 "summary": summarize(trades, checks[symbol]["observed_days"]),
             }
             for trade in trades:
@@ -494,6 +640,7 @@ def main() -> int:
         "timeframes": TIMEFRAMES,
         "symbols": INSTRUMENTS,
         "warmup_policy": "Indicators use only recorded bars; trades begin after 200 chart bars.",
+        "bar_policy": "Clock-time buckets retain observed minutes across recorder gaps; incomplete buckets are closed from observed members.",
         "preflight": {"rss_end_bytes": rss_bytes()},
     }
     write_json(args.output, payload)
@@ -506,8 +653,8 @@ def main() -> int:
         "60m is omitted because the window is too short.",
         "",
         "| Group | Trades | Trades/day | Any target | Positive real result | Real net points | "
-        "Real total R | Max DD points |",
-        "|---|---:|---:|---:|---:|---:|---:|---:|",
+        "Real total R | Max DD points | Recorded median spread | Assumed cost |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for key, data in groups.items():
         stats = data["summary"]["real"]
@@ -515,11 +662,14 @@ def main() -> int:
             f"| {key} | {stats['trades']} | {stats['trades_per_day']:.3f} | "
             f"{data['summary']['any_target_reached']:.3f} | "
             f"{data['summary']['positive_real_result']:.3f} | {stats['net_points']:.3f} | "
-            f"{stats['total_r']:.3f} | {stats['max_drawdown_points']:.3f} |"
+            f"{stats['total_r']:.3f} | {stats['max_drawdown_points']:.3f} | "
+            f"{data['recorded_spread_points']['median']:.3f} | {data['assumed_cost_points']:.3f} |"
         )
     lines += [
         "",
         "No owner trade list was present under docs/owner; no trade matching was invented.",
+        "Recorded median spreads are shown beside the assumed lab round-trip costs; older "
+        "results used the higher assumed costs.",
         "",
         "Safety flags: broker calls 0, orders 0, sealed holdout read false, "
         "Gate 1 evaluated false.",
