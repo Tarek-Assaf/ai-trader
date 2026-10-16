@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 379,
+  "revision": 380,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143, T-144 and T-145 accepted: all eight market/timeframe groups tested at zero cost, then split by year (2022 to mid-2026). No Gate 1 pass. By-year view: the short-side upthrust candidates mostly lose in 2022-2024 on NSXUSD; XAUUSD ones win more years at zero cost but costs remove most of it. Next: T-147 (owner's Tai Smart Filter test) for Codex; T-146 (movement matching) waits for its design note.",
+    "summary": "T-143, T-144 and T-145 accepted: all eight market/timeframe groups tested at zero cost, then split by year (2022 to mid-2026). No Gate 1 pass. T-147 Tai Trading Smart Filter diagnostic is now in progress from the accepted T-145 baseline; T-146 movement matching remains queued pending its Claude design note.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4837,7 +4837,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04"
@@ -21422,6 +21422,19 @@
         "docs/evidence/t145_by_year_table.md"
       ],
       "summary": "T-145 accepted as a diagnostic (V-362). Codex had not run ruff; Claude fixed the lint and formatting on the main rebuild. Merged Codex's two consecutive log entries into one. Queued T-147 (Tai Smart Filter test) for Codex. T-146 stays parked until its design note is written."
+    },
+    {
+      "revision": 380,
+      "ts": "2026-10-16T03:05:00+03:00",
+      "agent": "codex",
+      "action": "start_t147_tai_smart_filter",
+      "task_ids": [
+        "T-147"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-147 from accepted T-145 on origin/main. Will implement the pre-registered Tai Smart Filter diagnostic across both markets and all four timeframes, with ablations, bounded variants, mirror controls, and safety-only evidence; no holdout, gate, broker, paper or live activity."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
