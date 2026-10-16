@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 384,
+  "revision": 385,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4866,7 +4866,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04"
@@ -21605,6 +21605,19 @@
         "docs/specs/t148_exit_study.md"
       ],
       "summary": "Owner answered Q-056 with option A (D-039). Queued T-148: fix the degenerate T-147 mirror and test seven exit schemes (including the owner's scale-out) on the 24 pre-registered T-145 candidates plus the Tai baseline, all four timeframes, both markets, with paired comparisons and market-condition buckets. T-146 stays parked until its design note is written. Option B waits for the owner's trade list."
+    },
+    {
+      "revision": 385,
+      "ts": "2026-10-16T07:55:00+03:00",
+      "agent": "codex",
+      "action": "start_t148_exit_study",
+      "task_ids": [
+        "T-148"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-148 from accepted T-147. Will implement the fixed full-inversion mirror and seven pre-registered exit schemes on the 24 T-145 candidates plus Tai baseline across all 8 groups, with diagnostic-only safety flags."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
