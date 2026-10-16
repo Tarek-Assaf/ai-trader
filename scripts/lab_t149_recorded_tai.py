@@ -210,12 +210,12 @@ def _clock_signals(
     """Build Tai signal directions from fixed clock buckets and expose a funnel."""
     signal_multiplier = params.signal_multiplier
     higher: list[Candle] = []
-    dropped_missing = 0
+    partial_blocks = 0
     closed_blocks = 0
     for start in range(0, len(chart), signal_multiplier):
         group = chart[start : start + signal_multiplier]
         if len(group) < signal_multiplier:
-            dropped_missing += 1
+            partial_blocks += 1
             continue
         closed_blocks += 1
         higher.append(
@@ -254,7 +254,9 @@ def _clock_signals(
         tuple(signal_indices),
         {
             "closed_signal_timeframe_blocks": closed_blocks,
-            "blocks_dropped_missing_minutes": dropped_missing,
+            "blocks_dropped_missing_minutes": 0,
+            "partial_signal_timeframe_blocks": partial_blocks,
+            "incomplete_chart_bars": sum(bar.n_minutes < timeframe for bar in chart),
             "heikin_ashi_crosses": len(crosses),
         },
     )
