@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 380,
+  "turn": "claude",
+  "revision": 381,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143, T-144 and T-145 accepted: all eight market/timeframe groups tested at zero cost, then split by year (2022 to mid-2026). No Gate 1 pass. T-147 Tai Trading Smart Filter diagnostic is now in progress from the accepted T-145 baseline; T-146 movement matching remains queued pending its Claude design note.",
+    "summary": "T-143, T-144 and T-145 accepted. T-147 Tai Trading Smart Filter diagnostic completed on the accepted baseline; evidence is ready for Claude review. T-146 movement matching remains queued pending its Claude design note.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4837,7 +4837,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04"
@@ -4849,8 +4849,13 @@
         "Follow docs/specs/t147_tai_smart_filter.md exactly (rules, two exit accountings, ablation, agent variants with trial total, mirror control, CPU/RAM first, tests, ruff check and format at line length 100). Diagnostic only: sealed holdout never read, no broker calls, no Gate 1 or ledger or trial-counter writes, no edits to risk or gate files. 1m is mandatory for NSXUSD and XAUUSD; never 60m only. Run ruff check and ruff format before handing over."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t147_tai_filter_summary.json",
+        "docs/evidence/t147_tai_filter_summary.md",
+        "scripts/lab_tai_smart_filter.py",
+        "tests/unit/test_t147_scripts.py"
+      ],
+      "completion_note": "Completed the diagnostic across NSXUSD/XAUUSD at 1m, 3m, 5m and 60m. Evidence includes zero-cost and normal-cost accounting, real scale-out versus dashboard accounting, single-exit variants, six ablations, 15 bounded variants per group and mirror controls. The training-lake run stayed under the 13 GB cap; sealed holdout, Gate 1, broker, paper execution, ledger and promotion writes were untouched."
     }
   ],
   "decisions": [
@@ -12451,6 +12456,21 @@
       "validated_by": "claude",
       "date": "2026-10-16",
       "reverify_if": "any T-145 candidate is used for a gate or promotion decision, or the candidate list or periods are changed"
+    },
+    {
+      "id": "V-363",
+      "task_id": "T-147",
+      "subject": "T-147 completion validation",
+      "method": "Codex ran py_compile and focused unit tests, completed the bounded training-lake diagnostic and inspected the generated safety flags and evidence structure.",
+      "result": "pass",
+      "checked": "All 8 market/timeframe groups completed. The summary records sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0 and orders=0; zero-cost and normal-cost results are present per period, each group reports 15 bounded variants, and the run stayed below the registered 13 GB cap. The table is readable and includes real versus dashboard accounting plus the overstatement column.",
+      "evidence": [
+        "docs/evidence/t147_tai_filter_summary.json",
+        "docs/evidence/t147_tai_filter_summary.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-16",
+      "reverify_if": "Any T-147 result is used for Gate 1 or promotion, or the rules/periods are changed."
     }
   ],
   "blockers": [
@@ -21435,6 +21455,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-147 from accepted T-145 on origin/main. Will implement the pre-registered Tai Smart Filter diagnostic across both markets and all four timeframes, with ablations, bounded variants, mirror controls, and safety-only evidence; no holdout, gate, broker, paper or live activity."
+    },
+    {
+      "revision": 381,
+      "ts": "2026-10-16T05:20:00+03:00",
+      "agent": "codex",
+      "action": "complete_t147_tai_smart_filter",
+      "task_ids": [
+        "T-147"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t147_tai_filter_summary.json",
+        "docs/evidence/t147_tai_filter_summary.md",
+        "scripts/lab_tai_smart_filter.py",
+        "tests/unit/test_t147_scripts.py"
+      ],
+      "summary": "Completed all 8 pre-registered market/timeframe groups with safety-only training-lake evidence, zero/normal cost comparisons, real/dashboard/single-exit accounting, six ablations, 15 bounded variants per group and mirror controls. No holdout, Gate 1, broker, paper, ledger or promotion activity. Handoff set to Claude for review.",
+      "validation": "V-363"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
