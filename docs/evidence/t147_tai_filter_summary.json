@@ -2,20 +2,20 @@
   "broker_calls": 0,
   "diagnostic_only": true,
   "gate1_evaluated": false,
-  "generated_at": "2026-10-16T04:21:03.416431+00:00",
+  "generated_at": "2026-10-16T05:55:15.675765+00:00",
   "groups": {
     "NSXUSD:1": {
       "ablations": {
         "adx": {
           "dashboard": {
-            "average_r": -4.176865191819949,
-            "max_drawdown_points": 91918.3703275569,
-            "net_points": -91859.26417127273,
-            "profit_factor": 0.3597652312822116,
-            "total_r": -62928.65097995935,
+            "average_r": -3.613278307444534,
+            "max_drawdown_points": 21857.944182303065,
+            "net_points": -19556.696126345152,
+            "profit_factor": 0.790740494397315,
+            "total_r": -54437.65097995935,
             "trades": 15066,
-            "win_rate": 0.1571750962431966,
-            "wins": 2368
+            "win_rate": 0.3401699190229656,
+            "wins": 5125
           },
           "real": {
             "average_r": -3.9855292920013725,
@@ -62,14 +62,14 @@
         },
         "dont_chase": {
           "dashboard": {
-            "average_r": -1.518085155194679,
-            "max_drawdown_points": 244041.65819141766,
-            "net_points": -244026.7104795737,
-            "profit_factor": 0.4027365489200224,
-            "total_r": -52077.91124895346,
+            "average_r": -0.8884684812404449,
+            "max_drawdown_points": 21947.598003703424,
+            "net_points": -8931.923580445453,
+            "profit_factor": 0.9646520593418935,
+            "total_r": -30478.91124895346,
             "trades": 34305,
-            "win_rate": 0.16988777146188602,
-            "wins": 5828
+            "win_rate": 0.41731526016615655,
+            "wins": 14316
           },
           "real": {
             "average_r": -1.2773816620207004,
@@ -116,14 +116,14 @@
         },
         "ema": {
           "dashboard": {
-            "average_r": -3.358182484468346,
-            "max_drawdown_points": 61405.54915890979,
-            "net_points": -61221.12212968072,
-            "profit_factor": 0.35204531627755226,
-            "total_r": -30344.536929655977,
+            "average_r": -2.766549018332888,
+            "max_drawdown_points": 12846.545098544946,
+            "net_points": -10976.880777640265,
+            "profit_factor": 0.8177480568861718,
+            "total_r": -24998.536929655977,
             "trades": 9036,
-            "win_rate": 0.15914121292607347,
-            "wins": 1438
+            "win_rate": 0.3646525011066844,
+            "wins": 3295
           },
           "real": {
             "average_r": -3.143928389736164,
@@ -170,14 +170,14 @@
         },
         "refresh": {
           "dashboard": {
-            "average_r": -2.2554999743702333,
-            "max_drawdown_points": 4276.034301281272,
-            "net_points": -4255.97870187889,
-            "profit_factor": 0.2885397918302205,
-            "total_r": -1348.7889846733995,
+            "average_r": -1.5648645228652165,
+            "max_drawdown_points": 744.9214011022632,
+            "net_points": -616.0298372647758,
+            "profit_factor": 0.822036317759777,
+            "total_r": -935.7889846733995,
             "trades": 598,
-            "win_rate": 0.14715719063545152,
-            "wins": 88
+            "win_rate": 0.36454849498327757,
+            "wins": 218
           },
           "real": {
             "average_r": -1.962300420301114,
@@ -224,14 +224,14 @@
         },
         "swing_stop": {
           "dashboard": {
-            "average_r": -1.2197158413736615,
-            "max_drawdown_points": 73218.09448193482,
-            "net_points": -73218.09448193439,
-            "profit_factor": 0.32988974163482276,
-            "total_r": -14166.999497555078,
+            "average_r": -0.5715023243697872,
+            "max_drawdown_points": 17421.97594869478,
+            "net_points": -16545.751665631957,
+            "profit_factor": 0.7583800241123495,
+            "total_r": -6637.999497555078,
             "trades": 11615,
-            "win_rate": 0.1774429616874731,
-            "wins": 2061
+            "win_rate": 0.3840723202755058,
+            "wins": 4461
           },
           "real": {
             "average_r": -0.9673410386760004,
@@ -278,14 +278,14 @@
         },
         "vwap_direction": {
           "dashboard": {
-            "average_r": -2.6743676298062615,
-            "max_drawdown_points": 71265.9695574987,
-            "net_points": -71091.07591652857,
-            "profit_factor": 0.35915841242893126,
-            "total_r": -26746.350665692422,
+            "average_r": -2.0713279337758648,
+            "max_drawdown_points": 11643.84577064384,
+            "net_points": -9750.75961667059,
+            "profit_factor": 0.8604554637791599,
+            "total_r": -20715.350665692422,
             "trades": 10001,
-            "win_rate": 0.1578842115788421,
-            "wins": 1579
+            "win_rate": 0.38036196380361964,
+            "wins": 3804
           },
           "real": {
             "average_r": -2.44952344755782,
@@ -335,14 +335,14 @@
       "baseline": {
         "2022": {
           "dashboard": {
-            "average_r": -2.2711104045616164,
-            "max_drawdown_points": 12478.427663437402,
-            "net_points": -12478.427663437402,
-            "profit_factor": 0.370577880063551,
-            "total_r": -4081.185396997225,
+            "average_r": -1.6756735653852113,
+            "max_drawdown_points": 1511.1497604166434,
+            "net_points": -1293.7385072525612,
+            "profit_factor": 0.8948336695973671,
+            "total_r": -3011.185396997225,
             "trades": 1797,
-            "win_rate": 0.16304952698942682,
-            "wins": 293
+            "win_rate": 0.39454646633277685,
+            "wins": 709
           },
           "real": {
             "average_r": -2.0555659786666065,
@@ -388,14 +388,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.27434613244296047,
-              "max_drawdown_points": 5374.192737930662,
-              "net_points": -5290.427663437402,
-              "profit_factor": 0.6191307617185994,
-              "total_r": -493.0,
+              "average_r": 0.32109070673344464,
+              "max_drawdown_points": 285.9075627565344,
+              "net_points": 5894.261492747439,
+              "profit_factor": 1.7084800796590622,
+              "total_r": 577.0,
               "trades": 1797,
-              "win_rate": 0.18141346688925988,
-              "wins": 326
+              "win_rate": 0.4757929883138564,
+              "wins": 855
             },
             "real": {
               "average_r": -0.05880170654795029,
@@ -443,14 +443,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -4.657315844595457,
-            "max_drawdown_points": 9582.948042036849,
-            "net_points": -9546.088136293902,
-            "profit_factor": 0.270695732068824,
-            "total_r": -7433.076087974349,
+            "average_r": -4.084007573918766,
+            "max_drawdown_points": 3634.0698436388975,
+            "net_points": -3561.362914633257,
+            "profit_factor": 0.5887468378714417,
+            "total_r": -6518.076087974349,
             "trades": 1596,
-            "win_rate": 0.14849624060150377,
-            "wins": 237
+            "win_rate": 0.30137844611528825,
+            "wins": 481
           },
           "real": {
             "average_r": -4.454308325798465,
@@ -496,14 +496,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2832080200501253,
-              "max_drawdown_points": 3294.948042036849,
-              "net_points": -3162.0881362939017,
-              "profit_factor": 0.5927435445393525,
-              "total_r": -452.0,
+              "average_r": 0.2901002506265664,
+              "max_drawdown_points": 175.93744096066985,
+              "net_points": 2822.637085366743,
+              "profit_factor": 1.5876483223609705,
+              "total_r": 463.0,
               "trades": 1596,
-              "win_rate": 0.17919799498746866,
-              "wins": 286
+              "win_rate": 0.4592731829573935,
+              "wins": 733
             },
             "real": {
               "average_r": -0.08020050125313283,
@@ -551,14 +551,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -2.4262101819159767,
-            "max_drawdown_points": 10494.148604250164,
-            "net_points": -10494.148604250164,
-            "profit_factor": 0.38272932789159997,
-            "total_r": -4381.735588540254,
+            "average_r": -1.8514593513511923,
+            "max_drawdown_points": 2138.1192525000406,
+            "net_points": -2026.151409826256,
+            "profit_factor": 0.8165398171443625,
+            "total_r": -3343.7355885402535,
             "trades": 1806,
-            "win_rate": 0.1644518272425249,
-            "wins": 297
+            "win_rate": 0.349390919158361,
+            "wins": 631
           },
           "real": {
             "average_r": -2.231858022447538,
@@ -604,14 +604,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.24473975636766335,
-              "max_drawdown_points": 3304.9037579698706,
-              "net_points": -3270.1486042501638,
-              "profit_factor": 0.7041989111169585,
-              "total_r": -442.0,
+              "average_r": 0.3300110741971207,
+              "max_drawdown_points": 177.52626624620098,
+              "net_points": 5197.848590173744,
+              "profit_factor": 1.7550944443252923,
+              "total_r": 596.0,
               "trades": 1806,
-              "win_rate": 0.18881506090808417,
-              "wins": 341
+              "win_rate": 0.4684385382059801,
+              "wins": 846
             },
             "real": {
               "average_r": -0.05038759689922481,
@@ -659,14 +659,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -3.8036617354770605,
-            "max_drawdown_points": 12668.247493417726,
-            "net_points": -12668.077413646319,
-            "profit_factor": 0.3769884476063358,
-            "total_r": -6344.507774775737,
+            "average_r": -3.1999447090981636,
+            "max_drawdown_points": 1522.3632461549932,
+            "net_points": -1300.0503026721271,
+            "profit_factor": 0.8986464791282953,
+            "total_r": -5337.507774775737,
             "trades": 1668,
-            "win_rate": 0.15767386091127097,
-            "wins": 263
+            "win_rate": 0.41127098321342925,
+            "wins": 686
           },
           "real": {
             "average_r": -3.5756441495458056,
@@ -712,14 +712,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.302158273381295,
-              "max_drawdown_points": 6004.247493417726,
-              "net_points": -5996.077413646319,
-              "profit_factor": 0.5940366397377955,
-              "total_r": -504.0,
+              "average_r": 0.30155875299760193,
+              "max_drawdown_points": 276.7261700017334,
+              "net_points": 5371.949697327873,
+              "profit_factor": 1.5873237666778377,
+              "total_r": 503.0,
               "trades": 1668,
-              "win_rate": 0.17446043165467626,
-              "wins": 291
+              "win_rate": 0.46882494004796166,
+              "wins": 782
             },
             "real": {
               "average_r": -0.07414068745003997,
@@ -767,14 +767,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -1.5127014427274257,
-            "max_drawdown_points": 6869.872120389067,
-            "net_points": -6613.62917126008,
-            "profit_factor": 0.43464889689985003,
-            "total_r": -1120.9117690610224,
+            "average_r": -0.9148606869919329,
+            "max_drawdown_points": 950.6204998645153,
+            "net_points": 979.9395031816894,
+            "profit_factor": 1.1386940074691774,
+            "total_r": -677.9117690610223,
             "trades": 741,
-            "win_rate": 0.1632928475033738,
-            "wins": 121
+            "win_rate": 0.43049932523616735,
+            "wins": 319
           },
           "real": {
             "average_r": -1.281482369403089,
@@ -820,14 +820,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.33063427800269907,
-              "max_drawdown_points": 3957.6888496509273,
-              "net_points": -3649.6291712600796,
-              "profit_factor": 0.6043611483987639,
-              "total_r": -245.0,
+              "average_r": 0.26720647773279355,
+              "max_drawdown_points": 241.42557447146464,
+              "net_points": 3943.9395031816894,
+              "profit_factor": 1.7246129135524733,
+              "total_r": 198.0,
               "trades": 741,
-              "win_rate": 0.16734143049932523,
-              "wins": 124
+              "win_rate": 0.4601889338731444,
+              "wins": 341
             },
             "real": {
               "average_r": -0.09941520467836258,
@@ -1000,14 +1000,14 @@
       "mirror": {
         "2022": {
           "dashboard": {
-            "average_r": -1.1129130943461503,
-            "max_drawdown_points": 80.53754731287336,
-            "net_points": -55.8711553864232,
-            "profit_factor": 0.39082193229837386,
-            "total_r": -6.677478566076902,
+            "average_r": -0.7795797610128169,
+            "max_drawdown_points": 69.95091133314963,
+            "net_points": -42.69788342697575,
+            "profit_factor": 0.4737038278990624,
+            "total_r": -4.677478566076902,
             "trades": 6,
-            "win_rate": 0.16666666666666666,
-            "wins": 1
+            "win_rate": 0.3333333333333333,
+            "wins": 2
           },
           "real": {
             "average_r": -1.0573575387905947,
@@ -1054,11 +1054,11 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -1.7894212580221616,
-            "max_drawdown_points": 28.89359420987057,
-            "net_points": -28.89359420987057,
-            "profit_factor": 0.02383137976633411,
-            "total_r": -8.947106290110808,
+            "average_r": -0.9894212580221616,
+            "max_drawdown_points": 19.850103486320222,
+            "net_points": -19.850103486320222,
+            "profit_factor": 0.03431611561715142,
+            "total_r": -4.947106290110808,
             "trades": 5,
             "win_rate": 0.2,
             "wins": 1
@@ -1108,14 +1108,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -32.07675413447193,
-            "max_drawdown_points": 61.50159762242038,
-            "net_points": -61.50159762242038,
-            "profit_factor": 0.0,
-            "total_r": -256.61403307577547,
+            "average_r": -31.326754134471933,
+            "max_drawdown_points": 35.936084422999556,
+            "net_points": -31.245001661478454,
+            "profit_factor": 0.13053961879382575,
+            "total_r": -250.61403307577547,
             "trades": 8,
-            "win_rate": 0.0,
-            "wins": 0
+            "win_rate": 0.125,
+            "wins": 1
           },
           "real": {
             "average_r": -31.701754134471933,
@@ -1162,14 +1162,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -1.7563144953920076,
-            "max_drawdown_points": 64.3424838371684,
-            "net_points": -18.910832911540638,
-            "profit_factor": 0.7537363036136636,
-            "total_r": -15.806830458528069,
+            "average_r": -0.9785367176142299,
+            "max_drawdown_points": 32.85243406929294,
+            "net_points": 13.13606900828745,
+            "profit_factor": 1.256115628781172,
+            "total_r": -8.806830458528069,
             "trades": 9,
-            "win_rate": 0.1111111111111111,
-            "wins": 1
+            "win_rate": 0.3333333333333333,
+            "wins": 3
           },
           "real": {
             "average_r": -1.3489070879846001,
@@ -1216,14 +1216,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -0.5720443795547868,
-            "max_drawdown_points": 74.82770880841781,
-            "net_points": -52.57347917777952,
-            "profit_factor": 0.5369359236476065,
-            "total_r": -3.432266277328721,
+            "average_r": 0.42795562044521307,
+            "max_drawdown_points": 38.92098704169257,
+            "net_points": 25.957326003030175,
+            "profit_factor": 1.41686116263124,
+            "total_r": 2.5677337226712784,
             "trades": 6,
-            "win_rate": 0.16666666666666666,
-            "wins": 1
+            "win_rate": 0.6666666666666666,
+            "wins": 4
           },
           "real": {
             "average_r": -0.07204437955478693,
@@ -1273,17 +1273,17 @@
       "variants": {
         "best_oos_normal_cost": {
           "oos": {
-            "average_r": -2.6941655237383673,
-            "max_drawdown_points": 8861.685887112097,
-            "net_points": -8158.710033704473,
-            "profit_factor": 0.6073255713118355,
-            "total_r": -6678.836333347413,
-            "trades": 2479,
-            "win_rate": 0.3061718434852763,
-            "wins": 759
+            "average_r": -1.5868879518750008,
+            "max_drawdown_points": 8617.813074753072,
+            "net_points": -8396.961657616697,
+            "profit_factor": 0.4329082438077031,
+            "total_r": -2681.840638668751,
+            "trades": 1690,
+            "win_rate": 0.26804733727810653,
+            "wins": 453
           },
           "parameters": {
-            "adx_min": 20.0,
+            "adx_min": 25.0,
             "adx_period": 14,
             "atr_period": 14,
             "ema_period": 200,
@@ -1292,10 +1292,10 @@
             "signal_multiplier": 18,
             "swing_buffer_atr": 0.2,
             "swing_lookback": 5,
-            "target_multiple": 2.0,
+            "target_multiple": 3.0,
             "vwap_distance_atr": 1.5
           },
-          "trades": 7839
+          "trades": 5255
         },
         "trial_total": 15
       }
@@ -1304,14 +1304,14 @@
       "ablations": {
         "adx": {
           "dashboard": {
-            "average_r": -1.885260879453342,
-            "max_drawdown_points": 73711.02389854268,
-            "net_points": -73621.48832228145,
-            "profit_factor": 0.4363428361847176,
-            "total_r": -16441.360129712597,
+            "average_r": -1.3154867709795433,
+            "max_drawdown_points": 3938.9796228427167,
+            "net_points": 5709.227712857371,
+            "profit_factor": 1.0693159666086032,
+            "total_r": -11472.360129712597,
             "trades": 8721,
-            "win_rate": 0.1692466460268318,
-            "wins": 1476
+            "win_rate": 0.41703933035202384,
+            "wins": 3637
           },
           "real": {
             "average_r": -1.6877300152558115,
@@ -1358,14 +1358,14 @@
         },
         "dont_chase": {
           "dashboard": {
-            "average_r": -0.8415439978998235,
-            "max_drawdown_points": 119877.61418054972,
-            "net_points": -119639.51325286643,
-            "profit_factor": 0.484422747749215,
-            "total_r": -10018.581294997399,
+            "average_r": -0.2135725573286349,
+            "max_drawdown_points": 1433.946144929214,
+            "net_points": 32923.138547748764,
+            "profit_factor": 1.2310838955645076,
+            "total_r": -2542.5812949973983,
             "trades": 11905,
-            "win_rate": 0.1751364972700546,
-            "wins": 2085
+            "win_rate": 0.4684586308273834,
+            "wins": 5577
           },
           "real": {
             "average_r": -0.6011408059636623,
@@ -1412,14 +1412,14 @@
         },
         "ema": {
           "dashboard": {
-            "average_r": -1.836896667401292,
-            "max_drawdown_points": 43358.37467658665,
-            "net_points": -43323.977686308936,
-            "profit_factor": 0.46095010046001633,
-            "total_r": -9371.846797081393,
+            "average_r": -1.23889588339502,
+            "max_drawdown_points": 2416.704956257603,
+            "net_points": 7923.26838187153,
+            "profit_factor": 1.159670821397486,
+            "total_r": -6320.846797081393,
             "trades": 5102,
-            "win_rate": 0.1679733437867503,
-            "wins": 857
+            "win_rate": 0.4266954135633085,
+            "wins": 2177
           },
           "real": {
             "average_r": -1.620314934747431,
@@ -1466,14 +1466,14 @@
         },
         "refresh": {
           "dashboard": {
-            "average_r": -1.1528582073806815,
-            "max_drawdown_points": 2675.7463451437434,
-            "net_points": -2636.6571012593085,
-            "profit_factor": 0.529229467079192,
-            "total_r": -397.73608154633513,
+            "average_r": -0.5383654537574932,
+            "max_drawdown_points": 382.1135399958657,
+            "net_points": 1325.4447672472197,
+            "profit_factor": 1.4064670823035472,
+            "total_r": -185.73608154633516,
             "trades": 345,
-            "win_rate": 0.19420289855072465,
-            "wins": 67
+            "win_rate": 0.4463768115942029,
+            "wins": 154
           },
           "real": {
             "average_r": -0.946094922356527,
@@ -1520,14 +1520,14 @@
         },
         "swing_stop": {
           "dashboard": {
-            "average_r": -0.7170472588561647,
-            "max_drawdown_points": 47827.19575141182,
-            "net_points": -47565.376766216825,
-            "profit_factor": 0.4589855730607483,
-            "total_r": -4208.350362226831,
+            "average_r": -0.06889595539731308,
+            "max_drawdown_points": 2041.0626054491822,
+            "net_points": 7702.136807424828,
+            "profit_factor": 1.1435887761377947,
+            "total_r": -404.3503622268305,
             "trades": 5869,
-            "win_rate": 0.1826546260010223,
-            "wins": 1072
+            "win_rate": 0.4804907139205998,
+            "wins": 2820
           },
           "real": {
             "average_r": -0.4676010158846193,
@@ -1574,14 +1574,14 @@
         },
         "vwap_direction": {
           "dashboard": {
-            "average_r": -1.5872435230567952,
-            "max_drawdown_points": 47691.68763435853,
-            "net_points": -47568.66375325133,
-            "profit_factor": 0.44112543595207987,
-            "total_r": -7740.98666194799,
+            "average_r": -0.9774424158187389,
+            "max_drawdown_points": 1887.8552586730202,
+            "net_points": 6916.117700997604,
+            "profit_factor": 1.1309696138463021,
+            "total_r": -4766.98666194799,
             "trades": 4877,
-            "win_rate": 0.16670084068074636,
-            "wins": 813
+            "win_rate": 0.4371539881074431,
+            "wins": 2132
           },
           "real": {
             "average_r": -1.357252408300456,
@@ -1631,14 +1631,14 @@
       "baseline": {
         "2022": {
           "dashboard": {
-            "average_r": -1.5364871385617553,
-            "max_drawdown_points": 10471.623077191662,
-            "net_points": -10437.226086914065,
-            "profit_factor": 0.3928720771513093,
-            "total_r": -1485.7830629892173,
+            "average_r": -0.913943188199811,
+            "max_drawdown_points": 1026.8105329800146,
+            "net_points": 1189.119353699256,
+            "profit_factor": 1.1147542627631992,
+            "total_r": -883.7830629892172,
             "trades": 967,
-            "win_rate": 0.14788004136504654,
-            "wins": 143
+            "win_rate": 0.4270941054808687,
+            "wins": 413
           },
           "real": {
             "average_r": -1.2796791413194248,
@@ -1684,14 +1684,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.3671147880041365,
-              "max_drawdown_points": 6611.623077191662,
-              "net_points": -6569.226086914065,
-              "profit_factor": 0.5280925197582688,
-              "total_r": -355.0,
+              "average_r": 0.25542916235780766,
+              "max_drawdown_points": 227.69569711844088,
+              "net_points": 5057.119353699256,
+              "profit_factor": 1.6144114714289506,
+              "total_r": 247.0,
               "trades": 967,
-              "win_rate": 0.15822130299896586,
-              "wins": 153
+              "win_rate": 0.4591520165460186,
+              "wins": 444
             },
             "real": {
               "average_r": -0.11030679076180627,
@@ -1739,14 +1739,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -2.4612471591969682,
-            "max_drawdown_points": 6843.587484575852,
-            "net_points": -6837.693768316216,
-            "profit_factor": 0.34280048618222625,
-            "total_r": -2106.827568272605,
+            "average_r": -1.9121817386362208,
+            "max_drawdown_points": 1653.1887944408845,
+            "net_points": -1429.9924480896352,
+            "profit_factor": 0.7924272908112264,
+            "total_r": -1636.827568272605,
             "trades": 856,
-            "win_rate": 0.15771028037383178,
-            "wins": 135
+            "win_rate": 0.3679906542056075,
+            "wins": 315
           },
           "real": {
             "average_r": -2.280951209041205,
@@ -1792,14 +1792,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2570093457943925,
-              "max_drawdown_points": 3483.205422204588,
-              "net_points": -3413.693768316216,
-              "profit_factor": 0.5488683439159606,
-              "total_r": -220.0,
+              "average_r": 0.29205607476635514,
+              "max_drawdown_points": 237.46313753021604,
+              "net_points": 1994.0075519103648,
+              "profit_factor": 1.4071695484005111,
+              "total_r": 250.0,
               "trades": 856,
-              "win_rate": 0.18574766355140188,
-              "wins": 159
+              "win_rate": 0.45210280373831774,
+              "wins": 387
             },
             "real": {
               "average_r": -0.07671339563862929,
@@ -1847,14 +1847,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -2.465846021892376,
-            "max_drawdown_points": 7456.016655921061,
-            "net_points": -7456.016655921061,
-            "profit_factor": 0.47269885284374374,
-            "total_r": -2285.8392622942324,
+            "average_r": -1.844486798591405,
+            "max_drawdown_points": 539.5079158364351,
+            "net_points": 1423.3800088707667,
+            "profit_factor": 1.1643800283519516,
+            "total_r": -1709.8392622942324,
             "trades": 927,
-            "win_rate": 0.17691477885652643,
-            "wins": 164
+            "win_rate": 0.45307443365695793,
+            "wins": 420
           },
           "real": {
             "average_r": -2.2382300564123327,
@@ -1900,14 +1900,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2535059331175836,
-              "max_drawdown_points": 3748.016655921061,
-              "net_points": -3748.016655921061,
-              "profit_factor": 0.6625915192108216,
-              "total_r": -235.0,
+              "average_r": 0.36785329018338725,
+              "max_drawdown_points": 354.8751844197359,
+              "net_points": 5131.380008870767,
+              "profit_factor": 1.7631998484285187,
+              "total_r": 341.0,
               "trades": 927,
-              "win_rate": 0.1866235167206041,
-              "wins": 173
+              "win_rate": 0.49083063646170444,
+              "wins": 455
             },
             "real": {
               "average_r": -0.02588996763754046,
@@ -1955,14 +1955,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -1.06269900772278,
-            "max_drawdown_points": 7636.506026817471,
-            "net_points": -7567.205741358153,
-            "profit_factor": 0.5572874918465657,
-            "total_r": -975.5576890895121,
+            "average_r": -0.4559451950866146,
+            "max_drawdown_points": 439.32650378003746,
+            "net_points": 3574.320012887976,
+            "profit_factor": 1.3379563550074214,
+            "total_r": -418.55768908951217,
             "trades": 918,
-            "win_rate": 0.18082788671023964,
-            "wins": 166
+            "win_rate": 0.46187363834422657,
+            "wins": 424
           },
           "real": {
             "average_r": -0.8488282742442036,
@@ -2008,14 +2008,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2374727668845316,
-              "max_drawdown_points": 3986.099841087267,
-              "net_points": -3895.2057413581533,
-              "profit_factor": 0.723877541598081,
-              "total_r": -218.0,
+              "average_r": 0.369281045751634,
+              "max_drawdown_points": 306.9274769803342,
+              "net_points": 7246.320012887976,
+              "profit_factor": 1.8376219013186212,
+              "total_r": 339.0,
               "trades": 918,
-              "win_rate": 0.1906318082788671,
-              "wins": 175
+              "win_rate": 0.48257080610021785,
+              "wins": 443
             },
             "real": {
               "average_r": -0.02360203340595498,
@@ -2063,14 +2063,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -0.602938763163993,
-            "max_drawdown_points": 4837.917111007351,
-            "net_points": -4749.290220177758,
-            "profit_factor": 0.5641602138652695,
-            "total_r": -254.44015805520505,
+            "average_r": -0.05554539823508304,
+            "max_drawdown_points": 537.0162346868929,
+            "net_points": 2273.0064239713793,
+            "profit_factor": 1.3214217979692322,
+            "total_r": -23.440158055205043,
             "trades": 422,
-            "win_rate": 0.1872037914691943,
-            "wins": 79
+            "win_rate": 0.44786729857819907,
+            "wins": 189
           },
           "real": {
             "average_r": -0.4252136446805807,
@@ -2116,14 +2116,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.25118483412322273,
-              "max_drawdown_points": 3171.842607719809,
-              "net_points": -3061.290220177758,
-              "profit_factor": 0.678600371241303,
-              "total_r": -106.0,
+              "average_r": 0.2962085308056872,
+              "max_drawdown_points": 374.69675761078906,
+              "net_points": 3961.0064239713793,
+              "profit_factor": 1.6451439935046734,
+              "total_r": 125.0,
               "trades": 422,
-              "win_rate": 0.1872037914691943,
-              "wins": 79
+              "win_rate": 0.44786729857819907,
+              "wins": 189
             },
             "real": {
               "average_r": -0.07345971563981044,
@@ -2350,14 +2350,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -0.6143319746578852,
-            "max_drawdown_points": 43.591101389602045,
-            "net_points": -23.66776478770953,
-            "profit_factor": 0.6005385311713335,
-            "total_r": -3.0716598732894265,
+            "average_r": -0.21433197465788528,
+            "max_drawdown_points": 34.741948043845696,
+            "net_points": -13.969458096196831,
+            "profit_factor": 0.7228283633385468,
+            "total_r": -1.0716598732894265,
             "trades": 5,
-            "win_rate": 0.2,
-            "wins": 1
+            "win_rate": 0.4,
+            "wins": 2
           },
           "real": {
             "average_r": -0.5476653079912187,
@@ -2458,14 +2458,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -0.8324712863260122,
-            "max_drawdown_points": 107.86764735448014,
-            "net_points": -73.91044586450516,
-            "profit_factor": 0.5403697828026226,
-            "total_r": -7.492241576934109,
+            "average_r": 0.278639824785099,
+            "max_drawdown_points": 34.68652527262748,
+            "net_points": 115.12509546004367,
+            "profit_factor": 3.487234904845265,
+            "total_r": 2.507758423065891,
             "trades": 9,
-            "win_rate": 0.1111111111111111,
-            "wins": 1
+            "win_rate": 0.6666666666666666,
+            "wins": 6
           },
           "real": {
             "average_r": -0.20284165669638252,
@@ -2512,14 +2512,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": 0.1744531998459502,
+            "average_r": 0.8411198665126168,
             "max_drawdown_points": 35.3785231058464,
-            "net_points": 45.011340062301315,
-            "profit_factor": 1.7983846503131729,
-            "total_r": 0.5233595995378506,
+            "net_points": 79.01031951980258,
+            "profit_factor": 3.233284845820653,
+            "total_r": 2.5233595995378506,
             "trades": 3,
-            "win_rate": 0.3333333333333333,
-            "wins": 1
+            "win_rate": 0.6666666666666666,
+            "wins": 2
           },
           "real": {
             "average_r": 0.2855643109570613,
@@ -2569,17 +2569,17 @@
       "variants": {
         "best_oos_normal_cost": {
           "oos": {
-            "average_r": -0.6037066748303737,
-            "max_drawdown_points": 2921.429784015579,
-            "net_points": -2413.158054265018,
-            "profit_factor": 0.8691127381586218,
-            "total_r": -847.6041714618445,
-            "trades": 1404,
-            "win_rate": 0.39672364672364674,
-            "wins": 557
+            "average_r": -0.8698451897816185,
+            "max_drawdown_points": 4122.2224855852455,
+            "net_points": -4007.437753443273,
+            "profit_factor": 0.6491183079695505,
+            "total_r": -778.5114448545486,
+            "trades": 895,
+            "win_rate": 0.3664804469273743,
+            "wins": 328
           },
           "parameters": {
-            "adx_min": 20.0,
+            "adx_min": 25.0,
             "adx_period": 14,
             "atr_period": 14,
             "ema_period": 200,
@@ -2588,10 +2588,10 @@
             "signal_multiplier": 18,
             "swing_buffer_atr": 0.2,
             "swing_lookback": 5,
-            "target_multiple": 2.0,
+            "target_multiple": 3.0,
             "vwap_distance_atr": 1.5
           },
-          "trades": 4247
+          "trades": 2678
         },
         "trial_total": 15
       }
@@ -2600,14 +2600,14 @@
       "ablations": {
         "adx": {
           "dashboard": {
-            "average_r": -1.52227012208442,
-            "max_drawdown_points": 57685.83233574026,
-            "net_points": -57434.20899302466,
-            "profit_factor": 0.501660913813827,
-            "total_r": -9241.701911174514,
+            "average_r": -0.9413114661792975,
+            "max_drawdown_points": 714.3564452464634,
+            "net_points": 18614.093736530576,
+            "profit_factor": 1.2613301993044705,
+            "total_r": -5714.701911174515,
             "trades": 6071,
-            "win_rate": 0.1746005600395322,
-            "wins": 1060
+            "win_rate": 0.4457255806292209,
+            "wins": 2706
           },
           "real": {
             "average_r": -1.313353414238376,
@@ -2654,14 +2654,14 @@
         },
         "dont_chase": {
           "dashboard": {
-            "average_r": -0.6564922921274998,
-            "max_drawdown_points": 80270.62256092006,
-            "net_points": -80172.44052436911,
-            "profit_factor": 0.5379335539250407,
-            "total_r": -4563.2779225782515,
+            "average_r": -0.032697154737196275,
+            "max_drawdown_points": 1024.9771657129422,
+            "net_points": 40794.18301769856,
+            "profit_factor": 1.3869810570831131,
+            "total_r": -227.27792257825132,
             "trades": 6951,
-            "win_rate": 0.1760897712559344,
-            "wins": 1224
+            "win_rate": 0.47532729103726085,
+            "wins": 3304
           },
           "real": {
             "average_r": -0.4181572803785908,
@@ -2708,14 +2708,14 @@
         },
         "ema": {
           "dashboard": {
-            "average_r": -1.6954026705609158,
-            "max_drawdown_points": 40349.154444627464,
-            "net_points": -40303.84054524924,
-            "profit_factor": 0.4764080175116776,
-            "total_r": -6606.9842071758885,
+            "average_r": -1.0908350544459555,
+            "max_drawdown_points": 1184.253083409887,
+            "net_points": 13463.243784949229,
+            "profit_factor": 1.2930484567805736,
+            "total_r": -4250.9842071758885,
             "trades": 3897,
-            "win_rate": 0.16653836284321272,
-            "wins": 649
+            "win_rate": 0.4472671285604311,
+            "wins": 1743
           },
           "real": {
             "average_r": -1.4637715012854045,
@@ -2762,14 +2762,14 @@
         },
         "refresh": {
           "dashboard": {
-            "average_r": -1.0240786759465077,
-            "max_drawdown_points": 4194.514898726484,
-            "net_points": -4117.778952664532,
-            "profit_factor": 0.3255514031009739,
-            "total_r": -271.38084912582457,
+            "average_r": -0.39011641179556433,
+            "max_drawdown_points": 355.41268214110096,
+            "net_points": 512.6094023988371,
+            "profit_factor": 1.1463069176305742,
+            "total_r": -103.38084912582455,
             "trades": 265,
-            "win_rate": 0.12830188679245283,
-            "wins": 34
+            "win_rate": 0.43018867924528303,
+            "wins": 114
           },
           "real": {
             "average_r": -0.7297390533049982,
@@ -2816,14 +2816,14 @@
         },
         "swing_stop": {
           "dashboard": {
-            "average_r": -0.6440501632164066,
-            "max_drawdown_points": 42890.44445244665,
-            "net_points": -42890.444452446805,
-            "profit_factor": 0.460339083402592,
-            "total_r": -2694.7058828974455,
+            "average_r": 0.028033966802713764,
+            "max_drawdown_points": 1141.2828113786582,
+            "net_points": 10080.804548007654,
+            "profit_factor": 1.2085127629633254,
+            "total_r": 117.2941171025544,
             "trades": 4184,
-            "win_rate": 0.1704110898661568,
-            "wins": 713
+            "win_rate": 0.49115678776290633,
+            "wins": 2055
           },
           "real": {
             "average_r": -0.36640516640314985,
@@ -2870,14 +2870,14 @@
         },
         "vwap_direction": {
           "dashboard": {
-            "average_r": -1.5759157519862383,
-            "max_drawdown_points": 41355.54422836634,
-            "net_points": -41267.374295030255,
-            "profit_factor": 0.44305247485224053,
-            "total_r": -5443.213007360468,
+            "average_r": -0.9436053871917972,
+            "max_drawdown_points": 1097.3638971476175,
+            "net_points": 11872.252413572322,
+            "profit_factor": 1.2715776772914362,
+            "total_r": -3259.2130073604676,
             "trades": 3454,
-            "win_rate": 0.16039374638100753,
-            "wins": 554
+            "win_rate": 0.45396641574985525,
+            "wins": 1568
           },
           "real": {
             "average_r": -1.317953968546748,
@@ -2927,14 +2927,14 @@
       "baseline": {
         "2022": {
           "dashboard": {
-            "average_r": -2.4624639964526036,
-            "max_drawdown_points": 8756.190031586602,
-            "net_points": -8756.190031586602,
-            "profit_factor": 0.43923453493253806,
-            "total_r": -1637.5385576409815,
+            "average_r": -1.895546703219521,
+            "max_drawdown_points": 766.7022807452231,
+            "net_points": 1306.6428552782236,
+            "profit_factor": 1.131769156724624,
+            "total_r": -1260.5385576409815,
             "trades": 665,
-            "win_rate": 0.17443609022556392,
-            "wins": 116
+            "win_rate": 0.4496240601503759,
+            "wins": 299
           },
           "real": {
             "average_r": -2.2604589839212754,
@@ -2980,14 +2980,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2962406015037594,
-              "max_drawdown_points": 6096.190031586602,
-              "net_points": -6096.190031586602,
-              "profit_factor": 0.5458275028659921,
-              "total_r": -197.0,
+              "average_r": 0.2706766917293233,
+              "max_drawdown_points": 442.0242440960701,
+              "net_points": 3966.6428552782236,
+              "profit_factor": 1.4688278115801263,
+              "total_r": 180.0,
               "trades": 665,
-              "win_rate": 0.17593984962406015,
-              "wins": 117
+              "win_rate": 0.45413533834586467,
+              "wins": 302
             },
             "real": {
               "average_r": -0.09423558897243109,
@@ -3035,14 +3035,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -1.786930307889699,
-            "max_drawdown_points": 4865.3604525234405,
-            "net_points": -4839.918210335365,
-            "profit_factor": 0.4672831588412651,
-            "total_r": -1090.0274878127163,
+            "average_r": -1.1656188324798629,
+            "max_drawdown_points": 449.79102133805645,
+            "net_points": 886.4182914522025,
+            "profit_factor": 1.1606622576202317,
+            "total_r": -711.0274878127163,
             "trades": 610,
-            "win_rate": 0.17704918032786884,
-            "wins": 108
+            "win_rate": 0.45737704918032784,
+            "wins": 279
           },
           "real": {
             "average_r": -1.5563292149935242,
@@ -3088,14 +3088,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.26557377049180325,
-              "max_drawdown_points": 2592.2479228477787,
-              "net_points": -2399.918210335365,
-              "profit_factor": 0.6613859604817567,
-              "total_r": -162.0,
+              "average_r": 0.3557377049180328,
+              "max_drawdown_points": 265.3723417689107,
+              "net_points": 3326.4182914522025,
+              "profit_factor": 1.7831742913396291,
+              "total_r": 217.0,
               "trades": 610,
-              "win_rate": 0.18360655737704917,
-              "wins": 112
+              "win_rate": 0.4885245901639344,
+              "wins": 298
             },
             "real": {
               "average_r": -0.03497267759562842,
@@ -3143,14 +3143,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -1.1281270278086732,
-            "max_drawdown_points": 7383.239920780616,
-            "net_points": -7280.584137956721,
-            "profit_factor": 0.44767705111568534,
-            "total_r": -802.0983167719667,
+            "average_r": -0.44598919377210494,
+            "max_drawdown_points": 686.1382977858193,
+            "net_points": 2005.5860808374346,
+            "profit_factor": 1.2610469650035037,
+            "total_r": -317.0983167719666,
             "trades": 711,
-            "win_rate": 0.1490857946554149,
-            "wins": 106
+            "win_rate": 0.4542897327707454,
+            "wins": 323
           },
           "real": {
             "average_r": -0.8266736757224097,
@@ -3196,14 +3196,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.38677918424753865,
-              "max_drawdown_points": 4670.954109658123,
-              "net_points": -4436.584137956721,
-              "profit_factor": 0.5881077065108645,
-              "total_r": -275.0,
+              "average_r": 0.29535864978902954,
+              "max_drawdown_points": 411.1572242040311,
+              "net_points": 4849.586080837435,
+              "profit_factor": 1.7821750108503056,
+              "total_r": 210.0,
               "trades": 711,
-              "win_rate": 0.15330520393811534,
-              "wins": 109
+              "win_rate": 0.48523206751054854,
+              "wins": 345
             },
             "real": {
               "average_r": -0.0853258321612752,
@@ -3251,14 +3251,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -1.2465257541860202,
-            "max_drawdown_points": 8248.258642283912,
-            "net_points": -8248.258642283912,
-            "profit_factor": 0.50656492678187,
-            "total_r": -870.074976421842,
+            "average_r": -0.6132879318364498,
+            "max_drawdown_points": 457.7196450333213,
+            "net_points": 4959.402578849484,
+            "profit_factor": 1.531571121911184,
+            "total_r": -428.074976421842,
             "trades": 698,
-            "win_rate": 0.167621776504298,
-            "wins": 117
+            "win_rate": 0.47277936962750716,
+            "wins": 330
           },
           "real": {
             "average_r": -0.9948543119701652,
@@ -3304,14 +3304,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.31805157593123207,
-              "max_drawdown_points": 5456.258642283912,
-              "net_points": -5456.258642283912,
-              "profit_factor": 0.6210842373817096,
-              "total_r": -222.0,
+              "average_r": 0.3151862464183381,
+              "max_drawdown_points": 385.7196450333213,
+              "net_points": 7751.402578849484,
+              "profit_factor": 1.9843655823858304,
+              "total_r": 220.0,
               "trades": 698,
-              "win_rate": 0.17048710601719197,
-              "wins": 119
+              "win_rate": 0.4799426934097421,
+              "wins": 335
             },
             "real": {
               "average_r": -0.06638013371537727,
@@ -3359,14 +3359,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -0.6936376385063475,
-            "max_drawdown_points": 5392.510323425951,
-            "net_points": -5245.491118617356,
-            "profit_factor": 0.46830185377200684,
-            "total_r": -209.47856682891697,
+            "average_r": -0.08767737360568535,
+            "max_drawdown_points": 508.3012306214696,
+            "net_points": 2703.1485832856597,
+            "profit_factor": 1.486781882880036,
+            "total_r": -26.478566828916975,
             "trades": 302,
-            "win_rate": 0.16887417218543047,
-            "wins": 51
+            "win_rate": 0.46688741721854304,
+            "wins": 141
           },
           "real": {
             "average_r": -0.4585383007580032,
@@ -3412,14 +3412,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.32450331125827814,
-              "max_drawdown_points": 4248.510323425951,
-              "net_points": -4037.491118617356,
-              "profit_factor": 0.5443805946222764,
-              "total_r": -98.0,
+              "average_r": 0.2814569536423841,
+              "max_drawdown_points": 432.3012306214696,
+              "net_points": 3911.1485832856597,
+              "profit_factor": 1.7967139402590095,
+              "total_r": 85.0,
               "trades": 302,
-              "win_rate": 0.16887417218543047,
-              "wins": 51
+              "win_rate": 0.46688741721854304,
+              "wins": 141
             },
             "real": {
               "average_r": -0.08940397350993377,
@@ -3592,14 +3592,14 @@
       "mirror": {
         "2022": {
           "dashboard": {
-            "average_r": -0.591514178394934,
-            "max_drawdown_points": 48.663183209613635,
-            "net_points": 79.70730838552663,
-            "profit_factor": 2.3303577500281323,
-            "total_r": -2.95757089197467,
+            "average_r": 0.6084858216050659,
+            "max_drawdown_points": 14.393274261177794,
+            "net_points": 146.7491419413618,
+            "profit_factor": 11.195674679609239,
+            "total_r": 3.04242910802533,
             "trades": 5,
-            "win_rate": 0.2,
-            "wins": 1
+            "win_rate": 0.8,
+            "wins": 4
           },
           "real": {
             "average_r": 0.008485821605065946,
@@ -3646,14 +3646,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -1.2560200106597452,
-            "max_drawdown_points": 86.59184249475584,
-            "net_points": -86.59184249475584,
-            "profit_factor": 0.0,
-            "total_r": -5.024080042638981,
+            "average_r": 0.24397998934025478,
+            "max_drawdown_points": 23.66404534130197,
+            "net_points": 15.263751812151895,
+            "profit_factor": 1.645018702086044,
+            "total_r": 0.9759199573610191,
             "trades": 4,
-            "win_rate": 0.0,
-            "wins": 0
+            "win_rate": 0.75,
+            "wins": 3
           },
           "real": {
             "average_r": -0.2560200106597452,
@@ -3700,14 +3700,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -1.2169231494003272,
-            "max_drawdown_points": 119.1594883204707,
-            "net_points": -119.1594883204707,
-            "profit_factor": 0.0,
-            "total_r": -6.084615747001636,
+            "average_r": -0.2169231494003272,
+            "max_drawdown_points": 40.24752176102993,
+            "net_points": -1.6661335512071673,
+            "profit_factor": 0.9752029764894077,
+            "total_r": -1.084615747001636,
             "trades": 5,
-            "win_rate": 0.0,
-            "wins": 0
+            "win_rate": 0.4,
+            "wins": 2
           },
           "real": {
             "average_r": -0.5502564827336605,
@@ -3754,14 +3754,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -0.6024758796506614,
-            "max_drawdown_points": 87.35124773090865,
-            "net_points": -69.40273208153667,
-            "profit_factor": 0.36988175923174443,
-            "total_r": -3.614855277903968,
+            "average_r": -0.26914254631732804,
+            "max_drawdown_points": 40.106797973421635,
+            "net_points": -15.1588024077937,
+            "profit_factor": 0.8081660349879276,
+            "total_r": -1.6148552779039682,
             "trades": 6,
-            "win_rate": 0.16666666666666666,
-            "wins": 1
+            "win_rate": 0.3333333333333333,
+            "wins": 2
           },
           "real": {
             "average_r": -0.5469203240951058,
@@ -3808,14 +3808,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -1.2560183967957712,
-            "max_drawdown_points": 98.46612913840727,
-            "net_points": -98.46612913840727,
-            "profit_factor": 0.0,
-            "total_r": -3.7680551903873134,
+            "average_r": 1.0773149365375623,
+            "max_drawdown_points": 0.0,
+            "net_points": 120.21048398787025,
+            "profit_factor": "inf",
+            "total_r": 3.2319448096126866,
             "trades": 3,
-            "win_rate": 0.0,
-            "wins": 0
+            "win_rate": 1.0,
+            "wins": 3
           },
           "real": {
             "average_r": 0.2995371587597845,
@@ -3865,14 +3865,14 @@
       "variants": {
         "best_oos_normal_cost": {
           "oos": {
-            "average_r": -0.7969414991004726,
-            "max_drawdown_points": 1500.5621394238353,
-            "net_points": 1235.6040881928177,
-            "profit_factor": 1.0795657752510692,
-            "total_r": -827.2252760662906,
+            "average_r": -0.8807565280022067,
+            "max_drawdown_points": 2885.2561373035555,
+            "net_points": -1470.8980643027433,
+            "profit_factor": 0.9053021343796752,
+            "total_r": -914.2252760662906,
             "trades": 1038,
-            "win_rate": 0.4258188824662813,
-            "wins": 442
+            "win_rate": 0.4229287090558767,
+            "wins": 439
           },
           "parameters": {
             "adx_min": 20.0,
@@ -3896,14 +3896,14 @@
       "ablations": {
         "adx": {
           "dashboard": {
-            "average_r": -0.28774365453324185,
-            "max_drawdown_points": 24180.991807361912,
-            "net_points": -23975.771985730775,
-            "profit_factor": 0.5881618904889636,
-            "total_r": -249.18600482578745,
+            "average_r": 0.3693002253743794,
+            "max_drawdown_points": 1500.885350398803,
+            "net_points": 21329.917227917093,
+            "profit_factor": 1.602476604914343,
+            "total_r": 319.81399517421255,
             "trades": 866,
-            "win_rate": 0.19630484988452657,
-            "wins": 170
+            "win_rate": 0.5080831408775982,
+            "wins": 440
           },
           "real": {
             "average_r": -0.04601925114602092,
@@ -3950,14 +3950,14 @@
         },
         "dont_chase": {
           "dashboard": {
-            "average_r": -0.3527599751151155,
-            "max_drawdown_points": 20908.675107180403,
-            "net_points": -20338.570440566305,
-            "profit_factor": 0.5642654347589128,
-            "total_r": -221.5332643722925,
+            "average_r": 0.3271763306173686,
+            "max_drawdown_points": 1098.8565665149326,
+            "net_points": 17536.263461447597,
+            "profit_factor": 1.637305121802587,
+            "total_r": 205.4667356277075,
             "trades": 628,
-            "win_rate": 0.17834394904458598,
-            "wins": 112
+            "win_rate": 0.5047770700636943,
+            "wins": 317
           },
           "real": {
             "average_r": -0.07781305367137874,
@@ -4004,14 +4004,14 @@
         },
         "ema": {
           "dashboard": {
-            "average_r": -0.3230521128957707,
-            "max_drawdown_points": 20862.27292721677,
-            "net_points": -20776.847483316295,
-            "profit_factor": 0.5812718693448066,
-            "total_r": -234.21278184943372,
+            "average_r": 0.36384443882836726,
+            "max_drawdown_points": 1480.652406110039,
+            "net_points": 20087.187432942766,
+            "profit_factor": 1.7023543060219084,
+            "total_r": 263.7872181505663,
             "trades": 725,
-            "win_rate": 0.18758620689655173,
-            "wins": 136
+            "win_rate": 0.5213793103448275,
+            "wins": 378
           },
           "real": {
             "average_r": -0.052707285309563756,
@@ -4058,14 +4058,14 @@
         },
         "refresh": {
           "dashboard": {
-            "average_r": -1.0626716091118231,
-            "max_drawdown_points": 331.3451306374682,
-            "net_points": -331.3451306374682,
-            "profit_factor": 0.0,
-            "total_r": -4.2506864364472925,
+            "average_r": -0.06267160911182323,
+            "max_drawdown_points": 110.71705415914766,
+            "net_points": 93.91102231917284,
+            "profit_factor": 1.848207379002178,
+            "total_r": -0.25068643644729294,
             "trades": 4,
-            "win_rate": 0.0,
-            "wins": 0
+            "win_rate": 0.5,
+            "wins": 2
           },
           "real": {
             "average_r": -0.39600494244515655,
@@ -4112,14 +4112,14 @@
         },
         "swing_stop": {
           "dashboard": {
-            "average_r": -0.330806145553913,
-            "max_drawdown_points": 14293.414614278914,
-            "net_points": -14293.414614278914,
-            "profit_factor": 0.6356407480551758,
-            "total_r": -232.88752646995476,
+            "average_r": 0.3382279453551779,
+            "max_drawdown_points": 924.2224458095225,
+            "net_points": 16808.475765019924,
+            "profit_factor": 1.7093174846615156,
+            "total_r": 238.11247353004524,
             "trades": 704,
-            "win_rate": 0.18607954545454544,
-            "wins": 131
+            "win_rate": 0.5014204545454546,
+            "wins": 353
           },
           "real": {
             "average_r": -0.07086296373573119,
@@ -4166,14 +4166,14 @@
         },
         "vwap_direction": {
           "dashboard": {
-            "average_r": -0.4609778232882452,
-            "max_drawdown_points": 23291.030805883966,
-            "net_points": -23291.030805883966,
-            "profit_factor": 0.49933567280261876,
-            "total_r": -313.0039420127185,
+            "average_r": 0.1664154020431245,
+            "max_drawdown_points": 1541.0819127371906,
+            "net_points": 11673.51716062632,
+            "profit_factor": 1.4062404488842202,
+            "total_r": 112.99605798728153,
             "trades": 679,
-            "win_rate": 0.1634756995581738,
-            "wins": 111
+            "win_rate": 0.4639175257731959,
+            "wins": 315
           },
           "real": {
             "average_r": -0.20619137262550585,
@@ -4223,14 +4223,14 @@
       "baseline": {
         "2022": {
           "dashboard": {
-            "average_r": -0.33118859598524497,
-            "max_drawdown_points": 2472.1204874197956,
-            "net_points": -2470.4946679327477,
-            "profit_factor": 0.5122493663324825,
-            "total_r": -26.826276274804844,
+            "average_r": 0.360169428706113,
+            "max_drawdown_points": 366.43885943477653,
+            "net_points": 1683.904021992952,
+            "profit_factor": 1.5855269388959181,
+            "total_r": 29.173723725195156,
             "trades": 81,
-            "win_rate": 0.18518518518518517,
-            "wins": 15
+            "win_rate": 0.5308641975308642,
+            "wins": 43
           },
           "real": {
             "average_r": -0.0554684313761915,
@@ -4276,14 +4276,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.25925925925925924,
-              "max_drawdown_points": 2224.1204874197956,
-              "net_points": -2146.4946679327477,
-              "profit_factor": 0.5529139547304532,
-              "total_r": -21.0,
+              "average_r": 0.43209876543209874,
+              "max_drawdown_points": 346.43885943477653,
+              "net_points": 2007.904021992952,
+              "profit_factor": 1.7371490379353516,
+              "total_r": 35.0,
               "trades": 81,
-              "win_rate": 0.18518518518518517,
-              "wins": 15
+              "win_rate": 0.5308641975308642,
+              "wins": 43
             },
             "real": {
               "average_r": 0.016460905349794233,
@@ -4331,14 +4331,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -0.4348723261408916,
-            "max_drawdown_points": 3796.462529503944,
-            "net_points": -3796.462529503944,
-            "profit_factor": 0.4816181286746081,
-            "total_r": -66.10059357341552,
+            "average_r": 0.13749609491174,
+            "max_drawdown_points": 561.4707525515332,
+            "net_points": 1194.3779562747713,
+            "profit_factor": 1.2515101513345028,
+            "total_r": 20.89940642658448,
             "trades": 152,
-            "win_rate": 0.16447368421052633,
-            "wins": 25
+            "win_rate": 0.4407894736842105,
+            "wins": 67
           },
           "real": {
             "average_r": -0.21776706298299686,
@@ -4384,14 +4384,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.34210526315789475,
-              "max_drawdown_points": 3188.462529503944,
-              "net_points": -3188.462529503944,
-              "profit_factor": 0.5321871180845853,
-              "total_r": -52.0,
+              "average_r": 0.23026315789473684,
+              "max_drawdown_points": 493.9953484319158,
+              "net_points": 1802.3779562747713,
+              "profit_factor": 1.4088113115477536,
+              "total_r": 35.0,
               "trades": 152,
-              "win_rate": 0.16447368421052633,
-              "wins": 25
+              "win_rate": 0.4407894736842105,
+              "wins": 67
             },
             "real": {
               "average_r": -0.125,
@@ -4439,14 +4439,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -0.36752449848041846,
-            "max_drawdown_points": 4367.872274667463,
-            "net_points": -3394.8819547076473,
-            "profit_factor": 0.6270388683602712,
-            "total_r": -54.02610127662152,
+            "average_r": 0.3739721001590373,
+            "max_drawdown_points": 956.8577422527196,
+            "net_points": 3225.705587084709,
+            "profit_factor": 1.5613362915115323,
+            "total_r": 54.97389872337848,
             "trades": 147,
-            "win_rate": 0.17687074829931973,
-            "wins": 26
+            "win_rate": 0.5238095238095238,
+            "wins": 77
           },
           "real": {
             "average_r": -0.05006418102010102,
@@ -4492,14 +4492,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2925170068027211,
-              "max_drawdown_points": 3879.872274667463,
-              "net_points": -2806.8819547076473,
-              "profit_factor": 0.6743192999644879,
-              "total_r": -43.0,
+              "average_r": 0.4489795918367347,
+              "max_drawdown_points": 940.8577422527196,
+              "net_points": 3813.705587084709,
+              "profit_factor": 1.6976533899596575,
+              "total_r": 66.0,
               "trades": 147,
-              "win_rate": 0.17687074829931973,
-              "wins": 26
+              "win_rate": 0.5238095238095238,
+              "wins": 77
             },
             "real": {
               "average_r": 0.02494331065759637,
@@ -4547,14 +4547,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -0.2374810356208574,
-            "max_drawdown_points": 5258.473364232541,
-            "net_points": -5185.227975702142,
-            "profit_factor": 0.596375558318465,
-            "total_r": -34.90971223626604,
+            "average_r": 0.4427910732226801,
+            "max_drawdown_points": 1084.1252524787014,
+            "net_points": 5114.274811795014,
+            "profit_factor": 1.673233288989982,
+            "total_r": 65.09028776373397,
             "trades": 147,
-            "win_rate": 0.20408163265306123,
-            "wins": 30
+            "win_rate": 0.5374149659863946,
+            "wins": 79
           },
           "real": {
             "average_r": 0.011952070955106333,
@@ -4600,14 +4600,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.1836734693877551,
-              "max_drawdown_points": 4686.473364232541,
-              "net_points": -4597.227975702142,
-              "profit_factor": 0.6286168187680331,
-              "total_r": -27.0,
+              "average_r": 0.4965986394557823,
+              "max_drawdown_points": 1016.1252524787014,
+              "net_points": 5702.274811795014,
+              "profit_factor": 1.778511514684321,
+              "total_r": 73.0,
               "trades": 147,
-              "win_rate": 0.20408163265306123,
-              "wins": 30
+              "win_rate": 0.5374149659863946,
+              "wins": 79
             },
             "real": {
               "average_r": 0.06575963718820861,
@@ -4655,14 +4655,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -0.29582969098236456,
-            "max_drawdown_points": 4086.393877303515,
-            "net_points": -4086.393877303515,
-            "profit_factor": 0.49912206090018985,
-            "total_r": -20.70807836876552,
+            "average_r": 0.47559888044620685,
+            "max_drawdown_points": 674.761699321687,
+            "net_points": 3627.1128718262116,
+            "profit_factor": 1.8379333521153893,
+            "total_r": 33.29192163123448,
             "trades": 70,
-            "win_rate": 0.18571428571428572,
-            "wins": 13
+            "win_rate": 0.5571428571428572,
+            "wins": 39
           },
           "real": {
             "average_r": 0.03274173758906399,
@@ -4708,14 +4708,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2571428571428571,
-              "max_drawdown_points": 3806.393877303515,
-              "net_points": -3806.393877303515,
-              "profit_factor": 0.5200287646557813,
-              "total_r": -18.0,
+              "average_r": 0.5142857142857142,
+              "max_drawdown_points": 654.761699321687,
+              "net_points": 3907.1128718262116,
+              "profit_factor": 1.929238106298501,
+              "total_r": 36.0,
               "trades": 70,
-              "win_rate": 0.18571428571428572,
-              "wins": 13
+              "win_rate": 0.5571428571428572,
+              "wins": 39
             },
             "real": {
               "average_r": 0.07142857142857141,
@@ -5161,17 +5161,17 @@
       "variants": {
         "best_oos_normal_cost": {
           "oos": {
-            "average_r": 0.0718000849716555,
-            "max_drawdown_points": 1994.7299304166786,
-            "net_points": 387.5651903218809,
-            "profit_factor": 1.0309083490708093,
-            "total_r": 16.226819203594143,
-            "trades": 226,
-            "win_rate": 0.5309734513274337,
-            "wins": 120
+            "average_r": 0.06287490823184488,
+            "max_drawdown_points": 3248.49643257162,
+            "net_points": 215.5839370463398,
+            "profit_factor": 1.0151523933995086,
+            "total_r": 16.284601232047827,
+            "trades": 259,
+            "win_rate": 0.5405405405405406,
+            "wins": 140
           },
           "parameters": {
-            "adx_min": 20.0,
+            "adx_min": 15.0,
             "adx_period": 14,
             "atr_period": 14,
             "ema_period": 200,
@@ -5180,10 +5180,10 @@
             "signal_multiplier": 18,
             "swing_buffer_atr": 0.2,
             "swing_lookback": 5,
-            "target_multiple": 2.0,
+            "target_multiple": 3.0,
             "vwap_distance_atr": 1.5
           },
-          "trades": 622
+          "trades": 706
         },
         "trial_total": 15
       }
@@ -5192,14 +5192,14 @@
       "ablations": {
         "adx": {
           "dashboard": {
-            "average_r": -14.6426817755871,
-            "max_drawdown_points": 28033.25721755311,
-            "net_points": -28029.470994224575,
-            "profit_factor": 0.15507868008813697,
-            "total_r": -213226.73201609935,
+            "average_r": -14.079709656372707,
+            "max_drawdown_points": 17717.570630741397,
+            "net_points": -17707.227588114896,
+            "profit_factor": 0.28050774235892495,
+            "total_r": -205028.73201609935,
             "trades": 14562,
-            "win_rate": 0.10060431259442384,
-            "wins": 1465
+            "win_rate": 0.1646751819804972,
+            "wins": 2398
           },
           "real": {
             "average_r": -14.462189169260132,
@@ -5246,14 +5246,14 @@
         },
         "dont_chase": {
           "dashboard": {
-            "average_r": -4.928992248888164,
-            "max_drawdown_points": 70709.46634953804,
-            "net_points": -70709.46634953655,
-            "profit_factor": 0.21362728858063706,
-            "total_r": -171844.38576523698,
+            "average_r": -4.287700371880363,
+            "max_drawdown_points": 36762.45318255121,
+            "net_points": -36613.98594262773,
+            "profit_factor": 0.40971048505875224,
+            "total_r": -149486.38576523698,
             "trades": 34864,
-            "win_rate": 0.13039238182652593,
-            "wins": 4546
+            "win_rate": 0.22335360256998624,
+            "wins": 7787
           },
           "real": {
             "average_r": -4.683170388707653,
@@ -5300,14 +5300,14 @@
         },
         "ema": {
           "dashboard": {
-            "average_r": -8.897862654927684,
-            "max_drawdown_points": 16568.00081645579,
-            "net_points": -16564.833912494523,
-            "profit_factor": 0.18827894626138428,
-            "total_r": -75355.99882458255,
+            "average_r": -8.33581282614034,
+            "max_drawdown_points": 10018.811759722146,
+            "net_points": -9934.839370126258,
+            "profit_factor": 0.3347915845978758,
+            "total_r": -70595.99882458255,
             "trades": 8469,
-            "win_rate": 0.11311843192820877,
-            "wins": 958
+            "win_rate": 0.18715314677057504,
+            "wins": 1585
           },
           "real": {
             "average_r": -8.715747489815707,
@@ -5354,14 +5354,14 @@
         },
         "refresh": {
           "dashboard": {
-            "average_r": -4.76124524345374,
-            "max_drawdown_points": 1232.03393707185,
-            "net_points": -1232.0339370718493,
-            "profit_factor": 0.1097814399272246,
-            "total_r": -2713.9097887686316,
+            "average_r": -4.103350506611634,
+            "max_drawdown_points": 797.6725107504143,
+            "net_points": -797.601946328725,
+            "profit_factor": 0.210566386284349,
+            "total_r": -2338.9097887686316,
             "trades": 570,
-            "win_rate": 0.11228070175438597,
-            "wins": 64
+            "win_rate": 0.19298245614035087,
+            "wins": 110
           },
           "real": {
             "average_r": -4.520894366260757,
@@ -5408,14 +5408,14 @@
         },
         "swing_stop": {
           "dashboard": {
-            "average_r": -3.2988298150483994,
-            "max_drawdown_points": 21938.36288100637,
-            "net_points": -21936.309216569454,
-            "profit_factor": 0.13014983212511647,
-            "total_r": -37177.81201559546,
+            "average_r": -2.6497614920670327,
+            "max_drawdown_points": 14086.697965701609,
+            "net_points": -14080.095686633196,
+            "profit_factor": 0.23627470333495323,
+            "total_r": -29862.812015595457,
             "trades": 11270,
-            "win_rate": 0.10186335403726708,
-            "wins": 1148
+            "win_rate": 0.16548358473824312,
+            "wins": 1865
           },
           "real": {
             "average_r": -3.0473065970655537,
@@ -5462,14 +5462,14 @@
         },
         "vwap_direction": {
           "dashboard": {
-            "average_r": -7.533165318207853,
-            "max_drawdown_points": 19543.842203845485,
-            "net_points": -19537.94865720717,
-            "profit_factor": 0.17650582178605562,
-            "total_r": -72137.5910871584,
+            "average_r": -6.9566197877149545,
+            "max_drawdown_points": 11349.461590544568,
+            "net_points": -11311.040597922552,
+            "profit_factor": 0.3350591295263389,
+            "total_r": -66616.5910871584,
             "trades": 9576,
-            "win_rate": 0.11716791979949874,
-            "wins": 1122
+            "win_rate": 0.19893483709273183,
+            "wins": 1905
           },
           "real": {
             "average_r": -7.336144989608577,
@@ -5519,14 +5519,14 @@
       "baseline": {
         "2022": {
           "dashboard": {
-            "average_r": -9.2788095115012,
-            "max_drawdown_points": 2872.3972887605196,
-            "net_points": -2872.3972887605496,
-            "profit_factor": 0.0665586594130988,
-            "total_r": -14975.998551562936,
+            "average_r": -8.74968931323602,
+            "max_drawdown_points": 2217.1987114165076,
+            "net_points": -2217.1987114165568,
+            "profit_factor": 0.0919162532925979,
+            "total_r": -14121.998551562936,
             "trades": 1614,
-            "win_rate": 0.09603469640644362,
-            "wins": 155
+            "win_rate": 0.11771995043370508,
+            "wins": 190
           },
           "real": {
             "average_r": -9.137958623438415,
@@ -5572,14 +5572,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.1524163568773234,
-              "max_drawdown_points": 298.86425610318656,
-              "net_points": -289.9972887605493,
-              "profit_factor": 0.6742280154626632,
-              "total_r": -246.0,
+              "average_r": 0.37670384138785623,
+              "max_drawdown_points": 11.780702864334671,
+              "net_points": 365.20128858344356,
+              "profit_factor": 1.6458454651611656,
+              "total_r": 608.0,
               "trades": 1614,
-              "win_rate": 0.21189591078066913,
-              "wins": 342
+              "win_rate": 0.4714993804213135,
+              "wins": 761
             },
             "real": {
               "average_r": -0.011565468814539452,
@@ -5627,14 +5627,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -17.043172223975084,
-            "max_drawdown_points": 2670.901654768947,
-            "net_points": -2670.901654768987,
-            "profit_factor": 0.057854932587179664,
-            "total_r": -25803.36274709828,
+            "average_r": -16.47514051987997,
+            "max_drawdown_points": 2120.857765698034,
+            "net_points": -2116.920271129451,
+            "profit_factor": 0.07679489380797516,
+            "total_r": -24943.36274709828,
             "trades": 1514,
-            "win_rate": 0.07397622192866579,
-            "wins": 112
+            "win_rate": 0.08586525759577279,
+            "wins": 130
           },
           "real": {
             "average_r": -16.851406482011193,
@@ -5680,14 +5680,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2523117569352708,
-              "max_drawdown_points": 255.7595532464245,
-              "net_points": -248.501654768987,
-              "profit_factor": 0.6592340552765814,
-              "total_r": -382.0,
+              "average_r": 0.3157199471598415,
+              "max_drawdown_points": 12.64084501764387,
+              "net_points": 305.47972887054925,
+              "profit_factor": 1.6681062075675184,
+              "total_r": 478.0,
               "trades": 1514,
-              "win_rate": 0.18692206076618229,
-              "wins": 283
+              "win_rate": 0.4630118890356671,
+              "wins": 701
             },
             "real": {
               "average_r": -0.06054601497137825,
@@ -5735,14 +5735,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -8.800676286831548,
-            "max_drawdown_points": 3014.7654660821468,
-            "net_points": -3013.200215404369,
-            "profit_factor": 0.10543113424414963,
-            "total_r": -14679.528046435022,
+            "average_r": -8.24012472807855,
+            "max_drawdown_points": 2205.8391637096406,
+            "net_points": -2204.2739130318428,
+            "profit_factor": 0.15214803877675576,
+            "total_r": -13744.528046435022,
             "trades": 1668,
-            "win_rate": 0.10551558752997602,
-            "wins": 176
+            "win_rate": 0.14268585131894485,
+            "wins": 238
           },
           "real": {
             "average_r": -8.620020811212044,
@@ -5788,14 +5788,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2278177458033573,
-              "max_drawdown_points": 357.76866508944386,
-              "net_points": -344.40021540436874,
-              "profit_factor": 0.6880307740378777,
-              "total_r": -380.0,
+              "average_r": 0.3327338129496403,
+              "max_drawdown_points": 23.373898065428875,
+              "net_points": 464.5260869681574,
+              "profit_factor": 1.65841862677307,
+              "total_r": 555.0,
               "trades": 1668,
-              "win_rate": 0.19304556354916066,
-              "wins": 322
+              "win_rate": 0.4634292565947242,
+              "wins": 773
             },
             "real": {
               "average_r": -0.04716227018385292,
@@ -5843,14 +5843,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -4.179130890128852,
-            "max_drawdown_points": 3662.73807959792,
-            "net_points": -3662.73807959802,
-            "profit_factor": 0.2181709318440559,
-            "total_r": -6987.506848295441,
+            "average_r": -3.5804466796025367,
+            "max_drawdown_points": 1695.401524800494,
+            "net_points": -1693.9682814213681,
+            "profit_factor": 0.44864227217431285,
+            "total_r": -5986.506848295441,
             "trades": 1672,
-            "win_rate": 0.14892344497607657,
-            "wins": 249
+            "win_rate": 0.3020334928229665,
+            "wins": 505
           },
           "real": {
             "average_r": -3.9612281788050887,
@@ -5896,14 +5896,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2751196172248804,
-              "max_drawdown_points": 987.53807959802,
-              "net_points": -987.53807959802,
-              "profit_factor": 0.5973173266976639,
-              "total_r": -460.0,
+              "average_r": 0.3235645933014354,
+              "max_drawdown_points": 37.251506183706624,
+              "net_points": 981.2317185786319,
+              "profit_factor": 1.6636702419869263,
+              "total_r": 541.0,
               "trades": 1672,
-              "win_rate": 0.1812200956937799,
-              "wins": 303
+              "win_rate": 0.4742822966507177,
+              "wins": 793
             },
             "real": {
               "average_r": -0.05721690590111643,
@@ -5951,14 +5951,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -1.5190158392249642,
-            "max_drawdown_points": 2300.726085741471,
-            "net_points": -2298.1697907567445,
-            "profit_factor": 0.3978544422360944,
-            "total_r": -1271.416257431295,
+            "average_r": -0.9120863290696475,
+            "max_drawdown_points": 327.64326733540736,
+            "net_points": -258.6919195478355,
+            "profit_factor": 0.8938972610962637,
+            "total_r": -763.416257431295,
             "trades": 837,
-            "win_rate": 0.17204301075268819,
-            "wins": 144
+            "win_rate": 0.4253285543608124,
+            "wins": 356
           },
           "real": {
             "average_r": -1.2983866078430444,
@@ -6004,14 +6004,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2640382317801673,
-              "max_drawdown_points": 975.0323506993464,
-              "net_points": -958.9697907567447,
-              "profit_factor": 0.6468370908229844,
-              "total_r": -221.0,
+              "average_r": 0.3428912783751493,
+              "max_drawdown_points": 106.14929207281239,
+              "net_points": 1080.5080804521644,
+              "profit_factor": 1.6305134184589538,
+              "total_r": 287.0,
               "trades": 837,
-              "win_rate": 0.18399044205495818,
-              "wins": 154
+              "win_rate": 0.47909199522102747,
+              "wins": 401
             },
             "real": {
               "average_r": -0.043409000398247716,
@@ -6184,11 +6184,11 @@
       "mirror": {
         "2022": {
           "dashboard": {
-            "average_r": -3.349362019009818,
-            "max_drawdown_points": 13.090895381107519,
-            "net_points": -11.407153254868991,
-            "profit_factor": 0.12861932489877417,
-            "total_r": -26.794896152078543,
+            "average_r": -2.0993620190098183,
+            "max_drawdown_points": 6.848097631136034,
+            "net_points": -5.164355504897504,
+            "profit_factor": 0.24587005281336996,
+            "total_r": -16.794896152078547,
             "trades": 8,
             "win_rate": 0.25,
             "wins": 2
@@ -6238,11 +6238,11 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -3.5085930151417895,
-            "max_drawdown_points": 11.283693467252624,
-            "net_points": -11.283693467252625,
-            "profit_factor": 0.023654893101507493,
-            "total_r": -21.051558090850737,
+            "average_r": -3.175259681808456,
+            "max_drawdown_points": 10.0809795758772,
+            "net_points": -10.080979575877201,
+            "profit_factor": 0.026402534282005286,
+            "total_r": -19.051558090850737,
             "trades": 6,
             "win_rate": 0.16666666666666666,
             "wins": 1
@@ -6292,11 +6292,11 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -1.34451957134953,
-            "max_drawdown_points": 16.478412816321544,
-            "net_points": -14.807180573908045,
-            "profit_factor": 0.10141949112709298,
-            "total_r": -10.75615657079624,
+            "average_r": -0.8445195713495299,
+            "max_drawdown_points": 13.058277475300292,
+            "net_points": -11.387045232886795,
+            "profit_factor": 0.12798259537482112,
+            "total_r": -6.756156570796239,
             "trades": 8,
             "win_rate": 0.25,
             "wins": 2
@@ -6346,11 +6346,11 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -4.748871853918307,
-            "max_drawdown_points": 14.566134125443114,
-            "net_points": -7.147112550791553,
-            "profit_factor": 0.5207974160229709,
-            "total_r": -28.493231123509844,
+            "average_r": -4.415538520584974,
+            "max_drawdown_points": 11.827168171454831,
+            "net_points": -4.1722585271728345,
+            "profit_factor": 0.6505570370926934,
+            "total_r": -26.493231123509844,
             "trades": 6,
             "win_rate": 0.3333333333333333,
             "wins": 2
@@ -6488,14 +6488,14 @@
       "ablations": {
         "adx": {
           "dashboard": {
-            "average_r": -6.702283566938112,
-            "max_drawdown_points": 18863.134324906776,
-            "net_points": -18863.134324906317,
-            "profit_factor": 0.2827055679206129,
-            "total_r": -61131.52841404252,
+            "average_r": -6.137981407087219,
+            "max_drawdown_points": 8852.036135551176,
+            "net_points": -7471.997142558584,
+            "profit_factor": 0.579134499859454,
+            "total_r": -55984.52841404252,
             "trades": 9121,
-            "win_rate": 0.1380331104045609,
-            "wins": 1259
+            "win_rate": 0.26093630084420566,
+            "wins": 2380
           },
           "real": {
             "average_r": -6.516192860509723,
@@ -6542,14 +6542,14 @@
         },
         "dont_chase": {
           "dashboard": {
-            "average_r": -2.0567940377407075,
-            "max_drawdown_points": 30809.57851410212,
-            "net_points": -30809.578514101548,
-            "profit_factor": 0.33163790398320053,
-            "total_r": -26115.113897193765,
+            "average_r": -1.4093182560599957,
+            "max_drawdown_points": 9887.632718846287,
+            "net_points": -7506.833002097217,
+            "profit_factor": 0.7428278320027981,
+            "total_r": -17894.113897193765,
             "trades": 12697,
-            "win_rate": 0.1589351815389462,
-            "wins": 2018
+            "win_rate": 0.3418130266992203,
+            "wins": 4340
           },
           "real": {
             "average_r": -1.799515415493983,
@@ -6596,14 +6596,14 @@
         },
         "ema": {
           "dashboard": {
-            "average_r": -4.2064181471528,
-            "max_drawdown_points": 10975.356079823337,
-            "net_points": -10975.356079823157,
-            "profit_factor": 0.31123054216404655,
-            "total_r": -21095.187007971293,
+            "average_r": -3.6012337004927804,
+            "max_drawdown_points": 4570.592241692534,
+            "net_points": -3419.554894814102,
+            "profit_factor": 0.6708556884537107,
+            "total_r": -18060.187007971293,
             "trades": 5015,
-            "win_rate": 0.14177467597208374,
-            "wins": 711
+            "win_rate": 0.2865403788634098,
+            "wins": 1437
           },
           "real": {
             "average_r": -3.985414491453233,
@@ -6650,14 +6650,14 @@
         },
         "refresh": {
           "dashboard": {
-            "average_r": -3.8097701591136186,
-            "max_drawdown_points": 1015.8164109626624,
-            "net_points": -1015.8164109626573,
-            "profit_factor": 0.18222182754736516,
-            "total_r": -1440.0931201449478,
+            "average_r": -3.2198230691665284,
+            "max_drawdown_points": 512.8206360604554,
+            "net_points": -512.8206360604518,
+            "profit_factor": 0.4028478499238021,
+            "total_r": -1217.0931201449478,
             "trades": 378,
-            "win_rate": 0.1111111111111111,
-            "wins": 42
+            "win_rate": 0.25132275132275134,
+            "wins": 95
           },
           "real": {
             "average_r": -3.5619747446515375,
@@ -6704,14 +6704,14 @@
         },
         "swing_stop": {
           "dashboard": {
-            "average_r": -1.8219666483729442,
-            "max_drawdown_points": 13217.276171856121,
-            "net_points": -13217.276171855885,
-            "profit_factor": 0.26328036891980466,
-            "total_r": -11165.011621229401,
+            "average_r": -1.1584548990256855,
+            "max_drawdown_points": 5932.404720184889,
+            "net_points": -5267.815953179074,
+            "profit_factor": 0.5513885629274726,
+            "total_r": -7099.0116212294015,
             "trades": 6128,
-            "win_rate": 0.15633159268929503,
-            "wins": 958
+            "win_rate": 0.28867493472584854,
+            "wins": 1769
           },
           "real": {
             "average_r": -1.5558656910187232,
@@ -6758,14 +6758,14 @@
         },
         "vwap_direction": {
           "dashboard": {
-            "average_r": -3.9789013522265027,
-            "max_drawdown_points": 12148.300414091358,
-            "net_points": -12148.300414091165,
-            "profit_factor": 0.2756245189350992,
-            "total_r": -20085.494026039385,
+            "average_r": -3.3778712412914786,
+            "max_drawdown_points": 4706.319123302679,
+            "net_points": -4217.0388543397185,
+            "profit_factor": 0.6160056776285453,
+            "total_r": -17051.494026039385,
             "trades": 5048,
-            "win_rate": 0.14144215530903329,
-            "wins": 714
+            "win_rate": 0.2959587955625991,
+            "wins": 1494
           },
           "real": {
             "average_r": -3.7551163548678126,
@@ -6815,14 +6815,14 @@
       "baseline": {
         "2022": {
           "dashboard": {
-            "average_r": -6.232170116556338,
-            "max_drawdown_points": 1867.1138465750432,
-            "net_points": -1867.1138465750728,
-            "profit_factor": 0.15509076488635662,
-            "total_r": -5951.722461311303,
+            "average_r": -5.645782682001364,
+            "max_drawdown_points": 1140.4276763222615,
+            "net_points": -1140.427676322256,
+            "profit_factor": 0.26564129490153626,
+            "total_r": -5391.722461311303,
             "trades": 955,
-            "win_rate": 0.13612565445026178,
-            "wins": 130
+            "win_rate": 0.22722513089005236,
+            "wins": 217
           },
           "real": {
             "average_r": -6.033915317254418,
@@ -6868,14 +6868,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2293193717277487,
-              "max_drawdown_points": 346.5358329368728,
-              "net_points": -339.1138465750728,
-              "profit_factor": 0.6381319504529765,
-              "total_r": -219.0,
+              "average_r": 0.35706806282722514,
+              "max_drawdown_points": 19.565561383539716,
+              "net_points": 387.57232367774395,
+              "profit_factor": 1.6657129510335735,
+              "total_r": 341.0,
               "trades": 955,
-              "win_rate": 0.19267015706806281,
-              "wins": 184
+              "win_rate": 0.47539267015706804,
+              "wins": 454
             },
             "real": {
               "average_r": -0.031064572425828975,
@@ -6923,14 +6923,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -5.684905756956191,
-            "max_drawdown_points": 1621.3158588788256,
-            "net_points": -1619.1054604209012,
-            "profit_factor": 0.13753219994022237,
-            "total_r": -4741.211401301463,
+            "average_r": -5.106968107076095,
+            "max_drawdown_points": 1033.8614197840625,
+            "net_points": -1031.6510213261079,
+            "profit_factor": 0.23074704885071487,
+            "total_r": -4259.211401301463,
             "trades": 834,
-            "win_rate": 0.13309352517985612,
-            "wins": 111
+            "win_rate": 0.19904076738609114,
+            "wins": 166
           },
           "real": {
             "average_r": -5.491460513151234,
@@ -6976,14 +6976,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.23261390887290168,
-              "max_drawdown_points": 294.302094187163,
-              "net_points": -284.7054604209011,
-              "profit_factor": 0.6276140739320933,
-              "total_r": -194.0,
+              "average_r": 0.34532374100719426,
+              "max_drawdown_points": 17.741563361071258,
+              "net_points": 302.7489786738922,
+              "profit_factor": 1.639737833481846,
+              "total_r": 288.0,
               "trades": 834,
-              "win_rate": 0.19184652278177458,
-              "wins": 160
+              "win_rate": 0.47601918465227816,
+              "wins": 397
             },
             "real": {
               "average_r": -0.03916866506794565,
@@ -7031,14 +7031,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -5.265355156023327,
-            "max_drawdown_points": 2030.4265967018994,
-            "net_points": -2030.4265967019337,
-            "profit_factor": 0.21229448561641104,
-            "total_r": -5249.559090555257,
+            "average_r": -4.681603902262044,
+            "max_drawdown_points": 1095.3000435542617,
+            "net_points": -1095.3000435542542,
+            "profit_factor": 0.3838494661588544,
+            "total_r": -4667.559090555257,
             "trades": 997,
-            "win_rate": 0.1334002006018054,
-            "wins": 133
+            "win_rate": 0.2477432296890672,
+            "wins": 247
           },
           "real": {
             "average_r": -5.051714233255022,
@@ -7084,14 +7084,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2978936810431294,
-              "max_drawdown_points": 438.2855190054786,
-              "net_points": -435.22659670193366,
-              "profit_factor": 0.6448187308008437,
-              "total_r": -297.0,
+              "average_r": 0.2858575727181545,
+              "max_drawdown_points": 25.205951873359027,
+              "net_points": 499.89995644574583,
+              "profit_factor": 1.6515932976871763,
+              "total_r": 285.0,
               "trades": 997,
-              "win_rate": 0.17552657973921765,
-              "wins": 175
+              "win_rate": 0.4563691073219659,
+              "wins": 455
             },
             "real": {
               "average_r": -0.08425275827482448,
@@ -7139,14 +7139,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -1.689901189304499,
-            "max_drawdown_points": 2540.7365932997413,
-            "net_points": -2508.445301925146,
-            "profit_factor": 0.33741668684741777,
-            "total_r": -1625.6849441109282,
+            "average_r": -1.0932275926309025,
+            "max_drawdown_points": 630.3225399664194,
+            "net_points": -463.1980923583743,
+            "profit_factor": 0.8041925209209616,
+            "total_r": -1051.6849441109282,
             "trades": 962,
-            "win_rate": 0.1548856548856549,
-            "wins": 149
+            "win_rate": 0.38461538461538464,
+            "wins": 370
           },
           "real": {
             "average_r": -1.4605179599212699,
@@ -7192,14 +7192,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.3264033264033264,
-              "max_drawdown_points": 1061.8288593137822,
-              "net_points": -969.2453019251461,
-              "profit_factor": 0.6117709285388001,
-              "total_r": -314.0,
+              "average_r": 0.2702702702702703,
+              "max_drawdown_points": 54.98454059794085,
+              "net_points": 1076.0019076416256,
+              "profit_factor": 1.7196918071949165,
+              "total_r": 260.0,
               "trades": 962,
-              "win_rate": 0.1683991683991684,
-              "wins": 162
+              "win_rate": 0.4573804573804574,
+              "wins": 440
             },
             "real": {
               "average_r": -0.09702009702009703,
@@ -7247,14 +7247,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -1.0955610874982373,
-            "max_drawdown_points": 1535.179242193816,
-            "net_points": -1489.3961163960344,
-            "profit_factor": 0.540276138769045,
-            "total_r": -543.3982993991257,
+            "average_r": -0.41814173265952764,
+            "max_drawdown_points": 199.05742115118562,
+            "net_points": 553.0317051801907,
+            "profit_factor": 1.2781377394297486,
+            "total_r": -207.3982993991257,
             "trades": 496,
-            "win_rate": 0.17137096774193547,
-            "wins": 85
+            "win_rate": 0.48185483870967744,
+            "wins": 239
           },
           "real": {
             "average_r": -0.8153191520143664,
@@ -7300,14 +7300,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.31451612903225806,
-              "max_drawdown_points": 749.5792421938222,
-              "net_points": -695.7961163960344,
-              "profit_factor": 0.7305374382873066,
-              "total_r": -156.0,
+              "average_r": 0.3629032258064516,
+              "max_drawdown_points": 114.8140070295558,
+              "net_points": 1346.6317051801907,
+              "profit_factor": 1.8494376735694764,
+              "total_r": 180.0,
               "trades": 496,
-              "win_rate": 0.17137096774193547,
-              "wins": 85
+              "win_rate": 0.4959677419354839,
+              "wins": 246
             },
             "real": {
               "average_r": -0.0342741935483871,
@@ -7480,14 +7480,14 @@
       "mirror": {
         "2022": {
           "dashboard": {
-            "average_r": -1.4049307236744606,
-            "max_drawdown_points": 7.8953953983369045,
-            "net_points": -6.612507974643677,
-            "profit_factor": 0.16248551959328808,
-            "total_r": -7.0246536183723025,
+            "average_r": -1.0049307236744605,
+            "max_drawdown_points": 4.669191655566966,
+            "net_points": -3.3863042318737375,
+            "profit_factor": 0.2767851454887017,
+            "total_r": -5.0246536183723025,
             "trades": 5,
-            "win_rate": 0.4,
-            "wins": 2
+            "win_rate": 0.6,
+            "wins": 3
           },
           "real": {
             "average_r": -1.538264057007794,
@@ -7534,14 +7534,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -2.1417612165666573,
-            "max_drawdown_points": 26.82622321742074,
-            "net_points": -26.43773974459596,
-            "profit_factor": 0.034459083506466745,
-            "total_r": -25.701134598799886,
+            "average_r": -1.5584278832333238,
+            "max_drawdown_points": 19.71369860996069,
+            "net_points": -19.325215137135913,
+            "profit_factor": 0.05252033980184116,
+            "total_r": -18.701134598799886,
             "trades": 12,
-            "win_rate": 0.16666666666666666,
-            "wins": 2
+            "win_rate": 0.25,
+            "wins": 3
           },
           "real": {
             "average_r": -1.9195389943444352,
@@ -7588,11 +7588,11 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -1.321151479412026,
-            "max_drawdown_points": 5.547628444688872,
-            "net_points": -0.5904494758814507,
-            "profit_factor": 0.8935672275516704,
-            "total_r": -5.284605917648104,
+            "average_r": -0.821151479412026,
+            "max_drawdown_points": 2.697341377917201,
+            "net_points": 2.25983759089022,
+            "profit_factor": 1.8378018479200409,
+            "total_r": -3.284605917648104,
             "trades": 4,
             "win_rate": 0.25,
             "wins": 1
@@ -7642,14 +7642,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -1.6251348892892277,
-            "max_drawdown_points": 18.332793792378105,
-            "net_points": -18.332793792378105,
-            "profit_factor": 0.0,
-            "total_r": -6.500539557156911,
+            "average_r": -1.1251348892892277,
+            "max_drawdown_points": 14.074368150484043,
+            "net_points": -14.074368150484041,
+            "profit_factor": 0.03623856518358948,
+            "total_r": -4.500539557156911,
             "trades": 4,
-            "win_rate": 0.0,
-            "wins": 0
+            "win_rate": 0.25,
+            "wins": 1
           },
           "real": {
             "average_r": -1.2918015559558942,
@@ -7784,14 +7784,14 @@
       "ablations": {
         "adx": {
           "dashboard": {
-            "average_r": -6.177892589458139,
-            "max_drawdown_points": 15660.666433844117,
-            "net_points": -15646.477101488363,
-            "profit_factor": 0.32007082664754705,
-            "total_r": -40940.89419033909,
+            "average_r": -5.612629272723568,
+            "max_drawdown_points": 6124.241114211285,
+            "net_points": -4831.837795474811,
+            "profit_factor": 0.6847683254211985,
+            "total_r": -37194.89419033909,
             "trades": 6627,
-            "win_rate": 0.14622000905387053,
-            "wins": 969
+            "win_rate": 0.29983401237362306,
+            "wins": 1987
           },
           "real": {
             "average_r": -5.9794116277358915,
@@ -7838,14 +7838,14 @@
         },
         "dont_chase": {
           "dashboard": {
-            "average_r": -1.7656659554685208,
-            "max_drawdown_points": 19311.931087035882,
-            "net_points": -19310.45483324815,
-            "profit_factor": 0.4091382863746603,
-            "total_r": -13127.726378908452,
+            "average_r": -1.1216847853272969,
+            "max_drawdown_points": 4242.07923004967,
+            "net_points": -830.8619878823374,
+            "profit_factor": 0.9587900857525401,
+            "total_r": -8339.726378908452,
             "trades": 7435,
-            "win_rate": 0.16785474108944182,
-            "wins": 1248
+            "win_rate": 0.39704102219233356,
+            "wins": 2952
           },
           "real": {
             "average_r": -1.5114628619917219,
@@ -7892,14 +7892,14 @@
         },
         "ema": {
           "dashboard": {
-            "average_r": -3.481035595902655,
-            "max_drawdown_points": 9135.351411661895,
-            "net_points": -9127.997732349573,
-            "profit_factor": 0.36302823793150696,
-            "total_r": -13381.100830649806,
+            "average_r": -2.8590272712408447,
+            "max_drawdown_points": 3161.8809564988264,
+            "net_points": -1690.6115990321412,
+            "profit_factor": 0.8140436996830607,
+            "total_r": -10990.100830649806,
             "trades": 3844,
-            "win_rate": 0.1459417273673257,
-            "wins": 561
+            "win_rate": 0.32700312174817897,
+            "wins": 1257
           },
           "real": {
             "average_r": -3.242482005892249,
@@ -7946,14 +7946,14 @@
         },
         "refresh": {
           "dashboard": {
-            "average_r": -2.6477072177097396,
-            "max_drawdown_points": 736.5363826379039,
-            "net_points": -736.5363826379019,
-            "profit_factor": 0.18342806899534628,
-            "total_r": -595.7341239846915,
+            "average_r": -2.0565961065986285,
+            "max_drawdown_points": 268.43573504620997,
+            "net_points": -268.43573504621077,
+            "profit_factor": 0.5385952500502691,
+            "total_r": -462.73412398469145,
             "trades": 225,
-            "win_rate": 0.09777777777777778,
-            "wins": 22
+            "win_rate": 0.26666666666666666,
+            "wins": 60
           },
           "real": {
             "average_r": -2.373633143635666,
@@ -8000,14 +8000,14 @@
         },
         "swing_stop": {
           "dashboard": {
-            "average_r": -1.4192906688904168,
-            "max_drawdown_points": 10655.841967153796,
-            "net_points": -10649.909626148707,
-            "profit_factor": 0.28903199234829435,
-            "total_r": -6149.786468302176,
+            "average_r": -0.761547765590163,
+            "max_drawdown_points": 3874.843942365475,
+            "net_points": -3162.532706051109,
+            "profit_factor": 0.6662204771315563,
+            "total_r": -3299.786468302176,
             "trades": 4333,
-            "win_rate": 0.1717055158089084,
-            "wins": 744
+            "win_rate": 0.3415647357489038,
+            "wins": 1480
           },
           "real": {
             "average_r": -1.155501146619473,
@@ -8054,14 +8054,14 @@
         },
         "vwap_direction": {
           "dashboard": {
-            "average_r": -3.426052543336182,
-            "max_drawdown_points": 9032.18475727756,
-            "net_points": -9032.184757277366,
-            "profit_factor": 0.3337419866115885,
-            "total_r": -11857.567852486527,
+            "average_r": -2.8259369698025214,
+            "max_drawdown_points": 2832.9285496324846,
+            "net_points": -1846.4838506737176,
+            "profit_factor": 0.7856935493394078,
+            "total_r": -9780.567852486527,
             "trades": 3461,
-            "win_rate": 0.15024559375902918,
-            "wins": 520
+            "win_rate": 0.3316960416064721,
+            "wins": 1148
           },
           "real": {
             "average_r": -3.204536603819665,
@@ -8111,14 +8111,14 @@
       "baseline": {
         "2022": {
           "dashboard": {
-            "average_r": -4.4137373894601115,
-            "max_drawdown_points": 1436.369926631863,
-            "net_points": -1436.3699266318729,
-            "profit_factor": 0.1975893599788807,
-            "total_r": -2961.617788327735,
+            "average_r": -3.7669415623364157,
+            "max_drawdown_points": 704.8541926827561,
+            "net_points": -704.8541926827487,
+            "profit_factor": 0.39402641476525474,
+            "total_r": -2527.617788327735,
             "trades": 671,
-            "win_rate": 0.13263785394932937,
-            "wins": 89
+            "win_rate": 0.2786885245901639,
+            "wins": 187
           },
           "real": {
             "average_r": -4.1494552235386015,
@@ -8164,14 +8164,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.3323397913561848,
-              "max_drawdown_points": 362.769926631873,
-              "net_points": -362.769926631873,
-              "profit_factor": 0.5860238545479844,
-              "total_r": -223.0,
+              "average_r": 0.3144560357675112,
+              "max_drawdown_points": 26.005593654397217,
+              "net_points": 368.7458073172513,
+              "profit_factor": 1.7094839726528768,
+              "total_r": 211.0,
               "trades": 671,
-              "win_rate": 0.16691505216095381,
-              "wins": 112
+              "win_rate": 0.4798807749627422,
+              "wins": 322
             },
             "real": {
               "average_r": -0.06805762543467463,
@@ -8219,14 +8219,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -4.951922948171757,
-            "max_drawdown_points": 1282.429930935437,
-            "net_points": -1277.0658487982548,
-            "profit_factor": 0.18844761387253608,
-            "total_r": -3184.0864556744395,
+            "average_r": -4.42781719389493,
+            "max_drawdown_points": 788.4893854858695,
+            "net_points": -770.5324705040333,
+            "profit_factor": 0.32017037447250507,
+            "total_r": -2847.0864556744395,
             "trades": 643,
-            "win_rate": 0.13530326594090203,
-            "wins": 87
+            "win_rate": 0.2286158631415241,
+            "wins": 147
           },
           "real": {
             "average_r": -4.787589096435106,
@@ -8272,14 +8272,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.25972006220839816,
-              "max_drawdown_points": 277.5570343241402,
-              "net_points": -248.26584879825486,
-              "profit_factor": 0.6507468151340356,
-              "total_r": -167.0,
+              "average_r": 0.2643856920684292,
+              "max_drawdown_points": 23.51449476163839,
+              "net_points": 258.26752949596676,
+              "profit_factor": 1.5598456610548168,
+              "total_r": 170.0,
               "trades": 643,
-              "win_rate": 0.18506998444790046,
-              "wins": 119
+              "win_rate": 0.4401244167962675,
+              "wins": 283
             },
             "real": {
               "average_r": -0.09538621047174703,
@@ -8327,14 +8327,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -3.958094581049851,
-            "max_drawdown_points": 1617.871357343369,
-            "net_points": -1617.8713573433818,
-            "profit_factor": 0.22027698913599122,
-            "total_r": -2711.2947880191477,
+            "average_r": -3.309919398568099,
+            "max_drawdown_points": 692.6745020419107,
+            "net_points": -692.674502041901,
+            "profit_factor": 0.47980766947123593,
+            "total_r": -2267.2947880191477,
             "trades": 685,
-            "win_rate": 0.13576642335766423,
-            "wins": 93
+            "win_rate": 0.3182481751824818,
+            "wins": 218
           },
           "real": {
             "average_r": -3.6836420263053253,
@@ -8380,14 +8380,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.36934306569343067,
-              "max_drawdown_points": 521.8713573433818,
-              "net_points": -521.8713573433818,
-              "profit_factor": 0.5425305751788834,
-              "total_r": -253.0,
+              "average_r": 0.27883211678832115,
+              "max_drawdown_points": 34.14892177482625,
+              "net_points": 403.32549795809905,
+              "profit_factor": 1.583308119514095,
+              "total_r": 191.0,
               "trades": 685,
-              "win_rate": 0.15766423357664233,
-              "wins": 108
+              "win_rate": 0.47007299270072994,
+              "wins": 322
             },
             "real": {
               "average_r": -0.0948905109489051,
@@ -8435,14 +8435,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -1.78577093802434,
-            "max_drawdown_points": 2012.307312186497,
-            "net_points": -2012.3073121865189,
-            "profit_factor": 0.380617792288462,
-            "total_r": -1212.5384669185269,
+            "average_r": -1.176050761293854,
+            "max_drawdown_points": 396.18460430129755,
+            "net_points": -81.39557643807379,
+            "profit_factor": 0.9589859041948758,
+            "total_r": -798.5384669185269,
             "trades": 679,
-            "win_rate": 0.1634756995581738,
-            "wins": 111
+            "win_rate": 0.4256259204712813,
+            "wins": 289
           },
           "real": {
             "average_r": -1.5530757981127052,
@@ -8488,14 +8488,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.30486008836524303,
-              "max_drawdown_points": 927.1420150818408,
-              "net_points": -925.907312186519,
-              "profit_factor": 0.6055058543124058,
-              "total_r": -207.0,
+              "average_r": 0.30486008836524303,
+              "max_drawdown_points": 54.253810065629295,
+              "net_points": 1005.0044235619262,
+              "profit_factor": 1.7203568356828,
+              "total_r": 207.0,
               "trades": 679,
-              "win_rate": 0.17378497790868924,
-              "wins": 118
+              "win_rate": 0.47128129602356406,
+              "wins": 320
             },
             "real": {
               "average_r": -0.07216494845360825,
@@ -8543,14 +8543,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -0.971587494497289,
-            "max_drawdown_points": 1350.4031915061337,
-            "net_points": -1257.069048951906,
-            "profit_factor": 0.6064723167551521,
-            "total_r": -358.51578546949963,
+            "average_r": -0.48107258934823743,
+            "max_drawdown_points": 227.63731648749422,
+            "net_points": 798.0128624062737,
+            "profit_factor": 1.391588682488831,
+            "total_r": -177.5157854694996,
             "trades": 369,
-            "win_rate": 0.2140921409214092,
-            "wins": 79
+            "win_rate": 0.45257452574525747,
+            "wins": 167
           },
           "real": {
             "average_r": -0.8640897528532058,
@@ -8596,14 +8596,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.12195121951219512,
-              "max_drawdown_points": 905.4096077486097,
-              "net_points": -666.669048951906,
-              "profit_factor": 0.7559442224970402,
-              "total_r": -45.0,
+              "average_r": 0.3685636856368564,
+              "max_drawdown_points": 186.03731648749363,
+              "net_points": 1388.4128624062737,
+              "profit_factor": 1.8086805155074694,
+              "total_r": 136.0,
               "trades": 369,
-              "win_rate": 0.21951219512195122,
-              "wins": 81
+              "win_rate": 0.46070460704607047,
+              "wins": 170
             },
             "real": {
               "average_r": -0.014453477868112019,
@@ -8776,14 +8776,14 @@
       "mirror": {
         "2022": {
           "dashboard": {
-            "average_r": -2.1177960934823137,
-            "max_drawdown_points": 25.11704117692412,
-            "net_points": -25.11704117692411,
-            "profit_factor": 0.019277880621235133,
-            "total_r": -19.060164841340825,
+            "average_r": -1.2289072045934248,
+            "max_drawdown_points": 12.02339328340863,
+            "net_points": -12.023393283408632,
+            "profit_factor": 0.1339171542199906,
+            "total_r": -11.060164841340823,
             "trades": 9,
-            "win_rate": 0.1111111111111111,
-            "wins": 1
+            "win_rate": 0.3333333333333333,
+            "wins": 3
           },
           "real": {
             "average_r": -1.6363146120008323,
@@ -8830,11 +8830,11 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -2.5394213650610014,
-            "max_drawdown_points": 19.668781965057544,
-            "net_points": -19.668781965057544,
-            "profit_factor": 0.00469731417603422,
-            "total_r": -22.854792285549014,
+            "average_r": -1.6505324761721125,
+            "max_drawdown_points": 11.259556676257624,
+            "net_points": -11.259556676257626,
+            "profit_factor": 0.008176827913603083,
+            "total_r": -14.854792285549014,
             "trades": 9,
             "win_rate": 0.1111111111111111,
             "wins": 1
@@ -8938,14 +8938,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -1.4663494068503047,
-            "max_drawdown_points": 28.567974256778598,
-            "net_points": -28.567974256778598,
-            "profit_factor": 0.0,
-            "total_r": -7.331747034251523,
+            "average_r": -0.6663494068503046,
+            "max_drawdown_points": 11.413134059052663,
+            "net_points": -7.430420333323581,
+            "profit_factor": 0.4979173407054758,
+            "total_r": -3.3317470342515234,
             "trades": 5,
-            "win_rate": 0.0,
-            "wins": 0
+            "win_rate": 0.4,
+            "wins": 2
           },
           "real": {
             "average_r": -0.9330160735169715,
@@ -9049,14 +9049,14 @@
       "variants": {
         "best_oos_normal_cost": {
           "oos": {
-            "average_r": -1.2209404323440318,
-            "max_drawdown_points": 1190.2141753879253,
-            "net_points": -1170.5601055237814,
-            "profit_factor": 0.7199399240198563,
-            "total_r": -1317.3947264992103,
-            "trades": 1079,
-            "win_rate": 0.3568118628359592,
-            "wins": 385
+            "average_r": -0.995595569611284,
+            "max_drawdown_points": 1351.6004537207507,
+            "net_points": -1327.542884917767,
+            "profit_factor": 0.6023685049352578,
+            "total_r": -863.1813588529833,
+            "trades": 867,
+            "win_rate": 0.34371395617070355,
+            "wins": 298
           },
           "parameters": {
             "adx_min": 20.0,
@@ -9067,11 +9067,11 @@
             "refresh_bars": 12,
             "signal_multiplier": 18,
             "swing_buffer_atr": 0.2,
-            "swing_lookback": 5,
-            "target_multiple": 2.0,
+            "swing_lookback": 8,
+            "target_multiple": 3.0,
             "vwap_distance_atr": 1.5
           },
-          "trades": 3145
+          "trades": 2549
         },
         "trial_total": 15
       }
@@ -9080,14 +9080,14 @@
       "ablations": {
         "adx": {
           "dashboard": {
-            "average_r": -0.4530031570426274,
-            "max_drawdown_points": 3603.7008594763847,
-            "net_points": -3078.9136215110757,
-            "profit_factor": 0.6764568862521879,
-            "total_r": -370.5565824608692,
+            "average_r": 0.24870833439991544,
+            "max_drawdown_points": 321.00662747212937,
+            "net_points": 4027.121638978271,
+            "profit_factor": 1.7167445880055603,
+            "total_r": 203.44341753913082,
             "trades": 818,
-            "win_rate": 0.19682151589242053,
-            "wins": 161
+            "win_rate": 0.5317848410757946,
+            "wins": 435
           },
           "real": {
             "average_r": -0.18323950586088328,
@@ -9134,14 +9134,14 @@
         },
         "dont_chase": {
           "dashboard": {
-            "average_r": -0.4053543112884051,
-            "max_drawdown_points": 2544.949250787291,
-            "net_points": -2420.0678295275607,
-            "profit_factor": 0.6934502255264504,
-            "total_r": -266.31778251648217,
+            "average_r": 0.30088617577399973,
+            "max_drawdown_points": 321.00662747212937,
+            "net_points": 3825.0405200534747,
+            "profit_factor": 1.8536418947854618,
+            "total_r": 197.68221748351783,
             "trades": 657,
-            "win_rate": 0.2070015220700152,
-            "wins": 136
+            "win_rate": 0.5464231354642314,
+            "wins": 359
           },
           "real": {
             "average_r": -0.14152884198348378,
@@ -9188,14 +9188,14 @@
         },
         "ema": {
           "dashboard": {
-            "average_r": -0.5240184143303145,
-            "max_drawdown_points": 3565.2483279574985,
-            "net_points": -3540.800000796392,
-            "profit_factor": 0.5845688903306593,
-            "total_r": -365.2408347882292,
+            "average_r": 0.12734456988776297,
+            "max_drawdown_points": 288.54629486420527,
+            "net_points": 2973.516145864483,
+            "profit_factor": 1.590260139652352,
+            "total_r": 88.75916521177079,
             "trades": 697,
-            "win_rate": 0.18220946915351507,
-            "wins": 127
+            "win_rate": 0.4935437589670014,
+            "wins": 344
           },
           "real": {
             "average_r": -0.2734206142346665,
@@ -9242,14 +9242,14 @@
         },
         "refresh": {
           "dashboard": {
-            "average_r": -0.8196311474209574,
-            "max_drawdown_points": 194.0116128761123,
-            "net_points": -146.80837690784296,
-            "profit_factor": 0.2931251615287884,
-            "total_r": -13.933729506156277,
+            "average_r": -0.2902193827150751,
+            "max_drawdown_points": 108.44151587890548,
+            "net_points": 17.69040682786868,
+            "profit_factor": 1.1462960363836856,
+            "total_r": -4.9337295061562765,
             "trades": 17,
-            "win_rate": 0.11764705882352941,
-            "wins": 2
+            "win_rate": 0.35294117647058826,
+            "wins": 6
           },
           "real": {
             "average_r": -0.5843370297738987,
@@ -9296,14 +9296,14 @@
         },
         "swing_stop": {
           "dashboard": {
-            "average_r": -0.5250316215626245,
-            "max_drawdown_points": 3031.376545486647,
-            "net_points": -2710.322293964028,
-            "profit_factor": 0.619979614718875,
-            "total_r": -426.32567670885106,
+            "average_r": 0.14615064444722778,
+            "max_drawdown_points": 321.1407574205047,
+            "net_points": 2353.1675046090168,
+            "profit_factor": 1.549804915000236,
+            "total_r": 118.67432329114895,
             "trades": 812,
-            "win_rate": 0.18472906403940886,
-            "wins": 150
+            "win_rate": 0.5073891625615764,
+            "wins": 412
           },
           "real": {
             "average_r": -0.26230584159546516,
@@ -9350,14 +9350,14 @@
         },
         "vwap_direction": {
           "dashboard": {
-            "average_r": -0.5115039971556402,
-            "max_drawdown_points": 2750.9251002234155,
-            "net_points": -2616.2260304940037,
-            "profit_factor": 0.663863428765505,
-            "total_r": -361.121821991882,
+            "average_r": 0.12164047876503968,
+            "max_drawdown_points": 314.4946776034585,
+            "net_points": 2678.3591154953006,
+            "profit_factor": 1.547383333741012,
+            "total_r": 85.87817800811801,
             "trades": 706,
-            "win_rate": 0.20254957507082152,
-            "wins": 143
+            "win_rate": 0.5,
+            "wins": 353
           },
           "real": {
             "average_r": -0.29337368554090937,
@@ -9407,14 +9407,14 @@
       "baseline": {
         "2022": {
           "dashboard": {
-            "average_r": -0.8085312023190391,
-            "max_drawdown_points": 300.0984822586963,
-            "net_points": -282.2824784108336,
-            "profit_factor": 0.2911662395173928,
-            "total_r": -48.51187213914235,
+            "average_r": 0.0414687976809609,
+            "max_drawdown_points": 60.84856040847957,
+            "net_points": 22.859401700446377,
+            "profit_factor": 1.1048123964680157,
+            "total_r": 2.488127860857654,
             "trades": 60,
-            "win_rate": 0.13333333333333333,
-            "wins": 8
+            "win_rate": 0.5333333333333333,
+            "wins": 32
           },
           "real": {
             "average_r": -0.3751978689857058,
@@ -9460,14 +9460,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.4666666666666667,
-              "max_drawdown_points": 216.38885020162616,
-              "net_points": -186.28247841083362,
-              "profit_factor": 0.40869292771769006,
-              "total_r": -28.0,
+              "average_r": 0.38333333333333336,
+              "max_drawdown_points": 34.89661010120858,
+              "net_points": 118.85940170044637,
+              "profit_factor": 1.685866084601965,
+              "total_r": 23.0,
               "trades": 60,
-              "win_rate": 0.13333333333333333,
-              "wins": 8
+              "win_rate": 0.5333333333333333,
+              "wins": 32
             },
             "real": {
               "average_r": -0.03333333333333334,
@@ -9515,14 +9515,14 @@
         },
         "2023": {
           "dashboard": {
-            "average_r": -0.58438152222098,
-            "max_drawdown_points": 448.259748384756,
-            "net_points": -446.80570582873816,
-            "profit_factor": 0.4819201577123979,
-            "total_r": -80.64465006649525,
+            "average_r": 0.02431412995293304,
+            "max_drawdown_points": 97.71043403673485,
+            "net_points": 40.24396303883597,
+            "profit_factor": 1.0713794966784134,
+            "total_r": 3.355349933504759,
             "trades": 138,
-            "win_rate": 0.18840579710144928,
-            "wins": 26
+            "win_rate": 0.47101449275362317,
+            "wins": 65
           },
           "real": {
             "average_r": -0.36699021787315395,
@@ -9568,14 +9568,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2463768115942029,
-              "max_drawdown_points": 241.5379578099039,
-              "net_points": -226.0057058287382,
-              "profit_factor": 0.6692081521339104,
-              "total_r": -34.0,
+              "average_r": 0.36231884057971014,
+              "max_drawdown_points": 51.17703285195944,
+              "net_points": 261.04396303883595,
+              "profit_factor": 1.5819834638141124,
+              "total_r": 50.0,
               "trades": 138,
-              "win_rate": 0.18840579710144928,
-              "wins": 26
+              "win_rate": 0.4782608695652174,
+              "wins": 66
             },
             "real": {
               "average_r": -0.02898550724637682,
@@ -9623,14 +9623,14 @@
         },
         "2024": {
           "dashboard": {
-            "average_r": -0.6510343252185673,
-            "max_drawdown_points": 682.5584011799415,
-            "net_points": -675.2694049191368,
-            "profit_factor": 0.4819160954819997,
-            "total_r": -100.91032040887794,
+            "average_r": 0.0909011586524004,
+            "max_drawdown_points": 71.03602628650235,
+            "net_points": 261.06419847767734,
+            "profit_factor": 1.3412492636962132,
+            "total_r": 14.08967959112206,
             "trades": 155,
-            "win_rate": 0.16129032258064516,
-            "wins": 25
+            "win_rate": 0.5161290322580645,
+            "wins": 80
           },
           "real": {
             "average_r": -0.3241526047884598,
@@ -9676,14 +9676,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.32903225806451614,
-              "max_drawdown_points": 453.02289451553384,
-              "net_points": -427.26940491913683,
-              "profit_factor": 0.6103806770088696,
-              "total_r": -51.0,
+              "average_r": 0.4129032258064516,
+              "max_drawdown_points": 48.8767486580673,
+              "net_points": 509.06419847767734,
+              "profit_factor": 1.7877078345697486,
+              "total_r": 64.0,
               "trades": 155,
-              "win_rate": 0.16774193548387098,
-              "wins": 26
+              "win_rate": 0.5225806451612903,
+              "wins": 81
             },
             "real": {
               "average_r": -0.0021505376344086095,
@@ -9731,14 +9731,14 @@
         },
         "2025": {
           "dashboard": {
-            "average_r": -0.4079100629739374,
-            "max_drawdown_points": 999.1259666254978,
-            "net_points": -968.358764215955,
-            "profit_factor": 0.5423492846749685,
-            "total_r": -60.77859938311667,
+            "average_r": 0.39074765514686793,
+            "max_drawdown_points": 157.5281598443786,
+            "net_points": 1119.2730908197768,
+            "profit_factor": 2.1228049449242588,
+            "total_r": 58.22140061688332,
             "trades": 149,
-            "win_rate": 0.19463087248322147,
-            "wins": 29
+            "win_rate": 0.5838926174496645,
+            "wins": 87
           },
           "real": {
             "average_r": -0.07010245670995531,
@@ -9784,14 +9784,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.2214765100671141,
-              "max_drawdown_points": 773.525966625496,
-              "net_points": -729.958764215955,
-              "profit_factor": 0.6205905617474163,
-              "total_r": -33.0,
+              "average_r": 0.5771812080536913,
+              "max_drawdown_points": 143.1281598443784,
+              "net_points": 1357.673090819777,
+              "profit_factor": 2.512467421109394,
+              "total_r": 86.0,
               "trades": 149,
-              "win_rate": 0.19463087248322147,
-              "wins": 29
+              "win_rate": 0.5838926174496645,
+              "wins": 87
             },
             "real": {
               "average_r": 0.116331096196868,
@@ -9839,14 +9839,14 @@
         },
         "2026_to_holdout": {
           "dashboard": {
-            "average_r": -0.06629298644014854,
-            "max_drawdown_points": 1195.7173137258928,
-            "net_points": -525.6277620837352,
-            "profit_factor": 0.7942382826429736,
-            "total_r": -4.839388010130843,
+            "average_r": 0.5638439998612214,
+            "max_drawdown_points": 378.5253906514324,
+            "net_points": 1155.8474281691663,
+            "profit_factor": 1.6892317642049177,
+            "total_r": 41.16061198986916,
             "trades": 73,
-            "win_rate": 0.2465753424657534,
-            "wins": 18
+            "win_rate": 0.5616438356164384,
+            "wins": 41
           },
           "real": {
             "average_r": 0.10722299529501125,
@@ -9892,14 +9892,14 @@
           },
           "zero_cost": {
             "dashboard": {
-              "average_r": -0.0136986301369863,
-              "max_drawdown_points": 1106.117313725892,
-              "net_points": -408.82776208373525,
-              "profit_factor": 0.8342509038575222,
-              "total_r": -1.0,
+              "average_r": 0.6164383561643836,
+              "max_drawdown_points": 356.1253906514321,
+              "net_points": 1272.6474281691662,
+              "profit_factor": 1.7827782549182039,
+              "total_r": 45.0,
               "trades": 73,
-              "win_rate": 0.2465753424657534,
-              "wins": 18
+              "win_rate": 0.5616438356164384,
+              "wins": 41
             },
             "real": {
               "average_r": 0.1598173515981735,
@@ -10345,14 +10345,14 @@
       "variants": {
         "best_oos_normal_cost": {
           "oos": {
-            "average_r": 0.12178699745918821,
-            "max_drawdown_points": 643.6291661340497,
-            "net_points": 784.4864972532225,
-            "profit_factor": 1.2577968459465199,
-            "total_r": 29.22887939020517,
-            "trades": 240,
-            "win_rate": 0.5458333333333333,
-            "wins": 131
+            "average_r": 0.08210483934979139,
+            "max_drawdown_points": 294.8880504059982,
+            "net_points": 598.1011252028321,
+            "profit_factor": 1.2402530966811538,
+            "total_r": 17.81675013890473,
+            "trades": 217,
+            "win_rate": 0.5852534562211982,
+            "wins": 127
           },
           "parameters": {
             "adx_min": 20.0,
@@ -10362,12 +10362,12 @@
             "max_risk_atr": 2.0,
             "refresh_bars": 12,
             "signal_multiplier": 18,
-            "swing_buffer_atr": 0.2,
+            "swing_buffer_atr": 0.3,
             "swing_lookback": 5,
-            "target_multiple": 2.0,
+            "target_multiple": 3.0,
             "vwap_distance_atr": 1.5
           },
-          "trades": 621
+          "trades": 568
         },
         "trial_total": 15
       }
@@ -10377,8 +10377,8 @@
   "preflight": {
     "cpu_count": 384,
     "memory_limit_gb": 13.0,
-    "rss_end_bytes": 576512000,
-    "rss_start_bytes": 45109248
+    "rss_end_bytes": 565325824,
+    "rss_start_bytes": 45494272
   },
   "sealed_holdout_read": false,
   "task": "T-147"
