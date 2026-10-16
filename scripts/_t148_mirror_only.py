@@ -56,10 +56,6 @@ def main() -> None:
         "orders": 0,
         "groups": {},
     }
-
-
-def run_group_unpack(group: tuple[str, int]) -> tuple[str, dict[str, object]]:
-    return run_group(*group)
     groups = payload["groups"]
     assert isinstance(groups, dict)
     with ThreadPoolExecutor(max_workers=4) as pool:
@@ -67,6 +63,10 @@ def run_group_unpack(group: tuple[str, int]) -> tuple[str, dict[str, object]]:
             groups[key] = result
             print(f"completed {key} entries={result['entries']}", flush=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8")
+
+
+def run_group_unpack(group: tuple[str, int]) -> tuple[str, dict[str, object]]:
+    return run_group(*group)
 
 
 if __name__ == "__main__":
