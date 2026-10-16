@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -62,7 +62,7 @@ def run_group_unpack(group: tuple[str, int]) -> tuple[str, dict[str, object]]:
     return run_group(*group)
     groups = payload["groups"]
     assert isinstance(groups, dict)
-    with ProcessPoolExecutor(max_workers=4) as pool:
+    with ThreadPoolExecutor(max_workers=4) as pool:
         for key, result in pool.map(run_group_unpack, GROUPS):
             groups[key] = result
             print(f"completed {key} entries={result['entries']}", flush=True)
