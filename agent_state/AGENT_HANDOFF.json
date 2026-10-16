@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 377,
+  "revision": 379,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143 and T-144 accepted: all eight market/timeframe groups tested at zero cost on 2025-2026 data (17,592 strategies); no Gate 1 pass. Owner chose (D-038) to run the by-year table first (T-145, 2022 separate, 2023 to today, all timeframes, both markets), then the movement-matching study (T-146, price only, no news yet). Owner will share trade screenshots later; his methods are one example, not the limit. Screenshot coaching loop queued after T-146.",
+    "summary": "T-143, T-144 and T-145 accepted: all eight market/timeframe groups tested at zero cost, then split by year (2022 to mid-2026). No Gate 1 pass. By-year view: the short-side upthrust candidates mostly lose in 2022-2024 on NSXUSD; XAUUSD ones win more years at zero cost but costs remove most of it. Next: T-147 (owner's Tai Smart Filter test) for Codex; T-146 (movement matching) waits for its design note.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -118,7 +118,8 @@
         "T-143",
         "T-144",
         "T-145",
-        "T-146"
+        "T-146",
+        "T-147"
       ]
     },
     {
@@ -165,7 +166,8 @@
         "T-143",
         "T-144",
         "T-145",
-        "T-146"
+        "T-146",
+        "T-147"
       ]
     },
     {
@@ -4778,7 +4780,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04",
@@ -4797,8 +4799,12 @@
         "Evidence docs/evidence/t145_by_year_summary.json plus a plain-language table with the rules written in readable words (no raw 'parameter=...' or '0.0' text). Script changes need CI-importable unit tests (load scripts by path) and must pass ruff check and ruff format. PR, ONE log entry, validation entry, set to review, hand the turn to claude. Time estimate expected: report an estimate after the first group and update it."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t145_by_year_raw.json",
+        "docs/evidence/t145_by_year_summary.json",
+        "docs/evidence/t145_by_year_table.md"
+      ],
+      "completion_note": "Completed the pre-registered by-year diagnostic on the Pod training lake. All 8 market/timeframe groups have 3 distinct candidates and 18 period results each (2022, 2023, 2024, 2025, 2026-to-holdout, plus continuous 2023-to-holdout), with opposite-direction mirrors and the closest readable NSXUSD 60m overnight/London seed. No sealed holdout, Gate 1, broker, paper or live orders; broker_calls=0 and orders=0. All groups completed with no missing-data flags. Raw and rendered evidence are recorded; focused import-by-path tests and Python compilation pass. Desktop lacks the project's pydantic/pytest/ruff dependencies, so full CI validation remains for review."
     },
     {
       "id": "T-146",
@@ -4820,6 +4826,27 @@
         "Statistics: report per shape-cluster how many distinct matches there were, the share that went up and down, the average forward move, and the same numbers for matched random windows (same count, same time spread) so we can see if the shape beats random. Count every shape and parameter tried (the number of trials) and report it next to every result. Net the forward move of costs (NSXUSD about 4 points, XAUUSD about 1.6 points per trade, from the T-143 evidence) before calling anything useful.",
         "Scope: NSXUSD and XAUUSD on 1m, 3m, 5m (main) and 60m (extra), 1m mandatory; history 2022 through the day before the sealed holdout, with a clear in-sample period and a later out-of-sample period fixed in advance (state the split date). Report a result as found only if it holds in the out-of-sample period.",
         "Execution safety as in T-145: report CPU and RAM first, plan disjoint parallel work before launching, 13 GB total cap, per-worker RSS watchdog, checkpoints, no-progress stop, exit-code wrapper. Evidence docs/evidence/t146_matching_summary.json plus a plain-language report with a few example charts (shape, its matches, what followed). CI-importable unit tests, ruff check and format clean. PR, ONE log entry, validation entry, set to review, hand the turn to claude."
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-147",
+      "title": "Tai Trading Smart Filter test (owner hypothesis): exact rules, ablation, agent variants, 4 timeframes, both markets",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04"
+      ],
+      "depends_on": [
+        "T-145"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t147_tai_smart_filter.md exactly (rules, two exit accountings, ablation, agent variants with trial total, mirror control, CPU/RAM first, tests, ruff check and format at line length 100). Diagnostic only: sealed holdout never read, no broker calls, no Gate 1 or ledger or trial-counter writes, no edits to risk or gate files. 1m is mandatory for NSXUSD and XAUUSD; never 60m only. Run ruff check and ruff format before handing over."
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -12389,6 +12416,41 @@
       "validated_by": "claude",
       "date": "2026-10-15",
       "reverify_if": "any top-10 strategy is used as a candidate, or the rules text or a 2025/2026 split is added"
+    },
+    {
+      "id": "V-361",
+      "task_id": "T-145",
+      "subject": "T-145 by-year diagnostic completion and safety review",
+      "method": "Read the completed Pod raw output, rendered summary/table and diagnostic script; ran Python compilation and focused import-by-path helper tests.",
+      "result": "pass",
+      "checked": "All 8 groups contain 3 candidates and 18 results each. The five requested year windows and continuous 2023-to-holdout totals are present, every candidate has an opposite-direction mirror, and the NSXUSD 60m comparison is explicitly labelled as the closest readable seed because the exact historical 5-of-6 winner is not identifiable. Raw flags show sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0 and orders=0; all missing_data flags are false. Full project lint/test could not run in the desktop sandbox because pydantic/pytest/ruff are unavailable.",
+      "evidence": [
+        "docs/evidence/t145_by_year_raw.json",
+        "docs/evidence/t145_by_year_summary.json",
+        "docs/evidence/t145_by_year_table.md",
+        "scripts/lab_by_year.py",
+        "scripts/render_t145_by_year.py",
+        "tests/unit/test_t145_scripts.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-16",
+      "reverify_if": "Claude requests a rerun, changes the candidate definition, or asks to use these diagnostics for a gate or promotion decision"
+    },
+    {
+      "id": "V-362",
+      "task_id": "T-145",
+      "subject": "T-145 review: accepted as a diagnostic",
+      "method": "Claude read the summary JSON and the readable table, checked the pre-registered scope against the acceptance criteria, ran ruff check and ruff format (line length 100) on the three Codex files, and reviewed the safety flags.",
+      "result": "pass",
+      "checked": "All 8 groups (NSXUSD and XAUUSD, 1m/3m/5m/60m, 1m included) have 3 candidates and 18 period results; 2022 is its own column, 2023 and 2024 are present, 2026 stops at the holdout boundary (2026-07-01); continuous 2023-to-holdout totals, wins at zero and normal cost, and an opposite-direction mirror exist for every candidate; the NSXUSD 60m overnight/London comparison is labelled as the closest seed because the 5-of-6 winner could not be identified. Flags: sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0, orders=0; no src/ or config/ change. Codex had not run ruff: 46 lint errors and 3 unformatted files; Claude fixed them on the main rebuild (long lines marked noqa, one unused variable removed, formatting only, no logic change). Findings, not defects: (1) 2025 and 2026 are the window the candidates were picked from, so only 2022-2024 are out-of-sample, and there almost all NSXUSD candidates lose at zero cost (2022 loses for 8 of 12; 2023 and 2024 lose for all NSXUSD 1m/3m/60m candidates); (2) NSXUSD 1m and 3m shorts lose over 2023-to-holdout while their mirror longs win at zero cost but not at normal cost, so the short edge looked like a feature of the 2025-2026 period; (3) XAUUSD 3m/5m/60m shorts win 3-5 of 5 years at zero cost but only 1-3 at normal cost, so costs remove most of the edge; XAUUSD 1m has 1 to 11 trades a year, too thin to judge; (4) the preflight records 384 CPUs (host value) with a 12 GB memory limit and a single process at about 660 MB RSS, not the 8 CPUs the criteria asked to report; (5) the full pytest run could not be done in this sandbox, CI runs it.",
+      "evidence": [
+        "docs/evidence/t145_by_year_summary.json",
+        "docs/evidence/t145_by_year_table.md",
+        "docs/evidence/t145_by_year_raw.json"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-16",
+      "reverify_if": "any T-145 candidate is used for a gate or promotion decision, or the candidate list or periods are changed"
     }
   ],
   "blockers": [
@@ -21320,6 +21382,46 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner answered Q-055 (D-038): by-year table first, then movement matching, no news yet. Queued T-145 (by-year table: pre-registered top-3 distinct candidates per group plus the Asian range breakout comparison, 2022 separate, all four timeframes, mirror-direction control, parallel-work rules for the 16 GB / 8 CPU Pod) and T-146 (movement matching, depends on T-145 and on a design note I still have to write)."
+    },
+    {
+      "revision": 378,
+      "ts": "2026-10-16T02:20:00+03:00",
+      "agent": "codex",
+      "action": "complete_t145_by_year",
+      "task_ids": [
+        "T-145"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t145_by_year_raw.json",
+        "docs/evidence/t145_by_year_summary.json",
+        "docs/evidence/t145_by_year_table.md",
+        "scripts/lab_by_year.py",
+        "scripts/render_t145_by_year.py",
+        "tests/unit/test_t145_scripts.py"
+      ],
+      "summary": "Completed all 8 pre-registered groups (24 candidates, 18 period results per group) with mirror controls and the closest readable NSXUSD 60m overnight/London comparison. Diagnostic safety flags remain clean: no holdout, gate, broker, paper or live activity. Raw, summary and readable table evidence are recorded; handoff set to Claude for review.",
+      "validation": "V-361"
+    },
+    {
+      "revision": 379,
+      "ts": "2026-10-16T09:00:00+03:00",
+      "agent": "claude",
+      "action": "review_t145_queue_t147",
+      "task_ids": [
+        "T-145",
+        "T-147"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_by_year.py",
+        "scripts/render_t145_by_year.py",
+        "tests/unit/test_t145_scripts.py",
+        "docs/evidence/t145_by_year_raw.json",
+        "docs/evidence/t145_by_year_summary.json",
+        "docs/evidence/t145_by_year_table.md"
+      ],
+      "summary": "T-145 accepted as a diagnostic (V-362). Codex had not run ruff; Claude fixed the lint and formatting on the main rebuild. Merged Codex's two consecutive log entries into one. Queued T-147 (Tai Smart Filter test) for Codex. T-146 stays parked until its design note is written."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
