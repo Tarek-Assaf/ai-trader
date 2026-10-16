@@ -52,6 +52,11 @@ recorded real spreads (NAS100 1.8, XAUUSD 0.5) are reported alongside as a sensi
   centres.
 - Net forward move of cost before calling anything useful (3 lines: assumed cost, recorded spread,
   zero cost).
+- The predicted side is the sign of the mean forward move of the past matches. For a predicted
+  long, net points are `move_points - cost`; for a predicted short, net points are
+  `-move_points - cost`. Costs are charged on adverse moves too. Each out-of-sample query also
+  records its own realized forward move and only qualifies as a directional hit when that move is
+  positive after applying the predicted side and cost.
 - Count trials: every (symbol, timeframe, N, method, k, horizon) combination tried is one trial.
   Print the trial count next to every result. A result counts as FOUND only if it holds
   out-of-sample after cost and a multiple-testing correction (Bonferroni on the trial count).

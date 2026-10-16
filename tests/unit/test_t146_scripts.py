@@ -85,3 +85,58 @@ def test_repeated_shape_beats_white_noise() -> None:
     matches = module.find_matches(query, (repeated, noise), method="dtw", k=2)
     assert matches[0].window.start == repeated.start
     assert matches[0].distance < matches[1].distance
+
+
+def test_query_sampling_is_bounded_and_deterministic() -> None:
+    module = load_script()
+    queries = tuple(window(module, index, (0.0, 1.0, 0.0)) for index in range(10))
+    sampled, stride = module._sample_queries(queries, 3)
+    assert stride == 4
+    assert [item.start for item in sampled] == [0, 4, 8]
+
+
+def test_cost_is_charged_on_adverse_moves() -> None:
+    module = load_script()
+    rows = (
+        {"available": 1, "move_points": 10.0, "direction": "up"},
+        {"available": 1, "move_points": -10.0, "direction": "down"},
+    )
+    summary = module.summarise_moves(rows, cost_points=4.0)
+    assert summary["mean_net_points"] == -4.0
+    short = module.summarise_moves(rows, cost_points=4.0, trade_direction="down")
+    assert short["mean_net_points"] == -4.0
+
+
+def test_prediction_records_query_outcome_and_direction() -> None:
+    module = load_script()
+    matched = (
+        {"available": 1, "move_points": 3.0, "direction": "up"},
+        {"available": 1, "move_points": 2.0, "direction": "up"},
+    )
+    control = (
+        {"available": 1, "move_points": -1.0, "direction": "down"},
+        {"available": 1, "move_points": 0.5, "direction": "up"},
+    )
+    query = ({"available": 1, "move_points": 4.0, "direction": "up"},)
+    summary = module._multiple_testing_summary(
+        matched,
+        control,
+        cost_points=1.0,
+        trial_count=1,
+        trade_direction="up",
+        query_rows=query,
+    )
+    assert summary["trade_direction"] == "up"
+    assert summary["query_outcome"]["mean_net_points"] == 3.0
+
+
+def test_cluster_assignment_keeps_medoid_members() -> None:
+    module = load_script()
+    library = tuple(
+        window(module, index, (0.0, 1.0, 0.0) if index < 4 else (0.0, -1.0, 0.0))
+        for index in range(8)
+    )
+    clusters = module.cluster_windows(library, k=2, max_windows=8)
+    assert len(clusters) == 2
+    assert sum(len(cluster.members) for cluster in clusters) == len(library)
+    assert all(cluster.medoid in cluster.members for cluster in clusters)
