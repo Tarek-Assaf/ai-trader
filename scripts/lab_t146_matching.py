@@ -43,6 +43,8 @@ CORRELATION_PREFILTER = 200
 MAX_LIBRARY_WINDOWS = 50000
 MAX_OOS_WINDOWS = 20000
 CLUSTER_SAMPLE_LIMIT = 3000
+MEDOID_CANDIDATE_LIMIT = 64
+MEDOID_REFERENCE_LIMIT = 128
 ASSUMED_COSTS = {"NSXUSD": 4.0, "XAUUSD": 1.6}
 
 
@@ -371,11 +373,15 @@ def cluster_windows(
             if not bucket:
                 updated.append(medoids[index])
                 continue
+            candidate_stride = max(1, math.ceil(len(bucket) / MEDOID_CANDIDATE_LIMIT))
+            candidates = bucket[::candidate_stride][:MEDOID_CANDIDATE_LIMIT]
+            reference_stride = max(1, math.ceil(len(bucket) / MEDOID_REFERENCE_LIMIT))
+            references = bucket[::reference_stride][:MEDOID_REFERENCE_LIMIT]
             updated.append(
                 min(
-                    bucket,
+                    candidates,
                     key=lambda candidate: sum(
-                        dtw_distance(candidate.values, other.values) for other in bucket
+                        dtw_distance(candidate.values, other.values) for other in references
                     ),
                 )
             )
