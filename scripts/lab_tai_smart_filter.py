@@ -20,7 +20,7 @@ from typing import Any, Iterable
 
 from trader.analysis import indicators
 from trader.data.resample import Candle, resample_ohlc
-from trader.lab.runner import load_histdata_candles, pessimistic_cost_model
+from trader.lab.runner import load_histdata_candles
 
 END_HOLDOUT = datetime(2026, 7, 1, tzinfo=UTC)
 PERIODS = {
