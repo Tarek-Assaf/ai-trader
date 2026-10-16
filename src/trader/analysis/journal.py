@@ -344,10 +344,13 @@ class AnalysisJournal:
             ("symbol/timeframe", report["by_symbol_timeframe"]),
         ):
             if groups:
-                lines.append(f"By {label}: " + "; ".join(
-                    f"{key}: hit rate {value['hit_rate']:.1%}, mean R {value['mean_r']:.2f}"
-                    for key, value in groups.items()
-                ))
+                lines.append(
+                    f"By {label}: "
+                    + "; ".join(
+                        f"{key}: hit rate {value['hit_rate']:.1%}, mean R {value['mean_r']:.2f}"
+                        for key, value in groups.items()
+                    )
+                )
         return JournalReport(report, plain_text="\n".join(lines))
 
     @staticmethod
@@ -366,9 +369,7 @@ class AnalysisJournal:
         result: dict[str, Any] = {}
         for name, entries in sorted(buckets.items()):
             hits = [
-                hit
-                for hit in (_is_hit(call.outcome or {}) for call in entries)
-                if hit is not None
+                hit for hit in (_is_hit(call.outcome or {}) for call in entries) if hit is not None
             ]
             rs = [
                 value

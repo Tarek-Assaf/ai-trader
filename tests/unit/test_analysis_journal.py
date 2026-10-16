@@ -11,7 +11,6 @@ from trader.analysis.journal import (
     InMemoryAnalysisJournal,
 )
 
-
 BASE = datetime(2026, 10, 1, 12, tzinfo=UTC)
 
 
@@ -128,3 +127,20 @@ def test_sqlite_repository_persists_outcome_only():
     assert recovered is not None
     assert recovered.status == "resolved"
     assert recovered.symbol == "NAS100"
+
+
+def test_journal_module_imports_no_broker_execution_or_risk() -> None:
+    import ast
+    from pathlib import Path
+
+    import trader.analysis.journal as module
+
+    tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
+    names: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names.append(node.module)
+    banned = ("broker", "execution", "risk", "gate")
+    assert not [n for n in names if n.startswith("trader") and any(b in n for b in banned)]
