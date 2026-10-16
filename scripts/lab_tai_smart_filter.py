@@ -375,7 +375,11 @@ def run_group(minute_candles: tuple[Candle, ...], instrument: str, timeframe: in
         oos = summarize(variant_trades, PERIODS["2025"][0], END_HOLDOUT, normal_cost)
         variants.append({"parameters": params.__dict__ if hasattr(params, "__dict__") else {field: getattr(params, field) for field in params.__slots__}, "oos": oos["real"], "trades": len(variant_trades)})
     variants.sort(key=lambda row: float(row["oos"]["net_points"]), reverse=True)
-    periods = {name: summarize(baseline, start, end, normal_cost) for name, (start, end) in PERIODS.items()}
+    periods: dict[str, Any] = {}
+    for name, (start, end) in PERIODS.items():
+        normal = summarize(baseline, start, end, normal_cost)
+        normal["zero_cost"] = summarize(baseline, start, end, 0.0)
+        periods[name] = normal
     mirror_periods = {name: summarize(mirror, start, end, normal_cost) for name, (start, end) in PERIODS.items()}
     return {"instrument": instrument, "timeframe": timeframe, "bar_count": len(features.bars), "baseline": periods, "mirror": mirror_periods, "ablations": ablations, "variants": {"trial_total": len(variants), "best_oos_normal_cost": variants[0] if variants else None}, "example_equity": [round(sum(trade.real_r for trade in baseline[:index + 1]), 4) for index in range(min(len(baseline), 120))]}
 
@@ -399,11 +403,11 @@ def main() -> int:
         gc.collect()
     payload["preflight"]["rss_end_bytes"] = rss_bytes()
     write_json(args.output, payload)
-    lines = ["# T-147 Tai Trading Smart Filter diagnostic", "", "Diagnostic only: the sealed holdout, Gate 1, broker, paper execution and trial ledger were not accessed.", "", f"Generated `{payload['generated_at']}`. Signal timeframe is chart timeframe × 18; entries use closed bars and stop-first intrabar ordering.", "", "| Group | Year | Trades | Win rate | Real net normal | Dashboard net normal | Real total R | Dashboard total R |", "|---|---|---:|---:|---:|---:|---:|---:|"]
+    lines = ["# T-147 Tai Trading Smart Filter diagnostic", "", "Diagnostic only: the sealed holdout, Gate 1, broker, paper execution and trial ledger were not accessed.", "", f"Generated `{payload['generated_at']}`. Signal timeframe is chart timeframe × 18; entries use closed bars and stop-first intrabar ordering.", "", "| Group | Year | Trades | Win rate | Real net zero | Real net normal | Dashboard net zero | Dashboard net normal | Dashboard overstates real | Real total R | Dashboard total R |", "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     for group, data in payload["groups"].items():
         for period, result in data["baseline"].items():
             real = result["real"]; dashboard = result["dashboard"]
-            lines.append(f"| {group} | {period} | {real['trades']} | {real['win_rate']:.3f} | {real['net_points']:.3f} | {dashboard['net_points']:.3f} | {real['total_r']:.3f} | {dashboard['total_r']:.3f} |")
+            lines.append(f"| {group} | {period} | {real['trades']} | {real['win_rate']:.3f} | {real['zero_cost']['net_points']:.3f} | {real['net_points']:.3f} | {dashboard['zero_cost']['net_points']:.3f} | {dashboard['net_points']:.3f} | {(dashboard['net_points'] - real['net_points']):.3f} | {real['total_r']:.3f} | {dashboard['total_r']:.3f} |")
     lines += ["", "## Ablation and variant notes", "", "Each group includes one-factor-at-a-time ablations for EMA, ADX, VWAP direction, the don't-chase distance, swing stop, refresh entries, and the scale-out/single-exit accounting. Variant trials are counted explicitly and the best result is selected by 2025-to-holdout normal-cost net points only.", "", "All values are diagnostic evidence; no candidate is a Gate 1 pass or promotion recommendation."]
     args.table.parent.mkdir(parents=True, exist_ok=True)
     args.table.write_text("\n".join(lines) + "\n", encoding="utf-8")
