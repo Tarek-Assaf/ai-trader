@@ -313,7 +313,7 @@ class AnalysisJournal:
         if self._engine is None:
             return tuple(self._calls.values())
         table = tables["analysis_journal"]
-        with self._engine.connect() as connection:
+        with self._db().connect() as connection:
             rows = connection.execute(select(table)).mappings().all()
         return tuple(self._from_row(row) for row in rows)
 
@@ -385,11 +385,16 @@ class AnalysisJournal:
             }
         return result
 
+    def _db(self) -> Engine:
+        if self._engine is None:
+            raise AnalysisJournalError("no database engine configured")
+        return self._engine
+
     def _insert(self, call: AnalysisCall) -> None:
         table = tables["analysis_journal"]
         values = self._values(call)
         try:
-            with self._engine.begin() as connection:
+            with self._db().begin() as connection:
                 connection.execute(insert(table).values(**values))
         except Exception as exc:
             raise AnalysisJournalError("analysis call persistence failed") from exc
@@ -397,7 +402,7 @@ class AnalysisJournal:
     def _update(self, call: AnalysisCall) -> None:
         table = tables["analysis_journal"]
         try:
-            with self._engine.begin() as connection:
+            with self._db().begin() as connection:
                 connection.execute(
                     update(table)
                     .where(table.c.id == call.id)
@@ -413,7 +418,7 @@ class AnalysisJournal:
 
     def _load(self, call_id: str) -> AnalysisCall | None:
         table = tables["analysis_journal"]
-        with self._engine.connect() as connection:
+        with self._db().connect() as connection:
             row = connection.execute(select(table).where(table.c.id == call_id)).mappings().first()
         return self._from_row(row) if row else None
 
@@ -439,7 +444,7 @@ class AnalysisJournal:
         }
 
     @staticmethod
-    def _from_row(row: Mapping[str, Any]) -> AnalysisCall:
+    def _from_row(row: Any) -> AnalysisCall:
         return AnalysisCall(
             id=str(row["id"]),
             created_at=_utc(row["created_at"]),
