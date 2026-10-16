@@ -15,6 +15,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 from scripts.lab_by_year import PERIODS, _load_window, candidate_manifest
@@ -328,6 +329,13 @@ def bucket_summary(e0: list[Closed], e4: list[Closed], cost: float) -> dict[str,
         buckets["session"][session].append(trade)
         buckets["volatility"]["high" if trade.entry.atr_value >= 2 else "normal"].append(trade)
         buckets["trend_range"]["trend" if trade.entry.atr_value >= 1 else "range"].append(trade)
+    ordered = sorted(e0 + e4, key=lambda trade: trade.entry.atr_value)
+    tercile_size = max(1, (len(ordered) + 2) // 3)
+    volatility_tercile = defaultdict(list)
+    for index, trade in enumerate(ordered):
+        bucket = min(index // tercile_size, 2) + 1
+        volatility_tercile[f"T{bucket}"].append(trade)
+    buckets["volatility_tercile"] = volatility_tercile
     result: dict[str, Any] = {}
     for kind, values in buckets.items():
         result[kind] = {
@@ -365,7 +373,7 @@ def main() -> int:
         "gate1_evaluated": False,
         "broker_calls": 0,
         "orders": 0,
-        "trial_total": len(GROUPS) * 25 * len(SCHEMES),
+        "trial_total": (len(manifest) + len(GROUPS)) * len(SCHEMES),
         "preflight": {
             "cpu_count": os.cpu_count(),
             "rss_start_bytes": rss_bytes(),
@@ -400,6 +408,7 @@ def main() -> int:
             "timeframe": timeframe,
             "candidates": {},
             "paired": {},
+            "paired_summary": {},
             "market_conditions": {},
             "mirror_full": {},
         }
@@ -442,18 +451,49 @@ def main() -> int:
             }
         for digest, candidate in group_out["candidates"].items():
             comparisons: dict[str, Any] = {}
+            pairs = {
+                "E4_minus_E0": ("E4", "E0"),
+                "E4_minus_E2": ("E4", "E2"),
+                "E5_minus_E4": ("E5", "E4"),
+                "E6_minus_E4": ("E6", "E4"),
+            }
             for period, schemes in candidate["periods"].items():
-                e0 = schemes["E0"]["normal_cost"]
                 comparisons[period] = {
-                    f"E{scheme}_vs_E0": {
-                        "delta_total_r": schemes[scheme]["normal_cost"]["total_r"] - e0["total_r"],
-                        "delta_net_points": schemes[scheme]["normal_cost"]["net_points"]
-                        - e0["net_points"],
-                        "trades_equal": schemes[scheme]["normal_cost"]["trades"] == e0["trades"],
+                    name: {
+                        mode: {
+                            "delta_total_r": schemes[left][mode]["total_r"]
+                            - schemes[right][mode]["total_r"],
+                            "delta_net_points": schemes[left][mode]["net_points"]
+                            - schemes[right][mode]["net_points"],
+                            "trades_equal": schemes[left][mode]["trades"]
+                            == schemes[right][mode]["trades"],
+                        }
+                        for mode in ("zero_cost", "normal_cost")
                     }
-                    for scheme in ("E1", "E2", "E3", "E4", "E5", "E6")
+                    for name, (left, right) in pairs.items()
                 }
             group_out["paired"][digest] = comparisons
+        for name, (left, right) in pairs.items():
+            group_out["paired_summary"][name] = {}
+            for mode in ("zero_cost", "normal_cost"):
+                changes = [
+                    candidate["periods"][period][left][mode]["total_r"]
+                    - candidate["periods"][period][right][mode]["total_r"]
+                    for candidate in group_out["candidates"].values()
+                    for period in PERIODS
+                ]
+                point_changes = [
+                    candidate["periods"][period][left][mode]["net_points"]
+                    - candidate["periods"][period][right][mode]["net_points"]
+                    for candidate in group_out["candidates"].values()
+                    for period in PERIODS
+                ]
+                group_out["paired_summary"][name][mode] = {
+                    "observations": len(changes),
+                    "improved": sum(change > 0 for change in changes),
+                    "median_delta_total_r": median(changes) if changes else 0.0,
+                    "median_delta_net_points": median(point_changes) if point_changes else 0.0,
+                }
         payload["groups"][group] = group_out
         print(f"completed {group} rss={rss_bytes()}", flush=True)
         if rss_bytes() and rss_bytes() > args.memory_limit_gb * 1024**3:
@@ -468,7 +508,7 @@ def main() -> int:
         "Diagnostic only: no holdout, Gate 1, broker, orders, ledger or promotion writes.",
         "",
         f"Generated `{payload['generated_at']}`; trial total {payload['trial_total']} "
-        "(25 candidates x 7 schemes x 8 groups).",
+        "(24 T-145 candidates plus one Tai baseline per group, seven schemes).",
         "",
         "| Group | Candidate | Period | E0 normal R | E4 normal R | E4 minus E0 |",
         "|---|---|---|---:|---:|---:|",
@@ -491,7 +531,16 @@ def main() -> int:
         "",
         "## Market conditions",
         "",
-        "Only buckets with at least 30 trades are reported in the JSON.",
+        "The JSON contains the four pre-registered paired comparisons and the full-inversion "
+        "Tai mirror for every group and period.",
+        "Only market-condition buckets with at least 30 trades are reported in the JSON.",
+        "",
+        "## Plain-language reading",
+        "",
+        "Positive deltas mean the left-hand exit scheme improved the paired total-R result "
+        "for the same entries; negative deltas mean it hurt. The bucketed E0 versus E4 "
+        "rows show where the scale-out helped or hurt, with stop-first ordering when a "
+        "stop and target share a bar.",
     ]
     args.table.parent.mkdir(parents=True, exist_ok=True)
     args.table.write_text("\n".join(lines) + "\n", encoding="utf-8")
