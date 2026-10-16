@@ -309,7 +309,9 @@ def simulate_recorded(
     return tuple(trades)
 
 
-def _stats(trades: list[RecordedTrade], field: str = "real_points") -> dict[str, Any]:
+def _stats(
+    trades: list[RecordedTrade], field: str = "real_points", days_observed: int = 1
+) -> dict[str, Any]:
     values = [float(getattr(trade, field)) for trade in trades]
     equity = peak = drawdown = 0.0
     for value in values:
@@ -318,7 +320,7 @@ def _stats(trades: list[RecordedTrade], field: str = "real_points") -> dict[str,
         drawdown = max(drawdown, peak - equity)
     return {
         "trades": len(values),
-        "trades_per_day": len(values) / 11.0,
+        "trades_per_day": len(values) / days_observed if days_observed else 0.0,
         "win_rate": sum(value > 0 for value in values) / len(values) if values else 0.0,
         "net_points": sum(values),
         "total_r": sum(
@@ -328,7 +330,7 @@ def _stats(trades: list[RecordedTrade], field: str = "real_points") -> dict[str,
     }
 
 
-def summarize(trades: tuple[RecordedTrade, ...]) -> dict[str, Any]:
+def summarize(trades: tuple[RecordedTrade, ...], days_observed: int) -> dict[str, Any]:
     selected = list(trades)
 
     def single_stats(target: str) -> dict[str, Any]:
@@ -347,8 +349,8 @@ def summarize(trades: tuple[RecordedTrade, ...]) -> dict[str, Any]:
         }
 
     return {
-        "real": _stats(selected, "real_points"),
-        "dashboard": _stats(selected, "dashboard_points"),
+        "real": _stats(selected, "real_points", days_observed),
+        "dashboard": _stats(selected, "dashboard_points", days_observed),
         "single_exit": {key: single_stats(key) for key in ("1R", "2R", "3R")},
         "positive_real_result": sum(trade.real_points > 0 for trade in selected) / len(selected)
         if selected
@@ -385,6 +387,7 @@ def data_check(minutes: tuple[RecordedMinute, ...], symbol: str) -> dict[str, An
         "rows": len(minutes),
         "first_minute_utc": minutes[0].ts_utc,
         "last_minute_utc": minutes[-1].ts_utc,
+        "observed_days": len({item.ts_utc.date() for item in minutes}),
         "missing_minutes_between_observations": gaps,
         "bid_above_ask_rows": sum(spread < 0 for spread in spreads),
         "zero_spread_rows": sum(spread <= 0 for spread in spreads),
@@ -449,7 +452,7 @@ def main() -> int:
                 "symbol": symbol,
                 "timeframe": timeframe,
                 "bars": len(features.mid.bars),
-                "summary": summarize(trades),
+                "summary": summarize(trades, checks[symbol]["observed_days"]),
             }
             for trade in trades:
                 trade_rows.append(
@@ -494,9 +497,9 @@ def main() -> int:
     lines = [
         "# T-149 recorded Tai Smart Filter diagnostic",
         "",
-        "Diagnostic only on 11 observed October 2026 days. Indicators use bid/ask mid prices; "
-        "fills use the real side and recorded spread. 60m is omitted because the window is "
-        "too short.",
+        "Diagnostic only on the 10-11 observed October 2026 days (symbol-specific). "
+        "Indicators use bid/ask mid prices; fills use the real side and recorded spread. "
+        "60m is omitted because the window is too short.",
         "",
         "| Group | Trades | Trades/day | Any target | Positive real result | Real net points | "
         "Real total R | Max DD points |",
