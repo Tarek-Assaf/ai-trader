@@ -50,6 +50,7 @@ START = datetime(2026, 10, 5, tzinfo=UTC)
 END = datetime(2026, 10, 17, tzinfo=UTC)
 INSTRUMENTS = ("NAS100", "XAUUSD")
 TIMEFRAMES = (1, 3, 5)
+WARMUP_CHART_BARS = 200
 
 
 @dataclass(frozen=True, slots=True)
@@ -452,6 +453,8 @@ def main() -> int:
                 "symbol": symbol,
                 "timeframe": timeframe,
                 "bars": len(features.mid.bars),
+                "warmup_chart_bars": WARMUP_CHART_BARS,
+                "first_trade_time": trades[0].entry_time if trades else None,
                 "summary": summarize(trades, checks[symbol]["observed_days"]),
             }
             for trade in trades:
@@ -490,6 +493,7 @@ def main() -> int:
         "trade_count": len(trade_rows),
         "timeframes": TIMEFRAMES,
         "symbols": INSTRUMENTS,
+        "warmup_policy": "Indicators use only recorded bars; trades begin after 200 chart bars.",
         "preflight": {"rss_end_bytes": rss_bytes()},
     }
     write_json(args.output, payload)
