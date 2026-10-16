@@ -10373,6 +10373,904 @@
       }
     }
   },
+  "mirror_full": {
+    "NSXUSD:1": {
+      "2022": {
+        "normal_cost": {
+          "average_r": -0.4462464276794836,
+          "max_drawdown_points": 69.95091133314963,
+          "net_points": -29.524611467528302,
+          "profit_factor": 0.6360782139306107,
+          "total_r": -2.6774785660769016,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 0.3333333333333333,
+          "max_drawdown_points": 57.950911333149634,
+          "net_points": -5.5246114675283025,
+          "profit_factor": 0.9151743269338073,
+          "total_r": 2.0,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        }
+      },
+      "2023": {
+        "normal_cost": {
+          "average_r": -1.7894212580221616,
+          "max_drawdown_points": 28.89359420987057,
+          "net_points": -28.89359420987057,
+          "profit_factor": 0.02383137976633411,
+          "total_r": -8.947106290110808,
+          "trades": 5,
+          "win_rate": 0.2,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": -0.2,
+          "max_drawdown_points": 8.893594209870571,
+          "net_points": -8.893594209870571,
+          "profit_factor": 0.3460101381103021,
+          "total_r": -1.0,
+          "trades": 5,
+          "win_rate": 0.2,
+          "wins": 1
+        }
+      },
+      "2024": {
+        "normal_cost": {
+          "average_r": -26.20293506761308,
+          "max_drawdown_points": 47.787940612848615,
+          "net_points": -25.71469232828531,
+          "profit_factor": 0.46189996893543744,
+          "total_r": -209.62348054090464,
+          "trades": 8,
+          "win_rate": 0.125,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": 5.373819066858856,
+          "max_drawdown_points": 20.498940612847946,
+          "net_points": 6.2853076717146905,
+          "profit_factor": 1.2921912056211953,
+          "total_r": 42.99055253487085,
+          "trades": 8,
+          "win_rate": 0.375,
+          "wins": 3
+        }
+      },
+      "2025": {
+        "normal_cost": {
+          "average_r": -1.7563144953920076,
+          "max_drawdown_points": 64.3424838371684,
+          "net_points": -18.910832911540638,
+          "profit_factor": 0.7537363036136636,
+          "total_r": -15.806830458528069,
+          "trades": 9,
+          "win_rate": 0.1111111111111111,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": -0.5555555555555556,
+          "max_drawdown_points": 36.3424838371684,
+          "net_points": 17.089167088459362,
+          "profit_factor": 1.3815313592678289,
+          "total_r": -5.0,
+          "trades": 9,
+          "win_rate": 0.1111111111111111,
+          "wins": 1
+        }
+      },
+      "2026_to_holdout": {
+        "normal_cost": {
+          "average_r": 0.09462228711187974,
+          "max_drawdown_points": 74.82770880841781,
+          "net_points": -7.138755883061094,
+          "profit_factor": 0.9272855758684442,
+          "total_r": 0.5677337226712784,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 0.3333333333333333,
+          "max_drawdown_points": 62.82770880841781,
+          "net_points": 16.861244116938906,
+          "profit_factor": 1.2051864352500825,
+          "total_r": 2.0,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        }
+      }
+    },
+    "NSXUSD:3": {
+      "2022": {
+        "normal_cost": {
+          "average_r": 0.7710982192101428,
+          "max_drawdown_points": 44.315939009658905,
+          "net_points": 81.49521753880617,
+          "profit_factor": 2.8389595111827335,
+          "total_r": 3.084392876840571,
+          "trades": 4,
+          "win_rate": 0.5,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 1.0,
+          "max_drawdown_points": 36.315939009658905,
+          "net_points": 97.49521753880617,
+          "profit_factor": 3.6846398633083806,
+          "total_r": 4.0,
+          "trades": 4,
+          "win_rate": 0.5,
+          "wins": 2
+        }
+      },
+      "2023": {
+        "normal_cost": {
+          "average_r": -0.6143319746578852,
+          "max_drawdown_points": 43.591101389602045,
+          "net_points": -23.66776478770953,
+          "profit_factor": 0.6005385311713335,
+          "total_r": -3.0716598732894265,
+          "trades": 5,
+          "win_rate": 0.2,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": -0.2,
+          "max_drawdown_points": 31.591101389602045,
+          "net_points": -3.6677647877095296,
+          "profit_factor": 0.9151945835690979,
+          "total_r": -1.0,
+          "trades": 5,
+          "win_rate": 0.2,
+          "wins": 1
+        }
+      },
+      "2024": {
+        "normal_cost": {
+          "average_r": 0.26239758935425095,
+          "max_drawdown_points": 24.138536554557504,
+          "net_points": 76.55137175514392,
+          "profit_factor": 2.240770709194313,
+          "total_r": 1.8367831254797566,
+          "trades": 7,
+          "win_rate": 0.42857142857142855,
+          "wins": 3
+        },
+        "zero_cost": {
+          "average_r": 0.7142857142857143,
+          "max_drawdown_points": 20.138536554557504,
+          "net_points": 104.55137175514392,
+          "profit_factor": 3.2879448884197475,
+          "total_r": 5.0,
+          "trades": 7,
+          "win_rate": 0.42857142857142855,
+          "wins": 3
+        }
+      },
+      "2025": {
+        "normal_cost": {
+          "average_r": -0.38802684188156766,
+          "max_drawdown_points": 56.188641406817624,
+          "net_points": -22.231439916842646,
+          "profit_factor": 0.8454909613308792,
+          "total_r": -3.492241576934109,
+          "trades": 9,
+          "win_rate": 0.2222222222222222,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": -0.1111111111111111,
+          "max_drawdown_points": 44.936501500611485,
+          "net_points": 13.768560083157354,
+          "profit_factor": 1.11881288936088,
+          "total_r": -1.0,
+          "trades": 9,
+          "win_rate": 0.2222222222222222,
+          "wins": 2
+        }
+      },
+      "2026_to_holdout": {
+        "normal_cost": {
+          "average_r": 1.5077865331792835,
+          "max_drawdown_points": 35.3785231058464,
+          "net_points": 113.00929897730384,
+          "profit_factor": 4.194291029029099,
+          "total_r": 4.523359599537851,
+          "trades": 3,
+          "win_rate": 0.6666666666666666,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 1.6666666666666667,
+          "max_drawdown_points": 31.378523105846398,
+          "net_points": 125.00929897730384,
+          "profit_factor": 4.983912772300373,
+          "total_r": 5.0,
+          "trades": 3,
+          "win_rate": 0.6666666666666666,
+          "wins": 2
+        }
+      }
+    },
+    "NSXUSD:5": {
+      "2022": {
+        "normal_cost": {
+          "average_r": -0.591514178394934,
+          "max_drawdown_points": 48.663183209613635,
+          "net_points": 79.70730838552663,
+          "profit_factor": 2.3303577500281323,
+          "total_r": -2.95757089197467,
+          "trades": 5,
+          "win_rate": 0.2,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": -0.2,
+          "max_drawdown_points": 36.663183209613635,
+          "net_points": 99.70730838552663,
+          "profit_factor": 3.2705031340953186,
+          "total_r": -1.0,
+          "trades": 5,
+          "win_rate": 0.2,
+          "wins": 1
+        }
+      },
+      "2023": {
+        "normal_cost": {
+          "average_r": -0.2560200106597453,
+          "max_drawdown_points": 66.3268225188076,
+          "net_points": -21.5317625909629,
+          "profit_factor": 0.6753687004249697,
+          "total_r": -1.0240800426389811,
+          "trades": 4,
+          "win_rate": 0.25,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 54.3268225188076,
+          "net_points": -5.531762590962899,
+          "profit_factor": 0.8981762169313724,
+          "total_r": 0.0,
+          "trades": 4,
+          "win_rate": 0.25,
+          "wins": 1
+        }
+      },
+      "2024": {
+        "normal_cost": {
+          "average_r": -1.2169231494003272,
+          "max_drawdown_points": 119.1594883204707,
+          "net_points": -119.1594883204707,
+          "profit_factor": 0.0,
+          "total_r": -6.084615747001636,
+          "trades": 5,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": -1.0,
+          "max_drawdown_points": 99.1594883204707,
+          "net_points": -99.1594883204707,
+          "profit_factor": 0.0,
+          "total_r": -5.0,
+          "trades": 5,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2025": {
+        "normal_cost": {
+          "average_r": 0.06419078701600527,
+          "max_drawdown_points": 40.106797973421635,
+          "net_points": 39.08512726594927,
+          "profit_factor": 1.4946205336493854,
+          "total_r": 0.38514472209603157,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 0.3333333333333333,
+          "max_drawdown_points": 32.106797973421635,
+          "net_points": 63.08512726594927,
+          "profit_factor": 2.0010266074892984,
+          "total_r": 2.0,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        }
+      },
+      "2026_to_holdout": {
+        "normal_cost": {
+          "average_r": -1.2560183967957712,
+          "max_drawdown_points": 98.46612913840727,
+          "net_points": -98.46612913840727,
+          "profit_factor": 0.0,
+          "total_r": -3.7680551903873134,
+          "trades": 3,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": -1.0,
+          "max_drawdown_points": 86.46612913840727,
+          "net_points": -86.46612913840727,
+          "profit_factor": 0.0,
+          "total_r": -3.0,
+          "trades": 3,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      }
+    },
+    "NSXUSD:60": {
+      "2022": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2023": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2024": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2025": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2026_to_holdout": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      }
+    },
+    "XAUUSD:1": {
+      "2022": {
+        "normal_cost": {
+          "average_r": -2.849362019009818,
+          "max_drawdown_points": 12.208023641612137,
+          "net_points": -10.524281515373605,
+          "profit_factor": 0.13792094246109954,
+          "total_r": -22.794896152078543,
+          "trades": 8,
+          "win_rate": 0.25,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 0.5,
+          "max_drawdown_points": 2.608023641612135,
+          "net_points": 2.2757184846263954,
+          "profit_factor": 1.6959006115241189,
+          "total_r": 4.0,
+          "trades": 8,
+          "win_rate": 0.375,
+          "wins": 3
+        }
+      },
+      "2023": {
+        "normal_cost": {
+          "average_r": -2.841926348475123,
+          "max_drawdown_points": 9.082336521564912,
+          "net_points": -8.878265684501777,
+          "profit_factor": 0.05103319835449378,
+          "total_r": -17.051558090850737,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 0.3333333333333333,
+          "max_drawdown_points": 1.684120404653413,
+          "net_points": 0.7217343154982245,
+          "profit_factor": 1.2441824091526485,
+          "total_r": 2.0,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        }
+      },
+      "2024": {
+        "normal_cost": {
+          "average_r": -1.34451957134953,
+          "max_drawdown_points": 16.478412816321544,
+          "net_points": -14.807180573908045,
+          "profit_factor": 0.10141949112709298,
+          "total_r": -10.75615657079624,
+          "trades": 8,
+          "win_rate": 0.25,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 0.5,
+          "max_drawdown_points": 6.878412816321543,
+          "net_points": -2.0071805739080446,
+          "profit_factor": 0.7569822896292404,
+          "total_r": 4.0,
+          "trades": 8,
+          "win_rate": 0.375,
+          "wins": 3
+        }
+      },
+      "2025": {
+        "normal_cost": {
+          "average_r": -4.748871853918307,
+          "max_drawdown_points": 14.566134125443114,
+          "net_points": -7.147112550791553,
+          "profit_factor": 0.5207974160229709,
+          "total_r": -28.493231123509844,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 0.3333333333333333,
+          "max_drawdown_points": 7.027168171454832,
+          "net_points": 2.452887449208447,
+          "profit_factor": 1.28808033692896,
+          "total_r": 2.0,
+          "trades": 6,
+          "win_rate": 0.3333333333333333,
+          "wins": 2
+        }
+      },
+      "2026_to_holdout": {
+        "normal_cost": {
+          "average_r": -1.438450951724268,
+          "max_drawdown_points": 17.090747094873947,
+          "net_points": -17.090747094873947,
+          "profit_factor": 0.0,
+          "total_r": -4.315352855172804,
+          "trades": 3,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": -1.0,
+          "max_drawdown_points": 12.29074709487395,
+          "net_points": -12.29074709487395,
+          "profit_factor": 0.0,
+          "total_r": -3.0,
+          "trades": 3,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      }
+    },
+    "XAUUSD:3": {
+      "2022": {
+        "normal_cost": {
+          "average_r": -1.4049307236744606,
+          "max_drawdown_points": 7.8953953983369045,
+          "net_points": -6.612507974643677,
+          "profit_factor": 0.16248551959328808,
+          "total_r": -7.0246536183723025,
+          "trades": 5,
+          "win_rate": 0.4,
+          "wins": 2
+        },
+        "zero_cost": {
+          "average_r": 0.6,
+          "max_drawdown_points": 3.0953953983369047,
+          "net_points": 1.3874920253563232,
+          "profit_factor": 1.448243874143444,
+          "total_r": 3.0,
+          "trades": 5,
+          "win_rate": 0.4,
+          "wins": 2
+        }
+      },
+      "2023": {
+        "normal_cost": {
+          "average_r": -1.8084278832333238,
+          "max_drawdown_points": 23.948906905186597,
+          "net_points": -23.560423432361816,
+          "profit_factor": 0.059912383624550807,
+          "total_r": -21.701134598799886,
+          "trades": 12,
+          "win_rate": 0.25,
+          "wins": 3
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 6.482112607248382,
+          "net_points": -4.360423432361813,
+          "profit_factor": 0.5910292410240983,
+          "total_r": 0.0,
+          "trades": 12,
+          "win_rate": 0.25,
+          "wins": 3
+        }
+      },
+      "2024": {
+        "normal_cost": {
+          "average_r": -1.321151479412026,
+          "max_drawdown_points": 5.547628444688872,
+          "net_points": -0.5904494758814507,
+          "profit_factor": 0.8935672275516704,
+          "total_r": -5.284605917648104,
+          "trades": 4,
+          "win_rate": 0.25,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": 1.0,
+          "max_drawdown_points": 1.909956013863848,
+          "net_points": 5.809550524118549,
+          "profit_factor": 4.041719538014808,
+          "total_r": 4.0,
+          "trades": 4,
+          "win_rate": 0.5,
+          "wins": 2
+        }
+      },
+      "2025": {
+        "normal_cost": {
+          "average_r": -0.6251348892892276,
+          "max_drawdown_points": 11.173737136249837,
+          "net_points": -9.815942508589977,
+          "profit_factor": 0.32784003267466616,
+          "total_r": -2.5005395571569102,
+          "trades": 4,
+          "win_rate": 0.25,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 7.973737136249838,
+          "net_points": -3.4159425085899784,
+          "profit_factor": 0.6515617590608488,
+          "total_r": 0.0,
+          "trades": 4,
+          "win_rate": 0.25,
+          "wins": 1
+        }
+      },
+      "2026_to_holdout": {
+        "normal_cost": {
+          "average_r": -1.6900906351574192,
+          "max_drawdown_points": 9.417230226794526,
+          "net_points": -9.417230226794526,
+          "profit_factor": 0.0,
+          "total_r": -3.3801812703148384,
+          "trades": 2,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": -1.0,
+          "max_drawdown_points": 6.217230226794527,
+          "net_points": -6.217230226794527,
+          "profit_factor": 0.0,
+          "total_r": -2.0,
+          "trades": 2,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      }
+    },
+    "XAUUSD:5": {
+      "2022": {
+        "normal_cost": {
+          "average_r": -0.7844627601489804,
+          "max_drawdown_points": 14.364401859554164,
+          "net_points": -9.452342055855887,
+          "profit_factor": 0.4405106374732959,
+          "total_r": -7.060164841340824,
+          "trades": 9,
+          "win_rate": 0.4444444444444444,
+          "wins": 4
+        },
+        "zero_cost": {
+          "average_r": 0.7777777777777778,
+          "max_drawdown_points": 6.364401859554164,
+          "net_points": 4.947657944144112,
+          "profit_factor": 1.5562548998694454,
+          "total_r": 7.0,
+          "trades": 9,
+          "win_rate": 0.4444444444444444,
+          "wins": 4
+        }
+      },
+      "2023": {
+        "normal_cost": {
+          "average_r": -2.5394213650610014,
+          "max_drawdown_points": 19.668781965057544,
+          "net_points": -19.668781965057544,
+          "profit_factor": 0.00469731417603422,
+          "total_r": -22.854792285549014,
+          "trades": 9,
+          "win_rate": 0.1111111111111111,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": -0.1111111111111111,
+          "max_drawdown_points": 5.268781965057542,
+          "net_points": -5.268781965057542,
+          "profit_factor": 0.30870758684870664,
+          "total_r": -1.0,
+          "trades": 9,
+          "win_rate": 0.2222222222222222,
+          "wins": 2
+        }
+      },
+      "2024": {
+        "normal_cost": {
+          "average_r": -2.05431767103601,
+          "max_drawdown_points": 6.536940441939078,
+          "net_points": -6.536940441939078,
+          "profit_factor": 0.0,
+          "total_r": -4.10863534207202,
+          "trades": 2,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": -1.0,
+          "max_drawdown_points": 3.3369404419390776,
+          "net_points": -3.3369404419390776,
+          "profit_factor": 0.0,
+          "total_r": -2.0,
+          "trades": 2,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2025": {
+        "normal_cost": {
+          "average_r": -1.4663494068503047,
+          "max_drawdown_points": 28.567974256778598,
+          "net_points": -28.567974256778598,
+          "profit_factor": 0.0,
+          "total_r": -7.331747034251523,
+          "trades": 5,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": -1.0,
+          "max_drawdown_points": 20.567974256778598,
+          "net_points": -20.567974256778598,
+          "profit_factor": 0.0,
+          "total_r": -5.0,
+          "trades": 5,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2026_to_holdout": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      }
+    },
+    "XAUUSD:60": {
+      "2022": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2023": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2024": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      },
+      "2025": {
+        "normal_cost": {
+          "average_r": 2.932800530266777,
+          "max_drawdown_points": 0.0,
+          "net_points": 69.82913506692321,
+          "profit_factor": "inf",
+          "total_r": 2.932800530266777,
+          "trades": 1,
+          "win_rate": 1.0,
+          "wins": 1
+        },
+        "zero_cost": {
+          "average_r": 3.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 71.42913506692321,
+          "profit_factor": "inf",
+          "total_r": 3.0,
+          "trades": 1,
+          "win_rate": 1.0,
+          "wins": 1
+        }
+      },
+      "2026_to_holdout": {
+        "normal_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        },
+        "zero_cost": {
+          "average_r": 0.0,
+          "max_drawdown_points": 0.0,
+          "net_points": 0,
+          "profit_factor": 0.0,
+          "total_r": 0,
+          "trades": 0,
+          "win_rate": 0.0,
+          "wins": 0
+        }
+      }
+    }
+  },
   "orders": 0,
   "preflight": {
     "cpu_count": 384,
