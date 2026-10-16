@@ -318,6 +318,53 @@ def tai_entries(
     return features.bars, entries
 
 
+def tai_entries_full_inversion(
+    minute_candles: tuple[Candle, ...], timeframe: int
+) -> tuple[tuple[Candle, ...], list[Entry]]:
+    """Invert both Tai signal and filter direction for the T-148 mirror_v2.
+
+    The original ``mirror_full`` output is preserved byte-for-byte.  This
+    explicit helper makes the corrected inversion contract reviewable: the
+    signal is flipped first, then EMA/ADX/VWAP and swing-stop checks run for
+    the inverted side, with stop and target levels built from that side.
+    """
+    params = TaiParams()
+    features = build_features(minute_candles, timeframe, params)
+    entries: list[Entry] = []
+    last_exit = -10_000
+    for index, bar in enumerate(features.bars):
+        signal_direction = features.signals[index]
+        if signal_direction is None or index - last_exit < params.refresh_bars:
+            continue
+        direction = "short" if signal_direction == "long" else "long"
+        if not _passes(features, index, direction, params):
+            continue
+        risk_data = _risk(features, index, direction, params)
+        if risk_data is None:
+            continue
+        stop, risk = risk_data
+        stop_price = bar.close - risk if direction == "long" else bar.close + risk
+        target_price = (
+            bar.close + params.target_multiple * risk
+            if direction == "long"
+            else bar.close - params.target_multiple * risk
+        )
+        entries.append(
+            Entry(
+                index,
+                bar.ts_utc,
+                direction,
+                bar.close,
+                risk,
+                stop_price,
+                target_price,
+                None,
+                features.atr[index] or 1.0,
+            )
+        )
+    return features.bars, entries
+
+
 def bucket_summary(e0: list[Closed], e4: list[Closed], cost: float) -> dict[str, Any]:
     buckets: dict[str, dict[str, list[Closed]]] = {
         "session": defaultdict(list),
@@ -394,6 +441,7 @@ def main() -> int:
         chart = tuple(bar for bar in resample_ohlc(candles, timeframe) if bar.complete)
         tai_chart, tai_es = tai_entries(candles, timeframe)
         mirror_chart, mirror_es = tai_entries(candles, timeframe, mirror=True)
+        mirror_v2_chart, mirror_v2_es = tai_entries_full_inversion(candles, timeframe)
         candidate_rows = rows + [
             {
                 "group": group,
@@ -411,6 +459,7 @@ def main() -> int:
             "paired_summary": {},
             "market_conditions": {},
             "mirror_full": {},
+            "mirror_full_v2": {},
         }
         for row in candidate_rows:
             digest = row["strategy_hash"]
@@ -448,6 +497,12 @@ def main() -> int:
             group_out["mirror_full"][period] = {
                 "zero_cost": stats(closed, mirror_chart, 0.0),
                 "normal_cost": stats(closed, mirror_chart, cost),
+            }
+            v2_selected = [entry for entry in mirror_v2_es if start <= entry.time < end]
+            v2_closed = simulate(mirror_v2_chart, v2_selected, "E0")
+            group_out["mirror_full_v2"][period] = {
+                "zero_cost": stats(v2_closed, mirror_v2_chart, 0.0),
+                "normal_cost": stats(v2_closed, mirror_v2_chart, cost),
             }
         for digest, candidate in group_out["candidates"].items():
             comparisons: dict[str, Any] = {}
@@ -498,7 +553,7 @@ def main() -> int:
         print(f"completed {group} rss={rss_bytes()}", flush=True)
         if rss_bytes() and rss_bytes() > args.memory_limit_gb * 1024**3:
             raise RuntimeError("RSS exceeded registered cap")
-        del candles, chart, tai_chart
+        del candles, chart, tai_chart, mirror_v2_chart
         gc.collect()
     payload["preflight"]["rss_end_bytes"] = rss_bytes()
     write_json(args.output, payload)
@@ -531,8 +586,9 @@ def main() -> int:
         "",
         "## Market conditions",
         "",
-        "The JSON contains the four pre-registered paired comparisons and the full-inversion "
-        "Tai mirror for every group and period.",
+        "The JSON contains the four pre-registered paired comparisons, the original full-inversion "
+        "Tai mirror, and mirror_full_v2 for every group and period. mirror_full_v2 flips the "
+        "signal and all filter/stop/target sides; existing mirror_full numbers are unchanged.",
         "Only market-condition buckets with at least 30 trades are reported in the JSON.",
         "",
         "## Plain-language reading",

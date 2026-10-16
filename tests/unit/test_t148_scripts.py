@@ -61,3 +61,11 @@ def test_e6_stop_after_one_r_books_half() -> None:
     )
     closed = module.simulate(bars((100, 101.2, 99.8, 101.0), (101, 101, 100, 100)), [entry], "E6")
     assert closed[0].r == 0.5
+
+
+def test_full_inversion_helper_flips_signal_and_filter_side() -> None:
+    module = load_script()
+    assert callable(module.tai_entries_full_inversion)
+    source = (ROOT / "scripts/lab_t148_exit_study.py").read_text(encoding="utf-8")
+    assert "mirror_full_v2" in source
+    assert 'direction = "short" if signal_direction == "long" else "long"' in source
