@@ -407,7 +407,8 @@ def main() -> int:
     for group, data in payload["groups"].items():
         for period, result in data["baseline"].items():
             real = result["real"]; dashboard = result["dashboard"]
-            lines.append(f"| {group} | {period} | {real['trades']} | {real['win_rate']:.3f} | {real['zero_cost']['net_points']:.3f} | {real['net_points']:.3f} | {dashboard['zero_cost']['net_points']:.3f} | {dashboard['net_points']:.3f} | {(dashboard['net_points'] - real['net_points']):.3f} | {real['total_r']:.3f} | {dashboard['total_r']:.3f} |")
+            real_zero = result["zero_cost"]["real"]; dashboard_zero = result["zero_cost"]["dashboard"]
+            lines.append(f"| {group} | {period} | {real['trades']} | {real['win_rate']:.3f} | {real_zero['net_points']:.3f} | {real['net_points']:.3f} | {dashboard_zero['net_points']:.3f} | {dashboard['net_points']:.3f} | {(dashboard['net_points'] - real['net_points']):.3f} | {real['total_r']:.3f} | {dashboard['total_r']:.3f} |")
     lines += ["", "## Ablation and variant notes", "", "Each group includes one-factor-at-a-time ablations for EMA, ADX, VWAP direction, the don't-chase distance, swing stop, refresh entries, and the scale-out/single-exit accounting. Variant trials are counted explicitly and the best result is selected by 2025-to-holdout normal-cost net points only.", "", "All values are diagnostic evidence; no candidate is a Gate 1 pass or promotion recommendation."]
     args.table.parent.mkdir(parents=True, exist_ok=True)
     args.table.write_text("\n".join(lines) + "\n", encoding="utf-8")
