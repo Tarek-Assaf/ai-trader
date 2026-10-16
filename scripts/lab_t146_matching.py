@@ -40,7 +40,9 @@ HORIZONS = (6, 12, 30)
 CLUSTER_COUNTS = (8, 16, 32)
 DEFAULT_MAX_QUERIES = 2000
 CORRELATION_PREFILTER = 200
-CLUSTER_SAMPLE_LIMIT = 256
+MAX_LIBRARY_WINDOWS = 50000
+MAX_OOS_WINDOWS = 20000
+CLUSTER_SAMPLE_LIMIT = 3000
 ASSUMED_COSTS = {"NSXUSD": 4.0, "XAUUSD": 1.6}
 
 
@@ -133,6 +135,7 @@ def build_windows(
     lengths: Sequence[int] = WINDOW_LENGTHS,
     stride_divisor: int = 4,
     atr_period: int = 14,
+    max_windows: int | None = None,
 ) -> dict[int, tuple[ShapeWindow, ...]]:
     """Build windows wholly inside a date range, skipping data gaps."""
     if stride_divisor <= 0:
@@ -148,7 +151,11 @@ def build_windows(
             raise ValueError("window lengths must be positive")
         stride = max(1, length // stride_divisor)
         windows: list[ShapeWindow] = []
-        for start_index in range(atr_period, len(selected) - length + 1, stride):
+        indices = list(range(atr_period, len(selected) - length + 1, stride))
+        if max_windows is not None and max_windows > 0 and len(indices) > max_windows:
+            sample_stride = math.ceil(len(indices) / max_windows)
+            indices = indices[::sample_stride][:max_windows]
+        for start_index in indices:
             stop = start_index + length
             if not _continuous(selected, start_index, stop, timeframe):
                 continue
@@ -672,12 +679,14 @@ def run_group(
         start=IN_SAMPLE_START,
         end=OOS_START,
         timeframe=timeframe,
+        max_windows=MAX_LIBRARY_WINDOWS,
     )
     out_of_sample = build_windows(
         candles,
         start=OOS_START,
         end=holdout_end,
         timeframe=timeframe,
+        max_windows=MAX_OOS_WINDOWS,
     )
     results: list[dict[str, Any]] = []
     chart_dir = output_root / "t146_charts" / f"{instrument.lower()}_{timeframe}m"
@@ -747,6 +756,8 @@ def run_group(
         "timeframe": timeframe,
         "library_windows": sum(len(value) for value in in_sample.values()),
         "oos_queries": sum(len(value) for value in out_of_sample.values()),
+        "library_window_cap": MAX_LIBRARY_WINDOWS,
+        "oos_window_cap": MAX_OOS_WINDOWS,
         "queries_evaluated": sum(
             len(_sample_queries(value, max_queries)[0]) for value in out_of_sample.values()
         ),
@@ -893,6 +904,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             "max_queries": max_queries,
             "query_sampling": "every m-th OOS window, deterministic",
             "correlation_prefilter": CORRELATION_PREFILTER,
+            "library_window_cap": MAX_LIBRARY_WINDOWS,
+            "oos_window_cap": MAX_OOS_WINDOWS,
             "run_order": TIMEFRAMES,
             "assumed_cost_points": ASSUMED_COSTS,
             "sealed_holdout_read": False,
