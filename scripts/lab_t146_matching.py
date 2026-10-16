@@ -123,11 +123,7 @@ def build_windows(
     """Build windows wholly inside a date range, skipping data gaps."""
     if stride_divisor <= 0:
         raise ValueError("stride_divisor must be positive")
-    selected = [
-        candle
-        for candle in candles
-        if start <= candle.ts_utc < end
-    ]
+    selected = [candle for candle in candles if start <= candle.ts_utc < end]
     # The loader returns UTC candles, but keeping this explicit makes synthetic
     # test fixtures and direct callers safe.
     selected.sort(key=lambda candle: candle.ts_utc)
@@ -540,8 +536,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         for timeframe in TIMEFRAMES:
             # Keep 1m as the source and resample through the existing loader so
             # complete-bar handling remains identical to the Strategy Lab.
-            series = candles if timeframe == 1 else _load_histdata_candles(
-                args.lake, instrument, timeframe, excluded
+            series = (
+                candles
+                if timeframe == 1
+                else _load_histdata_candles(args.lake, instrument, timeframe, excluded)
             )
             series = tuple(item for item in series if IN_SAMPLE_START <= item.ts_utc < holdout_end)
             groups.append(
