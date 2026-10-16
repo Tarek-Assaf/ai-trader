@@ -263,10 +263,16 @@ def forward_move(
     horizon: int,
 ) -> dict[str, float | int | str | None]:
     """Measure the move after a matched window, with no future used in matching."""
-    target_index = window.end + horizon - 1
+    end_index = next(
+        (index for index, candle in enumerate(candles) if candle.ts_utc == window.ts_end),
+        None,
+    )
+    if end_index is None:
+        return {"available": 0, "move_atr": None, "move_points": None, "direction": None}
+    target_index = end_index + horizon
     if target_index >= len(candles):
         return {"available": 0, "move_atr": None, "move_points": None, "direction": None}
-    start_price = float(candles[window.end - 1].close)
+    start_price = float(candles[end_index].close)
     end_price = float(candles[target_index].close)
     move = end_price - start_price
     return {
@@ -310,6 +316,15 @@ def _candle_rows(candles: Sequence[Candle], indices: Sequence[int]) -> list[dict
     ]
 
 
+def _window_indices(candles: Sequence[Candle], window: ShapeWindow) -> tuple[int, ...]:
+    """Resolve window timestamps against the full series used for charting."""
+    return tuple(
+        index
+        for index, candle in enumerate(candles)
+        if window.ts_start <= candle.ts_utc <= window.ts_end
+    )
+
+
 def _save_shape_card(
     candles: Sequence[Candle],
     query: ShapeWindow,
@@ -326,14 +341,14 @@ def _save_shape_card(
     except Exception:
         return False
     figure, axes = plt.subplots(2, 1, figsize=(12, 8), constrained_layout=True)
-    query_indices = range(query.start, query.end)
+    query_indices = _window_indices(candles, query)
     axes[0].plot(
         [candles[index].ts_utc for index in query_indices],
         [candles[index].close for index in query_indices],
         label="query",
     )
     for match in matches[:5]:
-        indices = range(match.window.start, match.window.end)
+        indices = _window_indices(candles, match.window)
         axes[0].plot(
             [candles[index].ts_utc for index in indices],
             [candles[index].close for index in indices],
@@ -343,7 +358,7 @@ def _save_shape_card(
     axes[0].set_title("Query and top shape matches")
     axes[0].legend(loc="best", fontsize="small")
     for item in controls[:5]:
-        indices = range(item.start, item.end)
+        indices = _window_indices(candles, item)
         axes[1].plot(
             [candles[index].ts_utc for index in indices],
             [candles[index].close for index in indices],
