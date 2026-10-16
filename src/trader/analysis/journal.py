@@ -448,7 +448,7 @@ class AnalysisJournal:
         }
 
     @staticmethod
-    def _from_row(row: Mapping[str, Any]) -> AnalysisCall:
+    def _from_row(row: Mapping[Any, Any]) -> AnalysisCall:
         return AnalysisCall(
             id=str(row["id"]),
             created_at=_utc(row["created_at"]),
