@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 388,
+  "revision": 389,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143 to T-148 accepted as diagnostics (T-148 mirror part outstanding). T-149 (Tai rules on recorded Capital.com data) is back with Codex for fixes: NAS100 3m shows zero signals and needs explaining. Recorded real spreads are 1.8 pts NAS100 and 0.5 XAUUSD. T-146 movement matching still needs its design note; option B waits for the owner's trade list.",
+    "summary": "Codex is addressing Claude cycle-1 changes for T-149 and the corrected T-148 full inversion mirror.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -1107,7 +1107,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b4\u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00b4\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00a3\u0622\u00b9\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0637\u0152\u0623\u00a2\u00e2\u20ac\u200c\u0639\u00a9\u0637\u00b8\u00e2\u20ac\u21221 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط·آ´أ¢â€¢ع¾ط·آ´ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¢آ¤ط·آ¬ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط¢آ£ط·آ¸ط¸â‚¬ط£آ¹ط·آ¸ط¢آ¤ط·طŒأ¢â€‌ع©ط¸â€™1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -4898,7 +4898,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04"
@@ -4919,7 +4919,7 @@
         "docs/evidence/t149_recorded_tai_trades.csv"
       ],
       "completion_note": "Completed all six required symbol/timeframe runs on the Pod recorder lake: NAS100 and XAUUSD at 1m, 3m and 5m; 60m is omitted because the 10-11 observed days are too short. The data check records first/last UTC minutes, bounded intraday gaps, bid-above-ask and zero-spread rows, and UTC-hour spread median, p90 and max. Indicators use only recorded bid/ask mid bars after a 200-bar warm-up; entries and exits fill on the real side and the CSV includes UTC/Riyadh times, levels, reasons, real/dashboard results and entry spread. Safety flags are clean: sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0, orders=0, and no lake writes. The owner trade list was absent, so no matching was invented. Ruff check, Ruff format, py_compile and git diff --check pass; pytest is unavailable on desktop and Pod.",
-      "review_note": "Changes requested (cycle 1, V-370). Fix list: (1) NAS100 3m gave ZERO trades in 11 days although T-147 history gives about 3.6 signals a day on 3m (the owner's timeframe): add a per-group funnel (closed signal-timeframe blocks, blocks dropped because of missing minutes, Heikin Ashi crosses, after EMA200, ADX, VWAP, no-chase, risk cap, refresh) and explain the zero; if blocks are dropped because of recorder gaps (552 missing minutes NAS100, 1,333 XAUUSD), build the signal-timeframe bars by clock-time buckets from the minutes that exist and rerun all six groups. (2) Add to the table the recorded real spread next to the assumed costs (recorded median 1.8 points NAS100 and 0.5 XAUUSD versus the lab's 4 and 1.6) and state that older results used higher costs. (3) Cosmetics: ISO times in the JSON lose their T separator and a text string lost its spaces; exit_reason says 'stop' for trades that closed at entry after 1R, use stop_initial / stop_at_entry_after_1R / tp3 / time. (4) Do not set a task to done or write a pass validation for your own work: hand over in review. (5) Mirror (T-148 Part 1 was not delivered, see V-371): replace the mirror with a true inversion (flip the signal AND the filter sides, stop and targets on the inverted side), rerun for all 8 T-147 groups and 5 periods, add it as mirror_full_v2 in docs/evidence/t148_exit_study_summary.json without changing existing numbers. (6) Run ruff check and ruff format (line length 100) before handing over, keep UTF-8 intact and do not rewrite old handoff entries."
+      "review_note": "Addressing Claude cycle-1 review: add a per-group funnel and gap-tolerant signal bars for NAS100 3m, record spreads and corrected exit labels, preserve ISO timestamps, and implement the true full inversion mirror for T-148."
     }
   ],
   "decisions": [
@@ -6032,7 +6032,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00ab\u0637\u00b7\u0622\u00b8\u0637\u00a2\u00e2\u201a\u00ac\u0637\u00a2\u0622\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ¢â€¢ع¾ط·آ«ط·آ¸ط¢â‚¬ط¢آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -14633,7 +14633,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -14913,7 +14913,7 @@
     },
     {
       "revision": 83,
-      "ts": "2026-10-05T06:56:37.132076+00:00",
+      "ts": "2026-10-05T09:56:37.132076+03:00",
       "agent": "codex",
       "action": "prepare_t026_execution_for_full_review",
       "task_ids": [
@@ -14948,7 +14948,7 @@
     },
     {
       "revision": 85,
-      "ts": "2026-10-05T07:16:12.179745+00:00",
+      "ts": "2026-10-05T10:16:12.179745+03:00",
       "agent": "codex",
       "action": "address_t026_full_review_cycle_1",
       "task_ids": [
@@ -15350,7 +15350,7 @@
     },
     {
       "revision": 112,
-      "ts": "2026-10-06T06:16:56.850Z",
+      "ts": "2026-10-06T06:16:56.85Z",
       "agent": "codex",
       "action": "implement_t032_visualization",
       "task_ids": [
@@ -15380,7 +15380,7 @@
     },
     {
       "revision": 114,
-      "ts": "2026-10-06T06:41:44.180Z",
+      "ts": "2026-10-06T06:41:44.18Z",
       "agent": "codex",
       "action": "address_t032_review_cycle_1",
       "task_ids": [
@@ -21767,7 +21767,7 @@
     },
     {
       "revision": 387,
-      "ts": "2026-10-16T11:07:56.613012+00:00",
+      "ts": "2026-10-16T14:07:56.613012+03:00",
       "agent": "codex",
       "action": "start_and_complete_t149_recorded_tai",
       "task_ids": [
@@ -21801,6 +21801,20 @@
         "tests/unit/test_t149_scripts.py"
       ],
       "summary": "T-149 changes requested (cycle 1, V-370): NAS100 3m has zero trades in 11 days, which needs a funnel and likely a gap-tolerant bar build; recorded spreads (1.8 NAS100, 0.5 XAUUSD) are far below the lab's assumed costs; cosmetics; Codex must not set done itself. Also corrected my V-368: the T-148 mirror was not fixed (V-371); the true inversion is item 5 of the fix list. Merged Codex's two consecutive log entries into one with original wording; rebuilt on main with Codex's files."
+    },
+    {
+      "revision": 389,
+      "ts": "2026-10-16T11:30:32.7706134Z",
+      "agent": "codex",
+      "action": "start_t149_review_fixes",
+      "task_ids": [
+        "T-149",
+        "T-148"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-149 review fixes from authoritative origin/main after Claude requested changes in V-370/V-371. Will add the required signal funnel and gap-tolerant bars, record spreads and exit labels, and deliver the true T-148 mirror_full_v2 without changing prior numbers."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
