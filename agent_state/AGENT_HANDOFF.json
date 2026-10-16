@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "human",
-  "revision": 400,
+  "revision": 403,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-146 failed review twice; the owner decides how to continue (Q-059). Pod real-lake run for T-146 is still pending.",
+    "summary": "T-146 code accepted. Waiting for the Pod run of T-146 (Q-058). T-151 and T-152 stay blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4821,7 +4821,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04"
@@ -4837,17 +4837,24 @@
         "Execution safety as in T-145: report CPU and RAM first, plan disjoint parallel work before launching, 13 GB total cap, per-worker RSS watchdog, checkpoints, no-progress stop, exit-code wrapper. Evidence docs/evidence/t146_matching_summary.json plus a plain-language report with a few example charts (shape, its matches, what followed). CI-importable unit tests, ruff check and format clean. PR, ONE log entry, validation entry, set to review, hand the turn to claude.",
         "Design note written: follow docs/specs/t146_movement_matching.md (split dates, parameters, shape cards and overview charts per owner request 2026-10-16 22:36). Where this list and the note differ, the note is the newer one.",
         "Changes requested V-377: (1) bound the scan: correlation pre-filter keeps the best 200 candidates per query, DTW only on those, plus LB_Keogh early abandon; pre-register a deterministic query sample (every m-th out-of-sample window, at most 2000 queries per symbol/timeframe/length) and state it in the evidence; run 60m first and report the measured time per group before 1m; (2) implement section 5 clusters (k-medoids on DTW over a sample of at most 3000 in-sample windows, k in {8,16,32}) and per-cluster in-sample and out-of-sample results vs random control, net of cost; (3) overview chart per symbol/timeframe; (4) mark each result found only if out-of-sample, net of cost and significant after Bonferroni on the full trial count (include cluster k and method in the count); (5) plain-language report with a verdict per symbol/timeframe. Keep the existing tests and add tests for the bounded scan and cluster assignment. The real-lake run still needs the Pod (Q-058); do not wait for it to finish these code changes.",
-        "Changes requested V-379 (cycle 2, the last allowed): (1) COST BUG: summarise_moves and _paired_sign_pvalue compute net as value - cost if value > 0 else value + cost, which SHRINKS losing moves and has no trade direction. Replace with an explicit pre-registered rule: trade direction = sign of the MEDIAN forward move of the matches (query level) or of the in-sample cluster members (cluster level), both known before the outcome; net = direction * move_points - cost_points (cost always subtracted); flat direction = no trade. (2) The OOS TEST IS MISSING: per-query results currently summarise what followed the MATCHES (past data). The out-of-sample result must be the QUERY's own realized forward move at each horizon: predicted direction from its matches, realized = query's forward move, net as in (1). Do the same for the random control (direction from the control windows' median, applied to the same query outcome) and compare paired per query. For clusters: direction from in-sample members, applied to the OOS queries assigned to the cluster. Report count of trades, win rate, mean net points, control mean net points, edge, sign-test p and FOUND/NOT_FOUND with Bonferroni on the full trial count. (3) PERFORMANCE: forward_move scans all candles linearly for each call; build a timestamp-to-index dict once per group and pass it in. (4) Add tests: a losing short is NOT improved by cost (net = -move - cost), a planted repeated shape followed by a rise gives FOUND on OOS while white noise gives NOT_FOUND, and the dictionary lookup matches the linear scan. Keep the earlier fixes. Real-lake run on the Pod after acceptance; if a third problem remains this goes to the owner."
+        "Changes requested V-379 (cycle 2, the last allowed): (1) COST BUG: summarise_moves and _paired_sign_pvalue compute net as value - cost if value > 0 else value + cost, which SHRINKS losing moves and has no trade direction. Replace with an explicit pre-registered rule: trade direction = sign of the MEDIAN forward move of the matches (query level) or of the in-sample cluster members (cluster level), both known before the outcome; net = direction * move_points - cost_points (cost always subtracted); flat direction = no trade. (2) The OOS TEST IS MISSING: per-query results currently summarise what followed the MATCHES (past data). The out-of-sample result must be the QUERY's own realized forward move at each horizon: predicted direction from its matches, realized = query's forward move, net as in (1). Do the same for the random control (direction from the control windows' median, applied to the same query outcome) and compare paired per query. For clusters: direction from in-sample members, applied to the OOS queries assigned to the cluster. Report count of trades, win rate, mean net points, control mean net points, edge, sign-test p and FOUND/NOT_FOUND with Bonferroni on the full trial count. (3) PERFORMANCE: forward_move scans all candles linearly for each call; build a timestamp-to-index dict once per group and pass it in. (4) Add tests: a losing short is NOT improved by cost (net = -move - cost), a planted repeated shape followed by a rise gives FOUND on OOS while white noise gives NOT_FOUND, and the dictionary lookup matches the linear scan. Keep the earlier fixes. Real-lake run on the Pod after acceptance; if a third problem remains this goes to the owner.",
+        "Owner chose Q-059 option 2. Claude delivered the reference statistics scripts/lab_t146_stats.py and tests/unit/test_t146_stats.py (merged, do not change the formulas). Codex now: (1) in scripts/lab_t146_matching.py delete _net_move_points, _predict_direction, _paired_sign_pvalue and _multiple_testing_summary and call lab_t146_stats instead (import it the same way the Candle import is done, so direct script runs still work); (2) per group (symbol, timeframe, length, method, horizon) build one QueryRecord per OOS query (match_moves and control_moves = forward move points of the matches and of the random controls, realized = the query's own forward move) and call evaluate_group once with the FULL trial count (symbols x timeframes x lengths x methods x horizons plus cluster k); (3) clusters: call evaluate_cluster with the in-sample member moves, control moves and the realized moves of the OOS queries assigned to the cluster; (4) build timestamp_index(candles) once per group and use it inside forward_move (pass the dict in); (5) report trades, win_rate, mean_net_points, control_mean_net_points, edge_points, sign_test_p, verdict per group in the evidence JSON and the plain-language report; (6) keep existing tests, remove/adjust the ones that tested the deleted functions, ruff and format clean. This is wiring only: no new statistics. Real-lake run on the Pod after acceptance."
       ],
       "review_cycles": 2,
       "evidence": [
         "docs/specs/t146_movement_matching.md",
+        "scripts/lab_t146_stats.py",
+        "tests/unit/test_t146_stats.py",
         "scripts/lab_t146_matching.py",
         "tests/unit/test_t146_scripts.py"
       ],
-      "completion_note": "Implemented Claude review cycle 2: directional net-of-cost accounting now charges cost on adverse moves, and every out-of-sample query records its realized move against the side predicted by past matches. Cluster summaries use the same directional formula. Focused unit functions, Python compilation and diff checks pass. The owner-supplied reachable Pod lake was read-only checked; bounded max_queries=64 and max_queries=6 attempts exceeded the safe runtime bound without emitting canonical evidence. No broker, orders, holdout or promotion activity.",
+      "completion_note": "Wired the Claude reference statistics into the T-146 scan without changing the formulas: each group aggregates one QueryRecord per OOS query, clusters call evaluate_cluster, timestamp_index is built once per group, and the JSON/report expose the required group statistics. Removed the superseded local statistics helpers and adjusted tests for the new import boundary. py_compile, compileall, 11 focused matching tests, 8 reference statistics tests, line-length and diff checks pass. pytest and Ruff are unavailable in the desktop shell. The alternate owner-supplied Pod terminal is reachable, but its workspace has no T-146 checkout or lab_t146_matching.py, so no real-lake evidence was generated. No broker, orders, holdout or promotion activity.",
       "deliverables": [
-        "docs/specs/t146_movement_matching.md"
+        "docs/specs/t146_movement_matching.md",
+        "scripts/lab_t146_stats.py",
+        "tests/unit/test_t146_stats.py",
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py"
       ]
     },
     {
@@ -12928,6 +12935,39 @@
       "validated_by": "claude",
       "date": "2026-10-16T20:59:00Z",
       "reverify_if": "scripts/lab_t146_matching.py changes"
+    },
+    {
+      "id": "V-382",
+      "task_id": "T-146",
+      "subject": "T-146 reference statistics wiring",
+      "method": "Read the handoff acceptance criteria and reference statistics implementation; ran py_compile, compileall, direct execution of all 8 reference-statistics and 11 matching tests, a report-field assertion, line-length check and git diff --check. Checked the supplied Pod terminal with bounded read-only commands.",
+      "result": "pass",
+      "checked": "The scan calls evaluate_group once per length/method/horizon with one QueryRecord per query, evaluate_cluster receives member/control/OOS realized moves, timestamp_index is reused within each group, and required statistics are emitted in JSON and the plain-language report. The Pod endpoint is reachable but does not contain the branch checkout or T-146 script, so the real-lake run remains pending.",
+      "evidence": [
+        "scripts/lab_t146_stats.py",
+        "tests/unit/test_t146_stats.py",
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-16T23:26:27.309378+00:00",
+      "reverify_if": "The T-146 wiring, reference statistics formulas or Pod checkout changes."
+    },
+    {
+      "id": "V-383",
+      "task_id": "T-146",
+      "subject": "T-146 movement matching code, wiring of reference statistics",
+      "method": "Read the wiring in scripts/lab_t146_matching.py against scripts/lab_t146_stats.py; reference formulas untouched (diff empty); ruff check and ruff format (line length 100) run on the whole repo, one format-only fix by Claude; CI quality decides the tests (pytest is not installed on the Claude machine; the 8 reference tests passed locally by direct call).",
+      "result": "pass",
+      "checked": "One QueryRecord per OOS query with match moves, control moves and the query's own realized move; one evaluate_group call per symbol/timeframe/length/method/horizon with the full trial count (matching plus cluster trials); evaluate_cluster uses in-sample member moves against the OOS queries assigned to the cluster; forward_move uses the timestamp index built once per group; old cost and sign-test helpers removed. Holdout end stays at the boundary and no broker, order or promotion code is touched. Not yet done: the real-lake run on the Pod (Q-058), so there is no market result yet.",
+      "evidence": [
+        "scripts/lab_t146_matching.py:376",
+        "scripts/lab_t146_matching.py:680",
+        "scripts/lab_t146_stats.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-16T21:50:00Z",
+      "reverify_if": "scripts/lab_t146_matching.py or scripts/lab_t146_stats.py changes"
     }
   ],
   "blockers": [
@@ -13817,8 +13857,8 @@
         "Park T-146 and keep it as unfinished diagnostic work; move to T-151/T-152 first"
       ],
       "recommendation": "Option 2. The same mistake came back after two written instructions, so a written reference function with its own tests is safer than a third round of prose. The code is a diagnostic only and touches no broker, risk or gate file.",
-      "status": "open",
-      "answer": ""
+      "status": "answered",
+      "answer": "Owner 2026-10-16: do the recommended option (option 2: Claude writes the corrected statistics function and tests, Codex wires it in)."
     }
   ],
   "log": [
@@ -22312,7 +22352,54 @@
       ],
       "summary": "T-146 reviewed after Codex cycle 2 (V-381, fail). Cost direction is fixed, but the out-of-sample test, per-group totals, median direction, index dictionary and requested tests are still missing. Two cycles are used up, so Q-059 asks the owner how to continue (recommendation: Claude writes a reference statistics function with tests). T-146 set to blocked. Turn to human.",
       "validation": "V-381"
+    },
+    {
+      "revision": 401,
+      "ts": "2026-10-17T00:30:00+03:00",
+      "agent": "claude",
+      "action": "t146_reference_stats_handoff",
+      "task_ids": [
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t146_stats.py",
+        "tests/unit/test_t146_stats.py"
+      ],
+      "summary": "Owner answered Q-059 with option 2. Claude wrote the reference statistics (median direction, cost always subtracted, query's own realized move, paired control, per-group totals, sign test, Bonferroni, timestamp index) with 8 unit tests that pass locally, ruff clean. T-146 set to changes_requested for wiring only (no extra review cycle counted). Owner also said: do not wait for confirmation on tasks, and merging is authorized even after a failed review (CI must still have started and passed). Turn to Codex.",
+      "validation": "V-381"
+    },
+    {
+      "revision": 402,
+      "ts": "2026-10-16T23:26:27.309409+00:00",
+      "agent": "codex",
+      "action": "complete_t146_stats_wiring",
+      "task_ids": [
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py"
+      ],
+      "summary": "Wired Claude's reference statistics into the T-146 scan, aggregated per-query OOS records, added indexed forward lookup and required report fields, and handed T-146 to Claude for review. Desktop compile and focused tests pass; pytest/Ruff are not installed. The reachable Pod workspace has no T-146 checkout, so the real-lake run remains pending. No broker, order, holdout or promotion activity.",
+      "validation": "V-382"
+    },
+    {
+      "revision": 403,
+      "ts": "2026-10-17T00:55:00+03:00",
+      "agent": "claude",
+      "action": "accept_t146_code",
+      "task_ids": [
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t146_matching.py"
+      ],
+      "summary": "T-146 code accepted (V-383): Codex wired the reference statistics correctly. Claude applied one format-only fix (ruff format) that CI had flagged. The real market result still needs the Pod run (Q-058, owner action). Nothing else is queued for Codex, so the turn goes to the owner.",
+      "validation": "V-383"
     }
   ],
-  "project_summary": "T-146 failed review twice; waiting on the owner's answer to Q-059."
+  "project_summary": "T-146 code accepted; the real-lake run on the Pod (Q-058) is the next step and needs the owner."
 }
