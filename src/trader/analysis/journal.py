@@ -214,7 +214,9 @@ class AnalysisJournal:
             outcome=outcome,
         )
         identifier = call_id or str(uuid.uuid4())
-        if identifier in self._calls or self._load(identifier) is not None:
+        if identifier in self._calls or (
+            self._engine is not None and self._load(identifier) is not None
+        ):
             raise AnalysisJournalError("call id already exists")
         call = AnalysisCall(
             id=identifier,
