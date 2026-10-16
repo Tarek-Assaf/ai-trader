@@ -95,6 +95,41 @@ def test_query_sampling_is_bounded_and_deterministic() -> None:
     assert [item.start for item in sampled] == [0, 4, 8]
 
 
+def test_cost_is_charged_on_adverse_moves() -> None:
+    module = load_script()
+    rows = (
+        {"available": 1, "move_points": 10.0, "direction": "up"},
+        {"available": 1, "move_points": -10.0, "direction": "down"},
+    )
+    summary = module.summarise_moves(rows, cost_points=4.0)
+    assert summary["mean_net_points"] == -4.0
+    short = module.summarise_moves(rows, cost_points=4.0, trade_direction="down")
+    assert short["mean_net_points"] == -4.0
+
+
+def test_prediction_records_query_outcome_and_direction() -> None:
+    module = load_script()
+    matched = (
+        {"available": 1, "move_points": 3.0, "direction": "up"},
+        {"available": 1, "move_points": 2.0, "direction": "up"},
+    )
+    control = (
+        {"available": 1, "move_points": -1.0, "direction": "down"},
+        {"available": 1, "move_points": 0.5, "direction": "up"},
+    )
+    query = ({"available": 1, "move_points": 4.0, "direction": "up"},)
+    summary = module._multiple_testing_summary(
+        matched,
+        control,
+        cost_points=1.0,
+        trial_count=1,
+        trade_direction="up",
+        query_rows=query,
+    )
+    assert summary["trade_direction"] == "up"
+    assert summary["query_outcome"]["mean_net_points"] == 3.0
+
+
 def test_cluster_assignment_keeps_medoid_members() -> None:
     module = load_script()
     library = tuple(

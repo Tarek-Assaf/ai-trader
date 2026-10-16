@@ -297,18 +297,54 @@ def find_matches(
     return _non_overlapping(scored, len(query.values), k)
 
 
+def _direction_sign(direction: str | None) -> int:
+    """Return the payoff sign for an explicitly directed trade."""
+    if direction == "up":
+        return 1
+    if direction == "down":
+        return -1
+    return 0
+
+
+def _net_move_points(
+    row: dict[str, Any], cost_points: float, trade_direction: str | None = None
+) -> float | None:
+    """Apply round-trip cost to a move using the direction being traded."""
+    if not row.get("available"):
+        return None
+    move = float(row["move_points"])
+    sign = _direction_sign(trade_direction)
+    if sign == 0:
+        # A raw movement summary is long-oriented.  Costs are always paid,
+        # including when the movement is adverse.
+        return move - cost_points
+    return move * sign - cost_points
+
+
+def _predict_direction(rows: Sequence[dict[str, Any]]) -> str | None:
+    """Infer the side to trade from the mean forward move of past matches."""
+    available = [row for row in rows if row.get("available")]
+    if not available:
+        return None
+    average = mean(float(row["move_points"]) for row in available)
+    return "up" if average > 0 else "down" if average < 0 else "flat"
+
+
 def _paired_sign_pvalue(
-    matched: Sequence[dict[str, Any]], control: Sequence[dict[str, Any]], cost_points: float
+    matched: Sequence[dict[str, Any]],
+    control: Sequence[dict[str, Any]],
+    cost_points: float,
+    trade_direction: str | None = None,
 ) -> float | None:
     """Exact two-sided sign-test p-value for paired net moves."""
     differences: list[float] = []
     for left, right in zip(matched, control, strict=False):
         if not left.get("available") or not right.get("available"):
             continue
-        left_move = float(left["move_points"])
-        right_move = float(right["move_points"])
-        left_net = left_move - cost_points if left_move > 0 else left_move + cost_points
-        right_net = right_move - cost_points if right_move > 0 else right_move + cost_points
+        left_net = _net_move_points(left, cost_points, trade_direction)
+        right_net = _net_move_points(right, cost_points, trade_direction)
+        if left_net is None or right_net is None:
+            continue
         if left_net != right_net:
             differences.append(left_net - right_net)
     if not differences:
@@ -326,22 +362,44 @@ def _multiple_testing_summary(
     *,
     cost_points: float,
     trial_count: int,
+    trade_direction: str | None = None,
+    query_rows: Sequence[dict[str, Any]] = (),
 ) -> dict[str, Any]:
-    matched_summary = summarise_moves(matched, cost_points=cost_points)
-    control_summary = summarise_moves(control, cost_points=cost_points)
+    matched_summary = summarise_moves(
+        matched, cost_points=cost_points, trade_direction=trade_direction
+    )
+    control_summary = summarise_moves(
+        control, cost_points=cost_points, trade_direction=trade_direction
+    )
+    query_summary = (
+        summarise_moves(query_rows, cost_points=cost_points, trade_direction=trade_direction)
+        if query_rows
+        else None
+    )
     left = matched_summary.get("mean_net_points")
     right = control_summary.get("mean_net_points")
     edge = float(left - right) if left is not None and right is not None else None
-    p_value = _paired_sign_pvalue(matched, control, cost_points)
+    p_value = _paired_sign_pvalue(matched, control, cost_points, trade_direction)
     alpha = 0.05 / max(1, trial_count)
+    query_positive = query_summary is None or (
+        query_summary.get("mean_net_points") is not None
+        and float(query_summary["mean_net_points"]) > 0
+    )
     verdict = (
         "FOUND"
-        if edge is not None and edge > 0 and p_value is not None and p_value <= alpha
+        if edge is not None
+        and edge > 0
+        and p_value is not None
+        and p_value <= alpha
+        and trade_direction in {"up", "down"}
+        and query_positive
         else "NOT_FOUND"
     )
     return {
         "matches": matched_summary,
         "random_control": control_summary,
+        "query_outcome": query_summary,
+        "trade_direction": trade_direction,
         "mean_net_edge_points": edge,
         "paired_sign_p_value": p_value,
         "bonferroni_alpha": alpha,
@@ -451,10 +509,15 @@ def summarise_moves(
     rows: Sequence[dict[str, Any]],
     *,
     cost_points: float,
+    trade_direction: str | None = None,
 ) -> dict[str, Any]:
     available = [row for row in rows if row.get("available")]
     values = [float(row["move_points"]) for row in available]
-    net = [value - cost_points if value > 0 else value + cost_points for value in values]
+    net = [
+        net_move
+        for row in available
+        if (net_move := _net_move_points(row, cost_points, trade_direction)) is not None
+    ]
     return {
         "count": len(available),
         "up_share": (sum(row.get("direction") == "up" for row in available) / len(available))
@@ -464,6 +527,7 @@ def summarise_moves(
         "median_move_points": median(values) if values else None,
         "mean_net_points": mean(net) if net else None,
         "assumed_round_trip_cost_points": cost_points,
+        "trade_direction": trade_direction,
     }
 
 
@@ -636,6 +700,7 @@ def _cluster_evidence(
                     if controls
                     else {"available": 0}
                 )
+            trade_direction = _predict_direction(in_matches)
             horizon_rows.append(
                 {
                     "horizon": horizon,
@@ -644,13 +709,17 @@ def _cluster_evidence(
                         in_controls,
                         cost_points=ASSUMED_COSTS[instrument],
                         trial_count=trial_count,
+                        trade_direction=trade_direction,
                     ),
                     "out_of_sample": _multiple_testing_summary(
                         oos_matches,
                         oos_controls,
                         cost_points=ASSUMED_COSTS[instrument],
                         trial_count=trial_count,
+                        trade_direction=trade_direction,
+                        query_rows=oos_matches,
                     ),
+                    "trade_direction": trade_direction,
                 }
             )
         rows.append(
@@ -716,6 +785,16 @@ def run_group(
                     control_rows = [
                         forward_move(candles, item, horizon=horizon) for item in controls
                     ]
+                    query_row = forward_move(candles, query, horizon=horizon)
+                    trade_direction = _predict_direction(matched_rows)
+                    summary = _multiple_testing_summary(
+                        matched_rows,
+                        control_rows,
+                        cost_points=ASSUMED_COSTS[instrument],
+                        trial_count=trial_count,
+                        trade_direction=trade_direction,
+                        query_rows=(query_row,),
+                    )
                     results.append(
                         {
                             "length": length,
@@ -723,12 +802,25 @@ def run_group(
                             "query_start": query.ts_start.isoformat(),
                             "method": method,
                             "horizon": horizon,
-                            **_multiple_testing_summary(
-                                matched_rows,
-                                control_rows,
-                                cost_points=ASSUMED_COSTS[instrument],
-                                trial_count=trial_count,
-                            ),
+                            "prediction": {
+                                "direction": trade_direction,
+                                "query_move_points": query_row.get("move_points"),
+                                "query_trade_net_points": (
+                                    _net_move_points(
+                                        query_row,
+                                        ASSUMED_COSTS[instrument],
+                                        trade_direction,
+                                    )
+                                    if trade_direction in {"up", "down"}
+                                    else None
+                                ),
+                                "query_prediction_correct": (
+                                    summary["query_outcome"] is not None
+                                    and summary["query_outcome"].get("mean_net_points") is not None
+                                    and float(summary["query_outcome"]["mean_net_points"]) > 0
+                                ),
+                            },
+                            **summary,
                         }
                     )
                 if query_number < 6 and method == "dtw":
@@ -789,6 +881,10 @@ def render_report(payload: dict[str, Any]) -> str:
         "",
         "Each result uses past-only ATR-normalised windows, DTW and a correlation baseline, "
         "with a random control matched for count and time spread.",
+        "Net movement applies the cost to a stated trade direction; an adverse move is "
+        "charged the cost rather than made less negative. OOS verdicts also require the "
+        "query's own realized move to be positive after following the direction predicted "
+        "by its past matches.",
         "",
         "## Groups",
         "",
