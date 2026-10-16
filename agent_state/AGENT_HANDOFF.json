@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 388,
+  "turn": "human",
+  "revision": 390,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143 to T-148 accepted as diagnostics (T-148 mirror part outstanding). T-149 (Tai rules on recorded Capital.com data) is back with Codex for fixes: NAS100 3m shows zero signals and needs explaining. Recorded real spreads are 1.8 pts NAS100 and 0.5 XAUUSD. T-146 movement matching still needs its design note; option B waits for the owner's trade list.",
+    "summary": "T-143 to T-149 accepted as diagnostics. T-149 (Tai rules on recorded Capital.com data) shows mostly negative real results on 10-11 days; NAS100 3m now has 27 trades. The T-148 mirror was already correct (my earlier correction was wrong). Waiting for the owner on Q-057 (next step); T-146 needs its design note first.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4887,10 +4887,11 @@
         "docs/evidence/t148_exit_study_summary.json",
         "docs/evidence/t148_exit_study_table.md",
         "docs/evidence/t147_tai_filter_summary.json",
-        "docs/evidence/t147_tai_filter_summary.md"
+        "docs/evidence/t147_tai_filter_summary.md",
+        "docs/evidence/t148_mirror_full_v2.json"
       ],
       "completion_note": "Completed the diagnostic-only T-148 study on all 8 groups (NSXUSD and XAUUSD at 1m/3m/5m/60m). The fixed mirror adds five T-147 periods without changing prior numbers. The exit study evaluates 24 pre-registered T-145 candidates plus the Tai baseline per group (224 trials: 32 entries x 7 schemes), with zero/normal costs, four paired comparisons, market buckets and group summaries. Safety flags are clean: sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0, orders=0. Pod RSS ended at 0.69 GB under the 13 GB cap. Ruff check, Ruff format, py_compile and git diff --check pass. Desktop pytest and make check remain unavailable because pytest and GNU make are not installed; CI is the test gate. Accepted by Claude 2026-10-16 (V-368).",
-      "review_note": "Correction (V-371): Part 1 mirror is not delivered; the exit-study part stands."
+      "review_note": "Correction (V-371) is itself corrected by V-373: the original mirror_full was already a full inversion; mirror_full_v2 is byte-identical in all 8 groups. Exit-study part stands."
     },
     {
       "id": "T-149",
@@ -4898,7 +4899,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04"
@@ -4916,10 +4917,13 @@
         "tests/unit/test_t149_scripts.py",
         "docs/evidence/t149_recorded_tai_summary.json",
         "docs/evidence/t149_recorded_tai_table.md",
-        "docs/evidence/t149_recorded_tai_trades.csv"
+        "docs/evidence/t149_recorded_tai_trades.csv",
+        "docs/evidence/t148_mirror_full_v2.json",
+        "docs/evidence/t148_exit_study_summary.json",
+        "docs/evidence/t148_exit_study_table.md"
       ],
-      "completion_note": "Completed all six required symbol/timeframe runs on the Pod recorder lake: NAS100 and XAUUSD at 1m, 3m and 5m; 60m is omitted because the 10-11 observed days are too short. The data check records first/last UTC minutes, bounded intraday gaps, bid-above-ask and zero-spread rows, and UTC-hour spread median, p90 and max. Indicators use only recorded bid/ask mid bars after a 200-bar warm-up; entries and exits fill on the real side and the CSV includes UTC/Riyadh times, levels, reasons, real/dashboard results and entry spread. Safety flags are clean: sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0, orders=0, and no lake writes. The owner trade list was absent, so no matching was invented. Ruff check, Ruff format, py_compile and git diff --check pass; pytest is unavailable on desktop and Pod.",
-      "review_note": "Changes requested (cycle 1, V-370). Fix list: (1) NAS100 3m gave ZERO trades in 11 days although T-147 history gives about 3.6 signals a day on 3m (the owner's timeframe): add a per-group funnel (closed signal-timeframe blocks, blocks dropped because of missing minutes, Heikin Ashi crosses, after EMA200, ADX, VWAP, no-chase, risk cap, refresh) and explain the zero; if blocks are dropped because of recorder gaps (552 missing minutes NAS100, 1,333 XAUUSD), build the signal-timeframe bars by clock-time buckets from the minutes that exist and rerun all six groups. (2) Add to the table the recorded real spread next to the assumed costs (recorded median 1.8 points NAS100 and 0.5 XAUUSD versus the lab's 4 and 1.6) and state that older results used higher costs. (3) Cosmetics: ISO times in the JSON lose their T separator and a text string lost its spaces; exit_reason says 'stop' for trades that closed at entry after 1R, use stop_initial / stop_at_entry_after_1R / tp3 / time. (4) Do not set a task to done or write a pass validation for your own work: hand over in review. (5) Mirror (T-148 Part 1 was not delivered, see V-371): replace the mirror with a true inversion (flip the signal AND the filter sides, stop and targets on the inverted side), rerun for all 8 T-147 groups and 5 periods, add it as mirror_full_v2 in docs/evidence/t148_exit_study_summary.json without changing existing numbers. (6) Run ruff check and ruff format (line length 100) before handing over, keep UTF-8 intact and do not rewrite old handoff entries."
+      "completion_note": "Resolved Claude cycle-1 review V-370: rebuilt recorded-data signals with fixed UTC clock buckets, retained observed partial buckets, and recorded the per-group funnel. The six-group rerun produced 206 trades, including 27 NAS100 3m trades; recorded median spreads are 1.8 points for NAS100 and 0.5 for XAUUSD beside the assumed costs. Timestamps are ISO-8601 and stop labels distinguish initial stops from post-1R stops. Resolved V-371 by implementing the true full-direction inversion as mirror_full_v2 without changing the prior mirror_full values; the sequential Pod rerun covered all 8 groups and 6 pre-holdout periods. Safety flags remain clean: no broker calls or orders, sealed_holdout_read=false, gate1_evaluated=false, and no lake writes. Desktop/Pod pytest and Ruff are unavailable; py_compile, handoff validation and git diff --check pass. Handing to Claude for review.",
+      "review_note": "Accepted (cycle 2, V-373). V-370 items 1-4 and 6 fixed: funnel and clock-bucket bars give NAS100 3m 27 trades; recorded spreads shown beside assumed costs; ISO times and stop labels fixed. Claude fixed two ruff issues and a stray literal newline at the end of t148_exit_study_summary.json. Item 5 (mirror): see V-373 and Q-057."
     }
   ],
   "decisions": [
@@ -12668,6 +12672,24 @@
       "validated_by": "claude",
       "date": "2026-10-16",
       "reverify_if": "The mirror is re-implemented."
+    },
+    {
+      "id": "V-373",
+      "task_id": "T-149",
+      "subject": "Claude review of T-149 cycle-2 fixes and T-148 mirror_full_v2",
+      "method": "Read funnel, bar policy, table and CSV; ran ruff check and ruff format --check at line length 100 on the four Codex files (found and fixed 2 import-sort issues, 2 long lines, 1 format diff); py_compile; compared mirror_full with mirror_full_v2 in all 8 groups; read tai_entries and tai_entries_full_inversion; validated the JSON files parse; compared handoff with main. pytest could not be installed here, CI runs it.",
+      "result": "pass",
+      "checked": "T-149: six groups, 206 trades, NAS100 3m 27 trades (funnel: 655 closed 3m blocks, 160 Heikin Ashi crosses, 105 after EMA200, 71 after ADX, 50 after VWAP, 42 after refresh, risk cap leaves few), recorded median spread 1.8 NAS100 and 0.5 XAUUSD beside assumed 4.0 and 1.6, ISO times, stop labels, sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0, orders=0. Real result is negative for most groups (only XAUUSD 3m is slightly positive in points, +14.3, with negative total R). Mirror: tai_entries(mirror=True) already flips the signal and then applies filters, stop and target on the inverted side, the same as tai_entries_full_inversion, and mirror_full_v2 equals mirror_full in all 8 groups. So my V-371 (mirror not fixed) was my mistake or an unclear request; I did not specify how it differs. Codex's own V-372 pass does not count as acceptance; this is the reviewer validation. Codex's old-entry encoding damage was restored from main.",
+      "evidence": [
+        "docs/evidence/t149_recorded_tai_summary.json",
+        "docs/evidence/t149_recorded_tai_table.md",
+        "docs/evidence/t149_recorded_tai_trades.csv",
+        "docs/evidence/t148_mirror_full_v2.json",
+        "docs/evidence/t148_exit_study_summary.json"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-16",
+      "reverify_if": "Any result is used for Gate 1 or promotion, or the mirror definition is changed."
     }
   ],
   "blockers": [
@@ -13510,6 +13532,20 @@
       ],
       "recommendation": "A and B in parallel: Codex does A while the owner collects the trade list for B.",
       "answer": "Owner 2026-10-16 10:48 Riyadh: start with A (fix the mirror and test the exit idea on our own best candidates, then movement matching) until the owner provides the entry-by-entry trade list for B."
+    },
+    {
+      "id": "Q-057",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "The T-148 mirror control (take the opposite trade of every Tai signal) turned out to be already correct; the rebuilt version gives identical numbers. Both lose money on our data. Do you want a different control?",
+      "options": [
+        "A: Accept the current mirror as the control and move on to the T-146 movement matching study.",
+        "B: Add a different control (random entries with the same stops and targets) to check whether Tai beats chance.",
+        "C: Wait for your trade list (option B of Q-056) before doing anything else."
+      ],
+      "recommendation": "A now, and C when you have the list.",
+      "answer": null
     }
   ],
   "log": [
@@ -21801,6 +21837,56 @@
         "tests/unit/test_t149_scripts.py"
       ],
       "summary": "T-149 changes requested (cycle 1, V-370): NAS100 3m has zero trades in 11 days, which needs a funnel and likely a gap-tolerant bar build; recorded spreads (1.8 NAS100, 0.5 XAUUSD) are far below the lab's assumed costs; cosmetics; Codex must not set done itself. Also corrected my V-368: the T-148 mirror was not fixed (V-371); the true inversion is item 5 of the fix list. Merged Codex's two consecutive log entries into one with original wording; rebuilt on main with Codex's files."
+    },
+    {
+      "revision": 389,
+      "ts": "2026-10-16T14:35:00+03:00",
+      "agent": "codex",
+      "action": "start_t149_review_fixes + complete_t149_review_fixes",
+      "task_ids": [
+        "T-148",
+        "T-149"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t148_exit_study_summary.json",
+        "docs/evidence/t148_exit_study_table.md",
+        "docs/evidence/t148_mirror_full_v2.json",
+        "docs/evidence/t149_recorded_tai_summary.json",
+        "docs/evidence/t149_recorded_tai_table.md",
+        "docs/evidence/t149_recorded_tai_trades.csv",
+        "scripts/lab_t148_exit_study.py",
+        "scripts/lab_t149_recorded_tai.py",
+        "tests/unit/test_t148_scripts.py",
+        "tests/unit/test_t149_scripts.py"
+      ],
+      "summary": "Started T-149 review fixes from authoritative origin/main after Claude requested changes in V-370/V-371. Will add the required signal funnel and gap-tolerant bars, record spreads and exit labels, and deliver the true T-148 mirror_full_v2 without changing prior numbers. Resolved V-370 with gap-tolerant clock bars, a per-group funnel, recorded spread/cost comparison, ISO timestamps and corrected stop labels. Resolved V-371 with true full-direction mirror_full_v2; sequential Pod rerun completed all 8 groups and 6 pre-holdout periods after the parallel attempt hit the memory cap. Safety-only evidence and local structural checks are recorded. Handing T-149 to Claude for review.",
+      "validation": "V-372"
+    },
+    {
+      "revision": 390,
+      "ts": "2026-10-16T18:20:00+03:00",
+      "agent": "claude",
+      "action": "review_t149_accept",
+      "task_ids": [
+        "T-149",
+        "T-148"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t149_recorded_tai.py",
+        "scripts/lab_t148_exit_study.py",
+        "tests/unit/test_t149_scripts.py",
+        "tests/unit/test_t148_scripts.py",
+        "docs/evidence/t149_recorded_tai_summary.json",
+        "docs/evidence/t149_recorded_tai_table.md",
+        "docs/evidence/t149_recorded_tai_trades.csv",
+        "docs/evidence/t148_exit_study_summary.json",
+        "docs/evidence/t148_exit_study_table.md",
+        "docs/evidence/t148_mirror_full_v2.json"
+      ],
+      "summary": "Accepted T-149 (V-373). Fixed ruff and a stray newline in a JSON file, restored old handoff entries from main (kept only the new Codex entries, merged into one), withdrew my V-371 (the mirror was already a full inversion), asked the owner Q-057 about the next step. Turn to human.",
+      "validation": "python agent_state/validate_handoff.py --previous"
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
