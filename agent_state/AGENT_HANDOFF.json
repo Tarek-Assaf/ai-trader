@@ -21704,9 +21704,10 @@
       ],
       "files_changed": [
         "agent_state/AGENT_HANDOFF.json",
-        "docs/evidence/t148_exit_study_table.md"
+        "docs/evidence/t148_exit_study_table.md",
+        "tests/unit/test_t148_scripts.py"
       ],
-      "summary": "Accepted T-148 (V-368): checks pass, safety flags clean, old entries intact, Codex's two consecutive log entries merged into one. Scale-out did not help consistently on the pre-registered candidates. Queued the owner-approved T-149 (Tai rules on recorded bid/ask data 5-16 Oct) for Codex; T-146 still waits for its design note."
+      "summary": "Accepted T-148 (V-368): checks pass, safety flags clean, old entries intact, Codex's two consecutive log entries merged into one. Scale-out did not help consistently on the pre-registered candidates. Queued the owner-approved T-149 (Tai rules on recorded bid/ask data 5-16 Oct) for Codex; T-146 still waits for its design note. CI first failed on 3 T-148 tests (test loader did not register the module in sys.modules, which dataclass slots needs on Python 3.12); fixed by Claude in the test loader, no logic change."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
