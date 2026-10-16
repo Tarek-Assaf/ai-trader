@@ -12954,7 +12954,7 @@
       "reverify_if": "The T-146 wiring, reference statistics formulas or Pod checkout changes."
     },
     {
-      "id": "V-382",
+      "id": "V-383",
       "task_id": "T-146",
       "subject": "T-146 movement matching code, wiring of reference statistics",
       "method": "Read the wiring in scripts/lab_t146_matching.py against scripts/lab_t146_stats.py; reference formulas untouched (diff empty); ruff check and ruff format (line length 100) run on the whole repo, one format-only fix by Claude; CI quality decides the tests (pytest is not installed on the Claude machine; the 8 reference tests passed locally by direct call).",
@@ -22397,8 +22397,8 @@
         "agent_state/AGENT_HANDOFF.json",
         "scripts/lab_t146_matching.py"
       ],
-      "summary": "T-146 code accepted (V-382): Codex wired the reference statistics correctly. Claude applied one format-only fix (ruff format) that CI had flagged. The real market result still needs the Pod run (Q-058, owner action). Nothing else is queued for Codex, so the turn goes to the owner.",
-      "validation": "V-382"
+      "summary": "T-146 code accepted (V-383): Codex wired the reference statistics correctly. Claude applied one format-only fix (ruff format) that CI had flagged. The real market result still needs the Pod run (Q-058, owner action). Nothing else is queued for Codex, so the turn goes to the owner.",
+      "validation": "V-383"
     }
   ],
   "project_summary": "T-146 code accepted; the real-lake run on the Pod (Q-058) is the next step and needs the owner."
