@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 399,
+  "turn": "human",
+  "revision": 400,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-146 review cycle 2 fixes are implemented and locally validated. The reachable Pod lake was confirmed, but bounded real-lake attempts exceeded the safe runtime bound without canonical evidence; no broker, order, holdout or promotion activity occurred.",
+    "summary": "T-146 failed review twice; the owner decides how to continue (Q-059). Pod real-lake run for T-146 is still pending.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4821,7 +4821,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "blocked",
       "requirements": [
         "R-03",
         "R-04"
@@ -12910,6 +12910,24 @@
       "validated_by": "codex",
       "date": "2026-10-17T02:45:00+03:00",
       "reverify_if": "The T-146 cost formula, prediction direction or query-outcome reporting changes."
+    },
+    {
+      "id": "V-381",
+      "task_id": "T-146",
+      "subject": "T-146 movement matching code, review cycle 3 check (after Codex cycle 2 fixes)",
+      "method": "Read the diff of scripts/lab_t146_matching.py and tests against the V-379 instructions; ruff check and ruff format (line length 100) pass; handoff validator passes. pytest is not installed on the Claude machine, so tests were not run here; CI decides.",
+      "result": "fail",
+      "checked": "Done: direction-aware cost (cost always subtracted, trade direction used), query realized move recorded next to the predicted direction, cluster results use the same formula. Still wrong: (1) trade direction is the MEAN of the match moves, not the MEDIAN fixed in V-379; (2) the sign-test p-value and the edge still compare past matches against past controls, not the query's own realized net against the control applied to the same query; (3) the verdict is computed per single query, so Bonferroni on the full trial count can never be met and nothing is aggregated (trade count, win rate, mean net points, control mean, edge, one p-value per group/method/horizon/length are missing); (4) forward_move still scans all candles per call (no timestamp-to-index dictionary); (5) the requested tests are missing (losing short not improved by cost, planted shape FOUND out-of-sample vs white noise NOT_FOUND, dictionary equals linear scan). No real-lake evidence yet (Pod run exceeded the time bound).",
+      "evidence": [
+        "scripts/lab_t146_matching.py:324",
+        "scripts/lab_t146_matching.py:333",
+        "scripts/lab_t146_matching.py:363",
+        "scripts/lab_t146_matching.py:481",
+        "tests/unit/test_t146_scripts.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-16T20:59:00Z",
+      "reverify_if": "scripts/lab_t146_matching.py changes"
     }
   ],
   "blockers": [
@@ -13786,6 +13804,20 @@
         "Defer the real-data run"
       ],
       "recommendation": "Run the read-only command on the Pod after confirming the image contains the T-146 branch code; it produces no broker calls, orders, holdout reads or promotion writes.",
+      "answer": ""
+    },
+    {
+      "id": "Q-059",
+      "to": "human",
+      "from": "claude",
+      "text": "T-146 has now failed review twice (the allowed maximum). Cycle 2 fixed the cost formula but the out-of-sample test still compares past matches with past controls instead of the query's own later outcome, and nothing is totalled per group, so no FOUND verdict can ever be reached. How do you want to continue?",
+      "options": [
+        "Claude writes the exact statistics function as a short spec with a worked numeric example and Codex implements it once more (one extra cycle, then stop)",
+        "Claude writes the corrected statistics function and tests himself in docs/specs, Codex only wires it into the scan",
+        "Park T-146 and keep it as unfinished diagnostic work; move to T-151/T-152 first"
+      ],
+      "recommendation": "Option 2. The same mistake came back after two written instructions, so a written reference function with its own tests is safer than a third round of prose. The code is a diagnostic only and touches no broker, risk or gate file.",
+      "status": "open",
       "answer": ""
     }
   ],
@@ -22266,7 +22298,21 @@
       ],
       "summary": "Implemented directional cost accounting and query-outcome versus predicted-direction checks. Local focused checks pass; bounded Pod lake attempts were stopped after the safe runtime bound without canonical evidence. No broker, orders, holdout or promotion activity.",
       "validation": "V-380"
+    },
+    {
+      "revision": 400,
+      "ts": "2026-10-16T23:59:00+03:00",
+      "agent": "claude",
+      "action": "review_t146_cycle3_question",
+      "task_ids": [
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-146 reviewed after Codex cycle 2 (V-381, fail). Cost direction is fixed, but the out-of-sample test, per-group totals, median direction, index dictionary and requested tests are still missing. Two cycles are used up, so Q-059 asks the owner how to continue (recommendation: Claude writes a reference statistics function with tests). T-146 set to blocked. Turn to human.",
+      "validation": "V-381"
     }
   ],
-  "project_summary": "T-146 review cycle 2 is ready for Claude; the code review blockers are addressed and the diagnostic remains safety-only."
+  "project_summary": "T-146 failed review twice; waiting on the owner's answer to Q-059."
 }
