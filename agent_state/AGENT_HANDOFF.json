@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 395,
+  "turn": "human",
+  "revision": 396,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-146 movement matching is in progress from the accepted design note (shape matching, random control and inspectable charts); diagnostic-only with no broker, holdout, gate or promotion activity. T-151/T-152 remain parked under D-040 and Q-057 remains open.",
+    "summary": "T-146 implementation is ready for review, but the real-lake Pod run is blocked by the provided terminal endpoint (HTTP 404/direct and browser client blocked); no evidence run was started. T-151/T-152 remain parked under D-040 and Q-057 remains open.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4821,7 +4821,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04"
@@ -4838,8 +4838,12 @@
         "Design note written: follow docs/specs/t146_movement_matching.md (split dates, parameters, shape cards and overview charts per owner request 2026-10-16 22:36). Where this list and the note differ, the note is the newer one."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Started from authoritative origin/main after Claude supplied and accepted the T-146 design note. The study is diagnostic-only: no broker calls, orders, paper trading, holdout access, gate/config edits or promotion activity.",
+      "evidence": [
+        "docs/specs/t146_movement_matching.md",
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py"
+      ],
+      "completion_note": "Implemented the diagnostic movement matcher with fixed split handling, past-only ATR-normalised windows, band-limited DTW, correlation baseline, overlap removal, time-spread random controls, forward move summaries, safety metadata and owner-facing chart generation. Synthetic acceptance checks, py_compile, handoff validation and diff checks pass. Real-lake evidence is pending because the provided Pod terminal endpoint returned HTTP 404 and the browser client blocked the terminal surface; no local lake exists, so no real-data run was started.",
       "deliverables": [
         "docs/specs/t146_movement_matching.md"
       ]
@@ -12824,6 +12828,22 @@
       "validated_by": "claude",
       "date": "2026-10-16T17:00:00Z",
       "reverify_if": "journal.py or its migration changes"
+    },
+    {
+      "id": "V-376",
+      "task_id": "T-146",
+      "subject": "T-146 implementation and synthetic contract checks",
+      "method": "Ran py_compile for the script and unit module, direct synthetic checks for DTW identity, ATR scale invariance, past-only matching, overlap removal, random-control sampling and repeated-shape ranking, handoff validation and git diff --check.",
+      "result": "pass",
+      "checked": "The implementation is importable without desktop SQLAlchemy until the lazy data loader is called. Full-lake evidence and chart files remain pending B-024.",
+      "evidence": [
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py",
+        "docs/specs/t146_movement_matching.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-16T19:55:00Z",
+      "reverify_if": "The T-146 matcher, split dates, matching parameters or Pod evidence path changes."
     }
   ],
   "blockers": [
@@ -12988,6 +13008,13 @@
       "resolution": "Restarted only worker B with setsid and --memory-limit-gb 4 after confirming the container had recovered memory; the resumed worker completed its disjoint 1,100-row range. Final B peak monitor recorded 6,272,676 KB.",
       "resolved_by": "codex",
       "resolved_at": "2026-10-15"
+    },
+    {
+      "id": "B-024",
+      "text": "T-146 real-data evidence run is blocked: the owner-provided Pod terminal URL returned HTTP 404 for bounded direct GET checks and the in-app browser reported ERR_BLOCKED_BY_CLIENT. No local data lake is present, so no real-lake diagnostic or evidence files were generated and no broker/order activity occurred.",
+      "raised_by": "codex",
+      "status": "open",
+      "resolution": "Owner must re-enable/provide a reachable Pod terminal or run the documented read-only T-146 command on the Pod and share the redacted JSON summary."
     }
   ],
   "questions": [
@@ -13680,6 +13707,19 @@
       ],
       "recommendation": "B: it is a small change and the Pod run can be bundled into the next task.",
       "answer": ""
+    },
+    {
+      "id": "Q-058",
+      "to": "human",
+      "from": "codex",
+      "status": "open",
+      "text": "T-146 code and synthetic checks are ready, but the real-lake run needs the Pod. Can you re-enable the provided terminal endpoint, or run `python scripts/lab_t146_matching.py --lake /workspace/data/lake --output /workspace/state/t146_evidence` on the Pod and share only its redacted JSON summary?",
+      "options": [
+        "Re-enable/provide the Pod terminal",
+        "Run the read-only T-146 command and share its JSON summary",
+        "Defer the real-data run"
+      ],
+      "recommendation": "Run the read-only command on the Pod after confirming the image contains the T-146 branch code; it produces no broker calls, orders, holdout reads or promotion writes."
     }
   ],
   "log": [
@@ -22097,6 +22137,21 @@
         "docs/specs/t146_movement_matching.md"
       ],
       "summary": "Started T-146 from authoritative origin/main after Claude supplied the accepted design note. The diagnostic will follow the fixed split and parameters, random controls and shape-card charts; no broker, orders, paper trading, holdout, gate or promotion activity."
+    },
+    {
+      "revision": 396,
+      "ts": "2026-10-16T19:55:00Z",
+      "agent": "codex",
+      "action": "complete_t146_code_blocked_pod",
+      "task_ids": [
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py"
+      ],
+      "summary": "Completed the T-146 code and synthetic acceptance checks; handoff is review-ready. The required real-lake run is blocked by B-024 because the supplied Pod endpoint returned 404/direct and ERR_BLOCKED_BY_CLIENT in the browser, with no local lake available. No broker, order, holdout, gate or promotion activity occurred. Turn to human for the Pod step."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
