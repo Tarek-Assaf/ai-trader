@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 397,
+  "turn": "codex",
+  "revision": 398,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4821,7 +4821,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03",
         "R-04"
@@ -4836,7 +4836,8 @@
         "Scope: NSXUSD and XAUUSD on 1m, 3m, 5m (main) and 60m (extra), 1m mandatory; history 2022 through the day before the sealed holdout, with a clear in-sample period and a later out-of-sample period fixed in advance (state the split date). Report a result as found only if it holds in the out-of-sample period.",
         "Execution safety as in T-145: report CPU and RAM first, plan disjoint parallel work before launching, 13 GB total cap, per-worker RSS watchdog, checkpoints, no-progress stop, exit-code wrapper. Evidence docs/evidence/t146_matching_summary.json plus a plain-language report with a few example charts (shape, its matches, what followed). CI-importable unit tests, ruff check and format clean. PR, ONE log entry, validation entry, set to review, hand the turn to claude.",
         "Design note written: follow docs/specs/t146_movement_matching.md (split dates, parameters, shape cards and overview charts per owner request 2026-10-16 22:36). Where this list and the note differ, the note is the newer one.",
-        "Changes requested V-377: (1) bound the scan: correlation pre-filter keeps the best 200 candidates per query, DTW only on those, plus LB_Keogh early abandon; pre-register a deterministic query sample (every m-th out-of-sample window, at most 2000 queries per symbol/timeframe/length) and state it in the evidence; run 60m first and report the measured time per group before 1m; (2) implement section 5 clusters (k-medoids on DTW over a sample of at most 3000 in-sample windows, k in {8,16,32}) and per-cluster in-sample and out-of-sample results vs random control, net of cost; (3) overview chart per symbol/timeframe; (4) mark each result found only if out-of-sample, net of cost and significant after Bonferroni on the full trial count (include cluster k and method in the count); (5) plain-language report with a verdict per symbol/timeframe. Keep the existing tests and add tests for the bounded scan and cluster assignment. The real-lake run still needs the Pod (Q-058); do not wait for it to finish these code changes."
+        "Changes requested V-377: (1) bound the scan: correlation pre-filter keeps the best 200 candidates per query, DTW only on those, plus LB_Keogh early abandon; pre-register a deterministic query sample (every m-th out-of-sample window, at most 2000 queries per symbol/timeframe/length) and state it in the evidence; run 60m first and report the measured time per group before 1m; (2) implement section 5 clusters (k-medoids on DTW over a sample of at most 3000 in-sample windows, k in {8,16,32}) and per-cluster in-sample and out-of-sample results vs random control, net of cost; (3) overview chart per symbol/timeframe; (4) mark each result found only if out-of-sample, net of cost and significant after Bonferroni on the full trial count (include cluster k and method in the count); (5) plain-language report with a verdict per symbol/timeframe. Keep the existing tests and add tests for the bounded scan and cluster assignment. The real-lake run still needs the Pod (Q-058); do not wait for it to finish these code changes.",
+        "Changes requested V-379 (cycle 2, the last allowed): (1) COST BUG: summarise_moves and _paired_sign_pvalue compute net as value - cost if value > 0 else value + cost, which SHRINKS losing moves and has no trade direction. Replace with an explicit pre-registered rule: trade direction = sign of the MEDIAN forward move of the matches (query level) or of the in-sample cluster members (cluster level), both known before the outcome; net = direction * move_points - cost_points (cost always subtracted); flat direction = no trade. (2) The OOS TEST IS MISSING: per-query results currently summarise what followed the MATCHES (past data). The out-of-sample result must be the QUERY's own realized forward move at each horizon: predicted direction from its matches, realized = query's forward move, net as in (1). Do the same for the random control (direction from the control windows' median, applied to the same query outcome) and compare paired per query. For clusters: direction from in-sample members, applied to the OOS queries assigned to the cluster. Report count of trades, win rate, mean net points, control mean net points, edge, sign-test p and FOUND/NOT_FOUND with Bonferroni on the full trial count. (3) PERFORMANCE: forward_move scans all candles linearly for each call; build a timestamp-to-index dict once per group and pass it in. (4) Add tests: a losing short is NOT improved by cost (net = -move - cost), a planted repeated shape followed by a rise gives FOUND on OOS while white noise gives NOT_FOUND, and the dictionary lookup matches the linear scan. Keep the earlier fixes. Real-lake run on the Pod after acceptance; if a third problem remains this goes to the owner."
       ],
       "review_cycles": 2,
       "evidence": [
@@ -12877,6 +12878,22 @@
       "validated_by": "codex",
       "date": "2026-10-16T20:45:00Z",
       "reverify_if": "The T-146 matcher or review criteria change."
+    },
+    {
+      "id": "V-379",
+      "task_id": "T-146",
+      "subject": "T-146 movement matching code, review cycle 2",
+      "method": "Read the cycle 1 fixes (bounded scan, LB_Keogh, clusters, overview chart, Bonferroni) against the design note; checked CI (success) and the statistics code line by line.",
+      "result": "fail",
+      "checked": "Bounded scan, query sampling, clusters and overview chart are present and match the note. Two statistical defects make the verdicts meaningless: the net-of-cost formula shrinks losing moves and has no trade direction, and the out-of-sample evaluation never measures the query's own realized outcome against the prediction from its matches. Also a linear scan per forward_move call.",
+      "evidence": [
+        "scripts/lab_t146_matching.py:450",
+        "scripts/lab_t146_matching.py:300",
+        "scripts/lab_t146_matching.py:670"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-16T22:30:00Z",
+      "reverify_if": "scripts/lab_t146_matching.py changes"
     }
   ],
   "blockers": [
@@ -22203,6 +22220,19 @@
         "tests/unit/test_t146_scripts.py"
       ],
       "summary": "Completed T-146 review cycle 1 fixes: bounded scan with deterministic query sampling, correlation prefilter, LB_Keogh pruning, rolling ATR, k-medoids cluster evidence, overview chart, Bonferroni verdicts and group timings. Ruff, format, py_compile, direct synthetic checks and a bounded Pod smoke passed. No broker, orders, holdout or promotion activity. Handing to Claude for review."
+    },
+    {
+      "revision": 398,
+      "ts": "2026-10-17T01:55:00+03:00",
+      "agent": "claude",
+      "action": "review_t146_cycle2_changes_requested",
+      "task_ids": [
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-146 review cycle 2 (V-379, fail): the bounded scan, clusters and charts are in and CI passes, but the cost formula shrinks losing moves and has no trade direction, and the out-of-sample test never compares the query's own outcome with the prediction from its matches. Exact formulas given to Codex; this is the last allowed cycle."
     }
   ],
   "project_summary": "T-146 review cycle 2 is ready for Claude; the code review blockers are addressed and the diagnostic remains safety-only."
