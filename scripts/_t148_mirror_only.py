@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from concurrent.futures import ProcessPoolExecutor
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -14,6 +15,33 @@ from scripts.lab_t148_exit_study import (
     stats,
     tai_entries_full_inversion,
 )
+
+
+def run_group(instrument: str, timeframe: int) -> tuple[str, dict[str, object]]:
+    candles = _load_window(
+            Path("/workspace/data/lake"),
+            instrument,
+            timeframe,
+            start=PERIODS["2022"][0],
+            end=END_HOLDOUT,
+        )
+    chart, entries = tai_entries_full_inversion(candles, timeframe)
+    cost = 4.0 if instrument == "NSXUSD" else 1.6
+    periods: dict[str, object] = {}
+    for period, (start, end) in PERIODS.items():
+        selected = [entry for entry in entries if start <= entry.time < end]
+        closed = simulate(chart, selected, "E0")
+        periods[period] = {
+            "zero_cost": stats(closed, chart, 0.0),
+            "normal_cost": stats(closed, chart, cost),
+        }
+    return f"{instrument}:{timeframe}", {
+            "instrument": instrument,
+            "timeframe": timeframe,
+            "bars": len(chart),
+            "entries": len(entries),
+            "periods": periods,
+        }
 
 
 def main() -> None:
@@ -30,32 +58,10 @@ def main() -> None:
     }
     groups = payload["groups"]
     assert isinstance(groups, dict)
-    for instrument, timeframe in GROUPS:
-        candles = _load_window(
-            Path("/workspace/data/lake"),
-            instrument,
-            timeframe,
-            start=PERIODS["2022"][0],
-            end=END_HOLDOUT,
-        )
-        chart, entries = tai_entries_full_inversion(candles, timeframe)
-        cost = 4.0 if instrument == "NSXUSD" else 1.6
-        periods: dict[str, object] = {}
-        for period, (start, end) in PERIODS.items():
-            selected = [entry for entry in entries if start <= entry.time < end]
-            closed = simulate(chart, selected, "E0")
-            periods[period] = {
-                "zero_cost": stats(closed, chart, 0.0),
-                "normal_cost": stats(closed, chart, cost),
-            }
-        groups[f"{instrument}:{timeframe}"] = {
-            "instrument": instrument,
-            "timeframe": timeframe,
-            "bars": len(chart),
-            "entries": len(entries),
-            "periods": periods,
-        }
-        print(f"completed {instrument}:{timeframe} entries={len(entries)}", flush=True)
+    with ProcessPoolExecutor(max_workers=4) as pool:
+        for key, result in pool.map(run_group, GROUPS):
+            groups[key] = result
+            print(f"completed {key} entries={result['entries']}", flush=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8")
 
 
