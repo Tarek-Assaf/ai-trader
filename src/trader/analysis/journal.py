@@ -124,12 +124,12 @@ def _validate_common(
         raise AnalysisJournalError("bias is invalid")
     if len(reasons) > 600:
         raise AnalysisJournalError("reasons must be at most 600 characters")
-    if isinstance(confidence, bool) or not isinstance(confidence, (float, int)):
+    if isinstance(confidence, bool) or not isinstance(confidence, float | int):
         raise AnalysisJournalError("confidence must be a number from 0 to 1")
     confidence = float(confidence)
     if not math.isfinite(confidence) or not 0 <= confidence <= 1:
         raise AnalysisJournalError("confidence must be a number from 0 to 1")
-    if not isinstance(key_levels, Iterable) or isinstance(key_levels, (str, bytes)):
+    if not isinstance(key_levels, Iterable) or isinstance(key_levels, str | bytes):
         raise AnalysisJournalError("key_levels must be a list")
     if plan is not None and not isinstance(plan, Mapping):
         raise AnalysisJournalError("plan must be an object")
@@ -145,7 +145,7 @@ def _is_hit(outcome: Mapping[str, Any]) -> bool | None:
     value = outcome.get("hit", outcome.get("result"))
     if isinstance(value, bool):
         return value
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, int | float) and not isinstance(value, bool):
         return value > 0
     if isinstance(value, str):
         normalized = value.casefold().strip()
