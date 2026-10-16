@@ -199,7 +199,7 @@ class AnalysisJournal:
         outcome: Mapping[str, Any] | None = None,
         call_id: str | None = None,
     ) -> AnalysisCall:
-        created_at, key_levels, plan = _validate_common(
+        created_at, levels, plan_data = _validate_common(
             created_at=created_at,
             symbol=symbol,
             timeframe=timeframe,
@@ -225,8 +225,8 @@ class AnalysisJournal:
             image_ref=image_ref.strip() if image_ref else None,
             market_state=market_state,
             bias=bias,
-            key_levels=key_levels,
-            plan=plan,
+            key_levels=levels,
+            plan=plan_data,
             reasons=reasons,
             confidence=float(confidence),
             outcome=dict(outcome) if outcome else None,
@@ -313,7 +313,9 @@ class AnalysisJournal:
         if self._engine is None:
             return tuple(self._calls.values())
         table = tables["analysis_journal"]
-        with self._engine.connect() as connection:
+        engine = self._engine
+        assert engine is not None
+        with engine.connect() as connection:
             rows = connection.execute(select(table)).mappings().all()
         return tuple(self._from_row(row) for row in rows)
 
@@ -388,16 +390,20 @@ class AnalysisJournal:
     def _insert(self, call: AnalysisCall) -> None:
         table = tables["analysis_journal"]
         values = self._values(call)
+        engine = self._engine
+        assert engine is not None
         try:
-            with self._engine.begin() as connection:
+            with engine.begin() as connection:
                 connection.execute(insert(table).values(**values))
         except Exception as exc:
             raise AnalysisJournalError("analysis call persistence failed") from exc
 
     def _update(self, call: AnalysisCall) -> None:
         table = tables["analysis_journal"]
+        engine = self._engine
+        assert engine is not None
         try:
-            with self._engine.begin() as connection:
+            with engine.begin() as connection:
                 connection.execute(
                     update(table)
                     .where(table.c.id == call.id)
@@ -413,7 +419,10 @@ class AnalysisJournal:
 
     def _load(self, call_id: str) -> AnalysisCall | None:
         table = tables["analysis_journal"]
-        with self._engine.connect() as connection:
+        engine = self._engine
+        if engine is None:
+            return self._calls.get(call_id)
+        with engine.connect() as connection:
             row = connection.execute(select(table).where(table.c.id == call_id)).mappings().first()
         return self._from_row(row) if row else None
 
