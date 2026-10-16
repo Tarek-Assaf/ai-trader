@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 402,
+  "turn": "human",
+  "revision": 403,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-146 reference statistics are wired into the matcher and ready for Claude review; CI and the real-lake Pod run remain pending.",
+    "summary": "T-146 code accepted. Waiting for the Pod run of T-146 (Q-058). T-151 and T-152 stay blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4821,7 +4821,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04"
@@ -12952,6 +12952,22 @@
       "validated_by": "codex",
       "date": "2026-10-16T23:26:27.309378+00:00",
       "reverify_if": "The T-146 wiring, reference statistics formulas or Pod checkout changes."
+    },
+    {
+      "id": "V-382",
+      "task_id": "T-146",
+      "subject": "T-146 movement matching code, wiring of reference statistics",
+      "method": "Read the wiring in scripts/lab_t146_matching.py against scripts/lab_t146_stats.py; reference formulas untouched (diff empty); ruff check and ruff format (line length 100) run on the whole repo, one format-only fix by Claude; CI quality decides the tests (pytest is not installed on the Claude machine; the 8 reference tests passed locally by direct call).",
+      "result": "pass",
+      "checked": "One QueryRecord per OOS query with match moves, control moves and the query's own realized move; one evaluate_group call per symbol/timeframe/length/method/horizon with the full trial count (matching plus cluster trials); evaluate_cluster uses in-sample member moves against the OOS queries assigned to the cluster; forward_move uses the timestamp index built once per group; old cost and sign-test helpers removed. Holdout end stays at the boundary and no broker, order or promotion code is touched. Not yet done: the real-lake run on the Pod (Q-058), so there is no market result yet.",
+      "evidence": [
+        "scripts/lab_t146_matching.py:376",
+        "scripts/lab_t146_matching.py:680",
+        "scripts/lab_t146_stats.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-16T21:50:00Z",
+      "reverify_if": "scripts/lab_t146_matching.py or scripts/lab_t146_stats.py changes"
     }
   ],
   "blockers": [
@@ -22368,7 +22384,22 @@
       ],
       "summary": "Wired Claude's reference statistics into the T-146 scan, aggregated per-query OOS records, added indexed forward lookup and required report fields, and handed T-146 to Claude for review. Desktop compile and focused tests pass; pytest/Ruff are not installed. The reachable Pod workspace has no T-146 checkout, so the real-lake run remains pending. No broker, order, holdout or promotion activity.",
       "validation": "V-382"
+    },
+    {
+      "revision": 403,
+      "ts": "2026-10-17T00:55:00+03:00",
+      "agent": "claude",
+      "action": "accept_t146_code",
+      "task_ids": [
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t146_matching.py"
+      ],
+      "summary": "T-146 code accepted (V-382): Codex wired the reference statistics correctly. Claude applied one format-only fix (ruff format) that CI had flagged. The real market result still needs the Pod run (Q-058, owner action). Nothing else is queued for Codex, so the turn goes to the owner.",
+      "validation": "V-382"
     }
   ],
-  "project_summary": "T-146 reference statistics are wired into the matcher and ready for Claude review; CI and the real-lake Pod run remain pending."
+  "project_summary": "T-146 code accepted; the real-lake run on the Pod (Q-058) is the next step and needs the owner."
 }

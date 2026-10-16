@@ -556,9 +556,7 @@ def _cluster_evidence(
                     candles, member, candle_index=candle_index, horizon=horizon
                 )
                 control_row = (
-                    forward_move(
-                        candles, controls[0], candle_index=candle_index, horizon=horizon
-                    )
+                    forward_move(candles, controls[0], candle_index=candle_index, horizon=horizon)
                     if controls
                     else {"available": 0, "move_points": None}
                 )
