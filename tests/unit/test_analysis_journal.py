@@ -53,7 +53,7 @@ def test_add_and_resolve_once_and_immutable_fields():
     resolved = journal.resolve(
         call.id, {"result": "void", "r": 0, "at": BASE + timedelta(minutes=1)}
     )
-    assert resolved.status == "resolved"
+    assert resolved.status == "void"
     assert resolved.symbol == "XAUUSD"
     with pytest.raises(AnalysisJournalError, match="once"):
         journal.resolve(call.id, {"result": "win", "r": 1, "at": BASE + timedelta(minutes=2)})
