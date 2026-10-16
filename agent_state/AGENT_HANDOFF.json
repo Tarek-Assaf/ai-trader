@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 390,
+  "turn": "codex",
+  "revision": 391,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-143 to T-149 accepted as diagnostics. On recorded Capital.com data (5-16 Oct) the Tai rules give 27 trades on NAS100 3m but only a third reach a target and the real net is negative. Recorded spreads are 1.8 pts NAS100 and 0.5 XAUUSD, below the lab's assumed costs. Mirror control still undelivered (Q-057). T-146 movement matching needs its design note; owner trade list still wanted for the entry-by-entry comparison.",
+    "summary": "T-143 to T-149 accepted as diagnostics. Owner parked all Tai trade-validation tests (T-151 entry comparison, T-152 mirror control, Q-057) until he finishes validating his trades (D-040). Build work continues: T-150 analysis journal (spec written) is next for Codex. T-146 movement matching still needs its design note.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -59,7 +59,8 @@
         "T-031",
         "T-087",
         "T-091",
-        "T-111"
+        "T-111",
+        "T-150"
       ]
     },
     {
@@ -121,7 +122,10 @@
         "T-146",
         "T-147",
         "T-148",
-        "T-149"
+        "T-149",
+        "T-150",
+        "T-151",
+        "T-152"
       ]
     },
     {
@@ -347,7 +351,8 @@
       "covered_by": [
         "T-032",
         "T-091",
-        "T-111"
+        "T-111",
+        "T-150"
       ]
     },
     {
@@ -4923,6 +4928,67 @@
       ],
       "completion_note": "Resolved Claude cycle-1 review V-370: rebuilt recorded-data signals with fixed UTC clock buckets, retained observed partial buckets, and recorded the per-group funnel. The six-group rerun produced 206 trades, including 27 NAS100 3m trades; recorded median spreads are 1.8 points for NAS100 and 0.5 for XAUUSD beside the assumed costs. Timestamps are ISO-8601 and stop labels distinguish initial stops from post-1R stops. Resolved V-371 by implementing the true full-direction inversion as mirror_full_v2 without changing the prior mirror_full values; the sequential Pod rerun covered all 8 groups and 6 pre-holdout periods. Safety flags remain clean: no broker calls or orders, sealed_holdout_read=false, gate1_evaluated=false, and no lake writes. Desktop/Pod pytest and Ruff are unavailable; py_compile, handoff validation and git diff --check pass. Handing to Claude for review. Accepted by Claude 2026-10-16 (V-373) except the mirror part, which is not delivered after two cycles (Q-057).",
       "review_note": "Accepted as a diagnostic with one open item: mirror_full_v2 is not a true inversion."
+    },
+    {
+      "id": "T-150",
+      "title": "Analysis journal: agent records chart calls before the outcome, owner or data resolves them, report on hit rate by confidence",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-01",
+        "R-03",
+        "R-13"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Follow docs/specs/t150_analysis_journal.md exactly. Build task, not a test; no broker calls, no edits to risk or gate files."
+      ],
+      "deliverables": [
+        "docs/specs/t150_analysis_journal.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-151",
+      "title": "PARKED (D-040): entry-by-entry comparison of Tai signals with the owner's own trades (option B of Q-056)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "blocked",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Waits for the owner to finish validating his trades and provide the list (date and time Riyadh, direction, result), optionally account statement. Then compare against docs/evidence/t149_recorded_tai_trades.csv."
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Parked by owner, not started."
+    },
+    {
+      "id": "T-152",
+      "title": "PARKED (D-040): true mirror (opposite-direction) control for the Tai test, and any further Tai tests",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "blocked",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Q-057 stays open until unparked. Correct definition: take trades that pass the ORIGINAL signal's filters, trade the opposite direction, place stop and targets on the inverted side."
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Parked by owner, not started."
     }
   ],
   "decisions": [
@@ -5236,6 +5302,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-16T07:48:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-040",
+      "statement": "Owner 2026-10-16 18:55 Riyadh: park the Tai trade-validation and testing items (entry-by-entry comparison with the owner's trades, mirror control Q-057, further Tai tests) until the owner finishes validating the trades he performed; proceed with non-testing build tasks meanwhile. Nothing is deleted: parked items stay in the task list as blocked.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-16T15:55:00Z",
       "do_not_reopen": false
     }
   ],
@@ -21902,6 +21976,22 @@
         "tests/unit/test_t149_scripts.py"
       ],
       "summary": "T-149 accepted as a diagnostic (V-373): the gap-tolerant bars produce 206 trades in six groups, NAS100 3m now has 27 trades in 11 days. Recorded spreads (1.8 NAS100, 0.5 XAUUSD) are below the assumed costs. Claude fixed lint, formatting and an invalid JSON file in Codex's evidence. The mirror control still is not a true inversion after two cycles, so Q-057 asks the owner. Merged Codex's two consecutive log entries into one with original wording."
+    },
+    {
+      "revision": 391,
+      "ts": "2026-10-16T19:20:00+03:00",
+      "agent": "claude",
+      "action": "park_tests_queue_t150",
+      "task_ids": [
+        "T-150",
+        "T-151",
+        "T-152"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t150_analysis_journal.md"
+      ],
+      "summary": "Per owner request (D-040) the Tai validation items are parked as blocked tasks T-151 and T-152 (Q-057 left open, nothing deleted). Queued non-testing build task T-150, the analysis journal, with a written spec. Turn to Codex."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
