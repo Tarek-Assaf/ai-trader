@@ -16,11 +16,11 @@ import os
 import random
 import sys
 import time
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from statistics import mean, median
+from statistics import mean
 from typing import Any
 
 try:
@@ -28,6 +28,12 @@ try:
 except ModuleNotFoundError:  # direct ``python scripts/lab_t146_matching.py`` execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
     from trader.data.resample import Candle
+
+try:
+    from lab_t146_stats import QueryRecord, evaluate_cluster, evaluate_group, timestamp_index
+except ModuleNotFoundError:  # imported from the repository root by unit tests
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from lab_t146_stats import QueryRecord, evaluate_cluster, evaluate_group, timestamp_index
 
 
 END_HOLDOUT = datetime(2026, 7, 1, tzinfo=UTC)
@@ -297,117 +303,6 @@ def find_matches(
     return _non_overlapping(scored, len(query.values), k)
 
 
-def _direction_sign(direction: str | None) -> int:
-    """Return the payoff sign for an explicitly directed trade."""
-    if direction == "up":
-        return 1
-    if direction == "down":
-        return -1
-    return 0
-
-
-def _net_move_points(
-    row: dict[str, Any], cost_points: float, trade_direction: str | None = None
-) -> float | None:
-    """Apply round-trip cost to a move using the direction being traded."""
-    if not row.get("available"):
-        return None
-    move = float(row["move_points"])
-    sign = _direction_sign(trade_direction)
-    if sign == 0:
-        # A raw movement summary is long-oriented.  Costs are always paid,
-        # including when the movement is adverse.
-        return move - cost_points
-    return move * sign - cost_points
-
-
-def _predict_direction(rows: Sequence[dict[str, Any]]) -> str | None:
-    """Infer the side to trade from the mean forward move of past matches."""
-    available = [row for row in rows if row.get("available")]
-    if not available:
-        return None
-    average = mean(float(row["move_points"]) for row in available)
-    return "up" if average > 0 else "down" if average < 0 else "flat"
-
-
-def _paired_sign_pvalue(
-    matched: Sequence[dict[str, Any]],
-    control: Sequence[dict[str, Any]],
-    cost_points: float,
-    trade_direction: str | None = None,
-) -> float | None:
-    """Exact two-sided sign-test p-value for paired net moves."""
-    differences: list[float] = []
-    for left, right in zip(matched, control, strict=False):
-        if not left.get("available") or not right.get("available"):
-            continue
-        left_net = _net_move_points(left, cost_points, trade_direction)
-        right_net = _net_move_points(right, cost_points, trade_direction)
-        if left_net is None or right_net is None:
-            continue
-        if left_net != right_net:
-            differences.append(left_net - right_net)
-    if not differences:
-        return None
-    positive = sum(value > 0 for value in differences)
-    negative = sum(value < 0 for value in differences)
-    trials = positive + negative
-    tail = sum(math.comb(trials, i) for i in range(0, min(positive, negative) + 1)) / 2**trials
-    return min(1.0, 2.0 * tail)
-
-
-def _multiple_testing_summary(
-    matched: Sequence[dict[str, Any]],
-    control: Sequence[dict[str, Any]],
-    *,
-    cost_points: float,
-    trial_count: int,
-    trade_direction: str | None = None,
-    query_rows: Sequence[dict[str, Any]] = (),
-) -> dict[str, Any]:
-    matched_summary = summarise_moves(
-        matched, cost_points=cost_points, trade_direction=trade_direction
-    )
-    control_summary = summarise_moves(
-        control, cost_points=cost_points, trade_direction=trade_direction
-    )
-    query_summary = (
-        summarise_moves(query_rows, cost_points=cost_points, trade_direction=trade_direction)
-        if query_rows
-        else None
-    )
-    left = matched_summary.get("mean_net_points")
-    right = control_summary.get("mean_net_points")
-    edge = float(left - right) if left is not None and right is not None else None
-    p_value = _paired_sign_pvalue(matched, control, cost_points, trade_direction)
-    alpha = 0.05 / max(1, trial_count)
-    query_positive = query_summary is None or (
-        query_summary.get("mean_net_points") is not None
-        and float(query_summary["mean_net_points"]) > 0
-    )
-    verdict = (
-        "FOUND"
-        if edge is not None
-        and edge > 0
-        and p_value is not None
-        and p_value <= alpha
-        and trade_direction in {"up", "down"}
-        and query_positive
-        else "NOT_FOUND"
-    )
-    return {
-        "matches": matched_summary,
-        "random_control": control_summary,
-        "query_outcome": query_summary,
-        "trade_direction": trade_direction,
-        "mean_net_edge_points": edge,
-        "paired_sign_p_value": p_value,
-        "bonferroni_alpha": alpha,
-        "trial_count": trial_count,
-        "verdict": verdict,
-    }
-
-
 def cluster_windows(
     library: Sequence[ShapeWindow], *, k: int, max_windows: int = CLUSTER_SAMPLE_LIMIT
 ) -> tuple[ShapeCluster, ...]:
@@ -482,13 +377,11 @@ def forward_move(
     candles: Sequence[Candle],
     window: ShapeWindow,
     *,
+    candle_index: Mapping[datetime, int],
     horizon: int,
 ) -> dict[str, float | int | str | None]:
     """Measure the move after a matched window, with no future used in matching."""
-    end_index = next(
-        (index for index, candle in enumerate(candles) if candle.ts_utc == window.ts_end),
-        None,
-    )
+    end_index = candle_index.get(window.ts_end)
     if end_index is None:
         return {"available": 0, "move_atr": None, "move_points": None, "direction": None}
     target_index = end_index + horizon
@@ -502,32 +395,6 @@ def forward_move(
         "move_atr": move / window.atr if window.atr else None,
         "move_points": move,
         "direction": "up" if move > 0 else "down" if move < 0 else "flat",
-    }
-
-
-def summarise_moves(
-    rows: Sequence[dict[str, Any]],
-    *,
-    cost_points: float,
-    trade_direction: str | None = None,
-) -> dict[str, Any]:
-    available = [row for row in rows if row.get("available")]
-    values = [float(row["move_points"]) for row in available]
-    net = [
-        net_move
-        for row in available
-        if (net_move := _net_move_points(row, cost_points, trade_direction)) is not None
-    ]
-    return {
-        "count": len(available),
-        "up_share": (sum(row.get("direction") == "up" for row in available) / len(available))
-        if available
-        else None,
-        "mean_move_points": mean(values) if values else None,
-        "median_move_points": median(values) if values else None,
-        "mean_net_points": mean(net) if net else None,
-        "assumed_round_trip_cost_points": cost_points,
-        "trade_direction": trade_direction,
     }
 
 
@@ -655,6 +522,7 @@ def _load_histdata_candles(
 
 def _cluster_evidence(
     candles: Sequence[Candle],
+    candle_index: Mapping[datetime, int],
     library: Sequence[ShapeWindow],
     clusters: Sequence[ShapeCluster],
     queries: Sequence[ShapeWindow],
@@ -680,46 +548,40 @@ def _cluster_evidence(
         assigned = assignments[cluster.cluster_id]
         horizon_rows: list[dict[str, Any]] = []
         for horizon in HORIZONS:
-            in_matches: list[dict[str, Any]] = []
-            in_controls: list[dict[str, Any]] = []
+            member_moves: list[float | None] = []
+            control_moves: list[float | None] = []
             for member in members:
                 controls = random_control(member, library, count=1, seed=member.start + horizon)
-                in_matches.append(forward_move(candles, member, horizon=horizon))
-                in_controls.append(
-                    forward_move(candles, controls[0], horizon=horizon)
-                    if controls
-                    else {"available": 0}
+                member_row = forward_move(
+                    candles, member, candle_index=candle_index, horizon=horizon
                 )
-            oos_matches: list[dict[str, Any]] = []
-            oos_controls: list[dict[str, Any]] = []
-            for query in assigned:
-                controls = random_control(query, library, count=1, seed=query.start + horizon)
-                oos_matches.append(forward_move(candles, query, horizon=horizon))
-                oos_controls.append(
-                    forward_move(candles, controls[0], horizon=horizon)
+                control_row = (
+                    forward_move(
+                        candles, controls[0], candle_index=candle_index, horizon=horizon
+                    )
                     if controls
-                    else {"available": 0}
+                    else {"available": 0, "move_points": None}
                 )
-            trade_direction = _predict_direction(in_matches)
+                member_moves.append(member_row.get("move_points"))
+                control_moves.append(control_row.get("move_points"))
+            oos_realized = [
+                forward_move(candles, query, candle_index=candle_index, horizon=horizon).get(
+                    "move_points"
+                )
+                for query in assigned
+            ]
             horizon_rows.append(
                 {
                     "horizon": horizon,
-                    "in_sample": _multiple_testing_summary(
-                        in_matches,
-                        in_controls,
+                    "out_of_sample": evaluate_cluster(
+                        member_moves,
+                        control_moves,
+                        oos_realized,
                         cost_points=ASSUMED_COSTS[instrument],
                         trial_count=trial_count,
-                        trade_direction=trade_direction,
                     ),
-                    "out_of_sample": _multiple_testing_summary(
-                        oos_matches,
-                        oos_controls,
-                        cost_points=ASSUMED_COSTS[instrument],
-                        trial_count=trial_count,
-                        trade_direction=trade_direction,
-                        query_rows=oos_matches,
-                    ),
-                    "trade_direction": trade_direction,
+                    "in_sample_member_count": len(member_moves),
+                    "oos_query_count": len(oos_realized),
                 }
             )
         rows.append(
@@ -749,6 +611,7 @@ def run_group(
 ) -> dict[str, Any]:
     """Run one symbol/timeframe group and return JSON-safe evidence."""
     started = time.perf_counter()
+    candle_index = timestamp_index(candles)
     in_sample = build_windows(
         candles,
         start=IN_SAMPLE_START,
@@ -772,71 +635,71 @@ def run_group(
         library = in_sample.get(length, ())
         queries, stride = _sample_queries(out_of_sample.get(length, ()), max_queries)
         query_stride = max(query_stride, stride)
-        for query_number, query in enumerate(queries):
-            for method in ("dtw", "correlation"):
-                matches = find_matches(query, library, method=method, k=20)
-                controls = random_control(
-                    query, library, count=len(matches), seed=seed + query_number
-                )
-                for horizon in HORIZONS:
+        for method in ("dtw", "correlation"):
+            for horizon in HORIZONS:
+                records: list[QueryRecord] = []
+                for query_number, query in enumerate(queries):
+                    matches = find_matches(query, library, method=method, k=20)
+                    controls = random_control(
+                        query, library, count=len(matches), seed=seed + query_number
+                    )
                     matched_rows = [
-                        forward_move(candles, match.window, horizon=horizon) for match in matches
+                        forward_move(
+                            candles,
+                            match.window,
+                            candle_index=candle_index,
+                            horizon=horizon,
+                        )
+                        for match in matches
                     ]
                     control_rows = [
-                        forward_move(candles, item, horizon=horizon) for item in controls
+                        forward_move(
+                            candles,
+                            item,
+                            candle_index=candle_index,
+                            horizon=horizon,
+                        )
+                        for item in controls
                     ]
-                    query_row = forward_move(candles, query, horizon=horizon)
-                    trade_direction = _predict_direction(matched_rows)
-                    summary = _multiple_testing_summary(
-                        matched_rows,
-                        control_rows,
-                        cost_points=ASSUMED_COSTS[instrument],
-                        trial_count=trial_count,
-                        trade_direction=trade_direction,
-                        query_rows=(query_row,),
+                    query_row = forward_move(
+                        candles, query, candle_index=candle_index, horizon=horizon
                     )
-                    results.append(
-                        {
-                            "length": length,
-                            "query": query_number,
-                            "query_start": query.ts_start.isoformat(),
-                            "method": method,
-                            "horizon": horizon,
-                            "prediction": {
-                                "direction": trade_direction,
-                                "query_move_points": query_row.get("move_points"),
-                                "query_trade_net_points": (
-                                    _net_move_points(
-                                        query_row,
-                                        ASSUMED_COSTS[instrument],
-                                        trade_direction,
-                                    )
-                                    if trade_direction in {"up", "down"}
-                                    else None
-                                ),
-                                "query_prediction_correct": (
-                                    summary["query_outcome"] is not None
-                                    and summary["query_outcome"].get("mean_net_points") is not None
-                                    and float(summary["query_outcome"]["mean_net_points"]) > 0
-                                ),
-                            },
-                            **summary,
-                        }
+                    records.append(
+                        QueryRecord(
+                            match_moves=tuple(row.get("move_points") for row in matched_rows),
+                            control_moves=tuple(row.get("move_points") for row in control_rows),
+                            realized=query_row.get("move_points"),
+                        )
                     )
-                if query_number < 6 and method == "dtw":
-                    _save_shape_card(
-                        candles,
-                        query,
-                        matches,
-                        controls,
-                        chart_dir / f"query_{length}_{query_number:02d}.png",
-                    )
+                    if query_number < 6 and method == "dtw" and horizon == HORIZONS[0]:
+                        _save_shape_card(
+                            candles,
+                            query,
+                            matches,
+                            controls,
+                            chart_dir / f"query_{length}_{query_number:02d}.png",
+                        )
+                results.append(
+                    {
+                        "length": length,
+                        "method": method,
+                        "horizon": horizon,
+                        "query_count": len(records),
+                        "query_stride": stride,
+                        **evaluate_group(
+                            records,
+                            cost_points=ASSUMED_COSTS[instrument],
+                            trial_count=trial_count,
+                        ),
+                    }
+                )
         if library:
             for cluster_count in CLUSTER_COUNTS:
                 clusters = cluster_windows(library, k=cluster_count)
                 cluster_rows.extend(
                     _cluster_evidence(
                         candles,
+                        candle_index,
                         library,
                         clusters,
                         queries,
@@ -897,6 +760,16 @@ def render_report(payload: dict[str, Any]) -> str:
             f"{len(group['results'])} result rows in {group['elapsed_seconds']}s; "
             f"charts: `{group['charts_dir']}`"
         )
+        for row in group["results"]:
+            lines.append(
+                "  - "
+                f"length={row['length']} method={row['method']} horizon={row['horizon']}: "
+                f"trades={row.get('trades')}, win_rate={row.get('win_rate')}, "
+                f"mean_net_points={row.get('mean_net_points')}, "
+                f"control_mean_net_points={row.get('control_mean_net_points')}, "
+                f"edge_points={row.get('edge_points')}, sign_test_p={row.get('sign_test_p')}, "
+                f"verdict={row.get('verdict')}"
+            )
         verdicts = {row.get("verdict") for row in group["results"]}
         lines.append(
             "  Multiple-testing verdicts: "
@@ -951,7 +824,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         * len(TIMEFRAMES)
         * len(WINDOW_LENGTHS)
         * len(CLUSTER_COUNTS)
-        * 2
         * len(HORIZONS)
     )
     trial_count = matching_trials + cluster_trials
