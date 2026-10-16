@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 387,
+  "turn": "claude",
+  "revision": 388,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-149 recorded-data Tai Smart Filter diagnostic in progress; T-148 accepted by Claude in PR #242. No broker or orders.",
+    "summary": "T-149 completed and handed to Claude for review; T-146 remains queued. T-149 used only recorded bid/ask data, with no broker or order activity.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4897,7 +4897,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "done",
       "requirements": [
         "R-03",
         "R-04"
@@ -4909,9 +4909,16 @@
         "Follow docs/specs/t149_recorded_data_tai.md exactly (owner request 2026-10-16: Yes do it for T149). Confirm the recorded dates are outside the sealed holdout first; data check; Tai rules unchanged from T-147; fills on the real bid/ask side; 1m, 3m, 5m for both symbols (60m is too short for this window and is stated as such; 1m mandatory); trade list CSV readable by a non-programmer; side-by-side with the owner trade list only if docs/owner/ holds it. Diagnostic only: no broker calls, orders, Gate 1, ledger, trial-counter or promotion writes, no lake writes, no edits to risk, gate or cost files. Run ruff check and ruff format (line length 100) before handing over; keep UTF-8 intact; do not rewrite old handoff entries."
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
-      "notes": "Codex started the diagnostic runner from origin/main after Claude acceptance of T-148."
+      "evidence": [
+        "docs/specs/t149_recorded_data_tai.md",
+        "scripts/lab_t149_recorded_tai.py",
+        "tests/unit/test_t149_scripts.py",
+        "docs/evidence/t149_recorded_tai_summary.json",
+        "docs/evidence/t149_recorded_tai_table.md",
+        "docs/evidence/t149_recorded_tai_trades.csv"
+      ],
+      "completion_note": "Completed all six required symbol/timeframe runs on the Pod recorder lake: NAS100 and XAUUSD at 1m, 3m and 5m; 60m is omitted because the 10-11 observed days are too short. The data check records first/last UTC minutes, bounded intraday gaps, bid-above-ask and zero-spread rows, and UTC-hour spread median, p90 and max. Indicators use only recorded bid/ask mid bars after a 200-bar warm-up; entries and exits fill on the real side and the CSV includes UTC/Riyadh times, levels, reasons, real/dashboard results and entry spread. Safety flags are clean: sealed_holdout_read=false, gate1_evaluated=false, broker_calls=0, orders=0, and no lake writes. The owner trade list was absent, so no matching was invented. Ruff check, Ruff format, py_compile and git diff --check pass; pytest is unavailable on desktop and Pod.",
+      "notes": "Completed diagnostic on recorded Capital.com bid/ask data for NAS100 and XAUUSD at 1m, 3m and 5m; 60m omitted because the window is too short."
     }
   ],
   "decisions": [
@@ -12613,6 +12620,41 @@
       "validated_by": "claude",
       "date": "2026-10-16",
       "reverify_if": "Any T-148 result is used for Gate 1 or promotion, or the simulator rules, candidate list, periods or mirror definition change."
+    },
+    {
+      "id": "V-369",
+      "task_id": "T-149",
+      "result": "pass",
+      "checked_at": "2026-10-16T11:07:56.612940+00:00",
+      "evidence": [
+        "docs/evidence/t149_recorded_tai_summary.json",
+        "docs/evidence/t149_recorded_tai_table.md",
+        "docs/evidence/t149_recorded_tai_trades.csv"
+      ],
+      "details": {
+        "symbols": [
+          "NAS100",
+          "XAUUSD"
+        ],
+        "timeframes": [
+          1,
+          3,
+          5
+        ],
+        "groups": 6,
+        "trades": 62,
+        "observed_days": {
+          "NAS100": 11,
+          "XAUUSD": 10
+        },
+        "broker_calls": 0,
+        "orders": 0,
+        "sealed_holdout_read": false,
+        "gate1_evaluated": false,
+        "warmup_chart_bars": 200,
+        "rss_end_bytes": 144580608
+      },
+      "notes": "Pod run completed all six groups on the recorder lake. Data checks report first/last UTC minute, bounded intraday gaps, bid-above-ask and zero-spread rows, and UTC-hour spread statistics. The owner trade list was absent, so no matching was invented. Ruff/format/py_compile/diff checks pass; pytest is unavailable on desktop and Pod."
     }
   ],
   "blockers": [
@@ -21715,6 +21757,24 @@
       "actor": "codex",
       "action": "start_t149_recorded_tai",
       "summary": "Started T-149 from authoritative origin/main after Claude handoff; diagnostic only, recorded bid/ask data, no broker or orders."
+    },
+    {
+      "revision": 388,
+      "timestamp": "2026-10-16T11:07:56.613012+00:00",
+      "actor": "codex",
+      "action": "complete_t149_recorded_tai",
+      "task_ids": [
+        "T-149"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t149_recorded_tai_summary.json",
+        "docs/evidence/t149_recorded_tai_table.md",
+        "docs/evidence/t149_recorded_tai_trades.csv",
+        "scripts/lab_t149_recorded_tai.py",
+        "tests/unit/test_t149_scripts.py"
+      ],
+      "summary": "Completed T-149 recorded-data Tai diagnostic across six groups. Handing to Claude for review."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
