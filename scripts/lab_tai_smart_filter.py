@@ -103,12 +103,12 @@ def _months_at_or_after(end_date: datetime) -> set[tuple[int, int]]:
     }
 
 
-def load_training_window(lake: Path, instrument: str) -> tuple[Candle, ...]:
+def load_training_window(lake: Path, instrument: str, timeframe: int) -> tuple[Candle, ...]:
     """Load only 2022 through the day before the sealed holdout boundary."""
     candles = load_histdata_candles(
         lake,
         instrument,
-        1,
+        timeframe,
         exclude_months=_months_at_or_after(END_HOLDOUT),
     )
     return tuple(candle for candle in candles if datetime(2022, 1, 1, tzinfo=UTC) <= candle.ts_utc < END_HOLDOUT)
@@ -177,15 +177,18 @@ def fallback_vwap(bars: tuple[Candle, ...]) -> tuple[float | None, ...]:
     return tuple(result)
 
 
-def signal_directions(chart: tuple[Candle, ...], params: TaiParams) -> tuple[str | None, ...]:
+def signal_directions(chart: tuple[Candle, ...], params: TaiParams, timeframe: int) -> tuple[str | None, ...]:
     """Map closed higher-timeframe Heikin Ashi crosses onto chart bars."""
-    signal_tf = params.signal_multiplier * (chart[1].ts_utc - chart[0].ts_utc).seconds // 60 if len(chart) > 1 else params.signal_multiplier
+    signal_tf = params.signal_multiplier * timeframe
     # Chart bars are already aligned. Aggregate complete groups directly rather
     # than re-bucketing multi-minute candles as if they were one-minute input.
     higher_list: list[Candle] = []
     for start in range(0, len(chart) - params.signal_multiplier + 1, params.signal_multiplier):
         group = chart[start : start + params.signal_multiplier]
         if len(group) != params.signal_multiplier:
+            continue
+        expected = timedelta(minutes=timeframe)
+        if any(current.ts_utc - previous.ts_utc != expected for previous, current in zip(group[:-1], group[1:], strict=True)):
             continue
         higher_list.append(Candle(group[0].ts_utc, group[0].open, max(item.high for item in group), min(item.low for item in group), group[-1].close, sum(item.volume for item in group), group[0].series_key, True, sum(item.n_minutes for item in group)))
     higher = tuple(higher_list)
@@ -211,7 +214,7 @@ def build_features(minute_candles: tuple[Candle, ...], timeframe: int, params: T
     ema_values = indicators.ema([bar.close for bar in chart], params.ema_period)
     adx_values = indicators.adx(chart, params.adx_period)
     plus_di, minus_di = directional_index(chart, params.adx_period)
-    return Features(chart, atr_values, ema_values, adx_values, plus_di, minus_di, fallback_vwap(chart), signal_directions(chart, params))
+    return Features(chart, atr_values, ema_values, adx_values, plus_di, minus_di, fallback_vwap(chart), signal_directions(chart, params, timeframe))
 
 
 def _passes(features: Features, index: int, direction: str, params: TaiParams, *, disabled: frozenset[str] = frozenset()) -> bool:
@@ -386,14 +389,13 @@ def main() -> int:
     args = parser.parse_args()
     payload: dict[str, Any] = {"task": "T-147", "generated_at": stamp(), "diagnostic_only": True, "sealed_holdout_read": False, "gate1_evaluated": False, "broker_calls": 0, "orders": 0, "preflight": {"cpu_count": os.cpu_count(), "rss_start_bytes": rss_bytes(), "memory_limit_gb": args.memory_limit_gb}, "groups": {}}
     for instrument in INSTRUMENTS:
-        candles = load_training_window(args.lake, instrument)
         for timeframe in TIMEFRAMES:
             group = f"{instrument}:{timeframe}"
+            candles = load_training_window(args.lake, instrument, timeframe)
             payload["groups"][group] = run_group(candles, instrument, timeframe, 4.0 if instrument == "NSXUSD" else 1.6)
             if rss_bytes() and rss_bytes() > args.memory_limit_gb * 1024**3:
                 raise RuntimeError("RSS exceeded the registered 13 GB cap")
             print(f"completed {group} bars={payload['groups'][group]['bar_count']} rss={rss_bytes()}", flush=True)
-        del candles
         gc.collect()
     payload["preflight"]["rss_end_bytes"] = rss_bytes()
     write_json(args.output, payload)
