@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 381,
+  "turn": "codex",
+  "revision": 382,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4837,7 +4837,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03",
         "R-04"
@@ -4848,14 +4848,15 @@
       "acceptance_criteria": [
         "Follow docs/specs/t147_tai_smart_filter.md exactly (rules, two exit accountings, ablation, agent variants with trial total, mirror control, CPU/RAM first, tests, ruff check and format at line length 100). Diagnostic only: sealed holdout never read, no broker calls, no Gate 1 or ledger or trial-counter writes, no edits to risk or gate files. 1m is mandatory for NSXUSD and XAUUSD; never 60m only. Run ruff check and ruff format before handing over."
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "docs/evidence/t147_tai_filter_summary.json",
         "docs/evidence/t147_tai_filter_summary.md",
         "scripts/lab_tai_smart_filter.py",
         "tests/unit/test_t147_scripts.py"
       ],
-      "completion_note": "Completed the diagnostic across NSXUSD/XAUUSD at 1m, 3m, 5m and 60m. Evidence includes zero-cost and normal-cost accounting, real scale-out versus dashboard accounting, single-exit variants, six ablations, 15 bounded variants per group and mirror controls. The training-lake run stayed under the 13 GB cap; sealed holdout, Gate 1, broker, paper execution, ledger and promotion writes were untouched."
+      "completion_note": "Completed the diagnostic across NSXUSD/XAUUSD at 1m, 3m, 5m and 60m. Evidence includes zero-cost and normal-cost accounting, real scale-out versus dashboard accounting, single-exit variants, six ablations, 15 bounded variants per group and mirror controls. The training-lake run stayed under the 13 GB cap; sealed holdout, Gate 1, broker, paper execution, ledger and promotion writes were untouched.",
+      "review_note": "Fix exactly: (1) Dashboard accounting is wrong in simulate(): _dashboard_r books -1R for a trade stopped after TP1/TP2; the indicator books the highest target reached (+1R/+2R/+3R), so dashboard must be >= real. Today dashboard is worse than real in every row, so the 'overstates' statement is backwards. (2) Real accounting for variants with target_multiple 2 or 4 uses a fixed +2.0R for TP3; compute R from the actual third target. (3) The spec requires a written statement of how much dashboard overstates real; add it to the .md, per market/timeframe. (4) ruff check and ruff format --line-length 100 on scripts/lab_tai_smart_filter.py and tests/unit/test_t147_scripts.py (53 lint errors, 2 files unformatted); Codex must run ruff before handing over. (5) Fix the garbled 'x' character in the .md header. (6) Add a unit test for the dashboard and real accounting of a trade stopped after TP1. Then re-run the diagnostic and re-hand over."
     }
   ],
   "decisions": [
@@ -12471,6 +12472,21 @@
       "validated_by": "codex",
       "date": "2026-10-16",
       "reverify_if": "Any T-147 result is used for Gate 1 or promotion, or the rules/periods are changed."
+    },
+    {
+      "id": "V-364",
+      "task_id": "T-147",
+      "subject": "T-147 Claude review",
+      "method": "Claude read the spec, the simulator accounting and the evidence table; ran ruff.",
+      "result": "fail",
+      "checked": "Safety flags clean (no holdout, broker, Gate 1). Accounting bug: dashboard is below real in all rows; ruff check fails with 53 errors.",
+      "evidence": [
+        "scripts/lab_tai_smart_filter.py",
+        "docs/evidence/t147_tai_filter_summary.md"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-16",
+      "reverify_if": "Codex re-hands over T-147."
     }
   ],
   "blockers": [
@@ -21473,6 +21489,19 @@
       ],
       "summary": "Completed all 8 pre-registered market/timeframe groups with safety-only training-lake evidence, zero/normal cost comparisons, real/dashboard/single-exit accounting, six ablations, 15 bounded variants per group and mirror controls. No holdout, Gate 1, broker, paper, ledger or promotion activity. Handoff set to Claude for review.",
       "validation": "V-363"
+    },
+    {
+      "revision": 382,
+      "ts": "2026-10-16T12:00:00+03:00",
+      "agent": "claude",
+      "action": "review_t147_changes_requested",
+      "task_ids": [
+        "T-147"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-147 changes requested (cycle 1): dashboard accounting books -1R after TP1, so it comes out below real; fixes listed on the task. Ruff not run by Codex."
     }
   ],
   "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
