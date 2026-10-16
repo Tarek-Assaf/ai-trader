@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 396,
+  "turn": "claude",
+  "revision": 397,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-146 implementation is ready for review, but the real-lake Pod run is blocked by the provided terminal endpoint (HTTP 404/direct and browser client blocked); no evidence run was started. T-151/T-152 remain parked under D-040 and Q-057 remains open.",
+    "summary": "T-146 review cycle 2 is ready for Claude. The matcher now bounds 1m scans, records timing and query sampling, adds clusters and overview charts, and applies Bonferroni verdicts. A bounded Pod smoke completed safely; canonical full-lake evidence remains pending.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4821,7 +4821,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04"
@@ -4838,13 +4838,13 @@
         "Design note written: follow docs/specs/t146_movement_matching.md (split dates, parameters, shape cards and overview charts per owner request 2026-10-16 22:36). Where this list and the note differ, the note is the newer one.",
         "Changes requested V-377: (1) bound the scan: correlation pre-filter keeps the best 200 candidates per query, DTW only on those, plus LB_Keogh early abandon; pre-register a deterministic query sample (every m-th out-of-sample window, at most 2000 queries per symbol/timeframe/length) and state it in the evidence; run 60m first and report the measured time per group before 1m; (2) implement section 5 clusters (k-medoids on DTW over a sample of at most 3000 in-sample windows, k in {8,16,32}) and per-cluster in-sample and out-of-sample results vs random control, net of cost; (3) overview chart per symbol/timeframe; (4) mark each result found only if out-of-sample, net of cost and significant after Bonferroni on the full trial count (include cluster k and method in the count); (5) plain-language report with a verdict per symbol/timeframe. Keep the existing tests and add tests for the bounded scan and cluster assignment. The real-lake run still needs the Pod (Q-058); do not wait for it to finish these code changes."
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "docs/specs/t146_movement_matching.md",
         "scripts/lab_t146_matching.py",
         "tests/unit/test_t146_scripts.py"
       ],
-      "completion_note": "Implemented the diagnostic movement matcher with fixed split handling, past-only ATR-normalised windows, band-limited DTW, correlation baseline, overlap removal, time-spread random controls, forward move summaries, safety metadata and owner-facing chart generation. Synthetic acceptance checks, py_compile, handoff validation and diff checks pass. Real-lake evidence is pending because the provided Pod terminal endpoint returned HTTP 404 and the browser client blocked the terminal surface; no local lake exists, so no real-data run was started.",
+      "completion_note": "Implemented Claude review cycle 1: efficient rolling ATR windows, deterministic every-m-th OOS query sampling capped at 2000 per group, correlation prefilter plus LB_Keogh DTW pruning, bounded k-medoids clusters with in-sample and out-of-sample control summaries, per-group overview charts, Bonferroni verdicts, and per-group timing/query-stride evidence. A bounded Pod smoke run on the owner-supplied reachable terminal completed against a temporary NSXUSD lake slice with zero broker/order/holdout/promotion activity; canonical full-lake evidence remains pending.",
       "deliverables": [
         "docs/specs/t146_movement_matching.md"
       ]
@@ -12860,6 +12860,23 @@
       "validated_by": "claude",
       "date": "2026-10-16T20:30:00Z",
       "reverify_if": "scripts/lab_t146_matching.py changes"
+    },
+    {
+      "id": "V-378",
+      "task_id": "T-146",
+      "subject": "T-146 review cycle 1 fixes",
+      "method": "Ran Ruff check/format, py_compile, synthetic bounded run_group smoke and direct helper checks; inspected the owner-supplied Pod smoke output.",
+      "result": "pass",
+      "checked": "Rolling ATR removes the prior O(n^2) build cost; deterministic query sampling is capped at 2000 per group; DTW uses a 200-candidate correlation prefilter and LB_Keogh pruning; k-medoids clusters emit in-sample and OOS control summaries; one overview chart is written per symbol/timeframe; every result carries a Bonferroni alpha, p-value and FOUND/NOT_FOUND verdict; group timing and query stride are recorded.",
+      "evidence": [
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py",
+        "/workspace/state/t146_evidence_smoke_nsx_30/t146_matching_summary.json",
+        "/workspace/state/t146_evidence_smoke_nsx_30/t146_matching_report.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-16T20:45:00Z",
+      "reverify_if": "The T-146 matcher or review criteria change."
     }
   ],
   "blockers": [
@@ -22171,7 +22188,22 @@
         "tests/unit/test_t146_scripts.py"
       ],
       "summary": "T-146 review cycle 1 (V-377, fail): core matching is sound but the scan is unbounded (cannot finish on 1m), shape clusters and the overview chart are missing, and no multiple-testing verdict is applied. Claude fixed lint and formatting, merged Codex's two consecutive log entries into one, and added the missing answer field on Q-058. Turn to Codex."
+    },
+    {
+      "revision": 397,
+      "ts": "2026-10-16T20:45:00Z",
+      "agent": "codex",
+      "action": "complete_t146_review_fixes",
+      "task_ids": [
+        "T-146"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py"
+      ],
+      "summary": "Completed T-146 review cycle 1 fixes: bounded scan with deterministic query sampling, correlation prefilter, LB_Keogh pruning, rolling ATR, k-medoids cluster evidence, overview chart, Bonferroni verdicts and group timings. Ruff, format, py_compile, direct synthetic checks and a bounded Pod smoke passed. No broker, orders, holdout or promotion activity. Handing to Claude for review."
     }
   ],
-  "project_summary": "T-136 NSXUSD 1m was stopped on owner request after the stop-file grace window; XAUUSD and baselines were skipped. Claude owns the positive-control test first, then a later redeploy and T-136 continuation."
+  "project_summary": "T-146 review cycle 2 is ready for Claude; the code review blockers are addressed and the diagnostic remains safety-only."
 }

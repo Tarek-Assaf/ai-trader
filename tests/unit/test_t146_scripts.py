@@ -85,3 +85,23 @@ def test_repeated_shape_beats_white_noise() -> None:
     matches = module.find_matches(query, (repeated, noise), method="dtw", k=2)
     assert matches[0].window.start == repeated.start
     assert matches[0].distance < matches[1].distance
+
+
+def test_query_sampling_is_bounded_and_deterministic() -> None:
+    module = load_script()
+    queries = tuple(window(module, index, (0.0, 1.0, 0.0)) for index in range(10))
+    sampled, stride = module._sample_queries(queries, 3)
+    assert stride == 4
+    assert [item.start for item in sampled] == [0, 4, 8]
+
+
+def test_cluster_assignment_keeps_medoid_members() -> None:
+    module = load_script()
+    library = tuple(
+        window(module, index, (0.0, 1.0, 0.0) if index < 4 else (0.0, -1.0, 0.0))
+        for index in range(8)
+    )
+    clusters = module.cluster_windows(library, k=2, max_windows=8)
+    assert len(clusters) == 2
+    assert sum(len(cluster.members) for cluster in clusters) == len(library)
+    assert all(cluster.medoid in cluster.members for cluster in clusters)

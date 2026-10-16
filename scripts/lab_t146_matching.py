@@ -15,6 +15,7 @@ import math
 import os
 import random
 import sys
+import time
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -33,9 +34,13 @@ END_HOLDOUT = datetime(2026, 7, 1, tzinfo=UTC)
 IN_SAMPLE_START = datetime(2022, 1, 1, tzinfo=UTC)
 OOS_START = datetime(2025, 1, 1, tzinfo=UTC)
 INSTRUMENTS = ("NSXUSD", "XAUUSD")
-TIMEFRAMES = (1, 3, 5, 60)
+TIMEFRAMES = (60, 5, 3, 1)
 WINDOW_LENGTHS = (30, 60, 120)
 HORIZONS = (6, 12, 30)
+CLUSTER_COUNTS = (8, 16, 32)
+DEFAULT_MAX_QUERIES = 2000
+CORRELATION_PREFILTER = 200
+CLUSTER_SAMPLE_LIMIT = 256
 ASSUMED_COSTS = {"NSXUSD": 4.0, "XAUUSD": 1.6}
 
 
@@ -56,6 +61,15 @@ class Match:
     window: ShapeWindow
     distance: float
     method: str
+
+
+@dataclass(frozen=True, slots=True)
+class ShapeCluster:
+    """A deterministic, bounded k-medoids cluster of shape windows."""
+
+    cluster_id: int
+    medoid: ShapeWindow
+    members: tuple[ShapeWindow, ...]
 
 
 def _finite(values: Iterable[float]) -> bool:
@@ -127,6 +141,7 @@ def build_windows(
     # The loader returns UTC candles, but keeping this explicit makes synthetic
     # test fixtures and direct callers safe.
     selected.sort(key=lambda candle: candle.ts_utc)
+    ranges = true_ranges(selected)
     result: dict[int, tuple[ShapeWindow, ...]] = {}
     for length in lengths:
         if length <= 0:
@@ -137,7 +152,8 @@ def build_windows(
             stop = start_index + length
             if not _continuous(selected, start_index, stop, timeframe):
                 continue
-            atr = atr_at(selected, start_index, atr_period)
+            sample = ranges[max(0, start_index - atr_period) : start_index]
+            atr = mean(sample) if sample and _finite(sample) else 0.0
             closes = [float(item.close) for item in selected[start_index:stop]]
             if atr <= 0 or not _finite(closes):
                 continue
@@ -179,6 +195,24 @@ def dtw_distance(left: Sequence[float], right: Sequence[float], band_ratio: floa
     return math.sqrt(value / max(len(left), len(right))) if math.isfinite(value) else math.inf
 
 
+def lb_keogh_lower_bound(
+    query: Sequence[float], candidate: Sequence[float], band_ratio: float = 0.10
+) -> float:
+    """Return the LB_Keogh lower bound used to skip hopeless DTW candidates."""
+    if len(query) != len(candidate) or not query or not _finite(query) or not _finite(candidate):
+        return math.inf
+    radius = max(1, int(math.ceil(len(query) * band_ratio)))
+    total = 0.0
+    for index, value in enumerate(query):
+        lower = min(candidate[max(0, index - radius) : min(len(candidate), index + radius + 1)])
+        upper = max(candidate[max(0, index - radius) : min(len(candidate), index + radius + 1)])
+        if value < lower:
+            total += (value - lower) ** 2
+        elif value > upper:
+            total += (value - upper) ** 2
+    return math.sqrt(total / len(query))
+
+
 def correlation_distance(left: Sequence[float], right: Sequence[float]) -> float:
     """Return ``1 - Pearson r``; constant shapes are treated as maximally distant."""
     if len(left) != len(right) or len(left) < 2:
@@ -203,21 +237,42 @@ def _non_overlapping(matches: Sequence[Match], length: int, limit: int) -> tuple
     return tuple(chosen)
 
 
+def _sample_queries(
+    queries: Sequence[ShapeWindow], max_queries: int | None
+) -> tuple[tuple[ShapeWindow, ...], int]:
+    """Select a deterministic every-mth query sample under the registered cap."""
+    if max_queries is None or len(queries) <= max_queries:
+        return tuple(queries), 1
+    stride = max(1, math.ceil(len(queries) / max_queries))
+    return tuple(queries[::stride][:max_queries]), stride
+
+
 def find_matches(
     query: ShapeWindow,
     library: Sequence[ShapeWindow],
     *,
     method: str = "dtw",
     k: int = 20,
+    correlation_prefilter: int = CORRELATION_PREFILTER,
 ) -> tuple[Match, ...]:
     """Find top past-only matches and remove overlapping candidates."""
     if method not in {"dtw", "correlation"}:
         raise ValueError("method must be dtw or correlation")
     if k <= 0:
         raise ValueError("k must be positive")
+    eligible = [
+        candidate
+        for candidate in library
+        if candidate.ts_end < query.ts_start and len(candidate.values) == len(query.values)
+    ]
+    if method == "dtw" and correlation_prefilter > 0 and len(eligible) > correlation_prefilter:
+        eligible.sort(key=lambda candidate: correlation_distance(query.values, candidate.values))
+        eligible = eligible[:correlation_prefilter]
     scored: list[Match] = []
-    for candidate in library:
-        if candidate.ts_end >= query.ts_start or len(candidate.values) != len(query.values):
+    retained_limit = max(k * 8, k)
+    worst_bound = math.inf
+    for candidate in eligible:
+        if method == "dtw" and lb_keogh_lower_bound(query.values, candidate.values) >= worst_bound:
             continue
         distance = (
             dtw_distance(query.values, candidate.values)
@@ -226,7 +281,107 @@ def find_matches(
         )
         if math.isfinite(distance):
             scored.append(Match(candidate, distance, method))
+            if len(scored) >= retained_limit:
+                scored.sort(key=lambda item: (item.distance, item.window.start))
+                scored = scored[:retained_limit]
+                worst_bound = scored[-1].distance
     return _non_overlapping(scored, len(query.values), k)
+
+
+def _paired_sign_pvalue(
+    matched: Sequence[dict[str, Any]], control: Sequence[dict[str, Any]], cost_points: float
+) -> float | None:
+    """Exact two-sided sign-test p-value for paired net moves."""
+    differences: list[float] = []
+    for left, right in zip(matched, control, strict=False):
+        if not left.get("available") or not right.get("available"):
+            continue
+        left_move = float(left["move_points"])
+        right_move = float(right["move_points"])
+        left_net = left_move - cost_points if left_move > 0 else left_move + cost_points
+        right_net = right_move - cost_points if right_move > 0 else right_move + cost_points
+        if left_net != right_net:
+            differences.append(left_net - right_net)
+    if not differences:
+        return None
+    positive = sum(value > 0 for value in differences)
+    negative = sum(value < 0 for value in differences)
+    trials = positive + negative
+    tail = sum(math.comb(trials, i) for i in range(0, min(positive, negative) + 1)) / 2**trials
+    return min(1.0, 2.0 * tail)
+
+
+def _multiple_testing_summary(
+    matched: Sequence[dict[str, Any]],
+    control: Sequence[dict[str, Any]],
+    *,
+    cost_points: float,
+    trial_count: int,
+) -> dict[str, Any]:
+    matched_summary = summarise_moves(matched, cost_points=cost_points)
+    control_summary = summarise_moves(control, cost_points=cost_points)
+    left = matched_summary.get("mean_net_points")
+    right = control_summary.get("mean_net_points")
+    edge = float(left - right) if left is not None and right is not None else None
+    p_value = _paired_sign_pvalue(matched, control, cost_points)
+    alpha = 0.05 / max(1, trial_count)
+    verdict = (
+        "FOUND"
+        if edge is not None and edge > 0 and p_value is not None and p_value <= alpha
+        else "NOT_FOUND"
+    )
+    return {
+        "matches": matched_summary,
+        "random_control": control_summary,
+        "mean_net_edge_points": edge,
+        "paired_sign_p_value": p_value,
+        "bonferroni_alpha": alpha,
+        "trial_count": trial_count,
+        "verdict": verdict,
+    }
+
+
+def cluster_windows(
+    library: Sequence[ShapeWindow], *, k: int, max_windows: int = CLUSTER_SAMPLE_LIMIT
+) -> tuple[ShapeCluster, ...]:
+    """Build bounded deterministic k-medoids clusters for an overview."""
+    if not library or k <= 0:
+        return ()
+    sample = tuple(library)
+    if len(sample) > max_windows:
+        sample = tuple(
+            sample[index] for index in range(0, len(sample), max(1, len(sample) // max_windows))
+        )[:max_windows]
+    k = min(k, len(sample))
+    medoids = [sample[index * len(sample) // k] for index in range(k)]
+    for _ in range(2):
+        buckets: list[list[ShapeWindow]] = [[] for _ in medoids]
+        for item in sample:
+            distances = [dtw_distance(item.values, medoid.values) for medoid in medoids]
+            buckets[min(range(len(distances)), key=distances.__getitem__)].append(item)
+        updated: list[ShapeWindow] = []
+        for index, bucket in enumerate(buckets):
+            if not bucket:
+                updated.append(medoids[index])
+                continue
+            updated.append(
+                min(
+                    bucket,
+                    key=lambda candidate: sum(
+                        dtw_distance(candidate.values, other.values) for other in bucket
+                    ),
+                )
+            )
+        medoids = updated
+    buckets = [[] for _ in medoids]
+    for item in sample:
+        distances = [dtw_distance(item.values, medoid.values) for medoid in medoids]
+        buckets[min(range(len(distances)), key=distances.__getitem__)].append(item)
+    return tuple(
+        ShapeCluster(cluster_id=index, medoid=medoids[index], members=tuple(bucket))
+        for index, bucket in enumerate(buckets)
+        if bucket
+    )
 
 
 def random_control(
@@ -367,6 +522,41 @@ def _save_shape_card(
     return True
 
 
+def _save_overview_chart(
+    candles: Sequence[Candle], clusters: Sequence[ShapeCluster], path: Path
+) -> bool:
+    """Write one full-history chart with cluster medoid markers."""
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg", force=True)
+        from matplotlib import pyplot as plt
+    except Exception:
+        return False
+    if not candles or not clusters:
+        return False
+    figure, axis = plt.subplots(figsize=(14, 6), constrained_layout=True)
+    axis.plot([item.ts_utc for item in candles], [item.close for item in candles], linewidth=0.6)
+    for cluster in clusters:
+        axis.scatter(
+            cluster.medoid.ts_start,
+            float(candles[cluster.medoid.start].close)
+            if cluster.medoid.start < len(candles)
+            else 0.0,
+            s=18,
+            label=f"cluster {cluster.cluster_id} (n={len(cluster.members)})",
+        )
+    axis.set_title("T-146 repeated-shape cluster medoids")
+    axis.set_xlabel("UTC")
+    axis.set_ylabel("close")
+    if len(clusters) <= 16:
+        axis.legend(loc="best", fontsize="x-small")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    figure.savefig(path, dpi=110)
+    plt.close(figure)
+    return True
+
+
 def _memory_limit_bytes() -> int | None:
     try:
         value = Path("/sys/fs/cgroup/memory.max").read_text(encoding="ascii").strip()
@@ -386,6 +576,84 @@ def _load_histdata_candles(
     return load_histdata_candles(root, instrument, timeframe, exclude_months=excluded)
 
 
+def _cluster_evidence(
+    candles: Sequence[Candle],
+    library: Sequence[ShapeWindow],
+    clusters: Sequence[ShapeCluster],
+    queries: Sequence[ShapeWindow],
+    *,
+    instrument: str,
+    length: int,
+    cluster_count: int,
+    trial_count: int,
+) -> list[dict[str, Any]]:
+    """Summarise in-sample and OOS outcomes for each shape cluster."""
+    if not clusters:
+        return []
+    assignments: dict[int, list[ShapeWindow]] = {cluster.cluster_id: [] for cluster in clusters}
+    for query in queries:
+        cluster = min(
+            clusters,
+            key=lambda item: dtw_distance(query.values, item.medoid.values),
+        )
+        assignments[cluster.cluster_id].append(query)
+    rows: list[dict[str, Any]] = []
+    for cluster in clusters:
+        members = cluster.members[:64]
+        assigned = assignments[cluster.cluster_id]
+        horizon_rows: list[dict[str, Any]] = []
+        for horizon in HORIZONS:
+            in_matches: list[dict[str, Any]] = []
+            in_controls: list[dict[str, Any]] = []
+            for member in members:
+                controls = random_control(member, library, count=1, seed=member.start + horizon)
+                in_matches.append(forward_move(candles, member, horizon=horizon))
+                in_controls.append(
+                    forward_move(candles, controls[0], horizon=horizon)
+                    if controls
+                    else {"available": 0}
+                )
+            oos_matches: list[dict[str, Any]] = []
+            oos_controls: list[dict[str, Any]] = []
+            for query in assigned:
+                controls = random_control(query, library, count=1, seed=query.start + horizon)
+                oos_matches.append(forward_move(candles, query, horizon=horizon))
+                oos_controls.append(
+                    forward_move(candles, controls[0], horizon=horizon)
+                    if controls
+                    else {"available": 0}
+                )
+            horizon_rows.append(
+                {
+                    "horizon": horizon,
+                    "in_sample": _multiple_testing_summary(
+                        in_matches,
+                        in_controls,
+                        cost_points=ASSUMED_COSTS[instrument],
+                        trial_count=trial_count,
+                    ),
+                    "out_of_sample": _multiple_testing_summary(
+                        oos_matches,
+                        oos_controls,
+                        cost_points=ASSUMED_COSTS[instrument],
+                        trial_count=trial_count,
+                    ),
+                }
+            )
+        rows.append(
+            {
+                "length": length,
+                "k": cluster_count,
+                "cluster_id": cluster.cluster_id,
+                "member_count": len(cluster.members),
+                "oos_query_count": len(assigned),
+                "medoid_start": cluster.medoid.ts_start.isoformat(),
+                "horizons": horizon_rows,
+            }
+        )
+    return rows
+
+
 def run_group(
     candles: Sequence[Candle],
     *,
@@ -394,9 +662,11 @@ def run_group(
     output_root: Path,
     holdout_end: datetime = END_HOLDOUT,
     max_queries: int | None = None,
+    trial_count: int = 1,
     seed: int = 146,
 ) -> dict[str, Any]:
     """Run one symbol/timeframe group and return JSON-safe evidence."""
+    started = time.perf_counter()
     in_sample = build_windows(
         candles,
         start=IN_SAMPLE_START,
@@ -411,11 +681,13 @@ def run_group(
     )
     results: list[dict[str, Any]] = []
     chart_dir = output_root / "t146_charts" / f"{instrument.lower()}_{timeframe}m"
+    cluster_rows: list[dict[str, Any]] = []
+    overview_clusters: list[ShapeCluster] = []
+    query_stride = 1
     for length in WINDOW_LENGTHS:
         library = in_sample.get(length, ())
-        queries = list(out_of_sample.get(length, ()))
-        if max_queries is not None:
-            queries = queries[:max_queries]
+        queries, stride = _sample_queries(out_of_sample.get(length, ()), max_queries)
+        query_stride = max(query_stride, stride)
         for query_number, query in enumerate(queries):
             for method in ("dtw", "correlation"):
                 matches = find_matches(query, library, method=method, k=20)
@@ -436,11 +708,11 @@ def run_group(
                             "query_start": query.ts_start.isoformat(),
                             "method": method,
                             "horizon": horizon,
-                            "matches": summarise_moves(
-                                matched_rows, cost_points=ASSUMED_COSTS[instrument]
-                            ),
-                            "random_control": summarise_moves(
-                                control_rows, cost_points=ASSUMED_COSTS[instrument]
+                            **_multiple_testing_summary(
+                                matched_rows,
+                                control_rows,
+                                cost_points=ASSUMED_COSTS[instrument],
+                                trial_count=trial_count,
                             ),
                         }
                     )
@@ -452,12 +724,36 @@ def run_group(
                         controls,
                         chart_dir / f"query_{length}_{query_number:02d}.png",
                     )
+        if library:
+            for cluster_count in CLUSTER_COUNTS:
+                clusters = cluster_windows(library, k=cluster_count)
+                cluster_rows.extend(
+                    _cluster_evidence(
+                        candles,
+                        library,
+                        clusters,
+                        queries,
+                        instrument=instrument,
+                        length=length,
+                        cluster_count=cluster_count,
+                        trial_count=trial_count,
+                    )
+                )
+                if cluster_count == CLUSTER_COUNTS[0]:
+                    overview_clusters.extend(clusters)
+    _save_overview_chart(candles, overview_clusters, chart_dir / "overview.png")
     return {
         "instrument": instrument,
         "timeframe": timeframe,
         "library_windows": sum(len(value) for value in in_sample.values()),
         "oos_queries": sum(len(value) for value in out_of_sample.values()),
+        "queries_evaluated": sum(
+            len(_sample_queries(value, max_queries)[0]) for value in out_of_sample.values()
+        ),
+        "query_stride": query_stride,
+        "elapsed_seconds": round(time.perf_counter() - started, 3),
         "results": results,
+        "clusters": cluster_rows,
         "charts_dir": str(chart_dir),
     }
 
@@ -484,7 +780,15 @@ def render_report(payload: dict[str, Any]) -> str:
         lines.append(
             f"- **{group['instrument']} {group['timeframe']}m**: "
             f"{group['library_windows']} in-sample windows, {group['oos_queries']} OOS queries, "
-            f"{len(group['results'])} result rows; charts: `{group['charts_dir']}`"
+            f"{group['queries_evaluated']} evaluated under the query cap, "
+            f"{len(group['results'])} result rows in {group['elapsed_seconds']}s; "
+            f"charts: `{group['charts_dir']}`"
+        )
+        verdicts = {row.get("verdict") for row in group["results"]}
+        lines.append(
+            "  Multiple-testing verdicts: "
+            f"{', '.join(sorted(value for value in verdicts if value))}; "
+            f"query stride={group['query_stride']}; Bonferroni alpha is recorded per row."
         )
     lines.extend(
         [
@@ -512,7 +816,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--lake", type=Path, default=Path("/workspace/data/lake"))
     parser.add_argument("--output", type=Path, default=Path("docs/evidence"))
     parser.add_argument("--holdout-end", type=str, default=END_HOLDOUT.isoformat())
-    parser.add_argument("--max-queries", type=int, default=None)
+    parser.add_argument(
+        "--max-queries",
+        type=int,
+        default=DEFAULT_MAX_QUERIES,
+        help="maximum OOS queries evaluated per window length (0 means all)",
+    )
     parser.add_argument("--seed", type=int, default=146)
     args = parser.parse_args(argv)
     holdout_end = datetime.fromisoformat(args.holdout_end.replace("Z", "+00:00"))
@@ -522,6 +831,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     if holdout_end <= OOS_START:
         raise SystemExit("holdout end must be after the OOS start")
     groups: list[dict[str, Any]] = []
+    max_queries = None if args.max_queries == 0 else max(1, args.max_queries)
+    matching_trials = len(INSTRUMENTS) * len(TIMEFRAMES) * len(WINDOW_LENGTHS) * 2 * len(HORIZONS)
+    cluster_trials = (
+        len(INSTRUMENTS)
+        * len(TIMEFRAMES)
+        * len(WINDOW_LENGTHS)
+        * len(CLUSTER_COUNTS)
+        * 2
+        * len(HORIZONS)
+    )
+    trial_count = matching_trials + cluster_trials
     # Exclude calendar months at and after the configured boundary before the
     # Parquet loader materialises rows. The holdout directory is never opened.
     excluded = {
@@ -549,7 +869,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                     timeframe=timeframe,
                     output_root=args.output,
                     holdout_end=holdout_end,
-                    max_queries=args.max_queries,
+                    max_queries=max_queries,
+                    trial_count=trial_count,
                     seed=args.seed,
                 )
             )
@@ -568,6 +889,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             "stride": "N/4",
             "methods": ["dtw", "correlation"],
             "top_k": 20,
+            "cluster_counts": CLUSTER_COUNTS,
+            "max_queries": max_queries,
+            "query_sampling": "every m-th OOS window, deterministic",
+            "correlation_prefilter": CORRELATION_PREFILTER,
+            "run_order": TIMEFRAMES,
             "assumed_cost_points": ASSUMED_COSTS,
             "sealed_holdout_read": False,
         },
@@ -580,7 +906,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "ledger_writes": 0,
             "promotion_writes": 0,
         },
-        "trial_count": len(groups) * len(WINDOW_LENGTHS) * 2 * len(HORIZONS),
+        "trial_count": trial_count,
         "groups": groups,
     }
     _write_json(args.output / "t146_matching_summary.json", payload)
