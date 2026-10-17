@@ -883,9 +883,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         ((args.instrument, args.timeframe),)
         if args.instrument is not None and args.timeframe is not None
         else tuple(
-            (instrument, timeframe)
-            for instrument in INSTRUMENTS
-            for timeframe in TIMEFRAMES
+            (instrument, timeframe) for instrument in INSTRUMENTS for timeframe in TIMEFRAMES
         )
     )
     for instrument, timeframe in selected_groups:

@@ -13,9 +13,9 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any, Callable, Sequence
-
+from typing import Any
 
 GROUP_ORDER: tuple[tuple[str, int], ...] = (
     ("NSXUSD", 60),
@@ -180,9 +180,36 @@ def run_group_with_timeout(
         seed=seed,
     )
     started = clock()
-    process = popen_factory(
-        command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-    )
+    # Child output goes to a log file: an undrained PIPE can fill up and hang the child.
+    with (group_output / "child.log").open("w", encoding="utf-8") as log_handle:
+        process = popen_factory(command, stdout=log_handle, stderr=subprocess.STDOUT, text=True)
+        return _supervise(
+            process,
+            key=key,
+            instrument=instrument,
+            timeframe=timeframe,
+            group_output=group_output,
+            group_progress=group_progress,
+            started=started,
+            time_limit_seconds=time_limit_seconds,
+            clock=clock,
+            sleep=sleep,
+        )
+
+
+def _supervise(
+    process: Any,
+    *,
+    key: str,
+    instrument: str,
+    timeframe: int,
+    group_output: Path,
+    group_progress: Path,
+    started: float,
+    time_limit_seconds: float,
+    clock: Callable[[], float],
+    sleep: Callable[[float], None],
+) -> dict[str, Any]:
     peak_rss = 0
     timed_out = False
     while process.poll() is None:
@@ -319,9 +346,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, default=Path("docs/evidence"))
     parser.add_argument("--progress", type=Path)
     parser.add_argument("--holdout-end", default="2026-07-01T00:00:00+00:00")
-    parser.add_argument(
-        "--instrument", choices=tuple(sorted({item[0] for item in GROUP_ORDER}))
-    )
+    parser.add_argument("--instrument", choices=tuple(sorted({item[0] for item in GROUP_ORDER})))
     parser.add_argument(
         "--timeframe", type=int, choices=tuple(sorted({item[1] for item in GROUP_ORDER}))
     )
