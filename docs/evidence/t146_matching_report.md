@@ -27,6 +27,8 @@ Out-of-sample: `2025-01-01T00:00:00+00:00` to `2026-07-01T00:00:00+00:00`
 
 ## Coverage interpretation
 
+> Reviewer note (Claude, V-402): the explanation below is Codex's and is NOT proven. XAUUSD has about 1.0M pre-holdout 1m rows, and the window builder only needs consecutive equally spaced bars, so zero windows looks like a loader or timestamp-spacing defect rather than missing data. NSXUSD has no rows because the lake stores that index under another name. No verdict about movement matching exists yet. See Q-063.
+
 The runner returned zero eligible continuous in-sample windows for every group. This is a data coverage/continuity outcome and does not establish that the movement edge is absent.
 
 The Pod lake listing had no `NSXUSD/1m` parquet source. It did show `NAS100/1m_capital` and `XAUUSD/1m`; XAUUSD had 211 monthly 1m files, but the strict contiguous-window builder still produced no eligible 30, 60 or 120 bar windows.
