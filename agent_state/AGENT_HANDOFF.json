@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 404,
+  "revision": 408,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-146 code accepted; Codex now runs it on the real lake step by step (T-153). T-151 and T-152 stay blocked.",
+    "summary": "T-153 runner accepted and merged; Codex now runs the T-146 study on the Pod group by group (60m, 5m, 3m, 1m mandatory).",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5030,14 +5030,20 @@
         "T-146"
       ],
       "acceptance_criteria": [
-        "Owner (2026-10-17): do not wait for the owner; Codex runs this itself wherever it can reach the lake. Run scripts/lab_t146_matching.py from main (check the checkout is at or after the T-146 merge). Earlier attempts with max_queries 64 and 6 hit the runtime bound, so run ONE group at a time (one symbol, one timeframe) with a small --max-queries, 60m first, then 5m, 3m, and 1m last but mandatory; write each group's evidence file as soon as it finishes and keep a progress file so a stopped run resumes. Measure and report seconds per group; raise max-queries step by step while a group stays inside the bound. Merge the group files into docs/evidence/t146_matching_summary.json and write the plain-language report with a verdict per symbol/timeframe. NSXUSD and XAUUSD, all four timeframes, never 60m only. If the lake truly cannot be reached, say exactly which command failed and then (and only then) leave the question for the owner. Sealed holdout stays unread; no broker calls; no edits to risk, gate, cost or ledger files. Do not change the formulas in scripts/lab_t146_stats.py. PR, ONE log entry, validation entry, set to review, hand the turn to claude."
+        "Owner (2026-10-17): do not wait for the owner; Codex runs this itself wherever it can reach the lake. Run scripts/lab_t146_matching.py from main (check the checkout is at or after the T-146 merge). Earlier attempts with max_queries 64 and 6 hit the runtime bound, so run ONE group at a time (one symbol, one timeframe) with a small --max-queries, 60m first, then 5m, 3m, and 1m last but mandatory; write each group's evidence file as soon as it finishes and keep a progress file so a stopped run resumes. Measure and report seconds per group; raise max-queries step by step while a group stays inside the bound. Merge the group files into docs/evidence/t146_matching_summary.json and write the plain-language report with a verdict per symbol/timeframe. NSXUSD and XAUUSD, all four timeframes, never 60m only. If the lake truly cannot be reached, say exactly which command failed and then (and only then) leave the question for the owner. Sealed holdout stays unread; no broker calls; no edits to risk, gate, cost or ledger files. Do not change the formulas in scripts/lab_t146_stats.py. PR, ONE log entry, validation entry, set to review, hand the turn to claude.",
+        "Q-061 answered (D-041): you may now change code. Add a per-group runner (new script or flags, not a change to formulas in scripts/lab_t146_stats.py) that: runs exactly one symbol/timeframe group per invocation; writes that group's evidence JSON and charts as soon as it finishes; keeps a progress file so a stopped run resumes at the next group; enforces a per-group wall-clock limit (default 20 minutes) after which it saves what it has, marks the group 'partial' with the number of queries done, and exits cleanly; logs seconds per group and RSS; never runs two groups in parallel on 1m. Order: NSXUSD 60m, XAUUSD 60m, then 5m, 3m and 1m (1m mandatory), starting every group at --max-queries 2 and raising step by step only while the group stays well inside its limit. Detached PID must be monitored and a hung job stopped by the wrapper, not by hand. Add unit tests for resume, partial marking and the time limit (use a fake clock). After the runner is merged, run it on the Pod, merge group files into docs/evidence/t146_matching_summary.json, write the plain-language report with a verdict per symbol/timeframe, ruff check and ruff format --line-length 100 (CI uses ruff 0.9.6), PR, ONE log entry, validation entry, set to review, hand the turn to claude."
       ],
       "deliverables": [
         "docs/evidence/t146_matching_summary.json"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "scripts/lab_t146_matching.py",
+        "scripts/lab_t146_runner.py",
+        "tests/unit/test_t146_scripts.py",
+        "tests/unit/test_t146_runner.py"
+      ],
+      "completion_note": "Runner code reviewed and accepted by Claude (V-387). Remaining: after the runner is on main, run it on the Pod group by group (NSXUSD/XAUUSD 60m, 5m, 3m, 1m mandatory), merge group files into docs/evidence/t146_matching_summary.json, write the plain report with a verdict per symbol/timeframe, then set review."
     }
   ],
   "decisions": [
@@ -5359,6 +5365,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-16T15:55:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-041",
+      "statement": "Owner 2026-10-17 11:16 Riyadh answered Q-061 option 1: authorize a per-group bounded runner with checkpoints for the T-146 real-lake study (T-153). Method, formulas in scripts/lab_t146_stats.py, sealed holdout and safety rules stay unchanged; no broker calls.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-17T08:16:00Z",
       "do_not_reopen": false
     }
   ],
@@ -12994,6 +13008,71 @@
       "validated_by": "claude",
       "date": "2026-10-16T21:50:00Z",
       "reverify_if": "scripts/lab_t146_matching.py or scripts/lab_t146_stats.py changes"
+    },
+    {
+      "id": "V-384",
+      "task_id": "T-153",
+      "subject": "T-146 real-lake run preflight",
+      "method": "Attempted a bounded connection to the supplied Pod terminal and checked the previously reachable workspace for the required script and lake paths.",
+      "result": "pass",
+      "checked": "New supplied terminal opened successfully. Read-only checks confirmed /workspace/data/lake and /app/scripts/lab_t146_matching.py; --help confirmed the required timeframes and no broker/order path.",
+      "evidence": [
+        "Q-060",
+        "/app/scripts/lab_t146_matching.py --help",
+        "/workspace/data/lake"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-17T07:20:00Z",
+      "reverify_if": "The Pod endpoint becomes reachable and the deployed image contains scripts/lab_t146_matching.py."
+    },
+    {
+      "id": "V-385",
+      "task_id": "T-153",
+      "subject": "T-146 max_queries=1 bounded Pod run",
+      "method": "Ran the accepted script detached with max_queries=1 on the unsealed lake; monitored PID, wall time, CPU/RSS, output directory, and exit status; stopped only the study PID after exceeding the under-30-minute target.",
+      "result": "pending",
+      "checked": "The run reached 34:41 at ~100% CPU and ~2.16 GB RSS, emitted only nsxusd_5m chart files, and produced no summary/report. Exit capture reads Terminated/143 after the bounded stop.",
+      "evidence": [
+        "/workspace/state/t153_t146.exit",
+        "/workspace/state/t153_t146.log",
+        "/workspace/state/t153_t146/t146_charts/nsxusd_5m"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-17T07:59:00Z",
+      "reverify_if": "Owner/Claude authorizes a bounded per-group runner or accepts a longer runtime target."
+    },
+    {
+      "id": "V-386",
+      "task_id": "T-153",
+      "subject": "T-153 bounded runner implementation",
+      "method": "Ran Python compilation for the matching script, runner and focused tests; directly invoked all 3 runner tests and all 11 matching tests; checked CLI help, line lengths, git diff --check and handoff validation.",
+      "result": "pass",
+      "checked": "The runner orders NSXUSD/XAUUSD at 60m, 5m, 3m and 1m; runs one child group at a time; atomically persists progress; resumes at the next pending group; records query count, elapsed seconds, RSS and evidence paths; terminates and marks a group partial at the injected wall-clock limit. No broker, order, holdout, risk, gate, cost, ledger or promotion path is imported or called. Desktop pytest and Ruff executables are unavailable, so CI must provide those checks.",
+      "evidence": [
+        "scripts/lab_t146_runner.py",
+        "tests/unit/test_t146_runner.py",
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py",
+        "agent_state/validate_handoff.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-17T11:24:36+03:00",
+      "reverify_if": "The runner, matching progress flags or Pod image changes."
+    },
+    {
+      "id": "V-387",
+      "task_id": "T-153",
+      "subject": "T-153 runner code review (Claude)",
+      "method": "Reviewed diff vs main; ruff check and ruff format --line-length 100 on the three Codex files (Codex's formatting and import order failed, fixed by Claude); ran the 3 runner tests with a small harness (pytest not installable in this sandbox); handoff validation against main.",
+      "result": "pass",
+      "checked": "One group per invocation, order NSX/XAU 60m,5m,3m,1m, atomic checkpoint, partial marking at the time limit, no broker/holdout/risk/gate/ledger access, formulas in lab_t146_stats.py untouched. Fixed one defect: child output went to an undrained PIPE and could hang a long group; it now goes to child.log in the group folder. Pod run of the study is NOT yet done.",
+      "reverify_if": false,
+      "evidence": [
+        "scripts/lab_t146_runner.py",
+        "tests/unit/test_t146_runner.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-17T11:24:36+03:00"
     }
   ],
   "blockers": [
@@ -13165,6 +13244,24 @@
       "raised_by": "codex",
       "status": "open",
       "resolution": "Owner supplied a reachable terminal and the unsealed lake was confirmed. Bounded read-only T-146 attempts at max_queries=64 and max_queries=6 were stopped after exceeding the safe runtime bound without output; the canonical full-lake evidence run remains pending."
+    },
+    {
+      "id": "B-025",
+      "text": "T-153 Pod execution is blocked: the supplied terminal currently returns net::ERR_BLOCKED_BY_CLIENT, and the last reachable workspace had the lake but did not contain /app/scripts/lab_t146_matching.py. The T-146 image must be deployed before the read-only command can run.",
+      "raised_by": "codex",
+      "status": "resolved",
+      "resolution": "Owner supplied a reachable terminal with the accepted T-146 script and unsealed lake. Read-only preflight passed; the bounded study run is now starting.",
+      "resolved_by": "codex",
+      "resolved_at": "2026-10-17"
+    },
+    {
+      "id": "B-026",
+      "text": "T-153 max_queries=1 run exceeded the under-30-minute Pod target without summary/report output. At 34:41 the detached PID 735 was ~100% CPU and ~2.16 GB RSS; Codex stopped only that process (exit 143). Partial charts were emitted only for nsxusd_5m. The unchanged command should not be rerun until the owner/Claude chooses a bounded per-group runner or explicitly accepts a longer bound.",
+      "raised_by": "codex",
+      "status": "resolved",
+      "resolution": "Owner authorized D-041; a5c2f02 adds the per-group checkpointed runner with a 20-minute wall-clock guard and partial marking. The unchanged command will not be rerun; the next Pod run uses the wrapper after merge.",
+      "resolved_by": "codex",
+      "resolved_at": "2026-10-17"
     }
   ],
   "questions": [
@@ -13885,6 +13982,32 @@
       "recommendation": "Option 2. The same mistake came back after two written instructions, so a written reference function with its own tests is safer than a third round of prose. The code is a diagnostic only and touches no broker, risk or gate file.",
       "status": "answered",
       "answer": "Owner 2026-10-16: do the recommended option (option 2: Claude writes the corrected statistics function and tests, Codex wires it in)."
+    },
+    {
+      "id": "Q-060",
+      "to": "human",
+      "from": "codex",
+      "status": "answered",
+      "options": [
+        "Redeploy the accepted T-146 image and provide a reachable terminal",
+        "Defer the real-lake run"
+      ],
+      "text": "T-153 could not start because the supplied Pod terminal returned ERR_BLOCKED_BY_CLIENT; the last reachable workspace had /workspace/data/lake but lacked /app/scripts/lab_t146_matching.py. Please redeploy ghcr.io/tarek-assaf/ai-trader:a49971219b58fa596e6cff15f2c68825920dd796 and provide a reachable terminal so Codex can run the read-only T-146 command.",
+      "recommendation": "Redeploy the immutable a49971219 image and provide a reachable terminal; the run makes no broker calls or orders.",
+      "answer": "Owner supplied a reachable endpoint; preflight found the required script and lake, so Codex resumed T-153."
+    },
+    {
+      "id": "Q-061",
+      "to": "human",
+      "from": "codex",
+      "status": "answered",
+      "options": [
+        "Authorize a code-level per-group bounded runner/checkpoint change before retry",
+        "Accept the partial runtime evidence and defer the full real-lake study"
+      ],
+      "text": "T-153 max_queries=1 exceeded the under-30-minute Pod target without summary/report output. Only partial nsxusd_5m charts were emitted before Codex stopped PID 735 at 34:41 (exit 143). What bounded execution design should be used next?",
+      "recommendation": "Do not rerun the unchanged command; add a per-group runner/checkpoint path or explicitly accept a longer runtime bound.",
+      "answer": "Owner 2026-10-17 11:16 Riyadh: option 1, authorize a code-level per-group bounded runner with checkpoints before retry."
     }
   ],
   "log": [
@@ -22439,7 +22562,64 @@
       ],
       "summary": "Owner asked why the turn went to the human when Codex already works on the Pod. Fair: Codex's own question Q-058 asked the owner to run the command, and I handed over instead of giving Codex a smaller job. T-153 now asks Codex to run the T-146 study itself, one group at a time with checkpoints, 60m first and 1m mandatory, and only come back to the owner if a named command truly fails. Turn to Codex.",
       "validation": "V-383"
+    },
+    {
+      "revision": 405,
+      "ts": "2026-10-17T08:00:00+03:00",
+      "agent": "codex",
+      "action": "t153_pod_attempts_and_stop",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Codex note 405 (original wording): T-153 preflight could not reach the supplied Pod terminal (ERR_BLOCKED_BY_CLIENT). The prior reachable workspace had the lake but lacked lab_t146_matching.py. Recorded B-025, Q-060 and the exact immutable image required; no broker or order activity. Turn to human. | Codex note 406 (original wording): New owner-supplied Pod endpoint is reachable. Preflight found the accepted T-146 study script and /workspace/data/lake; --help confirms 60m, 5m, 3m and mandatory 1m groups. Starting one bounded run at max_queries=1. | Codex note 407 (original wording): The first foreground study process ended when its terminal session closed before evidence was written. Restarted the same max_queries=1 command detached with setsid, log, launch and exit-code files; wrapper 734 and Python PID 735 are active. | Codex note 408 (original wording): Stopped only the detached T-153 study PID after 34:41 because max_queries=1 exceeded the under-30-minute Pod target without summary/report output. Partial nsxusd_5m charts were preserved; no broker or order activity. Added B-026, Q-061 and V-385. Turn to human."
+    },
+    {
+      "revision": 406,
+      "ts": "2026-10-17T11:25:00+03:00",
+      "agent": "claude",
+      "action": "answer_q061_unblock_t153",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner chose Q-061 option 1 (D-041). T-153 unblocked with a per-group bounded runner spec: one group per run, checkpoint file, 20-minute limit with partial marking, 60m first and 1m mandatory. Also fixed Q-060 and Q-061 into the standard answered shape and merged Codex's four consecutive log entries into one with original wording. Turn to Codex."
+    },
+    {
+      "revision": 407,
+      "ts": "2026-10-17T11:24:36+03:00",
+      "agent": "codex",
+      "action": "implement_t153_bounded_runner",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t146_matching.py",
+        "scripts/lab_t146_runner.py",
+        "tests/unit/test_t146_runner.py"
+      ],
+      "summary": "Implemented the owner-authorized per-group T-153 runner: deterministic 60m/5m/3m/1m group order, atomic resume checkpoints, one child group per invocation, 20-minute timeout with clean partial marking, query/RSS/elapsed evidence and fake-clock unit coverage. No broker, order, holdout, risk, gate, cost, ledger or promotion activity. Pod execution remains next; turn stays Codex while implementation continues. Completed the authorized per-group T-153 runner and handed it to Claude for review. It has deterministic 60m/5m/3m/1m ordering, one child group per invocation, atomic resume checkpoints, 20-minute timeout/partial marking, query/elapsed/RSS records, aggregate checkpoint/report output and fake-clock tests. Direct Python checks, compile and handoff validation pass; desktop pytest/Ruff are unavailable. Pod execution is intentionally deferred until the runner is merged. No broker, order, holdout, risk, gate, cost, ledger or promotion activity."
+    },
+    {
+      "revision": 408,
+      "ts": "2026-10-17T12:00:00+03:00",
+      "agent": "claude",
+      "action": "accept_t153_runner",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t146_runner.py",
+        "scripts/lab_t146_matching.py"
+      ],
+      "summary": "Reviewed the T-153 runner. Fixed ruff import order and formatting and one hang risk (undrained output pipe, now a log file). Runner accepted and merged; the Pod study run is still to do and stays with Codex. Merged Codex's two consecutive log entries into one."
     }
   ],
-  "project_summary": "T-153: Codex runs the accepted T-146 study on the real lake in small checkpointed steps."
+  "project_summary": "T-153: runner accepted; Codex runs the accepted T-146 study on the Pod group by group."
 }
