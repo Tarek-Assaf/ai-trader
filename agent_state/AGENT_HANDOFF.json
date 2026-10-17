@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 405,
+  "turn": "codex",
+  "revision": 406,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-153 is blocked pending a reachable Pod terminal with the accepted T-146 image; no broker activity occurred.",
+    "summary": "T-153 is in progress on a reachable Pod with the accepted T-146 study script and unsealed lake; no broker activity is permitted.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -1114,7 +1114,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط·آ´أ¢â€¢ع¾ط·آ´ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¢آ¤ط·آ¬ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط¢آ£ط·آ¸ط¸â‚¬ط£آ¹ط·آ¸ط¢آ¤ط·طŒأ¢â€‌ع©ط¸â€™1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b4\u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00b4\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00a3\u0622\u00b9\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0637\u0152\u0623\u00a2\u00e2\u20ac\u200c\u0639\u00a9\u0637\u00b8\u00e2\u20ac\u21221 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -5021,7 +5021,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04"
@@ -5037,7 +5037,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": "Attempted the owner-supplied Pod terminal for the T-153 T-146 real-lake run. The current endpoint returned net::ERR_BLOCKED_BY_CLIENT before a command could run. A prior bounded read-only check on the reachable terminal confirmed /workspace/data/lake and /workspace/state existed, but /app/scripts/lab_t146_matching.py was missing, so the accepted T-146 image was not deployed there. No broker calls, orders, holdout reads, risk/gate/cost/ledger writes or promotion activity occurred."
+      "completion_note": "Pod preflight succeeded on the newly supplied endpoint: /app/scripts/lab_t146_matching.py is present, /workspace/data/lake is present, and --help confirms the read-only T-146 study with 60m, 5m, 3m and 1m groups. Starting one bounded run with --max-queries 1; no broker calls or orders."
     }
   ],
   "decisions": [
@@ -6158,7 +6158,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ¢â€¢ع¾ط·آ«ط·آ¸ط¢â‚¬ط¢آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00ab\u0637\u00b7\u0622\u00b8\u0637\u00a2\u00e2\u201a\u00ac\u0637\u00a2\u0622\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -13000,14 +13000,15 @@
       "task_id": "T-153",
       "subject": "T-146 real-lake run preflight",
       "method": "Attempted a bounded connection to the supplied Pod terminal and checked the previously reachable workspace for the required script and lake paths.",
-      "result": "blocked",
-      "checked": "Current terminal open returned net::ERR_BLOCKED_BY_CLIENT. Prior reachable terminal had /workspace/data/lake and /workspace/state but /app/scripts/lab_t146_matching.py was missing.",
+      "result": "pass",
+      "checked": "New supplied terminal opened successfully. Read-only checks confirmed /workspace/data/lake and /app/scripts/lab_t146_matching.py; --help confirmed the required timeframes and no broker/order path.",
       "evidence": [
         "Q-060",
-        "B-025"
+        "/app/scripts/lab_t146_matching.py --help",
+        "/workspace/data/lake"
       ],
       "validated_by": "codex",
-      "date": "2026-10-17T07:18:55.447377+00:00",
+      "date": "2026-10-17T07:20:00Z",
       "reverify_if": "The Pod endpoint becomes reachable and the deployed image contains scripts/lab_t146_matching.py."
     }
   ],
@@ -13185,7 +13186,10 @@
       "id": "B-025",
       "text": "T-153 Pod execution is blocked: the supplied terminal currently returns net::ERR_BLOCKED_BY_CLIENT, and the last reachable workspace had the lake but did not contain /app/scripts/lab_t146_matching.py. The T-146 image must be deployed before the read-only command can run.",
       "raised_by": "codex",
-      "status": "open"
+      "status": "resolved",
+      "resolution": "Owner supplied a reachable terminal with the accepted T-146 script and unsealed lake. Read-only preflight passed; the bounded study run is now starting.",
+      "resolved_by": "codex",
+      "resolved_at": "2026-10-17"
     }
   ],
   "questions": [
@@ -13911,13 +13915,14 @@
       "id": "Q-060",
       "to": "human",
       "from": "codex",
-      "status": "open",
+      "status": "resolved",
       "options": [
         "Redeploy the accepted T-146 image and provide a reachable terminal",
         "Defer the real-lake run"
       ],
       "text": "T-153 could not start because the supplied Pod terminal returned ERR_BLOCKED_BY_CLIENT; the last reachable workspace had /workspace/data/lake but lacked /app/scripts/lab_t146_matching.py. Please redeploy ghcr.io/tarek-assaf/ai-trader:a49971219b58fa596e6cff15f2c68825920dd796 and provide a reachable terminal so Codex can run the read-only T-146 command.",
-      "recommendation": "Redeploy the immutable a49971219 image and provide a reachable terminal; the run makes no broker calls or orders."
+      "recommendation": "Redeploy the immutable a49971219 image and provide a reachable terminal; the run makes no broker calls or orders.",
+      "resolution": "Owner supplied a reachable endpoint; preflight found the required script and lake, so Codex resumed T-153."
     }
   ],
   "log": [
@@ -15041,7 +15046,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -22485,7 +22490,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-153 preflight could not reach the supplied Pod terminal (ERR_BLOCKED_BY_CLIENT). The prior reachable workspace had the lake but lacked lab_t146_matching.py. Recorded B-025, Q-060 and the exact immutable image required; no broker or order activity. Turn to human."
+    },
+    {
+      "revision": 406,
+      "ts": "2026-10-17T07:20:00+03:00",
+      "agent": "codex",
+      "action": "start_t153_bounded_run",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "New owner-supplied Pod endpoint is reachable. Preflight found the accepted T-146 study script and /workspace/data/lake; --help confirms 60m, 5m, 3m and mandatory 1m groups. Starting one bounded run at max_queries=1.",
+      "validation": "V-384"
     }
   ],
-  "project_summary": "T-153 blocked: deploy the accepted T-146 image and provide a reachable Pod terminal, then Codex will run the read-only real-lake study."
+  "project_summary": "T-153 in progress: reachable Pod preflight passed on the accepted T-146 image; bounded real-lake study started with max_queries=1."
 }
