@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 407,
+  "turn": "human",
+  "revision": 408,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-153 is running as a detached read-only study on the reachable Pod; evidence and exit status are being monitored.",
+    "summary": "T-153 stopped after a bounded max_queries=1 run exceeded the Pod runtime target; only partial nsxusd_5m charts exist and no canonical summary/report was produced.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5021,7 +5021,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "blocked",
       "requirements": [
         "R-03",
         "R-04"
@@ -5037,7 +5037,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": "Pod preflight passed. A detached bounded run is active with --max-queries 1 and output /workspace/state/t153_t146; process 735 (wrapper 734). The earlier foreground attempt ended with the terminal session, so the run was restarted via setsid with stdout/stderr and exit-code capture. No broker calls or orders."
+      "completion_note": "The accepted command was run detached with --max-queries 1, --lake /workspace/data/lake and --output /workspace/state/t153_t146. It exceeded the Pod wall-time target of under 30 minutes without summary JSON or report. At 34:41, PID 735 used about 2.16 GB RSS at ~100% CPU; Codex stopped only that process (exit file: Terminated/143). Partial charts exist only for nsxusd_5m. No broker calls, orders, holdout reads, risk/gate/cost/ledger writes or promotion activity."
     }
   ],
   "decisions": [
@@ -13010,6 +13010,22 @@
       "validated_by": "codex",
       "date": "2026-10-17T07:20:00Z",
       "reverify_if": "The Pod endpoint becomes reachable and the deployed image contains scripts/lab_t146_matching.py."
+    },
+    {
+      "id": "V-385",
+      "task_id": "T-153",
+      "subject": "T-146 max_queries=1 bounded Pod run",
+      "method": "Ran the accepted script detached with max_queries=1 on the unsealed lake; monitored PID, wall time, CPU/RSS, output directory, and exit status; stopped only the study PID after exceeding the under-30-minute target.",
+      "result": "blocked",
+      "checked": "The run reached 34:41 at ~100% CPU and ~2.16 GB RSS, emitted only nsxusd_5m chart files, and produced no summary/report. Exit capture reads Terminated/143 after the bounded stop.",
+      "evidence": [
+        "/workspace/state/t153_t146.exit",
+        "/workspace/state/t153_t146.log",
+        "/workspace/state/t153_t146/t146_charts/nsxusd_5m"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-17T07:59:00Z",
+      "reverify_if": "Owner/Claude authorizes a bounded per-group runner or accepts a longer runtime target."
     }
   ],
   "blockers": [
@@ -13190,6 +13206,13 @@
       "resolution": "Owner supplied a reachable terminal with the accepted T-146 script and unsealed lake. Read-only preflight passed; the bounded study run is now starting.",
       "resolved_by": "codex",
       "resolved_at": "2026-10-17"
+    },
+    {
+      "id": "B-026",
+      "text": "T-153 max_queries=1 run exceeded the under-30-minute Pod target without summary/report output. At 34:41 the detached PID 735 was ~100% CPU and ~2.16 GB RSS; Codex stopped only that process (exit 143). Partial charts were emitted only for nsxusd_5m. The unchanged command should not be rerun until the owner/Claude chooses a bounded per-group runner or explicitly accepts a longer bound.",
+      "raised_by": "codex",
+      "status": "open",
+      "resolution": ""
     }
   ],
   "questions": [
@@ -13923,6 +13946,18 @@
       "text": "T-153 could not start because the supplied Pod terminal returned ERR_BLOCKED_BY_CLIENT; the last reachable workspace had /workspace/data/lake but lacked /app/scripts/lab_t146_matching.py. Please redeploy ghcr.io/tarek-assaf/ai-trader:a49971219b58fa596e6cff15f2c68825920dd796 and provide a reachable terminal so Codex can run the read-only T-146 command.",
       "recommendation": "Redeploy the immutable a49971219 image and provide a reachable terminal; the run makes no broker calls or orders.",
       "resolution": "Owner supplied a reachable endpoint; preflight found the required script and lake, so Codex resumed T-153."
+    },
+    {
+      "id": "Q-061",
+      "to": "human",
+      "from": "codex",
+      "status": "open",
+      "options": [
+        "Authorize a code-level per-group bounded runner/checkpoint change before retry",
+        "Accept the partial runtime evidence and defer the full real-lake study"
+      ],
+      "text": "T-153 max_queries=1 exceeded the under-30-minute Pod target without summary/report output. Only partial nsxusd_5m charts were emitted before Codex stopped PID 735 at 34:41 (exit 143). What bounded execution design should be used next?",
+      "recommendation": "Do not rerun the unchanged command; add a per-group runner/checkpoint path or explicitly accept a longer runtime bound."
     }
   ],
   "log": [
@@ -22518,7 +22553,21 @@
       ],
       "summary": "The first foreground study process ended when its terminal session closed before evidence was written. Restarted the same max_queries=1 command detached with setsid, log, launch and exit-code files; wrapper 734 and Python PID 735 are active.",
       "validation": "V-384"
+    },
+    {
+      "revision": 408,
+      "ts": "2026-10-17T08:00:00+03:00",
+      "agent": "codex",
+      "action": "stop_t153_runtime_bound",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Stopped only the detached T-153 study PID after 34:41 because max_queries=1 exceeded the under-30-minute Pod target without summary/report output. Partial nsxusd_5m charts were preserved; no broker or order activity. Added B-026, Q-061 and V-385. Turn to human.",
+      "validation": "V-385"
     }
   ],
-  "project_summary": "T-153 in progress: detached bounded real-lake study active on Pod with max_queries=1; monitoring checkpoint output."
+  "project_summary": "T-153 blocked: max_queries=1 exceeded the under-30-minute Pod target without summary/report output; owner/Claude must choose the next bounded execution design."
 }
