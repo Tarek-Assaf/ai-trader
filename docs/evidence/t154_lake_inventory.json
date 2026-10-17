@@ -1,0 +1,63 @@
+{
+  "task": "T-154",
+  "source": "RunPod read-only checks against /workspace/data/lake",
+  "captured_at": "2026-10-17",
+  "inventory": {
+    "XAUUSD": {
+      "directory": "/workspace/data/lake/XAUUSD/1m",
+      "parquet_files": 211,
+      "rows": 6140217,
+      "timestamp_schema": "timestamp[us, tz=UTC]",
+      "representative_files": [
+        {
+          "file": "2009/03.parquet",
+          "rows": 16400,
+          "first": "2009-03-15T22:00:00Z",
+          "last": "2009-03-31T23:59:00Z",
+          "gap_histogram_minutes_top": [[1, 16086], [2, 228], [3, 40], [4, 13], [5, 5], [7, 4], [60, 3], [45, 3], [19, 2], [2881, 2]],
+          "gaps_gt_1": 313,
+          "gaps_gt_5": 27,
+          "gaps_gt_60": 2,
+          "exact_one_minute_share": 0.9809134703
+        }
+      ]
+    },
+    "NSXUSD": {
+      "directory": "/workspace/data/lake/NSXUSD/1m",
+      "parquet_files": 191,
+      "rows": 5285568,
+      "timestamp_schema": "timestamp[us, tz=UTC]",
+      "representative_files": [
+        {
+          "file": "2010/11.parquet",
+          "rows": 14690,
+          "first": "2010-11-14T23:01:00Z",
+          "last": "2010-11-30T23:59:00Z"
+        },
+        {
+          "file": "2010/12.parquet",
+          "rows": 26165,
+          "first": "2010-12-01T00:00:00Z",
+          "last": "2010-12-31T19:59:00Z",
+          "gap_histogram_minutes_top": [[1, 23521], [2, 1739], [3, 467], [4, 194], [5, 87], [6, 46], [7, 30], [9, 21], [8, 14], [10, 8]],
+          "gaps_gt_1": 2643,
+          "gaps_gt_5": 156,
+          "gaps_gt_60": 4,
+          "exact_one_minute_share": 0.8989833359
+        }
+      ]
+    }
+  },
+  "interpretation": [
+    "Both lake directories exist in the applied Pod image, so the earlier NSXUSD zero-row result was an image or deployment state mismatch rather than proof that the symbol is absent.",
+    "The representative files contain UTC-aware timestamps, so the loader is not receiving naive timestamps in these samples.",
+    "Both samples contain non-one-minute gaps. The long gaps include market closures; shorter gaps also occur inside the files and need a complete-window check before the continuity rule is changed.",
+    "This is a bounded sample, not the required per-year aggregate. The full per-year scan remains pending because scanning all 11.4 million rows exceeds the Pod terminal time bound."
+  ],
+  "safety": {
+    "broker_calls": false,
+    "orders": false,
+    "holdout_read": false,
+    "promotion_or_gate_changes": false
+  }
+}
