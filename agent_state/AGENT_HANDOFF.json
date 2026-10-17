@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 403,
+  "turn": "codex",
+  "revision": 404,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-146 code accepted. Waiting for the Pod run of T-146 (Q-058). T-151 and T-152 stay blocked.",
+    "summary": "T-146 code accepted; Codex now runs it on the real lake step by step (T-153). T-151 and T-152 stay blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -125,7 +125,8 @@
         "T-149",
         "T-150",
         "T-151",
-        "T-152"
+        "T-152",
+        "T-153"
       ]
     },
     {
@@ -175,7 +176,8 @@
         "T-146",
         "T-147",
         "T-148",
-        "T-149"
+        "T-149",
+        "T-153"
       ]
     },
     {
@@ -5012,6 +5014,30 @@
       "review_cycles": 0,
       "evidence": [],
       "completion_note": "Parked by owner, not started."
+    },
+    {
+      "id": "T-153",
+      "title": "Run the accepted T-146 movement-matching study on the real lake in small checkpointed steps",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03",
+        "R-04"
+      ],
+      "depends_on": [
+        "T-146"
+      ],
+      "acceptance_criteria": [
+        "Owner (2026-10-17): do not wait for the owner; Codex runs this itself wherever it can reach the lake. Run scripts/lab_t146_matching.py from main (check the checkout is at or after the T-146 merge). Earlier attempts with max_queries 64 and 6 hit the runtime bound, so run ONE group at a time (one symbol, one timeframe) with a small --max-queries, 60m first, then 5m, 3m, and 1m last but mandatory; write each group's evidence file as soon as it finishes and keep a progress file so a stopped run resumes. Measure and report seconds per group; raise max-queries step by step while a group stays inside the bound. Merge the group files into docs/evidence/t146_matching_summary.json and write the plain-language report with a verdict per symbol/timeframe. NSXUSD and XAUUSD, all four timeframes, never 60m only. If the lake truly cannot be reached, say exactly which command failed and then (and only then) leave the question for the owner. Sealed holdout stays unread; no broker calls; no edits to risk, gate, cost or ledger files. Do not change the formulas in scripts/lab_t146_stats.py. PR, ONE log entry, validation entry, set to review, hand the turn to claude."
+      ],
+      "deliverables": [
+        "docs/evidence/t146_matching_summary.json"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -22399,7 +22425,21 @@
       ],
       "summary": "T-146 code accepted (V-383): Codex wired the reference statistics correctly. Claude applied one format-only fix (ruff format) that CI had flagged. The real market result still needs the Pod run (Q-058, owner action). Nothing else is queued for Codex, so the turn goes to the owner.",
       "validation": "V-383"
+    },
+    {
+      "revision": 404,
+      "ts": "2026-10-17T01:20:00+03:00",
+      "agent": "claude",
+      "action": "queue_t153_pod_run",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner asked why the turn went to the human when Codex already works on the Pod. Fair: Codex's own question Q-058 asked the owner to run the command, and I handed over instead of giving Codex a smaller job. T-153 now asks Codex to run the T-146 study itself, one group at a time with checkpoints, 60m first and 1m mandatory, and only come back to the owner if a named command truly fails. Turn to Codex.",
+      "validation": "V-383"
     }
   ],
-  "project_summary": "T-146 code accepted; the real-lake run on the Pod (Q-058) is the next step and needs the owner."
+  "project_summary": "T-153: Codex runs the accepted T-146 study on the real lake in small checkpointed steps."
 }
