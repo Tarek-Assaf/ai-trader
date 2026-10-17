@@ -1,0 +1,107 @@
+{
+  "generated_at": "2026-10-17T13:40:12Z",
+  "study": "T-146 movement matching",
+  "split": {
+    "holdout_end": "2026-07-01T00:00:00+00:00"
+  },
+  "safety": {
+    "broker_calls": 0,
+    "orders": 0,
+    "paper_trading": false,
+    "gate1_evaluated": false,
+    "ledger_writes": 0,
+    "promotion_writes": 0
+  },
+  "groups": [
+    {
+      "instrument": "NSXUSD",
+      "timeframe": 1,
+      "status": "partial",
+      "queries_evaluated": 36,
+      "elapsed_seconds": 1200.12,
+      "library_windows": 0,
+      "oos_queries": 36,
+      "results": [],
+      "query_stride": null
+    },
+    {
+      "instrument": "NSXUSD",
+      "timeframe": 3,
+      "status": "partial",
+      "queries_evaluated": 36,
+      "elapsed_seconds": 1200.116,
+      "library_windows": 0,
+      "oos_queries": 36,
+      "results": [],
+      "query_stride": null
+    },
+    {
+      "instrument": "NSXUSD",
+      "timeframe": 5,
+      "status": "partial",
+      "queries_evaluated": 36,
+      "elapsed_seconds": 1200.115,
+      "library_windows": 0,
+      "oos_queries": 36,
+      "results": [],
+      "query_stride": null
+    },
+    {
+      "instrument": "NSXUSD",
+      "timeframe": 60,
+      "status": "complete",
+      "queries_evaluated": 0,
+      "elapsed_seconds": 416.147,
+      "library_windows": 0,
+      "oos_queries": 0,
+      "results": [],
+      "query_stride": null,
+      "evidence_file": "/workspace/state/t153_runner/groups/nsxusd_60m/t146_group_nsxusd_60m.json"
+    },
+    {
+      "instrument": "XAUUSD",
+      "timeframe": 1,
+      "status": "partial",
+      "queries_evaluated": 36,
+      "elapsed_seconds": 1200.115,
+      "library_windows": 0,
+      "oos_queries": 36,
+      "results": [],
+      "query_stride": null
+    },
+    {
+      "instrument": "XAUUSD",
+      "timeframe": 3,
+      "status": "partial",
+      "queries_evaluated": 36,
+      "elapsed_seconds": 1200.12,
+      "library_windows": 0,
+      "oos_queries": 36,
+      "results": [],
+      "query_stride": null
+    },
+    {
+      "instrument": "XAUUSD",
+      "timeframe": 5,
+      "status": "partial",
+      "queries_evaluated": 36,
+      "elapsed_seconds": 1200.114,
+      "library_windows": 0,
+      "oos_queries": 36,
+      "results": [],
+      "query_stride": null
+    },
+    {
+      "instrument": "XAUUSD",
+      "timeframe": 60,
+      "status": "complete",
+      "queries_evaluated": 0,
+      "elapsed_seconds": 479.144,
+      "library_windows": 0,
+      "oos_queries": 0,
+      "results": [],
+      "query_stride": null,
+      "evidence_file": "/workspace/state/t153_runner/groups/xauusd_60m/t146_group_xauusd_60m.json"
+    }
+  ]
+}
