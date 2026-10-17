@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 414,
+  "revision": 415,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-153 Pod execution is progressing sequentially: NSXUSD/60 and XAUUSD/60 completed; NSXUSD/5 reached the 20-minute limit with a partial checkpoint; XAUUSD/5 is now running.",
+    "summary": "T-153 Pod execution is progressing sequentially: both 60m groups completed; both 5m groups are partial at the enforced limit; NSXUSD/3 is now running.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5044,9 +5044,10 @@
         "tests/unit/test_t146_runner.py",
         "/workspace/state/t153_runner/groups/nsxusd_60m/t146_group_nsxusd_60m.json",
         "/workspace/state/t153_runner/groups/xauusd_60m/t146_group_xauusd_60m.json",
-        "/workspace/state/t153_runner/groups/nsxusd_5m/progress.json"
+        "/workspace/state/t153_runner/groups/nsxusd_5m/progress.json",
+        "/workspace/state/t153_runner/groups/xauusd_5m/progress.json"
       ],
-      "completion_note": "Runner accepted and merged (V-387). Redeployed Pod preflight passed (V-389). NSXUSD/60 and XAUUSD/60 completed (V-390/V-391). NSXUSD/5 reached the enforced 1200.115s per-group limit, was marked partial with 36 queries done, exit -15 and peak RSS 5,924,884,480 bytes (V-392); XAUUSD/5 is now running. Continue through remaining 5m, 3m and mandatory 1m groups, preserving checkpoints."
+      "completion_note": "Runner accepted and merged (V-387). Redeployed Pod preflight passed (V-389). NSXUSD/60 and XAUUSD/60 completed (V-390/V-391). NSXUSD/5 and XAUUSD/5 each reached the enforced 1200-second limit and were checkpointed partial with 36 queries (V-392/V-393). NSXUSD/3 is now running. Continue through remaining 3m and mandatory 1m groups, preserving checkpoints."
     }
   ],
   "decisions": [
@@ -13154,6 +13155,22 @@
       "validated_by": "codex",
       "date": "2026-10-17T11:40:00Z",
       "reverify_if": "The Pod checkpoint or NSXUSD/5 partial group is regenerated."
+    },
+    {
+      "id": "V-393",
+      "task_id": "T-153",
+      "subject": "T-153 XAUUSD 5m bounded partial checkpoint",
+      "method": "Ran the accepted merged per-group runner on the owner-provided Pod with max_queries=2 and a 1200-second group limit; monitored the detached wrapper and inspected the progress checkpoint after the runner enforced the limit.",
+      "result": "pass",
+      "checked": "XAUUSD/5 was cleanly marked partial at 1200.114 seconds with 36 queries done, exit code -15 and rss_peak_bytes=6746279936. The runner exited 0 after saving the checkpoint; no broker, order, holdout, risk, gate, cost, ledger or promotion path was used.",
+      "evidence": [
+        "/workspace/state/t153_runner/progress.json",
+        "/workspace/state/t153_runner/runner.exit",
+        "/workspace/state/t153_runner/groups/xauusd_5m/progress.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-17T12:00:00Z",
+      "reverify_if": "The Pod checkpoint or XAUUSD/5 partial group is regenerated."
     }
   ],
   "blockers": [
