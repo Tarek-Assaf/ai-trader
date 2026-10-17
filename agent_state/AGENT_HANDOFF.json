@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 410,
+  "turn": "codex",
+  "revision": 411,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-153 Pod study is blocked by the reachable Pod image: /workspace/data/lake exists but the merged runner is absent. Owner must redeploy an image containing PR260 and provide a reachable terminal.",
+    "summary": "T-153 resumed on the redeployed Pod image; Codex is running one bounded T-146 group at a time with checkpoints.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5021,7 +5021,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04"
@@ -5043,7 +5043,7 @@
         "tests/unit/test_t146_scripts.py",
         "tests/unit/test_t146_runner.py"
       ],
-      "completion_note": "Runner code reviewed and accepted by Claude (V-387). The reachable Pod has /workspace/data/lake but `python /app/scripts/lab_t146_runner.py --help` fails because the runner is absent; redeploy an image containing merged PR260 before the sequential group run."
+      "completion_note": "Runner accepted and merged (V-387). Owner redeployed the Pod image; preflight now finds the runner and lake. Run NSXUSD/XAUUSD at 60m, 5m, 3m and 1m sequentially, preserving evidence and checkpoints."
     }
   ],
   "decisions": [
@@ -13088,6 +13088,21 @@
       "validated_by": "codex",
       "date": "2026-10-17T08:59:45Z",
       "reverify_if": "Owner redeploys an image containing the merged runner."
+    },
+    {
+      "id": "V-389",
+      "task_id": "T-153",
+      "subject": "T-153 redeployed Pod preflight",
+      "method": "On the new owner-provided terminal, ran `python /app/scripts/lab_t146_runner.py --help` and checked `/workspace/data/lake`.",
+      "result": "pass",
+      "checked": "The merged runner CLI is present and reports the NSXUSD/XAUUSD 60m, 5m, 3m and 1m groups; `/workspace/data/lake` is present. No broker call or order path was used.",
+      "evidence": [
+        "python /app/scripts/lab_t146_runner.py --help",
+        "/workspace/data/lake"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-17T10:39:00Z",
+      "reverify_if": "Pod image changes."
     }
   ],
   "blockers": [
@@ -13282,8 +13297,10 @@
       "id": "B-027",
       "text": "T-153 cannot start on the reachable Pod image: `/workspace/data/lake` exists, but the authoritative merged runner command `python /app/scripts/lab_t146_runner.py --help` fails with `python: can't open file '/app/scripts/lab_t146_runner.py': [Errno 2] No such file or directory`. No study, broker call, order or evidence run was started.",
       "raised_by": "codex",
-      "status": "open",
-      "resolution": "Owner must redeploy an image containing the merged T-153 runner (PR260, main d3d6bc9) and provide a reachable terminal; then Codex resumes the bounded one-group-at-a-time run."
+      "status": "resolved",
+      "resolution": "Owner redeployed the Pod image; the runner CLI and lake preflight now pass. T-153 resumed with the bounded sequential runner.",
+      "resolved_by": "human",
+      "resolved_at": "2026-10-17"
     }
   ],
   "questions": [
@@ -14035,14 +14052,14 @@
       "id": "Q-062",
       "to": "human",
       "from": "codex",
-      "status": "open",
+      "status": "answered",
       "text": "The reachable Pod has `/workspace/data/lake`, but the merged runner is missing. The exact preflight command `python /app/scripts/lab_t146_runner.py --help` failed with `[Errno 2] No such file or directory`. Please redeploy an image containing PR260/main d3d6bc9 and provide a reachable terminal so Codex can run the read-only bounded groups.",
       "options": [
         "Redeploy the accepted T-153 image and provide a reachable terminal",
         "Defer the real-lake run"
       ],
       "recommendation": "Redeploy the image containing PR260/main d3d6bc9; the run makes no broker calls or orders.",
-      "answer": ""
+      "answer": "Owner 2026-10-17: image applied; resume T-153 on the reachable Pod."
     }
   ],
   "log": [
@@ -22680,6 +22697,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "The reachable Pod has /workspace/data/lake, but the merged runner is absent: `python /app/scripts/lab_t146_runner.py --help` returned [Errno 2] No such file or directory. No study or broker activity occurred. Added B-027/Q-062/V-388 and paused for the owner to redeploy PR260/main d3d6bc9."
+    },
+    {
+      "revision": 411,
+      "ts": "2026-10-17T13:00:00+03:00",
+      "agent": "codex",
+      "action": "resume_t153_redeployed_pod",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner confirmed the Pod image was applied. Preflight now finds the merged runner and /workspace/data/lake, so T-153 resumes with the bounded sequential study beginning at NSXUSD 60m. No broker, order, holdout, risk, gate, cost, ledger or promotion activity."
     }
   ],
   "project_summary": "T-153: runner accepted; Codex runs the accepted T-146 study on the Pod group by group."
