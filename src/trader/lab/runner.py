@@ -495,8 +495,26 @@ def _as_utc(value: Any) -> datetime:
     return stamp.astimezone(UTC)
 
 
+_LAKE_PATH_ALIASES: dict[str, tuple[tuple[str, str], ...]] = {
+    # Older Pod lake builds wrote the NAS100 HistData import under the broker
+    # display name and capital-bar suffix.  Keep the canonical NSXUSD path
+    # first, then discover that known alias when a deployment has not been
+    # migrated yet.
+    "NSXUSD": (("NAS100", "1m_capital"), ("NAS100", "1m"), ("US100", "1m")),
+}
+
+
 def _parquet_files(root: Path, instrument: str) -> tuple[Path, ...]:
-    return tuple(sorted((root / instrument / "1m").glob("**/*.parquet")))
+    candidates = [root / instrument / "1m"]
+    candidates.extend(
+        root / symbol / timeframe
+        for symbol, timeframe in _LAKE_PATH_ALIASES.get(instrument, ())
+    )
+    for directory in candidates:
+        files = tuple(sorted(directory.glob("**/*.parquet")))
+        if files:
+            return files
+    return ()
 
 
 def _path_month(path: Path) -> tuple[int, int] | None:

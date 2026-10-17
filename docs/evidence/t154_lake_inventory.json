@@ -2,6 +2,67 @@
   "task": "T-154",
   "source": "RunPod read-only checks against /workspace/data/lake",
   "captured_at": "2026-10-17",
+  "root_cause": {
+    "t153_zero_window_reporting": "The bounded runner used a zero-valued fallback whenever a child timed out before writing its final group JSON. XAUUSD had valid windows, but the partial aggregate reported library_windows=0. The child heartbeat now records window counts before matching starts, and the parent preserves them in partial evidence.",
+    "nsxusd_source": "The current applied Pod image has the canonical /workspace/data/lake/NSXUSD/1m tree. A legacy fallback for NAS100/1m_capital (and NAS100/1m or US100/1m) is now supported for older images; the mapping is only used when the canonical tree is empty.",
+    "continuity_rule": "Exact timeframe spacing remains the safe rule for 1m/3m/5m bars. For 60m bars only, the confirmed HistData daily 20:00/21:00-to-23:00 UTC break is skipped in trading time; weekend and unknown gaps remain hard boundaries. This preserves in-session bars without allowing arbitrary missing data. NSXUSD still has additional same-day missing hourly bars, so its 60m group is stopped rather than treated as a valid study."
+  },
+  "continuity_failure_examples": [
+    {"symbol": "XAUUSD", "before": "2009-03-15T22:00:00Z", "after": "2009-03-15T23:00:00Z", "gap_minutes": 60, "reason": "missing source interval; 1m/5m/3m window rejected"},
+    {"symbol": "XAUUSD", "before": "2009-03-15T23:29:00Z", "after": "2009-03-15T23:31:00Z", "gap_minutes": 2, "reason": "unknown in-session source gap; strict window rejected"},
+    {"symbol": "XAUUSD", "before": "2009-03-15T23:55:00Z", "after": "2009-03-15T23:57:00Z", "gap_minutes": 2, "reason": "unknown in-session source gap; strict window rejected"},
+    {"symbol": "XAUUSD", "before": "2009-03-16T00:25:00Z", "after": "2009-03-16T00:27:00Z", "gap_minutes": 2, "reason": "unknown in-session source gap; strict window rejected"},
+    {"symbol": "XAUUSD", "before": "2009-03-16T00:29:00Z", "after": "2009-03-16T00:31:00Z", "gap_minutes": 2, "reason": "unknown in-session source gap; strict window rejected"},
+    {"symbol": "NSXUSD", "before": "2010-12-01T00:17:00Z", "after": "2010-12-01T00:19:00Z", "gap_minutes": 2, "reason": "unknown in-session source gap; strict window rejected"},
+    {"symbol": "NSXUSD", "before": "2010-12-01T00:20:00Z", "after": "2010-12-01T00:22:00Z", "gap_minutes": 2, "reason": "unknown in-session source gap; strict window rejected"},
+    {"symbol": "NSXUSD", "before": "2010-12-01T00:28:00Z", "after": "2010-12-01T00:30:00Z", "gap_minutes": 2, "reason": "unknown in-session source gap; strict window rejected"},
+    {"symbol": "NSXUSD", "before": "2010-12-01T00:50:00Z", "after": "2010-12-01T00:52:00Z", "gap_minutes": 2, "reason": "unknown in-session source gap; strict window rejected"},
+    {"symbol": "NSXUSD", "before": "2010-12-01T00:52:00Z", "after": "2010-12-01T00:55:00Z", "gap_minutes": 3, "reason": "unknown in-session source gap; strict window rejected"}
+  ],
+  "continuity_checks": {
+    "XAUUSD_2022_2024": {
+      "rows": 1018912,
+      "first": "2022-01-02T23:00:00Z",
+      "last": "2024-12-31T21:57:00Z",
+      "windows_by_length": {"30": 46415, "60": 31084, "120": 29277}
+    },
+    "NSXUSD_2022_2024": {
+      "rows": 982926,
+      "first": "2022-01-02T23:00:00Z",
+      "last": "2024-12-31T21:12:00Z",
+      "windows_by_length": {"30": 44947, "60": 30160, "120": 28368}
+    },
+    "XAUUSD_2024_max_contiguous_run_minutes": 1380
+  },
+  "mapping_proof": {
+    "canonical_symbol": "NSXUSD",
+    "legacy_aliases": ["NAS100/1m_capital", "NAS100/1m", "US100/1m"],
+    "loader_order": "canonical NSXUSD/1m first; legacy alias only when canonical has no parquet files",
+    "representative_price_date_proof": {
+      "file": "NSXUSD/2010/11.parquet",
+      "first": "2010-11-14T23:01:00Z",
+      "last": "2010-11-30T23:59:00Z",
+      "close_min": 2083.75,
+      "close_max": 2164.75
+    }
+  },
+  "oos_window_counts": {
+    "source": "Pod copy of 2025-2026 lake files; safe continuity policy applied",
+    "NSXUSD_1m": {"30": 17693, "60": 16051, "120": 15162, "queries": 48906},
+    "NSXUSD_3m": {"30": 11169, "60": 9534, "120": 3914, "queries": 24617},
+    "NSXUSD_5m": {"30": 12652, "60": 5039, "120": 1717, "queries": 19408},
+    "NSXUSD_60m": {"30": 0, "60": 0, "120": 0, "queries": 0},
+    "XAUUSD_1m": {"30": 18450, "60": 16805, "120": 16009, "queries": 51264},
+    "XAUUSD_3m": {"30": 11736, "60": 10170, "120": 4301, "queries": 26207},
+    "XAUUSD_5m": {"30": 13428, "60": 5478, "120": 1971, "queries": 20877},
+    "XAUUSD_60m": {"30": 724, "60": 190, "120": 0, "queries": 914}
+  },
+  "rerun_status": {
+    "status": "stopped_before_matching_verdicts",
+    "reason": "The acceptance rule requires stopping when a post-fix group still has zero library windows. NSXUSD 60m remains zero because the source has additional same-day hourly gaps (for example 11:00-13:00 and 20:00-23:00 UTC); no matching result is claimed for that group or for the full eight-group study.",
+    "other_groups_have_windows": true,
+    "matching_results_written": false
+  },
   "inventory": {
     "XAUUSD": {
       "directory": "/workspace/data/lake/XAUUSD/1m",

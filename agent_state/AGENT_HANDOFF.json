@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 416,
+  "turn": "claude",
+  "revision": 417,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-154 is in progress: Pod lake inventory confirmed XAUUSD and NSXUSD parquet coverage; Codex is diagnosing timestamps, spacing, continuity and symbol mapping before rerunning T-146.",
+    "summary": "T-154 diagnostic is complete and handed to Claude: the timeout fallback zero-count defect, NSXUSD alias mapping and narrow hourly daily-break handling are fixed and documented. The bounded post-fix inventory stops at NSXUSD 60m because its source still has unknown same-day hourly gaps; no matching verdict is claimed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5079,7 +5079,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04"
@@ -5094,12 +5094,26 @@
         "Step 3: rerun the T-146 groups with the T-153 per-group runner (60m first, then 5m, 3m, 1m; both markets; each group at most 20 minutes, checkpoint files, resume). Report for every group the number of in-sample library windows, out-of-sample queries run, time per group, and the verdict with the trial count. A group with 0 windows after the fix is a defect, stop and report instead of writing a verdict.",
         "Report in plain language: what was wrong, what changed, how many windows each group now has, and what the matching found out-of-sample net of cost (or not found). ruff check and ruff format --line-length 100 (CI uses ruff 0.9.6), mypy clean. PR, ONE log entry, validation entry, set to review, hand the turn to claude."
       ],
-      "deliverables": [],
+      "deliverables": [
+        "docs/evidence/t154_lake_inventory.json",
+        "docs/evidence/t154_lake_inventory.md",
+        "docs/evidence/t154_report.md"
+      ],
       "review_cycles": 0,
       "evidence": [
-        "Pod read-only inventory started: XAUUSD 211 parquet files / 6,140,217 rows; NSXUSD 191 files / 5,285,568 rows."
+        "docs/evidence/t154_lake_inventory.json",
+        "docs/evidence/t154_lake_inventory.md",
+        "docs/evidence/t154_report.md",
+        "scripts/lab_t146_matching.py",
+        "scripts/lab_t146_runner.py",
+        "src/trader/lab/runner.py",
+        "tests/unit/test_t146_scripts.py",
+        "tests/unit/test_t146_runner.py",
+        "tests/unit/test_lab_runner.py",
+        "Pod read-only inventory: XAUUSD 211 parquet files / 6,140,217 rows; NSXUSD 191 files / 5,285,568 rows.",
+        "Pod read-only OOS window counts for 2025-2026 recorded in t154_lake_inventory.json; NSXUSD 60m remains zero and stops matching per acceptance rule."
       ],
-      "completion_note": "In progress: authoritative origin/main now includes the owner decision for T-154. Pod lake inventory has confirmed both symbol directories; detailed spacing and continuity diagnostics remain to be recorded before any fix or rerun."
+      "completion_note": "Completed T-154 diagnostic and handed to Claude for review. Fixed the parent timeout fallback that misreported partial groups as library_windows=0, preserved pre-match window counts in child checkpoints, added canonical NSXUSD loader fallback for legacy NAS100/1m_capital (and NAS100/1m or US100/1m) trees, and added narrow hourly handling for the confirmed HistData 20:00/21:00-to-23:00 UTC daily break while keeping weekends and unknown gaps hard. Pod evidence records exact inventory, timestamp dtype, 10 representative continuity failures, NSXUSD price/date proof and 2025-2026 OOS window counts. NSXUSD 60m still has zero windows because of additional unknown same-day source-hour gaps, so the acceptance stop rule was followed: no T-146 matching or net-of-cost verdict was written. No broker calls, orders, holdout reads, gate/cost/ledger/promotion edits or lake writes. Desktop pytest, Ruff and mypy are unavailable; compileall, continuity smoke tests, JSON validation, handoff validation and git diff --check pass."
     }
   ],
   "decisions": [
@@ -13387,6 +13401,28 @@
       "validated_by": "claude",
       "date": "2026-10-17T21:00:00+03:00",
       "reverify_if": "Codex re-runs T-146 after the loader/continuity cause is found."
+    },
+    {
+      "id": "V-403",
+      "task_id": "T-154",
+      "subject": "T-154 lake diagnostics, loader mapping and bounded post-fix window inventory",
+      "method": "Read-only Pod inventory and window scans; local compile, JSON, continuity smoke and diff checks",
+      "result": "pass",
+      "checked": "Both lake directories and UTC timestamp schemas were confirmed. XAUUSD and NSXUSD representative files show real non-one-minute gaps; ten timestamped failures are recorded. NSXUSD price/date evidence supports the canonical mapping, with legacy aliases tried only when canonical files are absent. 2025-2026 OOS counts are nonzero for all 1m/3m/5m groups and XAUUSD 60m; NSXUSD 60m remains zero because additional same-day hourly gaps are not an owner-verified closure. The acceptance stop rule was followed, so no movement-matching verdict was written. No broker, order, holdout, gate, cost, ledger, promotion or lake-write path was used.",
+      "evidence": [
+        "docs/evidence/t154_lake_inventory.json",
+        "docs/evidence/t154_lake_inventory.md",
+        "docs/evidence/t154_report.md",
+        "scripts/lab_t146_matching.py",
+        "scripts/lab_t146_runner.py",
+        "src/trader/lab/runner.py",
+        "tests/unit/test_t146_scripts.py",
+        "tests/unit/test_t146_runner.py",
+        "tests/unit/test_lab_runner.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-18",
+      "reverify_if": "Owner supplies an authoritative NSXUSD session schedule or source repair for the additional same-day hourly gaps."
     }
   ],
   "blockers": [
@@ -23083,7 +23119,29 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-154 from authoritative origin/main after Q-063 option A. Read-only Pod inventory found XAUUSD 211 parquet files / 6,140,217 rows and NSXUSD 191 files / 5,285,568 rows. No broker, order, holdout, gate, cost, ledger or promotion activity."
+    },
+    {
+      "revision": 417,
+      "ts": "2026-10-18T00:00:00Z",
+      "agent": "codex",
+      "action": "complete_t154_diagnostics",
+      "task_ids": [
+        "T-154"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t154_lake_inventory.json",
+        "docs/evidence/t154_lake_inventory.md",
+        "docs/evidence/t154_report.md",
+        "scripts/lab_t146_matching.py",
+        "scripts/lab_t146_runner.py",
+        "src/trader/lab/runner.py",
+        "tests/unit/test_lab_runner.py",
+        "tests/unit/test_t146_runner.py",
+        "tests/unit/test_t146_scripts.py"
+      ],
+      "summary": "Completed T-154 diagnostics and handed to Claude for review. Fixed the timeout fallback zero-count defect, preserved pre-match window counts, added legacy NSXUSD loader aliases and the narrow confirmed hourly daily-break rule, and recorded inventory, timestamped continuity failures, mapping proof and bounded 2025-2026 window counts. NSXUSD 60m remains zero due unknown same-day source gaps, so the acceptance stop rule was followed and no matching verdict was written. No broker, order, holdout, gate, cost, ledger, promotion or lake-write activity."
     }
   ],
-  "project_summary": "T-153: accepted T-146 study completed in bounded Pod checkpoints; cycle-2 coverage explanations and repository-local group evidence are recorded, with review handed to Claude."
+  "project_summary": "T-153 was accepted as inconclusive. T-154 now records the diagnosed timeout-reporting defect, NSXUSD legacy mapping, strict continuity policy and bounded post-fix inventories; NSXUSD 60m remains stopped on unknown source-hour gaps, with no matching verdict. Review is handed to Claude."
 }
