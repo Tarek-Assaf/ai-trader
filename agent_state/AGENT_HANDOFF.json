@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 407,
+  "turn": "claude",
+  "revision": 408,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-153 is implementing the owner-authorized per-group checkpointed runner before the next read-only Pod execution.",
+    "summary": "T-153 implementation is review-ready; after merge, run the ordered groups on the reachable Pod with the new 20-minute checkpointed wrapper.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5021,7 +5021,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04"
@@ -5038,10 +5038,12 @@
       ],
       "review_cycles": 0,
       "evidence": [
+        "scripts/lab_t146_matching.py",
         "scripts/lab_t146_runner.py",
+        "tests/unit/test_t146_scripts.py",
         "tests/unit/test_t146_runner.py"
       ],
-      "completion_note": "Implemented the authorized per-group runner with atomic checkpoints, one-group ordering, a 20-minute wall-clock guard, partial marking, RSS tracking and synthetic fake-clock tests. Pod execution is next; no broker, order, holdout, risk, gate, cost, ledger or promotion activity."
+      "completion_note": "Implementation complete for review: the authorized runner executes one ordered group per invocation, checkpoints atomically, marks timed-out groups partial with query counts, records elapsed/RSS evidence and writes aggregate checkpoints. Direct Python acceptance checks and handoff validation pass; desktop pytest/Ruff are unavailable. The new runner is pushed in a5c2f02. The Pod image still needs the merged runner before the required read-only group execution."
     }
   ],
   "decisions": [
@@ -13038,6 +13040,24 @@
       "validated_by": "codex",
       "date": "2026-10-17T07:59:00Z",
       "reverify_if": "Owner/Claude authorizes a bounded per-group runner or accepts a longer runtime target."
+    },
+    {
+      "id": "V-386",
+      "task_id": "T-153",
+      "subject": "T-153 bounded runner implementation",
+      "method": "Ran Python compilation for the matching script, runner and focused tests; directly invoked all 3 runner tests and all 11 matching tests; checked CLI help, line lengths, git diff --check and handoff validation.",
+      "result": "pass",
+      "checked": "The runner orders NSXUSD/XAUUSD at 60m, 5m, 3m and 1m; runs one child group at a time; atomically persists progress; resumes at the next pending group; records query count, elapsed seconds, RSS and evidence paths; terminates and marks a group partial at the injected wall-clock limit. No broker, order, holdout, risk, gate, cost, ledger or promotion path is imported or called. Desktop pytest and Ruff executables are unavailable, so CI must provide those checks.",
+      "evidence": [
+        "scripts/lab_t146_runner.py",
+        "tests/unit/test_t146_runner.py",
+        "scripts/lab_t146_matching.py",
+        "tests/unit/test_t146_scripts.py",
+        "agent_state/validate_handoff.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-17T11:24:36+03:00",
+      "reverify_if": "The runner, matching progress flags or Pod image changes."
     }
   ],
   "blockers": [
@@ -13223,8 +13243,10 @@
       "id": "B-026",
       "text": "T-153 max_queries=1 run exceeded the under-30-minute Pod target without summary/report output. At 34:41 the detached PID 735 was ~100% CPU and ~2.16 GB RSS; Codex stopped only that process (exit 143). Partial charts were emitted only for nsxusd_5m. The unchanged command should not be rerun until the owner/Claude chooses a bounded per-group runner or explicitly accepts a longer bound.",
       "raised_by": "codex",
-      "status": "open",
-      "resolution": ""
+      "status": "resolved",
+      "resolution": "Owner authorized D-041; a5c2f02 adds the per-group checkpointed runner with a 20-minute wall-clock guard and partial marking. The unchanged command will not be rerun; the next Pod run uses the wrapper after merge.",
+      "resolved_by": "codex",
+      "resolved_at": "2026-10-17"
     }
   ],
   "questions": [
@@ -22566,7 +22588,23 @@
         "tests/unit/test_t146_runner.py"
       ],
       "summary": "Implemented the owner-authorized per-group T-153 runner: deterministic 60m/5m/3m/1m group order, atomic resume checkpoints, one child group per invocation, 20-minute timeout with clean partial marking, query/RSS/elapsed evidence and fake-clock unit coverage. No broker, order, holdout, risk, gate, cost, ledger or promotion activity. Pod execution remains next; turn stays Codex while implementation continues."
+    },
+    {
+      "revision": 408,
+      "ts": "2026-10-17T11:24:36+03:00",
+      "agent": "codex",
+      "action": "complete_t153_bounded_runner",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t146_matching.py",
+        "scripts/lab_t146_runner.py",
+        "tests/unit/test_t146_runner.py"
+      ],
+      "summary": "Completed the authorized per-group T-153 runner and handed it to Claude for review. It has deterministic 60m/5m/3m/1m ordering, one child group per invocation, atomic resume checkpoints, 20-minute timeout/partial marking, query/elapsed/RSS records, aggregate checkpoint/report output and fake-clock tests. Direct Python checks, compile and handoff validation pass; desktop pytest/Ruff are unavailable. Pod execution is intentionally deferred until the runner is merged. No broker, order, holdout, risk, gate, cost, ledger or promotion activity."
     }
   ],
-  "project_summary": "T-153 is implementing the owner-authorized per-group checkpointed runner before the next read-only Pod execution."
+  "project_summary": "T-153 implementation is review-ready; after merge, run the ordered groups on the reachable Pod with the new 20-minute checkpointed wrapper."
 }
