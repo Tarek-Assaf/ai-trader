@@ -1,6 +1,6 @@
 # T-151: Reproduce the owner's own Tai entries (forming-candle replay)
 
-Owner 2026-10-17: supplied his TradingView Replay Trading export (NQ1 CME mini, 3m, times in Riyadh,
+Owner 2026-10-17: supplied his TradingView Replay Trading export (NQ1 CME mini, 3m, times in UTC (owner confirmed 2026-10-17 13:46 Riyadh; an earlier message said Riyadh, that was a mistake),
 6 to 16 Oct 2026), file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv.
 Unparks T-151 (D-040 condition met: the owner finished validating his trades).
 
@@ -11,8 +11,9 @@ point. Tranche win rate 72% (39 of 54), position win rate 61% (19 of 31). 21 exi
 (partly manual). All entry minutes are multiples of 3.
 
 ## Finding that triggered this task (Claude, 2026-10-17)
-Against the T-149 signals on recorded Capital.com NAS100 data (all timeframes, same days) only 1 of
-31 entries falls within 6 minutes and in the same direction. A time-zone shift does not fix it.
+Treating the file as UTC, against the T-149 signals on recorded Capital.com NAS100 data (1m, 3m and
+5m, same days): 0 of 31 entries within 3 minutes, 1 of 31 within 6 minutes, 5 of 31 within 30 minutes
+(3m signals alone: 3 of 31). Same direction in every near hit. The mismatch stands with the right time zone.
 
 ## Hypothesis to test first
 The Pine script computes Heikin Ashi through request.security(haTicker, myTime, open/close,
