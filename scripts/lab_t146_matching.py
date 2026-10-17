@@ -606,9 +606,22 @@ def run_group(
     max_queries: int | None = None,
     trial_count: int = 1,
     seed: int = 146,
+    progress_path: Path | None = None,
 ) -> dict[str, Any]:
     """Run one symbol/timeframe group and return JSON-safe evidence."""
     started = time.perf_counter()
+    queries_done = 0
+    if progress_path is not None:
+        _write_json(
+            progress_path,
+            {
+                "status": "running",
+                "instrument": instrument,
+                "timeframe": timeframe,
+                "queries_done": queries_done,
+                "started_at": datetime.now(UTC).isoformat(),
+            },
+        )
     candle_index = timestamp_index(candles)
     in_sample = build_windows(
         candles,
@@ -669,6 +682,18 @@ def run_group(
                             realized=query_row.get("move_points"),
                         )
                     )
+                    queries_done += 1
+                    if progress_path is not None:
+                        _write_json(
+                            progress_path,
+                            {
+                                "status": "running",
+                                "instrument": instrument,
+                                "timeframe": timeframe,
+                                "queries_done": queries_done,
+                                "elapsed_seconds": round(time.perf_counter() - started, 3),
+                            },
+                        )
                     if query_number < 6 and method == "dtw" and horizon == HORIZONS[0]:
                         _save_shape_card(
                             candles,
@@ -710,7 +735,7 @@ def run_group(
                 if cluster_count == CLUSTER_COUNTS[0]:
                     overview_clusters.extend(clusters)
     _save_overview_chart(candles, overview_clusters, chart_dir / "overview.png")
-    return {
+    evidence = {
         "instrument": instrument,
         "timeframe": timeframe,
         "library_windows": sum(len(value) for value in in_sample.values()),
@@ -726,6 +751,18 @@ def run_group(
         "clusters": cluster_rows,
         "charts_dir": str(chart_dir),
     }
+    if progress_path is not None:
+        _write_json(
+            progress_path,
+            {
+                "status": "complete",
+                "instrument": instrument,
+                "timeframe": timeframe,
+                "queries_done": queries_done,
+                "elapsed_seconds": evidence["elapsed_seconds"],
+            },
+        )
+    return evidence
 
 
 def render_report(payload: dict[str, Any]) -> str:
@@ -800,6 +837,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--lake", type=Path, default=Path("/workspace/data/lake"))
     parser.add_argument("--output", type=Path, default=Path("docs/evidence"))
     parser.add_argument("--holdout-end", type=str, default=END_HOLDOUT.isoformat())
+    parser.add_argument("--instrument", choices=INSTRUMENTS)
+    parser.add_argument("--timeframe", type=int, choices=TIMEFRAMES)
+    parser.add_argument(
+        "--progress-file",
+        type=Path,
+        help="write per-group progress for a bounded parent runner",
+    )
     parser.add_argument(
         "--max-queries",
         type=int,
@@ -808,6 +852,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--seed", type=int, default=146)
     args = parser.parse_args(argv)
+    if (args.instrument is None) != (args.timeframe is None):
+        parser.error("--instrument and --timeframe must be provided together")
     holdout_end = datetime.fromisoformat(args.holdout_end.replace("Z", "+00:00"))
     if holdout_end.tzinfo is None:
         holdout_end = holdout_end.replace(tzinfo=UTC)
@@ -833,29 +879,42 @@ def main(argv: Sequence[str] | None = None) -> int:
         for month in range(1, 13)
         if (year, month) >= (holdout_end.year, holdout_end.month)
     }
-    for instrument in INSTRUMENTS:
+    selected_groups = (
+        ((args.instrument, args.timeframe),)
+        if args.instrument is not None and args.timeframe is not None
+        else tuple(
+            (instrument, timeframe)
+            for instrument in INSTRUMENTS
+            for timeframe in TIMEFRAMES
+        )
+    )
+    for instrument, timeframe in selected_groups:
         candles = _load_histdata_candles(args.lake, instrument, 1, excluded)
         candles = tuple(item for item in candles if IN_SAMPLE_START <= item.ts_utc < holdout_end)
-        for timeframe in TIMEFRAMES:
-            # Keep 1m as the source and resample through the existing loader so
-            # complete-bar handling remains identical to the Strategy Lab.
-            series = (
-                candles
-                if timeframe == 1
-                else _load_histdata_candles(args.lake, instrument, timeframe, excluded)
-            )
-            series = tuple(item for item in series if IN_SAMPLE_START <= item.ts_utc < holdout_end)
-            groups.append(
-                run_group(
-                    series,
-                    instrument=instrument,
-                    timeframe=timeframe,
-                    output_root=args.output,
-                    holdout_end=holdout_end,
-                    max_queries=max_queries,
-                    trial_count=trial_count,
-                    seed=args.seed,
-                )
+        # Keep 1m as the source and resample through the existing loader so
+        # complete-bar handling remains identical to the Strategy Lab.
+        series = (
+            candles
+            if timeframe == 1
+            else _load_histdata_candles(args.lake, instrument, timeframe, excluded)
+        )
+        series = tuple(item for item in series if IN_SAMPLE_START <= item.ts_utc < holdout_end)
+        group = run_group(
+            series,
+            instrument=instrument,
+            timeframe=timeframe,
+            output_root=args.output,
+            holdout_end=holdout_end,
+            max_queries=max_queries,
+            trial_count=trial_count,
+            seed=args.seed,
+            progress_path=args.progress_file,
+        )
+        groups.append(group)
+        if args.instrument is not None:
+            _write_json(
+                args.output / f"t146_group_{instrument.lower()}_{timeframe}m.json",
+                group,
             )
     payload: dict[str, Any] = {
         "generated_at": datetime.now(UTC).isoformat(),

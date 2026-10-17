@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 406,
+  "revision": 407,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-153 stopped after a bounded max_queries=1 run exceeded the Pod runtime target; only partial nsxusd_5m charts exist and no canonical summary/report was produced.",
+    "summary": "T-153 is implementing the owner-authorized per-group checkpointed runner before the next read-only Pod execution.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5021,7 +5021,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04"
@@ -5037,8 +5037,11 @@
         "docs/evidence/t146_matching_summary.json"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "The accepted command was run detached with --max-queries 1, --lake /workspace/data/lake and --output /workspace/state/t153_t146. It exceeded the Pod wall-time target of under 30 minutes without summary JSON or report. At 34:41, PID 735 used about 2.16 GB RSS at ~100% CPU; Codex stopped only that process (exit file: Terminated/143). Partial charts exist only for nsxusd_5m. No broker calls, orders, holdout reads, risk/gate/cost/ledger writes or promotion activity."
+      "evidence": [
+        "scripts/lab_t146_runner.py",
+        "tests/unit/test_t146_runner.py"
+      ],
+      "completion_note": "Implemented the authorized per-group runner with atomic checkpoints, one-group ordering, a 20-minute wall-clock guard, partial marking, RSS tracking and synthetic fake-clock tests. Pod execution is next; no broker, order, holdout, risk, gate, cost, ledger or promotion activity."
     }
   ],
   "decisions": [
@@ -22548,7 +22551,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner chose Q-061 option 1 (D-041). T-153 unblocked with a per-group bounded runner spec: one group per run, checkpoint file, 20-minute limit with partial marking, 60m first and 1m mandatory. Also fixed Q-060 and Q-061 into the standard answered shape and merged Codex's four consecutive log entries into one with original wording. Turn to Codex."
+    },
+    {
+      "revision": 407,
+      "ts": "2026-10-17T11:24:36+03:00",
+      "agent": "codex",
+      "action": "implement_t153_bounded_runner",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "scripts/lab_t146_matching.py",
+        "scripts/lab_t146_runner.py",
+        "tests/unit/test_t146_runner.py"
+      ],
+      "summary": "Implemented the owner-authorized per-group T-153 runner: deterministic 60m/5m/3m/1m group order, atomic resume checkpoints, one child group per invocation, 20-minute timeout with clean partial marking, query/RSS/elapsed evidence and fake-clock unit coverage. No broker, order, holdout, risk, gate, cost, ledger or promotion activity. Pod execution remains next; turn stays Codex while implementation continues."
     }
   ],
-  "project_summary": "T-153 blocked: max_queries=1 exceeded the under-30-minute Pod target without summary/report output; owner/Claude must choose the next bounded execution design."
+  "project_summary": "T-153 is implementing the owner-authorized per-group checkpointed runner before the next read-only Pod execution."
 }
