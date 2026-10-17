@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 408,
+  "revision": 409,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-153 runner accepted and merged; Codex now runs the T-146 study on the Pod group by group (60m, 5m, 3m, 1m mandatory).",
+    "summary": "T-153 Pod study run started from merged runner; Codex is executing one bounded group at a time with checkpoints.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5021,7 +5021,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03",
         "R-04"
@@ -5043,7 +5043,7 @@
         "tests/unit/test_t146_scripts.py",
         "tests/unit/test_t146_runner.py"
       ],
-      "completion_note": "Runner code reviewed and accepted by Claude (V-387). Remaining: after the runner is on main, run it on the Pod group by group (NSXUSD/XAUUSD 60m, 5m, 3m, 1m mandatory), merge group files into docs/evidence/t146_matching_summary.json, write the plain report with a verdict per symbol/timeframe, then set review."
+      "completion_note": "Runner code reviewed and accepted by Claude (V-387). Pod execution is now in progress from origin/main; record each completed group and merge final evidence into docs/evidence/t146_matching_summary.json."
     }
   ],
   "decisions": [
@@ -22619,6 +22619,19 @@
         "scripts/lab_t146_matching.py"
       ],
       "summary": "Reviewed the T-153 runner. Fixed ruff import order and formatting and one hang risk (undrained output pipe, now a log file). Runner accepted and merged; the Pod study run is still to do and stays with Codex. Merged Codex's two consecutive log entries into one."
+    },
+    {
+      "revision": 409,
+      "ts": "2026-10-17T12:00:00+03:00",
+      "agent": "codex",
+      "action": "start_t153_post_merge_pod_run",
+      "task_ids": [
+        "T-153"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started the authorized post-merge T-153 Pod study from authoritative origin/main (runner merge d3d6bc9). Codex will run NSXUSD/XAUUSD groups in bounded sequential checkpoints, beginning at max_queries=2, with no broker, order, holdout, risk, gate, cost, ledger or promotion activity."
     }
   ],
   "project_summary": "T-153: runner accepted; Codex runs the accepted T-146 study on the Pod group by group."
