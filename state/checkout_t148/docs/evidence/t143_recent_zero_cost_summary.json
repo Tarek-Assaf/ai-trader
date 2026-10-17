@@ -1,0 +1,51 @@
+{
+  "task": "T-143",
+  "diagnostic_zero_cost": true,
+  "cost_multiplier": 0.0,
+  "generated_at": "2026-10-15T10:02:07Z",
+  "scope": {
+    "markets": ["NSXUSD", "XAUUSD"],
+    "timeframes": [60, 1],
+    "sealed_holdout_read": false,
+    "gate1_evaluated": false,
+    "broker_calls": 0,
+    "orders": 0
+  },
+  "merge": {
+    "main_checkpoint_completed": 8890,
+    "tail_ranges": [[1780, 1928], [1928, 2075], [2075, 2223], [2223, 2370]],
+    "tail_strategy_counts": [148, 147, 148, 147],
+    "tail_strategy_total": 590,
+    "merged_strategy_count": 9480,
+    "expected_candidate_count": 9480,
+    "duplicate_rows_removed": 0,
+    "count_matches_expected": true,
+    "pod_result_sha256": "45fddf384ee78288f3f9c514046f7e055ed96eaa02c278a6a7976923996e84bf"
+  },
+  "groups": {
+    "NSXUSD:60": {
+      "strategies_rebuilt": 2370,
+      "by_source": {"round_d": 360, "staged": 2010},
+      "zero_cost": {"average_trade_points": -3.715153855741625, "best_trade_points": 1517.8390510915415, "worst_trade_points": -567.8449999999975, "profitable_strategies": 738, "total_trades": 8945},
+      "normal_cost": {"average_trade_points": -7.715153855741626, "best_trade_points": 1513.8390510915415, "worst_trade_points": -571.8449999999975, "profitable_strategies": 704, "total_trades": 8945}
+    },
+    "NSXUSD:1": {
+      "strategies_rebuilt": 2370,
+      "by_source": {"round_d": 360, "staged": 2010},
+      "zero_cost": {"average_trade_points": -0.3896649308494144, "best_trade_points": 228.2878289468681, "worst_trade_points": -133.47917429204244, "profitable_strategies": 900, "total_trades": 9808},
+      "normal_cost": {"average_trade_points": -4.389664930849414, "best_trade_points": 224.2878289468681, "worst_trade_points": -137.47917429204244, "profitable_strategies": 740, "total_trades": 9808}
+    },
+    "XAUUSD:60": {
+      "strategies_rebuilt": 2370,
+      "by_source": {"round_d": 360, "staged": 2010},
+      "zero_cost": {"average_trade_points": -1.6017166927752144, "best_trade_points": 119.54322039489125, "worst_trade_points": -113.7724621982452, "profitable_strategies": 891, "total_trades": 8827},
+      "normal_cost": {"average_trade_points": -3.201716692775215, "best_trade_points": 117.94322039489126, "worst_trade_points": -115.37246219824519, "profitable_strategies": 809, "total_trades": 8827}
+    },
+    "XAUUSD:1": {
+      "strategies_rebuilt": 2370,
+      "by_source": {"round_d": 360, "staged": 2010},
+      "zero_cost": {"average_trade_points": 1.4144933824981805, "best_trade_points": 20.354263338795135, "worst_trade_points": -12.445733753788772, "profitable_strategies": 655, "total_trades": 2332},
+      "normal_cost": {"average_trade_points": -0.18550661750181943, "best_trade_points": 18.754263338795134, "worst_trade_points": -14.045733753788772, "profitable_strategies": 486, "total_trades": 2332}
+    }
+  }
+}

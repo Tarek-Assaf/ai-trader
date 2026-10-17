@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "authorization_expires_at": "2026-10-06T20:08:00Z",
+  "demo_only": true,
+  "attempts": [
+    {
+      "attempt": 1,
+      "captured_at": "2026-10-06T13:55:55Z",
+      "result": "failed_before_order",
+      "http_status": 429,
+      "method": "POST",
+      "endpoint_path": "/session",
+      "order_submitted": false
+    },
+    {
+      "attempt": 2,
+      "captured_at": "2026-10-06T14:00:07Z",
+      "result": "success",
+      "round_trip_report": "docs/evidence/t028_q040_round_trip_20261006.json",
+      "order_submitted": true,
+      "flat_confirmed": true,
+      "positions_remaining": 0,
+      "working_orders_remaining": 0
+    }
+  ],
+  "preflight_report": "docs/evidence/t028_q040_preflight_20261006.json",
+  "pod_image_tag": "ghcr.io/tarek-assaf/ai-trader:c72ed3c125193402ef409b6352a2e6f5445d1126",
+  "pod_image_tag_observed": "unavailable_in_container",
+  "workspace_report": "/workspace/t028_q040_attempts_20261006.json",
+  "secrets_recorded": false
+}

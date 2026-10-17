@@ -1,0 +1,38 @@
+{
+  "image": "ghcr.io/tarek-assaf/ai-trader:0af8f4ad0e3dfc691d9d587c4ad0d185d5af09d0",
+  "timeframes": [
+    1
+  ],
+  "instruments": [
+    "NSXUSD",
+    "XAUUSD"
+  ],
+  "runs": {
+    "1m_c": {
+      "run_id": "unavailable (not emitted by lab result)",
+      "status": "stopped_memory_cap",
+      "attempts": 212,
+      "too_few_trades": "unavailable (not emitted by lab result)",
+      "gate1_passes": "unavailable (not emitted by lab result)",
+      "weekly_p_le_0_05": "unavailable (not emitted by lab result)",
+      "weekly_p_le_0_001": "unavailable (not emitted by lab result)",
+      "weekly_p_le_0_0001": "unavailable (not emitted by lab result)",
+      "peak_cgroup_anon_bytes": 14212386816,
+      "peak_memory_current_bytes": 14752727040,
+      "point_reached": "holdout:NSXUSD:1m"
+    }
+  },
+  "families": {},
+  "notes": [
+    "Round C used idea_sources=round_c, max_ideas=400, force=true, and the verified image.",
+    "No code, config, gate, or holdout changes; no broker orders.",
+    "Result read failed: FileNotFoundError",
+    "Random baseline unavailable: FileNotFoundError",
+    "1m NSXUSD stopped at the 12 GB cgroup anon ceiling before an atomic results file was emitted; XAUUSD was not evaluated after the cap per T-135 acceptance. No 1m random baseline was run because no 1m results file existed."
+  ],
+  "overall_best10": {},
+  "random_baseline": {
+    "count": "unavailable (not emitted by lab result)",
+    "top": []
+  }
+}

@@ -1,0 +1,213 @@
+# T-148 exit study
+
+Diagnostic only: no holdout, Gate 1, broker, orders, ledger or promotion writes.
+
+Generated `2026-10-16T09:14:51.087468+00:00`; trial total 224 (24 T-145 candidates plus one Tai baseline per group, seven schemes).
+
+| Group | Candidate | Period | E0 normal R | E4 normal R | E4 minus E0 |
+|---|---|---|---:|---:|---:|
+| NSXUSD:1 | 8e12fa7d140556e5ae0c075c23551170103e831326cf1e2c33dbf4acaa577d47 | 2022 | -25.187 | -22.801 | 2.386 |
+| NSXUSD:1 | 8e12fa7d140556e5ae0c075c23551170103e831326cf1e2c33dbf4acaa577d47 | 2023 | -6.252 | -11.247 | -4.995 |
+| NSXUSD:1 | 8e12fa7d140556e5ae0c075c23551170103e831326cf1e2c33dbf4acaa577d47 | 2024 | -43.591 | -37.128 | 6.463 |
+| NSXUSD:1 | 8e12fa7d140556e5ae0c075c23551170103e831326cf1e2c33dbf4acaa577d47 | 2025 | -22.811 | -25.274 | -2.463 |
+| NSXUSD:1 | 8e12fa7d140556e5ae0c075c23551170103e831326cf1e2c33dbf4acaa577d47 | 2026_to_holdout | 0.456 | -3.220 | -3.676 |
+| NSXUSD:1 | 8e12fa7d140556e5ae0c075c23551170103e831326cf1e2c33dbf4acaa577d47 | 2023_to_today | -72.199 | -76.870 | -4.671 |
+| NSXUSD:1 | ff8a7a29441a600b0c1b81b1ec72537546bb144c4295ed78bb5b9dd4bab59265 | 2022 | -22.597 | -20.211 | 2.386 |
+| NSXUSD:1 | ff8a7a29441a600b0c1b81b1ec72537546bb144c4295ed78bb5b9dd4bab59265 | 2023 | -9.732 | -10.060 | -0.328 |
+| NSXUSD:1 | ff8a7a29441a600b0c1b81b1ec72537546bb144c4295ed78bb5b9dd4bab59265 | 2024 | -26.408 | -23.454 | 2.954 |
+| NSXUSD:1 | ff8a7a29441a600b0c1b81b1ec72537546bb144c4295ed78bb5b9dd4bab59265 | 2025 | -22.811 | -25.274 | -2.463 |
+| NSXUSD:1 | ff8a7a29441a600b0c1b81b1ec72537546bb144c4295ed78bb5b9dd4bab59265 | 2026_to_holdout | -1.475 | -4.151 | -2.676 |
+| NSXUSD:1 | ff8a7a29441a600b0c1b81b1ec72537546bb144c4295ed78bb5b9dd4bab59265 | 2023_to_today | -60.426 | -62.940 | -2.514 |
+| NSXUSD:1 | c054d05b7b119a573703768ef678356d38addae4e903a938b71889609a855260 | 2022 | -27.904 | -24.184 | 3.719 |
+| NSXUSD:1 | c054d05b7b119a573703768ef678356d38addae4e903a938b71889609a855260 | 2023 | -7.451 | -11.113 | -3.662 |
+| NSXUSD:1 | c054d05b7b119a573703768ef678356d38addae4e903a938b71889609a855260 | 2024 | -44.892 | -38.428 | 6.463 |
+| NSXUSD:1 | c054d05b7b119a573703768ef678356d38addae4e903a938b71889609a855260 | 2025 | -25.690 | -28.153 | -2.463 |
+| NSXUSD:1 | c054d05b7b119a573703768ef678356d38addae4e903a938b71889609a855260 | 2026_to_holdout | -0.686 | -4.362 | -3.676 |
+| NSXUSD:1 | c054d05b7b119a573703768ef678356d38addae4e903a938b71889609a855260 | 2023_to_today | -78.719 | -82.057 | -3.338 |
+| NSXUSD:1 | tai_baseline | 2022 | -183.400 | -169.691 | 13.709 |
+| NSXUSD:1 | tai_baseline | 2023 | -405.260 | -478.800 | -73.541 |
+| NSXUSD:1 | tai_baseline | 2024 | -232.106 | -234.314 | -2.208 |
+| NSXUSD:1 | tai_baseline | 2025 | -201.467 | -214.434 | -12.967 |
+| NSXUSD:1 | tai_baseline | 2026_to_holdout | -39.848 | -43.336 | -3.488 |
+| NSXUSD:1 | tai_baseline | 2023_to_today | -878.681 | -970.885 | -92.204 |
+| NSXUSD:3 | 4225cd15cd6c1f8028820f8def2f30bddabd52f709fab82333bac9b03389fe7a | 2022 | -6.782 | -4.157 | 2.625 |
+| NSXUSD:3 | 4225cd15cd6c1f8028820f8def2f30bddabd52f709fab82333bac9b03389fe7a | 2023 | -10.781 | -5.050 | 5.731 |
+| NSXUSD:3 | 4225cd15cd6c1f8028820f8def2f30bddabd52f709fab82333bac9b03389fe7a | 2024 | -15.464 | -9.289 | 6.175 |
+| NSXUSD:3 | 4225cd15cd6c1f8028820f8def2f30bddabd52f709fab82333bac9b03389fe7a | 2025 | -0.457 | -0.989 | -0.533 |
+| NSXUSD:3 | 4225cd15cd6c1f8028820f8def2f30bddabd52f709fab82333bac9b03389fe7a | 2026_to_holdout | 3.057 | 3.009 | -0.048 |
+| NSXUSD:3 | 4225cd15cd6c1f8028820f8def2f30bddabd52f709fab82333bac9b03389fe7a | 2023_to_today | -23.645 | -12.319 | 11.325 |
+| NSXUSD:3 | f2677183f40306b6422c0b425b3ac55a4a966f7aebf7c2f3f2c2d72ea6718688 | 2022 | -4.742 | -5.938 | -1.196 |
+| NSXUSD:3 | f2677183f40306b6422c0b425b3ac55a4a966f7aebf7c2f3f2c2d72ea6718688 | 2023 | -16.867 | -14.239 | 2.628 |
+| NSXUSD:3 | f2677183f40306b6422c0b425b3ac55a4a966f7aebf7c2f3f2c2d72ea6718688 | 2024 | -5.920 | -1.419 | 4.501 |
+| NSXUSD:3 | f2677183f40306b6422c0b425b3ac55a4a966f7aebf7c2f3f2c2d72ea6718688 | 2025 | -1.382 | -0.414 | 0.968 |
+| NSXUSD:3 | f2677183f40306b6422c0b425b3ac55a4a966f7aebf7c2f3f2c2d72ea6718688 | 2026_to_holdout | 3.353 | 2.125 | -1.228 |
+| NSXUSD:3 | f2677183f40306b6422c0b425b3ac55a4a966f7aebf7c2f3f2c2d72ea6718688 | 2023_to_today | -20.817 | -13.948 | 6.869 |
+| NSXUSD:3 | 4eb63ce0bfa23d6de5079d96fdd0ea94eda6b063281f05b448727ca306efebcd | 2022 | -5.575 | -5.771 | -0.196 |
+| NSXUSD:3 | 4eb63ce0bfa23d6de5079d96fdd0ea94eda6b063281f05b448727ca306efebcd | 2023 | -8.072 | -7.577 | 0.495 |
+| NSXUSD:3 | 4eb63ce0bfa23d6de5079d96fdd0ea94eda6b063281f05b448727ca306efebcd | 2024 | -5.547 | -4.423 | 1.124 |
+| NSXUSD:3 | 4eb63ce0bfa23d6de5079d96fdd0ea94eda6b063281f05b448727ca306efebcd | 2025 | 0.861 | 0.496 | -0.365 |
+| NSXUSD:3 | 4eb63ce0bfa23d6de5079d96fdd0ea94eda6b063281f05b448727ca306efebcd | 2026_to_holdout | 3.353 | 2.125 | -1.228 |
+| NSXUSD:3 | 4eb63ce0bfa23d6de5079d96fdd0ea94eda6b063281f05b448727ca306efebcd | 2023_to_today | -9.405 | -9.380 | 0.026 |
+| NSXUSD:3 | tai_baseline | 2022 | 18.583 | -111.691 | -130.274 |
+| NSXUSD:3 | tai_baseline | 2023 | -23.289 | -38.898 | -15.608 |
+| NSXUSD:3 | tai_baseline | 2024 | -58.114 | -72.652 | -14.539 |
+| NSXUSD:3 | tai_baseline | 2025 | -47.183 | -48.406 | -1.223 |
+| NSXUSD:3 | tai_baseline | 2026_to_holdout | -35.353 | -31.750 | 3.603 |
+| NSXUSD:3 | tai_baseline | 2023_to_today | -163.939 | -191.706 | -27.767 |
+| NSXUSD:5 | ff94a4401ed8a5d03d7881d84591fca7190d4918630f12a613236aeca5b96c2f | 2022 | -7.657 | -9.429 | -1.772 |
+| NSXUSD:5 | ff94a4401ed8a5d03d7881d84591fca7190d4918630f12a613236aeca5b96c2f | 2023 | -15.228 | -21.633 | -6.405 |
+| NSXUSD:5 | ff94a4401ed8a5d03d7881d84591fca7190d4918630f12a613236aeca5b96c2f | 2024 | -15.929 | -16.481 | -0.552 |
+| NSXUSD:5 | ff94a4401ed8a5d03d7881d84591fca7190d4918630f12a613236aeca5b96c2f | 2025 | 2.593 | -4.402 | -6.994 |
+| NSXUSD:5 | ff94a4401ed8a5d03d7881d84591fca7190d4918630f12a613236aeca5b96c2f | 2026_to_holdout | 8.542 | 7.601 | -0.941 |
+| NSXUSD:5 | ff94a4401ed8a5d03d7881d84591fca7190d4918630f12a613236aeca5b96c2f | 2023_to_today | -20.022 | -34.915 | -14.893 |
+| NSXUSD:5 | 517772c7340d317e9d700515d69fa0593f167784ed2caec864a6b43d429d7847 | 2022 | -3.759 | -6.310 | -2.552 |
+| NSXUSD:5 | 517772c7340d317e9d700515d69fa0593f167784ed2caec864a6b43d429d7847 | 2023 | -47.248 | -44.985 | 2.263 |
+| NSXUSD:5 | 517772c7340d317e9d700515d69fa0593f167784ed2caec864a6b43d429d7847 | 2024 | -11.748 | -14.832 | -3.084 |
+| NSXUSD:5 | 517772c7340d317e9d700515d69fa0593f167784ed2caec864a6b43d429d7847 | 2025 | -1.223 | -6.072 | -4.849 |
+| NSXUSD:5 | 517772c7340d317e9d700515d69fa0593f167784ed2caec864a6b43d429d7847 | 2026_to_holdout | 6.454 | 6.846 | 0.392 |
+| NSXUSD:5 | 517772c7340d317e9d700515d69fa0593f167784ed2caec864a6b43d429d7847 | 2023_to_today | -53.766 | -59.043 | -5.278 |
+| NSXUSD:5 | 143087d2fdc58b5866f5b81e1409ae627293ae6ecc321380391286c2967e0987 | 2022 | -6.219 | -9.017 | -2.798 |
+| NSXUSD:5 | 143087d2fdc58b5866f5b81e1409ae627293ae6ecc321380391286c2967e0987 | 2023 | -48.306 | -49.710 | -1.404 |
+| NSXUSD:5 | 143087d2fdc58b5866f5b81e1409ae627293ae6ecc321380391286c2967e0987 | 2024 | -19.833 | -21.272 | -1.439 |
+| NSXUSD:5 | 143087d2fdc58b5866f5b81e1409ae627293ae6ecc321380391286c2967e0987 | 2025 | 2.038 | -5.477 | -7.515 |
+| NSXUSD:5 | 143087d2fdc58b5866f5b81e1409ae627293ae6ecc321380391286c2967e0987 | 2026_to_holdout | 5.413 | 5.806 | 0.392 |
+| NSXUSD:5 | 143087d2fdc58b5866f5b81e1409ae627293ae6ecc321380391286c2967e0987 | 2023_to_today | -60.688 | -70.653 | -9.966 |
+| NSXUSD:5 | tai_baseline | 2022 | -48.908 | -48.804 | 0.103 |
+| NSXUSD:5 | tai_baseline | 2023 | -11.495 | -15.545 | -4.050 |
+| NSXUSD:5 | tai_baseline | 2024 | -7.641 | -57.167 | -49.526 |
+| NSXUSD:5 | tai_baseline | 2025 | -42.329 | -26.416 | 15.913 |
+| NSXUSD:5 | tai_baseline | 2026_to_holdout | -15.656 | -8.742 | 6.914 |
+| NSXUSD:5 | tai_baseline | 2023_to_today | -77.121 | -107.870 | -30.749 |
+| NSXUSD:60 | 75911ac5e4c5611875986faea37a69378360385e152c80044399dc613f1a0263 | 2022 | -2.284 | -1.697 | 0.588 |
+| NSXUSD:60 | 75911ac5e4c5611875986faea37a69378360385e152c80044399dc613f1a0263 | 2023 | -8.117 | -6.784 | 1.333 |
+| NSXUSD:60 | 75911ac5e4c5611875986faea37a69378360385e152c80044399dc613f1a0263 | 2024 | -7.668 | -6.534 | 1.134 |
+| NSXUSD:60 | 75911ac5e4c5611875986faea37a69378360385e152c80044399dc613f1a0263 | 2025 | -1.581 | -4.396 | -2.815 |
+| NSXUSD:60 | 75911ac5e4c5611875986faea37a69378360385e152c80044399dc613f1a0263 | 2026_to_holdout | 4.008 | 1.890 | -2.119 |
+| NSXUSD:60 | 75911ac5e4c5611875986faea37a69378360385e152c80044399dc613f1a0263 | 2023_to_today | -13.357 | -15.823 | -2.466 |
+| NSXUSD:60 | d7650179ca2d60baa51b3ad18bd5e99eb5a70f0c0ebe67b7da1cf278b4c81325 | 2022 | -2.480 | -2.147 | 0.333 |
+| NSXUSD:60 | d7650179ca2d60baa51b3ad18bd5e99eb5a70f0c0ebe67b7da1cf278b4c81325 | 2023 | -5.542 | -4.208 | 1.333 |
+| NSXUSD:60 | d7650179ca2d60baa51b3ad18bd5e99eb5a70f0c0ebe67b7da1cf278b4c81325 | 2024 | -7.467 | -6.215 | 1.253 |
+| NSXUSD:60 | d7650179ca2d60baa51b3ad18bd5e99eb5a70f0c0ebe67b7da1cf278b4c81325 | 2025 | -5.517 | -5.569 | -0.053 |
+| NSXUSD:60 | d7650179ca2d60baa51b3ad18bd5e99eb5a70f0c0ebe67b7da1cf278b4c81325 | 2026_to_holdout | 6.125 | 4.006 | -2.119 |
+| NSXUSD:60 | d7650179ca2d60baa51b3ad18bd5e99eb5a70f0c0ebe67b7da1cf278b4c81325 | 2023_to_today | -12.401 | -11.986 | 0.415 |
+| NSXUSD:60 | 92555c98f97623e665d463b68406a8601071cfaaae8425446b1500763c4fa675 | 2022 | -2.480 | -2.147 | 0.333 |
+| NSXUSD:60 | 92555c98f97623e665d463b68406a8601071cfaaae8425446b1500763c4fa675 | 2023 | -6.599 | -5.266 | 1.333 |
+| NSXUSD:60 | 92555c98f97623e665d463b68406a8601071cfaaae8425446b1500763c4fa675 | 2024 | -7.467 | -6.215 | 1.253 |
+| NSXUSD:60 | 92555c98f97623e665d463b68406a8601071cfaaae8425446b1500763c4fa675 | 2025 | -5.517 | -5.569 | -0.053 |
+| NSXUSD:60 | 92555c98f97623e665d463b68406a8601071cfaaae8425446b1500763c4fa675 | 2026_to_holdout | 5.064 | 2.945 | -2.119 |
+| NSXUSD:60 | 92555c98f97623e665d463b68406a8601071cfaaae8425446b1500763c4fa675 | 2023_to_today | -14.519 | -14.104 | 0.415 |
+| NSXUSD:60 | tai_baseline | 2022 | -2.085 | 0.582 | 2.667 |
+| NSXUSD:60 | tai_baseline | 2023 | -1.104 | 0.230 | 1.333 |
+| NSXUSD:60 | tai_baseline | 2024 | 0.000 | 0.000 | 0.000 |
+| NSXUSD:60 | tai_baseline | 2025 | -1.062 | -1.062 | 0.000 |
+| NSXUSD:60 | tai_baseline | 2026_to_holdout | 0.000 | 0.000 | 0.000 |
+| NSXUSD:60 | tai_baseline | 2023_to_today | -2.166 | -0.833 | 1.333 |
+| XAUUSD:1 | b16f23b6ffcd871649ef59e4b2cb3c7442e672bd479e3e9f74c3df7a976d797d | 2022 | -18.340 | -18.429 | -0.089 |
+| XAUUSD:1 | b16f23b6ffcd871649ef59e4b2cb3c7442e672bd479e3e9f74c3df7a976d797d | 2023 | -4.483 | -4.483 | -0.000 |
+| XAUUSD:1 | b16f23b6ffcd871649ef59e4b2cb3c7442e672bd479e3e9f74c3df7a976d797d | 2024 | -11.001 | -11.334 | -0.333 |
+| XAUUSD:1 | b16f23b6ffcd871649ef59e4b2cb3c7442e672bd479e3e9f74c3df7a976d797d | 2025 | -8.604 | -8.938 | -0.333 |
+| XAUUSD:1 | b16f23b6ffcd871649ef59e4b2cb3c7442e672bd479e3e9f74c3df7a976d797d | 2026_to_holdout | 1.365 | -1.301 | -2.667 |
+| XAUUSD:1 | b16f23b6ffcd871649ef59e4b2cb3c7442e672bd479e3e9f74c3df7a976d797d | 2023_to_today | -22.723 | -26.056 | -3.333 |
+| XAUUSD:1 | 3ae64b747aa85ab3527965474b3fb7e3e2439e989aebd3be70491d93e2ef1bd0 | 2022 | -20.482 | -20.816 | -0.333 |
+| XAUUSD:1 | 3ae64b747aa85ab3527965474b3fb7e3e2439e989aebd3be70491d93e2ef1bd0 | 2023 | -12.299 | -9.299 | 3.000 |
+| XAUUSD:1 | 3ae64b747aa85ab3527965474b3fb7e3e2439e989aebd3be70491d93e2ef1bd0 | 2024 | -19.036 | -17.036 | 2.000 |
+| XAUUSD:1 | 3ae64b747aa85ab3527965474b3fb7e3e2439e989aebd3be70491d93e2ef1bd0 | 2025 | -2.642 | -5.975 | -3.333 |
+| XAUUSD:1 | 3ae64b747aa85ab3527965474b3fb7e3e2439e989aebd3be70491d93e2ef1bd0 | 2026_to_holdout | -1.572 | -1.572 | 0.000 |
+| XAUUSD:1 | 3ae64b747aa85ab3527965474b3fb7e3e2439e989aebd3be70491d93e2ef1bd0 | 2023_to_today | -35.549 | -33.882 | 1.667 |
+| XAUUSD:1 | 05d54ee0f27ea897697f629ad32f22a2ac8e3c40cfa9b89043da1899fbd13afe | 2022 | -14.893 | -14.531 | 0.362 |
+| XAUUSD:1 | 05d54ee0f27ea897697f629ad32f22a2ac8e3c40cfa9b89043da1899fbd13afe | 2023 | -2.171 | -2.423 | -0.252 |
+| XAUUSD:1 | 05d54ee0f27ea897697f629ad32f22a2ac8e3c40cfa9b89043da1899fbd13afe | 2024 | -5.960 | -7.094 | -1.133 |
+| XAUUSD:1 | 05d54ee0f27ea897697f629ad32f22a2ac8e3c40cfa9b89043da1899fbd13afe | 2025 | -5.569 | -6.584 | -1.015 |
+| XAUUSD:1 | 05d54ee0f27ea897697f629ad32f22a2ac8e3c40cfa9b89043da1899fbd13afe | 2026_to_holdout | 1.646 | 1.249 | -0.396 |
+| XAUUSD:1 | 05d54ee0f27ea897697f629ad32f22a2ac8e3c40cfa9b89043da1899fbd13afe | 2023_to_today | -12.054 | -14.851 | -2.797 |
+| XAUUSD:1 | tai_baseline | 2022 | -750.096 | -752.029 | -1.933 |
+| XAUUSD:1 | tai_baseline | 2023 | -808.367 | -812.810 | -4.443 |
+| XAUUSD:1 | tai_baseline | 2024 | -501.092 | -506.241 | -5.149 |
+| XAUUSD:1 | tai_baseline | 2025 | -319.706 | -344.162 | -24.456 |
+| XAUUSD:1 | tai_baseline | 2026_to_holdout | -113.481 | -105.578 | 7.903 |
+| XAUUSD:1 | tai_baseline | 2023_to_today | -1742.646 | -1768.791 | -26.145 |
+| XAUUSD:3 | 94c58b1b10f2e0070b71dfcc47be0886bdb52f772f5088795affdf9c57f1ee0f | 2022 | -9.879 | -6.947 | 2.932 |
+| XAUUSD:3 | 94c58b1b10f2e0070b71dfcc47be0886bdb52f772f5088795affdf9c57f1ee0f | 2023 | -20.443 | -18.832 | 1.611 |
+| XAUUSD:3 | 94c58b1b10f2e0070b71dfcc47be0886bdb52f772f5088795affdf9c57f1ee0f | 2024 | -5.804 | -8.230 | -2.426 |
+| XAUUSD:3 | 94c58b1b10f2e0070b71dfcc47be0886bdb52f772f5088795affdf9c57f1ee0f | 2025 | -4.327 | -7.905 | -3.578 |
+| XAUUSD:3 | 94c58b1b10f2e0070b71dfcc47be0886bdb52f772f5088795affdf9c57f1ee0f | 2026_to_holdout | 3.314 | 2.347 | -0.966 |
+| XAUUSD:3 | 94c58b1b10f2e0070b71dfcc47be0886bdb52f772f5088795affdf9c57f1ee0f | 2023_to_today | -27.260 | -32.619 | -5.359 |
+| XAUUSD:3 | eaa204624ddc3e61ada1f44a18d2efdc7759292d59cd72dfda81b2ba548bb2c5 | 2022 | -9.879 | -6.947 | 2.932 |
+| XAUUSD:3 | eaa204624ddc3e61ada1f44a18d2efdc7759292d59cd72dfda81b2ba548bb2c5 | 2023 | -22.847 | -22.902 | -0.056 |
+| XAUUSD:3 | eaa204624ddc3e61ada1f44a18d2efdc7759292d59cd72dfda81b2ba548bb2c5 | 2024 | -5.813 | -8.238 | -2.426 |
+| XAUUSD:3 | eaa204624ddc3e61ada1f44a18d2efdc7759292d59cd72dfda81b2ba548bb2c5 | 2025 | -6.198 | -9.776 | -3.578 |
+| XAUUSD:3 | eaa204624ddc3e61ada1f44a18d2efdc7759292d59cd72dfda81b2ba548bb2c5 | 2026_to_holdout | 3.314 | 2.347 | -0.966 |
+| XAUUSD:3 | eaa204624ddc3e61ada1f44a18d2efdc7759292d59cd72dfda81b2ba548bb2c5 | 2023_to_today | -31.543 | -38.569 | -7.026 |
+| XAUUSD:3 | 0e4cd6ac3b5d07e38995778924dee1d81d97f8e28b904b90199c0e2b78d7346b | 2022 | -9.879 | -6.947 | 2.932 |
+| XAUUSD:3 | 0e4cd6ac3b5d07e38995778924dee1d81d97f8e28b904b90199c0e2b78d7346b | 2023 | -20.443 | -18.832 | 1.611 |
+| XAUUSD:3 | 0e4cd6ac3b5d07e38995778924dee1d81d97f8e28b904b90199c0e2b78d7346b | 2024 | -15.140 | -20.855 | -5.715 |
+| XAUUSD:3 | 0e4cd6ac3b5d07e38995778924dee1d81d97f8e28b904b90199c0e2b78d7346b | 2025 | -8.890 | -12.468 | -3.578 |
+| XAUUSD:3 | 0e4cd6ac3b5d07e38995778924dee1d81d97f8e28b904b90199c0e2b78d7346b | 2026_to_holdout | 4.067 | 3.243 | -0.825 |
+| XAUUSD:3 | 0e4cd6ac3b5d07e38995778924dee1d81d97f8e28b904b90199c0e2b78d7346b | 2023_to_today | -40.405 | -48.912 | -8.507 |
+| XAUUSD:3 | tai_baseline | 2022 | -302.068 | -305.708 | -3.640 |
+| XAUUSD:3 | tai_baseline | 2023 | -573.731 | -564.242 | 9.488 |
+| XAUUSD:3 | tai_baseline | 2024 | -282.952 | -281.791 | 1.161 |
+| XAUUSD:3 | tai_baseline | 2025 | -112.814 | -103.214 | 9.601 |
+| XAUUSD:3 | tai_baseline | 2026_to_holdout | -34.277 | -38.687 | -4.410 |
+| XAUUSD:3 | tai_baseline | 2023_to_today | -1003.774 | -987.934 | 15.840 |
+| XAUUSD:5 | 70de6d5a40dfca0fe1336337cb9731b2253f0997216d99074e257dbd6820a5c0 | 2022 | -14.917 | -17.611 | -2.695 |
+| XAUUSD:5 | 70de6d5a40dfca0fe1336337cb9731b2253f0997216d99074e257dbd6820a5c0 | 2023 | -23.214 | -29.129 | -5.914 |
+| XAUUSD:5 | 70de6d5a40dfca0fe1336337cb9731b2253f0997216d99074e257dbd6820a5c0 | 2024 | -3.611 | -9.111 | -5.500 |
+| XAUUSD:5 | 70de6d5a40dfca0fe1336337cb9731b2253f0997216d99074e257dbd6820a5c0 | 2025 | -7.484 | -14.465 | -6.981 |
+| XAUUSD:5 | 70de6d5a40dfca0fe1336337cb9731b2253f0997216d99074e257dbd6820a5c0 | 2026_to_holdout | 8.115 | 2.382 | -5.733 |
+| XAUUSD:5 | 70de6d5a40dfca0fe1336337cb9731b2253f0997216d99074e257dbd6820a5c0 | 2023_to_today | -26.194 | -50.323 | -24.128 |
+| XAUUSD:5 | 42209dbf1decf3299679530e7341a102d83029fcf942414fbc8ff8d86848fa00 | 2022 | -29.942 | -23.673 | 6.269 |
+| XAUUSD:5 | 42209dbf1decf3299679530e7341a102d83029fcf942414fbc8ff8d86848fa00 | 2023 | -12.171 | -9.504 | 2.667 |
+| XAUUSD:5 | 42209dbf1decf3299679530e7341a102d83029fcf942414fbc8ff8d86848fa00 | 2024 | -14.033 | -12.174 | 1.859 |
+| XAUUSD:5 | 42209dbf1decf3299679530e7341a102d83029fcf942414fbc8ff8d86848fa00 | 2025 | 3.852 | 2.642 | -1.210 |
+| XAUUSD:5 | 42209dbf1decf3299679530e7341a102d83029fcf942414fbc8ff8d86848fa00 | 2026_to_holdout | 0.729 | 1.191 | 0.462 |
+| XAUUSD:5 | 42209dbf1decf3299679530e7341a102d83029fcf942414fbc8ff8d86848fa00 | 2023_to_today | -21.623 | -17.845 | 3.778 |
+| XAUUSD:5 | 30df9a90712e56a6855a4606ba5b0653db7ed821c2ffc6a95f0a4f67d7e1b4ca | 2022 | -48.227 | -52.788 | -4.561 |
+| XAUUSD:5 | 30df9a90712e56a6855a4606ba5b0653db7ed821c2ffc6a95f0a4f67d7e1b4ca | 2023 | -55.377 | -55.152 | 0.226 |
+| XAUUSD:5 | 30df9a90712e56a6855a4606ba5b0653db7ed821c2ffc6a95f0a4f67d7e1b4ca | 2024 | -52.045 | -45.266 | 6.779 |
+| XAUUSD:5 | 30df9a90712e56a6855a4606ba5b0653db7ed821c2ffc6a95f0a4f67d7e1b4ca | 2025 | -18.218 | -27.005 | -8.787 |
+| XAUUSD:5 | 30df9a90712e56a6855a4606ba5b0653db7ed821c2ffc6a95f0a4f67d7e1b4ca | 2026_to_holdout | 9.865 | 6.560 | -3.305 |
+| XAUUSD:5 | 30df9a90712e56a6855a4606ba5b0653db7ed821c2ffc6a95f0a4f67d7e1b4ca | 2023_to_today | -115.776 | -120.863 | -5.087 |
+| XAUUSD:5 | tai_baseline | 2022 | -193.469 | -198.993 | -5.524 |
+| XAUUSD:5 | tai_baseline | 2023 | -134.866 | -128.733 | 6.133 |
+| XAUUSD:5 | tai_baseline | 2024 | -78.388 | -92.651 | -14.263 |
+| XAUUSD:5 | tai_baseline | 2025 | -59.744 | -44.544 | 15.200 |
+| XAUUSD:5 | tai_baseline | 2026_to_holdout | -32.461 | -29.597 | 2.864 |
+| XAUUSD:5 | tai_baseline | 2023_to_today | -305.460 | -295.525 | 9.935 |
+| XAUUSD:60 | f9f305d393cc6d43b558c635c43e02ccb8db8d964b9f1e4c8e554a52dde1df10 | 2022 | -3.808 | -4.991 | -1.182 |
+| XAUUSD:60 | f9f305d393cc6d43b558c635c43e02ccb8db8d964b9f1e4c8e554a52dde1df10 | 2023 | 3.159 | 0.602 | -2.557 |
+| XAUUSD:60 | f9f305d393cc6d43b558c635c43e02ccb8db8d964b9f1e4c8e554a52dde1df10 | 2024 | -8.895 | -6.777 | 2.118 |
+| XAUUSD:60 | f9f305d393cc6d43b558c635c43e02ccb8db8d964b9f1e4c8e554a52dde1df10 | 2025 | -7.589 | -7.422 | 0.167 |
+| XAUUSD:60 | f9f305d393cc6d43b558c635c43e02ccb8db8d964b9f1e4c8e554a52dde1df10 | 2026_to_holdout | 3.569 | 1.903 | -1.667 |
+| XAUUSD:60 | f9f305d393cc6d43b558c635c43e02ccb8db8d964b9f1e4c8e554a52dde1df10 | 2023_to_today | -9.755 | -11.694 | -1.939 |
+| XAUUSD:60 | 2d4115080a9fc17c129068acecab35207470f3332974a3c313ba4ebf9c408749 | 2022 | -1.224 | -6.399 | -5.175 |
+| XAUUSD:60 | 2d4115080a9fc17c129068acecab35207470f3332974a3c313ba4ebf9c408749 | 2023 | 3.789 | 0.283 | -3.506 |
+| XAUUSD:60 | 2d4115080a9fc17c129068acecab35207470f3332974a3c313ba4ebf9c408749 | 2024 | -10.435 | -7.137 | 3.298 |
+| XAUUSD:60 | 2d4115080a9fc17c129068acecab35207470f3332974a3c313ba4ebf9c408749 | 2025 | -8.526 | -6.526 | 2.000 |
+| XAUUSD:60 | 2d4115080a9fc17c129068acecab35207470f3332974a3c313ba4ebf9c408749 | 2026_to_holdout | 3.569 | 1.903 | -1.667 |
+| XAUUSD:60 | 2d4115080a9fc17c129068acecab35207470f3332974a3c313ba4ebf9c408749 | 2023_to_today | -11.603 | -11.478 | 0.125 |
+| XAUUSD:60 | e63d1ed1aafc80027006bc1e3db2c0011280d20315111ae20db1c2a60dba14c0 | 2022 | -4.867 | -4.867 | 0.000 |
+| XAUUSD:60 | e63d1ed1aafc80027006bc1e3db2c0011280d20315111ae20db1c2a60dba14c0 | 2023 | 2.596 | 2.523 | -0.073 |
+| XAUUSD:60 | e63d1ed1aafc80027006bc1e3db2c0011280d20315111ae20db1c2a60dba14c0 | 2024 | -4.903 | -4.855 | 0.048 |
+| XAUUSD:60 | e63d1ed1aafc80027006bc1e3db2c0011280d20315111ae20db1c2a60dba14c0 | 2025 | -3.688 | -3.664 | 0.024 |
+| XAUUSD:60 | e63d1ed1aafc80027006bc1e3db2c0011280d20315111ae20db1c2a60dba14c0 | 2026_to_holdout | 1.782 | 2.080 | 0.298 |
+| XAUUSD:60 | e63d1ed1aafc80027006bc1e3db2c0011280d20315111ae20db1c2a60dba14c0 | 2023_to_today | -4.213 | -3.916 | 0.297 |
+| XAUUSD:60 | tai_baseline | 2022 | -2.289 | -0.632 | 1.657 |
+| XAUUSD:60 | tai_baseline | 2023 | -1.391 | -1.391 | 0.000 |
+| XAUUSD:60 | tai_baseline | 2024 | -8.691 | -8.691 | 0.000 |
+| XAUUSD:60 | tai_baseline | 2025 | -3.763 | -1.763 | 2.000 |
+| XAUUSD:60 | tai_baseline | 2026_to_holdout | 1.877 | 2.210 | 0.333 |
+| XAUUSD:60 | tai_baseline | 2023_to_today | -11.968 | -9.635 | 2.333 |
+
+## Exit schemes
+
+E4 is the owner's scale-out (thirds at 1R/2R/3R with stop to entry after 1R). E5 moves to entry after 2R; E6 uses halves at 1R and 3R. Stops are evaluated before targets on the same bar.
+
+## Market conditions
+
+The JSON contains the four pre-registered paired comparisons and the full-inversion Tai mirror for every group and period.
+Only market-condition buckets with at least 30 trades are reported in the JSON.
+
+## Plain-language reading
+
+Positive deltas mean the left-hand exit scheme improved the paired total-R result for the same entries; negative deltas mean it hurt. The bucketed E0 versus E4 rows show where the scale-out helped or hurt, with stop-first ordering when a stop and target share a bar.

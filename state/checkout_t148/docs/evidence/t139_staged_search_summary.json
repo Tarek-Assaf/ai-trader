@@ -1,0 +1,29 @@
+{
+  "task": "T-139",
+  "spec": "docs/specs/staged_search.md",
+  "image": "ghcr.io/tarek-assaf/ai-trader:ffb0a6f895463e0a754de702167ea57b4806008a",
+  "results_files": [
+    "Pod:/workspace/state/staged_search_nsxusd_15m_v2.json",
+    "Pod:/workspace/state/staged_search_nsxusd_5m_v2.json",
+    "Pod:/workspace/state/staged_search_xauusd_15m_v2.json",
+    "Pod:/workspace/state/staged_search_xauusd_5m_v2.json",
+    "Pod:/workspace/state/staged_search_nsxusd_60m_v2.json",
+    "Pod:/workspace/state/staged_search_xauusd_60m_v2.json"
+  ],
+  "runs": {
+    "NSXUSD_15m": {"parents": 10, "generations": [{"generation": 1, "children_evaluated": 120, "survivors": 0, "trials_so_far": 2506}], "total_trials": 2506, "gate1_passes": 0},
+    "NSXUSD_5m": {"parents": 10, "generations": [{"generation": 1, "children_evaluated": 119, "survivors": 0, "trials_so_far": 2502}], "total_trials": 2502, "gate1_passes": 0},
+    "XAUUSD_15m": {"parents": 10, "generations": [{"generation": 1, "children_evaluated": 123, "survivors": 0, "trials_so_far": 2519}], "total_trials": 2519, "gate1_passes": 0},
+    "XAUUSD_5m": {"parents": 10, "generations": [{"generation": 1, "children_evaluated": 125, "survivors": 0, "trials_so_far": 2521}], "total_trials": 2521, "gate1_passes": 0},
+    "NSXUSD_60m": {"parents": 10, "generations": [{"generation": 1, "children_evaluated": 135, "survivors": 2, "trials_so_far": 2519}, {"generation": 2, "children_evaluated": 20, "survivors": 8, "trials_so_far": 2539}, {"generation": 3, "children_evaluated": 65, "survivors": 20, "trials_so_far": 2604}], "total_trials": 2604, "survivors": 30, "gate1_attempts": 30, "gate1_passes": 0},
+    "XAUUSD_60m": {"parents": 10, "generations": [{"generation": 1, "children_evaluated": 135, "survivors": 0, "trials_so_far": 2531}], "total_trials": 2531, "survivors": 0, "gate1_passes": 0}
+  },
+  "best3_survivors": [
+    {"market": "NSXUSD", "timeframe": 60, "hash": "8eea94b231e186697d05ad3c9cb3fe14ab6d72777d484eae51c3c6b64c0f9b33", "generation": 3, "change": "volatility_normal_volatility", "early": {"trades": 212, "net_per_trade": 11.982}, "later": {"trades": 159, "net_per_trade": 19.2286}, "other_market": {"trades": 140, "net_per_trade": 2.5466}},
+    {"market": "NSXUSD", "timeframe": 60, "hash": "0e785e4948f6a5a45a8aa6d5cd84424bb0e8753492cd5d32be14d9378ae87b1", "generation": 3, "change": "trend_with", "early": {"trades": 181, "net_per_trade": 2.9339}, "later": {"trades": 135, "net_per_trade": 26.0712}, "other_market": {"trades": 116, "net_per_trade": 2.5119}},
+    {"market": "NSXUSD", "timeframe": 60, "hash": "90edbe82a5b81e0d50f2632cd6a1da8ebc4dfb26805a0e94a266d0df51af3cfe", "generation": 3, "change": "session_new_york", "early": {"trades": 223, "net_per_trade": 12.5186}, "later": {"trades": 158, "net_per_trade": 33.3468}, "other_market": {"trades": 126, "net_per_trade": 2.2584}}
+  ],
+  "safety": {"gates_changed": false, "code_config_holdout_changed": false, "broker_calls": 0, "orders": 0, "paper": true, "live_enabled": false},
+  "execution_note": "The repository script reached its report-writing line but hit vars() on a slots dataclass. Runs were repeated through an ephemeral Pod-only Python wrapper that converts dataclasses.asdict for report serialization; repository source was not changed. The search and Gate 1 logic were unchanged. All six required runs completed; no Gate 1 pass occurred, so no paper trading was started.",
+  "validation": ["Step 0 addendum generated from retained Round D Pod files", "all staged runs completed", "no gate/config/holdout changes"]
+}

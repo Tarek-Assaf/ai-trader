@@ -1,0 +1,44 @@
+{
+  "broker_observations": [],
+  "cleanup": {
+    "attempted": false
+  },
+  "created_at": "2026-10-05T15:16:00Z",
+  "deal_references": {},
+  "direction": "BUY",
+  "environment": "demo",
+  "epic": "US100",
+  "error": null,
+  "live_trading_enabled": false,
+  "minimum_size_step": "0.001",
+  "mode": "paper",
+  "quote": {
+    "ask": "30963.0",
+    "bid": "30961.2",
+    "spread": "1.8"
+  },
+  "report_path": "/workspace/demo_round_trip_20261005T151601Z_06c9a322.json",
+  "requested_reference_price": "30963.0",
+  "requested_size": "0.001",
+  "result": "preflight",
+  "rounding": {},
+  "schema_version": 1,
+  "stop_levels": {
+    "minimum_stop_distance": "3.0963",
+    "minimum_stop_distance_rule": {
+      "reference_price": "30963.0",
+      "unit": "PERCENTAGE",
+      "value": "0.01"
+    },
+    "open_requested": "30956.3",
+    "safety_margin": "1.8",
+    "tick_size": "0.1",
+    "tightened_distance_from_bid": "4.8",
+    "tightened_requested": "30956.4"
+  },
+  "symbol": "NAS100",
+  "timings_ms": {
+    "preflight": 598.958,
+    "total": 600.92
+  }
+}

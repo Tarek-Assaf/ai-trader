@@ -1,0 +1,27 @@
+{
+  "status": "degraded",
+  "role": "all",
+  "version": "b75b50654e310d1b59c6cff3516ae0a4ce4617b5",
+  "last_backup_at": "2026-10-05T14:32:42+00:00",
+  "last_backup_age_seconds": 266,
+  "mode": "paper",
+  "broker_env": "demo",
+  "live_enabled": false,
+  "db": "reachable",
+  "redis": "reachable",
+  "data_recorder": {
+    "configured": true,
+    "status": "degraded",
+    "ping_reply_ok": false,
+    "market_status": "unknown",
+    "market_status_source": "unknown,unknown",
+    "expected_open": null,
+    "stale_epics": [],
+    "reconnect_count": 0,
+    "last_reconnect_reason": null,
+    "last_update_at": null,
+    "last_closed_bar_at": null,
+    "last_liveness_at": "2026-10-05T14:37:08.203650+00:00"
+  },
+  "time": "2026-10-05T14:37:08.555177+00:00"
+}

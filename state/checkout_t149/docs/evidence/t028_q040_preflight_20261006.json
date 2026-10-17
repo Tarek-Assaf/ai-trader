@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "result": "preflight",
+  "captured_at": "2026-10-06T13:59:42Z",
+  "environment": "demo",
+  "mode": "paper",
+  "live_trading_enabled": false,
+  "symbol": "NAS100",
+  "epic": "US100",
+  "requested_size": "1.0",
+  "account_observations": {
+    "before_open": {
+      "account_count": 1,
+      "accounts": [
+        {
+          "currency": "USD",
+          "fields_present": ["available", "balance", "deposit", "profitLoss"],
+          "observed_values": {
+            "available": "1000.0",
+            "balance": "1000.0",
+            "deposit": "1000.0",
+            "profitLoss": "0.0"
+          }
+        }
+      ]
+    }
+  },
+  "pod_image_tag": "ghcr.io/tarek-assaf/ai-trader:c72ed3c125193402ef409b6352a2e6f5445d1126",
+  "pod_image_tag_observed": "unavailable_in_container",
+  "workspace_report": "/workspace/demo_round_trip_20261006T140010Z_02d5ffff.json",
+  "secrets_recorded": false
+}

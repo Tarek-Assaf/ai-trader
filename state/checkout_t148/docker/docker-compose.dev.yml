@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:16}
+    environment:
+      POSTGRES_DB: trader
+      POSTGRES_USER: trader
+      POSTGRES_PASSWORD: trader
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trader -d trader"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7}
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    environment:
+      ROLE: core
+      TRADING_MODE: paper
+      BROKER_ENV: demo
+      LIVE_TRADING_ENABLED: "false"
+      DATABASE_URL: postgresql+psycopg://trader:trader@postgres:5432/trader
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "127.0.0.1:${API_HOST_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    environment:
+      ROLE: worker
+      TRADING_MODE: paper
+      BROKER_ENV: demo
+      LIVE_TRADING_ENABLED: "false"
+    volumes:
+      - worker_data:/workspace
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os, time; p='/workspace/worker.heartbeat'; assert time.time() - os.path.getmtime(p) < 30"]
+      interval: 5s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  postgres_data:
+  redis_data:
+  worker_data:
+

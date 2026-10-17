@@ -1,0 +1,263 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: mirror.gcr.io/library/postgres:16
+        env:
+          POSTGRES_USER: trader
+          POSTGRES_PASSWORD: trader
+          POSTGRES_DB: trader
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U trader -d trader"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+      redis:
+        image: mirror.gcr.io/library/redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      PYTHON_IMAGE: mirror.gcr.io/library/python:3.12-slim
+      POSTGRES_IMAGE: mirror.gcr.io/library/postgres:16
+      REDIS_IMAGE: mirror.gcr.io/library/redis:7
+      DATABASE_URL: postgresql+psycopg://trader:trader@localhost:5432/trader
+      REDIS_URL: redis://localhost:6379/0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "0.6.3"
+      - name: Install locked dependencies
+        run: uv sync --extra dev --frozen
+      - name: Verify locked dependency versions
+        run: uv lock --check
+      - name: Lint and format
+        run: |
+          set +e
+          make lint 2>&1 | tee /tmp/lint.log
+          command_status=${PIPESTATUS[0]}
+          if [ "$command_status" -ne 0 ]; then
+            uv run ruff format --diff . 2>&1 | tee -a /tmp/lint.log
+            failure_summary="$(tail -n 30 /tmp/lint.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            printf '::error title=Lint and format failed::%s\n' "$failure_summary"
+            exit "$command_status"
+          fi
+      - name: Type check
+        run: |
+          set +e
+          make typecheck 2>&1 | tee /tmp/typecheck.log
+          command_status=${PIPESTATUS[0]}
+          if [ "$command_status" -ne 0 ]; then
+            failure_summary="$(tail -n 30 /tmp/typecheck.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            printf '::error title=Type check failed::%s\n' "$failure_summary"
+            exit "$command_status"
+          fi
+      - name: Verify migrations are reversible
+        run: |
+          set +e
+          uv run alembic upgrade head 2>&1 | tee /tmp/migrations.log
+          command_status=${PIPESTATUS[0]}
+          if [ "$command_status" -eq 0 ]; then
+            uv run alembic downgrade base 2>&1 | tee -a /tmp/migrations.log
+            command_status=${PIPESTATUS[0]}
+          fi
+          if [ "$command_status" -eq 0 ]; then
+            uv run alembic upgrade head 2>&1 | tee -a /tmp/migrations.log
+            command_status=${PIPESTATUS[0]}
+          fi
+          if [ "$command_status" -ne 0 ]; then
+            failure_summary="$(tail -n 30 /tmp/migrations.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            printf '::error title=Migration reversibility failed::%s\n' "$failure_summary"
+            exit "$command_status"
+          fi
+      - name: Run tests
+        run: |
+          set +e
+          make test 2>&1 | tee /tmp/tests.log
+          command_status=${PIPESTATUS[0]}
+          if [ "$command_status" -ne 0 ]; then
+            failure_summary="$(tail -n 30 /tmp/tests.log | tr '\n' ' ' | sed 's/%/%25/g; s/\r/%0D/g')"
+            printf '::error title=Run tests failed::%s\n' "$failure_summary"
+            exit "$command_status"
+          fi
+      - name: Validate handoff
+        run: python agent_state/validate_handoff.py
+      - name: Validate handoff changes against base on pull requests
+        if: github.event_name == 'pull_request'
+        run: |
+          git show "origin/${GITHUB_BASE_REF}:agent_state/AGENT_HANDOFF.json" > /tmp/previous-handoff.json
+          python agent_state/validate_handoff.py --previous /tmp/previous-handoff.json
+      - name: Scan for secrets
+        run: uv run python scripts/secret_scan.py
+      - name: Build container image
+        run: docker build --build-arg PYTHON_IMAGE="${PYTHON_IMAGE}" --build-arg GIT_SHA="${GITHUB_SHA}" --tag ai-trader:ci --file docker/Dockerfile .
+      - name: Verify ROLE=all health, non-root processes, and persistent data
+        run: |
+          data_volume="ai-trader-data-${GITHUB_RUN_ID}"
+          cleanup() {
+            docker logs ai-trader || true
+            docker exec ai-trader sh -c 'for file in /workspace/logs/*; do [ -f "$file" ] || continue; printf "%s\\n" "--- $file ---"; cat "$file"; done' || true
+            docker rm --force ai-trader || true
+            docker volume rm "$data_volume" || true
+          }
+          docker volume create "$data_volume" >/dev/null
+          trap cleanup EXIT
+          docker run --detach --name ai-trader --publish 8000:8000 \
+            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \
+            --env LIVE_TRADING_ENABLED=false --env POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata \
+            --volume "$data_volume:/workspace" ai-trader:ci
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8000/health > /tmp/health.json; then
+              cat /tmp/health.json
+              grep --quiet '"status":"healthy"' /tmp/health.json &&
+                grep --quiet '"role":"all"' /tmp/health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/health.json
+          grep --quiet '"role":"all"' /tmp/health.json
+          grep --quiet "\"version\":\"$GITHUB_SHA\"" /tmp/health.json
+          grep --quiet '"last_backup_age_seconds":' /tmp/health.json
+          docker top ai-trader -eo pid,user,comm | awk 'NR > 1 && $2 == "root" { failed = 1 } END { if (NR < 2 || failed) exit 1 }'
+          docker inspect --format='{{if (index .NetworkSettings.Ports "5432/tcp")}}published{{else}}internal{{end}}' ai-trader | grep --quiet '^internal$'
+          docker inspect --format='{{if (index .NetworkSettings.Ports "6379/tcp")}}published{{else}}internal{{end}}' ai-trader | grep --quiet '^internal$'
+          docker exec ai-trader sh -c 'touch /workspace/persistence-check'
+          docker restart ai-trader
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8000/health > /tmp/health.json; then
+              grep --quiet '"status":"healthy"' /tmp/health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/health.json
+          docker exec ai-trader test -f /workspace/persistence-check
+          docker exec ai-trader test -s /tmp/ai-trader-pgdata/PG_VERSION
+      - name: Verify ROLE=all tolerates mounted volumes that refuse chown
+        run: |
+          root="$RUNNER_TEMP/ai-trader-no-chown"
+          workspace="$root/workspace"
+          postgres="$root/postgres"
+          bad_postgres="$root/postgres-unwritable"
+          postgres_socket="$root/postgres-socket"
+          bad_postgres_socket="$root/postgres-socket-unwritable"
+          mkdir -p "$workspace/redisdata" "$workspace/logs" "$workspace/backups" "$postgres" "$bad_postgres" "$postgres_socket" "$bad_postgres_socket"
+          chmod 0755 "$workspace" "$workspace/redisdata" "$workspace/logs" "$workspace/backups"
+          chmod 0700 "$postgres" "$bad_postgres" "$postgres_socket" "$bad_postgres_socket"
+          sudo chown -R 10001:10001 "$workspace" "$postgres" "$postgres_socket" "$bad_postgres_socket"
+          cleanup() {
+            docker logs ai-trader-no-chown || true
+            docker rm --force ai-trader-no-chown || true
+          }
+          trap cleanup EXIT
+          docker run --detach --name ai-trader-no-chown --publish 8001:8000 \
+            --cap-drop=CHOWN \
+            --env ROLE=all --env TRADING_MODE=paper --env BROKER_ENV=demo \
+            --env LIVE_TRADING_ENABLED=false --env POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata \
+            --volume "$workspace:/workspace" \
+            --volume "$postgres:/tmp/ai-trader-pgdata" \
+            --volume "$postgres_socket:/var/run/postgresql" ai-trader:ci
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8001/health > /tmp/no-chown-health.json; then
+              grep --quiet '"status":"healthy"' /tmp/no-chown-health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/no-chown-health.json
+          grep --quiet 'chown failed for /tmp/ai-trader-pgdata; trader can write to it, continuing' < <(docker logs ai-trader-no-chown 2>&1)
+          docker exec --user 10001:10001 ai-trader-no-chown test -w /tmp/ai-trader-pgdata
+          docker exec --user 10001:10001 ai-trader-no-chown test -s /tmp/ai-trader-pgdata/PG_VERSION
+          docker stop --time 15 ai-trader-no-chown >/dev/null
+          docker rm ai-trader-no-chown >/dev/null
+          if docker run --rm --cap-drop=CHOWN \
+            --env ROLE=all --env POSTGRES_DATA_DIR=/tmp/ai-trader-pgdata \
+            --volume "$workspace:/workspace" \
+            --volume "$bad_postgres:/tmp/ai-trader-pgdata" \
+            --volume "$bad_postgres_socket:/var/run/postgresql" ai-trader:ci > /tmp/no-chown-unwritable.log 2>&1; then
+            echo "Container unexpectedly accepted a PostgreSQL volume the trader user cannot write" >&2
+            exit 1
+          fi
+          if ! grep --fixed-strings --quiet 'Cannot chown /tmp/ai-trader-pgdata and trader user cannot write to it' /tmp/no-chown-unwritable.log; then
+            cat /tmp/no-chown-unwritable.log >&2
+            echo "Container failed without the expected unwritable PostgreSQL volume diagnostic" >&2
+            exit 1
+          fi
+      - name: Verify ROLE=all PostgreSQL backup and restore across container replacement
+        run: bash scripts/test_postgres_backup_restore.sh
+      - name: Verify ROLE=core and ROLE=worker compose services
+        env:
+          POSTGRES_HOST_PORT: "15432"
+          REDIS_HOST_PORT: "16379"
+          API_HOST_PORT: "18000"
+        run: |
+          cleanup() {
+            docker compose --file docker/docker-compose.dev.yml down --volumes --remove-orphans || true
+          }
+          trap cleanup EXIT
+          docker compose --file docker/docker-compose.dev.yml up --detach --build api worker
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:${API_HOST_PORT}/health > /tmp/core-health.json; then
+              grep --quiet '"status":"healthy"' /tmp/core-health.json &&
+                grep --quiet '"role":"core"' /tmp/core-health.json && break
+            fi
+            sleep 2
+          done
+          grep --quiet '"status":"healthy"' /tmp/core-health.json
+          grep --quiet '"role":"core"' /tmp/core-health.json
+          worker_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet worker)"
+          test "$(docker inspect --format='{{.State.Health.Status}}' "$worker_id")" = healthy
+          for service in api worker; do
+            container_id="$(docker compose --file docker/docker-compose.dev.yml ps --quiet "$service")"
+            if docker top "$container_id" -eo pid,comm | grep --extended-regexp --quiet '^(postgres|redis-server)$'; then
+              echo "$service unexpectedly started embedded PostgreSQL or Redis" >&2
+              exit 1
+            fi
+          done
+  publish-image:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+            PYTHON_IMAGE=mirror.gcr.io/library/python:3.12-slim
+          push: true
+          tags: |
+            ghcr.io/tarek-assaf/ai-trader:${{ github.sha }}
+            ghcr.io/tarek-assaf/ai-trader:latest

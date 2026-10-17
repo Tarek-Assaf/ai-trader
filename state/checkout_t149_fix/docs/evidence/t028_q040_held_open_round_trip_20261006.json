@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "result": "success",
+  "captured_at": "2026-10-06T14:59:05.232096Z",
+  "environment": "demo",
+  "mode": "paper",
+  "live_trading_enabled": false,
+  "symbol": "NAS100",
+  "epic": "US100",
+  "size": "0.001",
+  "normal_order_path": true,
+  "risk_guardian_approval": true,
+  "opened_position": {
+    "direction": "BUY",
+    "entry_level": "31325.3",
+    "stop_level": "31319.0"
+  },
+  "account_observations": {
+    "during_open_polling": {
+      "interval_seconds": 5,
+      "duration_seconds": 62.577553,
+      "poll_count": 13,
+      "first_captured_at": "2026-10-06T14:58:02.654543Z",
+      "last_captured_at": "2026-10-06T14:59:05.232096Z",
+      "position_visible_count": 13,
+      "position_visible_series": [true, true, true, true, true, true, true, true, true, true, true, true, true],
+      "first": {
+        "available": "999.48",
+        "balance": "999.79",
+        "deposit": "999.79",
+        "profitLoss": "0.0"
+      },
+      "last": {
+        "available": "999.49",
+        "balance": "999.8",
+        "deposit": "999.79",
+        "profitLoss": "0.01"
+      }
+    },
+    "after_close": {
+      "account_count": 1,
+      "accounts": [
+        {
+          "currency": "USD",
+          "fields_present": ["available", "balance", "deposit", "profitLoss"],
+          "observed_values": {
+            "available": "999.49",
+            "balance": "999.8",
+            "deposit": "999.79",
+            "profitLoss": "0.01"
+          }
+        }
+      ]
+    }
+  },
+  "rounding": {
+    "open_stop_delta": "0.0",
+    "size_delta": "0.000",
+    "size_delta_after_modify": "0.000",
+    "tightened_stop_delta": "0.0"
+  },
+  "close_and_flat": {
+    "close_succeeded": true,
+    "flat_confirmed": true,
+    "positions_remaining": 0,
+    "working_orders_remaining": 0
+  },
+  "workspace_report": "/workspace/demo_round_trip_20261006T145905Z_97a6bac2.json",
+  "secrets_recorded": false
+}

@@ -1,0 +1,42 @@
+[
+  {
+    "symbol": "NSXUSD",
+    "status": "ok",
+    "rows_read": 28395,
+    "rows_written": 28395,
+    "coverage_start_utc": "2026-08-02T23:00:00+00:00",
+    "coverage_end_utc": "2026-09-01T04:59:00+00:00",
+    "invalid_rows": 0,
+    "conflicting_duplicates": 0,
+    "outliers": 0,
+    "source_archive": "DAT_ASCII_NSXUSD_T_202608.zip",
+    "sha256": "2a86cb3bbcb84e5c62c5ea3f19cd0d43fdaed45ef54bf7ed7ae8366f63bdbcd2",
+    "tick_rows": 7959579,
+    "out_of_order_quotes": 2199,
+    "minute_count": 28395,
+    "tied_endpoint_minutes": 28189,
+    "price_basis": "bid",
+    "method": "Timestamp order, stable archive sequence for ties; extrema over all minute bids.",
+    "validated_conflicting_minutes": 37
+  },
+  {
+    "symbol": "XAUUSD",
+    "status": "ok",
+    "rows_read": 29340,
+    "rows_written": 29340,
+    "coverage_start_utc": "2026-08-02T23:00:00+00:00",
+    "coverage_end_utc": "2026-09-01T04:59:00+00:00",
+    "invalid_rows": 0,
+    "conflicting_duplicates": 0,
+    "outliers": 0,
+    "source_archive": "DAT_ASCII_XAUUSD_T_202608.zip",
+    "sha256": "2dea6c1f5ad0ece8d7f34b5838b952f4e65ea556265833ab36a24f0223aa03cc",
+    "tick_rows": 5213048,
+    "out_of_order_quotes": 2707,
+    "minute_count": 29340,
+    "tied_endpoint_minutes": 27289,
+    "price_basis": "bid",
+    "method": "Timestamp order; archive sequence for ties; extrema over all minute bids.",
+    "validated_conflicting_minutes": 98
+  }
+]

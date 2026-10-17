@@ -1,0 +1,1665 @@
+{
+  "generated_at": "2026-10-16T20:42:29.831231+00:00",
+  "groups": [
+    {
+      "charts_dir": "/workspace/state/t146_evidence_smoke_review2/t146_charts/nsxusd_1m",
+      "clusters": [
+        {
+          "cluster_id": 0,
+          "horizons": [
+            {
+              "horizon": 6,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -0.2445625000005407,
+                  "mean_net_points": -0.6195625000005407,
+                  "median_move_points": 0.3989999999994325,
+                  "up_share": 0.546875
+                },
+                "mean_net_edge_points": 1.957671874999562,
+                "paired_sign_p_value": 0.707980754134764,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -2.0772343750001028,
+                  "mean_net_points": -2.5772343750001028,
+                  "median_move_points": 2.1719999999986612,
+                  "up_share": 0.5625
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 12,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -2.2672031250003215,
+                  "mean_net_points": -1.6422031250003215,
+                  "median_move_points": -1.5789999999997235,
+                  "up_share": 0.421875
+                },
+                "mean_net_edge_points": -3.9359375000000227,
+                "paired_sign_p_value": 0.10342187831608089,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 2.7937343749997012,
+                  "mean_net_points": 2.2937343749997012,
+                  "median_move_points": 1.2775000000001455,
+                  "up_share": 0.5625
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 30,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 0.7973749999998176,
+                  "mean_net_points": -0.07762500000018235,
+                  "median_move_points": 1.0939999999991414,
+                  "up_share": 0.609375
+                },
+                "mean_net_edge_points": 0.17695312500001137,
+                "paired_sign_p_value": 0.707980754134764,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -0.7545781250001937,
+                  "mean_net_points": -0.2545781250001937,
+                  "median_move_points": -4.060999999999694,
+                  "up_share": 0.4375
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            }
+          ],
+          "k": 8,
+          "length": 30,
+          "medoid_start": "2024-12-06T11:10:00+00:00",
+          "member_count": 361,
+          "oos_query_count": 0
+        },
+        {
+          "cluster_id": 1,
+          "horizons": [
+            {
+              "horizon": 6,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 0.48143749999979946,
+                  "mean_net_points": 0.35643749999979946,
+                  "median_move_points": 0.856500000001688,
+                  "up_share": 0.515625
+                },
+                "mean_net_edge_points": 0.8474218749996112,
+                "paired_sign_p_value": 0.9006532462520331,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -0.49098437499981173,
+                  "mean_net_points": -0.49098437499981173,
+                  "median_move_points": 0.8335000000006403,
+                  "up_share": 0.5
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 12,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 0.04768750000005184,
+                  "mean_net_points": -0.07731249999994816,
+                  "median_move_points": 0.32850000000144064,
+                  "up_share": 0.515625
+                },
+                "mean_net_edge_points": -3.200625000000059,
+                "paired_sign_p_value": 0.707980754134764,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 3.123312500000111,
+                  "mean_net_points": 3.123312500000111,
+                  "median_move_points": 0.21750000000065484,
+                  "up_share": 0.5
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 30,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 1.7537031250000155,
+                  "mean_net_points": 1.2537031250000155,
+                  "median_move_points": 2.249999999998181,
+                  "up_share": 0.5625
+                },
+                "mean_net_edge_points": 5.312874999999849,
+                "paired_sign_p_value": 0.707980754134764,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -4.434171874999834,
+                  "mean_net_points": -4.059171874999834,
+                  "median_move_points": -4.509500000000116,
+                  "up_share": 0.453125
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            }
+          ],
+          "k": 8,
+          "length": 30,
+          "medoid_start": "2024-11-08T11:24:00+00:00",
+          "member_count": 514,
+          "oos_query_count": 0
+        },
+        {
+          "cluster_id": 2,
+          "horizons": [
+            {
+              "horizon": 6,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -0.5340312499999413,
+                  "mean_net_points": -1.2840312499999413,
+                  "median_move_points": 3.3545000000012806,
+                  "up_share": 0.59375
+                },
+                "mean_net_edge_points": -4.662203125000133,
+                "paired_sign_p_value": 0.5323087760278421,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 3.6281718750001914,
+                  "mean_net_points": 3.3781718750001914,
+                  "median_move_points": 1.0280000000020664,
+                  "up_share": 0.53125
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 12,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -3.4956875000002015,
+                  "mean_net_points": -3.7456875000002015,
+                  "median_move_points": 0.7344999999986612,
+                  "up_share": 0.53125
+                },
+                "mean_net_edge_points": -3.324984375000554,
+                "paired_sign_p_value": 1.0,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -0.7957031249996476,
+                  "mean_net_points": -0.42070312499964757,
+                  "median_move_points": -2.0450000000000728,
+                  "up_share": 0.453125
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 30,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 4.443187500000022,
+                  "mean_net_points": 2.943187500000022,
+                  "median_move_points": 9.62249999999949,
+                  "up_share": 0.6875
+                },
+                "mean_net_edge_points": -2.2685624999998026,
+                "paired_sign_p_value": 0.5323087760278421,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 5.4617499999998245,
+                  "mean_net_points": 5.2117499999998245,
+                  "median_move_points": 1.150500000001557,
+                  "up_share": 0.53125
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            }
+          ],
+          "k": 8,
+          "length": 30,
+          "medoid_start": "2024-11-27T03:01:00+00:00",
+          "member_count": 252,
+          "oos_query_count": 0
+        },
+        {
+          "cluster_id": 3,
+          "horizons": [
+            {
+              "horizon": 6,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 2.1083749999997963,
+                  "mean_net_points": 1.6083749999997963,
+                  "median_move_points": 1.117500000000291,
+                  "up_share": 0.5625
+                },
+                "mean_net_edge_points": 0.8987400793649569,
+                "paired_sign_p_value": 0.6146550157654618,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 63,
+                  "mean_move_points": 1.5350317460316647,
+                  "mean_net_points": 0.7096349206348394,
+                  "median_move_points": 2.400999999998021,
+                  "up_share": 0.6031746031746031
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 12,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 0.7378281249999645,
+                  "mean_net_points": 1.1128281249999645,
+                  "median_move_points": -1.2160000000003492,
+                  "up_share": 0.453125
+                },
+                "mean_net_edge_points": -0.5996163194446245,
+                "paired_sign_p_value": 0.8013064925040662,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 63,
+                  "mean_move_points": 2.4108571428572874,
+                  "mean_net_points": 1.712444444444589,
+                  "median_move_points": 2.077000000001135,
+                  "up_share": 0.5873015873015873
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 30,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 3.718984374999877,
+                  "mean_net_points": 4.218984374999877,
+                  "median_move_points": -2.0560000000004948,
+                  "up_share": 0.4375
+                },
+                "mean_net_edge_points": 2.474047867063592,
+                "paired_sign_p_value": 0.20736789985685422,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 63,
+                  "mean_move_points": 2.57033333333311,
+                  "mean_net_points": 1.7449365079362849,
+                  "median_move_points": 1.889999999999418,
+                  "up_share": 0.6031746031746031
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            }
+          ],
+          "k": 8,
+          "length": 30,
+          "medoid_start": "2024-10-21T13:04:00+00:00",
+          "member_count": 268,
+          "oos_query_count": 0
+        },
+        {
+          "cluster_id": 4,
+          "horizons": [
+            {
+              "horizon": 6,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -4.22104687500007,
+                  "mean_net_points": -2.97104687500007,
+                  "median_move_points": -2.30449999999837,
+                  "up_share": 0.34375
+                },
+                "mean_net_edge_points": -7.249094494047975,
+                "paired_sign_p_value": 0.1299179230225525,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 63,
+                  "mean_move_points": 5.611380952381238,
+                  "mean_net_points": 4.278047619047905,
+                  "median_move_points": 4.056000000000495,
+                  "up_share": 0.6666666666666666
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 2,
+                  "mean_move_points": -8.999000000001615,
+                  "mean_net_points": -4.999000000001615,
+                  "median_move_points": -8.999000000001615,
+                  "up_share": 0.0
+                },
+                "mean_net_edge_points": -9.260000000002037,
+                "paired_sign_p_value": 0.5,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 2,
+                  "mean_move_points": 4.261000000000422,
+                  "mean_net_points": 4.261000000000422,
+                  "median_move_points": 4.261000000000422,
+                  "up_share": 0.5
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 12,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -3.4037499999995475,
+                  "mean_net_points": -2.9037499999995475,
+                  "median_move_points": -1.1114999999990687,
+                  "up_share": 0.4375
+                },
+                "mean_net_edge_points": -1.3055912698406267,
+                "paired_sign_p_value": 0.6146550157654618,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 63,
+                  "mean_move_points": -2.2965714285716192,
+                  "mean_net_points": -1.5981587301589208,
+                  "median_move_points": -1.1460000000006403,
+                  "up_share": 0.4126984126984127
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 2,
+                  "mean_move_points": -4.132999999999811,
+                  "mean_net_points": -0.13299999999981083,
+                  "median_move_points": -4.132999999999811,
+                  "up_share": 0.0
+                },
+                "mean_net_edge_points": 33.53850000000057,
+                "paired_sign_p_value": 0.5,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 2,
+                  "mean_move_points": -37.67150000000038,
+                  "mean_net_points": -33.67150000000038,
+                  "median_move_points": -37.67150000000038,
+                  "up_share": 0.0
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 30,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -5.876937499999883,
+                  "mean_net_points": -4.876937499999883,
+                  "median_move_points": -5.956000000000131,
+                  "up_share": 0.375
+                },
+                "mean_net_edge_points": -0.8372073412699459,
+                "paired_sign_p_value": 0.20736789985685422,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 63,
+                  "mean_move_points": -4.1032222222220005,
+                  "mean_net_points": -4.039730158729937,
+                  "median_move_points": -3.6999999999970896,
+                  "up_share": 0.49206349206349204
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 2,
+                  "mean_move_points": -20.688500000000204,
+                  "mean_net_points": -20.688500000000204,
+                  "median_move_points": -20.688500000000204,
+                  "up_share": 0.5
+                },
+                "mean_net_edge_points": -32.64350000000013,
+                "paired_sign_p_value": 1.0,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 2,
+                  "mean_move_points": 11.954999999999927,
+                  "mean_net_points": 11.954999999999927,
+                  "median_move_points": 11.954999999999927,
+                  "up_share": 0.5
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            }
+          ],
+          "k": 8,
+          "length": 30,
+          "medoid_start": "2024-11-12T03:33:00+00:00",
+          "member_count": 329,
+          "oos_query_count": 2
+        },
+        {
+          "cluster_id": 5,
+          "horizons": [
+            {
+              "horizon": 6,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -0.40823437499983584,
+                  "mean_net_points": -0.5332343749998358,
+                  "median_move_points": 0.33250000000225555,
+                  "up_share": 0.515625
+                },
+                "mean_net_edge_points": -2.963468750000004,
+                "paired_sign_p_value": 0.38173279479333766,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 2.8052343750001683,
+                  "mean_net_points": 2.4302343750001683,
+                  "median_move_points": 0.9950000000008004,
+                  "up_share": 0.546875
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 12,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -1.7929687499998863,
+                  "mean_net_points": -1.6679687499998863,
+                  "median_move_points": -0.1944999999996071,
+                  "up_share": 0.484375
+                },
+                "mean_net_edge_points": 0.6017499999999814,
+                "paired_sign_p_value": 0.707980754134764,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -1.3947187499998677,
+                  "mean_net_points": -2.2697187499998677,
+                  "median_move_points": 2.2555000000011205,
+                  "up_share": 0.609375
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 30,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -1.3998750000001223,
+                  "mean_net_points": -2.1498750000001223,
+                  "median_move_points": 3.3834999999980937,
+                  "up_share": 0.59375
+                },
+                "mean_net_edge_points": 5.3137499999998,
+                "paired_sign_p_value": 0.38173279479333766,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -7.838624999999922,
+                  "mean_net_points": -7.463624999999922,
+                  "median_move_points": -3.576499999999214,
+                  "up_share": 0.453125
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            }
+          ],
+          "k": 8,
+          "length": 30,
+          "medoid_start": "2024-10-21T03:58:00+00:00",
+          "member_count": 522,
+          "oos_query_count": 0
+        },
+        {
+          "cluster_id": 6,
+          "horizons": [
+            {
+              "horizon": 6,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 2.6101093750000928,
+                  "mean_net_points": 1.9851093750000928,
+                  "median_move_points": 1.922500000002401,
+                  "up_share": 0.578125
+                },
+                "mean_net_edge_points": 2.4581874999999513,
+                "paired_sign_p_value": 0.16864291143970336,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -0.7230781249998586,
+                  "mean_net_points": -0.4730781249998586,
+                  "median_move_points": -1.0270000000000437,
+                  "up_share": 0.46875
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 12,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 3.3451406249997717,
+                  "mean_net_points": 2.0951406249997717,
+                  "median_move_points": 3.889999999999418,
+                  "up_share": 0.65625
+                },
+                "mean_net_edge_points": -0.04442187500012551,
+                "paired_sign_p_value": 0.9006532462520331,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 2.2645624999998972,
+                  "mean_net_points": 2.1395624999998972,
+                  "median_move_points": 0.3555000000014843,
+                  "up_share": 0.515625
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 30,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -0.9261875000001965,
+                  "mean_net_points": -1.6761875000001965,
+                  "median_move_points": 2.6015000000006694,
+                  "up_share": 0.59375
+                },
+                "mean_net_edge_points": -3.4119218750001323,
+                "paired_sign_p_value": 0.5323087760278421,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 2.235734374999936,
+                  "mean_net_points": 1.7357343749999359,
+                  "median_move_points": 1.9604999999992287,
+                  "up_share": 0.5625
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            }
+          ],
+          "k": 8,
+          "length": 30,
+          "medoid_start": "2024-10-07T07:24:00+00:00",
+          "member_count": 191,
+          "oos_query_count": 0
+        },
+        {
+          "cluster_id": 7,
+          "horizons": [
+            {
+              "horizon": 6,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 0.4326406250001469,
+                  "mean_net_points": -0.06735937499985312,
+                  "median_move_points": 1.1485000000011496,
+                  "up_share": 0.5625
+                },
+                "mean_net_edge_points": -0.14360937499952797,
+                "paired_sign_p_value": 1.0,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 0.7012499999996749,
+                  "mean_net_points": 0.07624999999967486,
+                  "median_move_points": 1.690999999998894,
+                  "up_share": 0.578125
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 12,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 1.2241250000002992,
+                  "mean_net_points": 0.9741250000002992,
+                  "median_move_points": 1.1954999999998108,
+                  "up_share": 0.53125
+                },
+                "mean_net_edge_points": 1.6942656249999004,
+                "paired_sign_p_value": 0.9006532462520331,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -1.0951406249996012,
+                  "mean_net_points": -0.7201406249996012,
+                  "median_move_points": -0.3900000000012369,
+                  "up_share": 0.453125
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            },
+            {
+              "horizon": 30,
+              "in_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": 1.1245625000000246,
+                  "mean_net_points": 1.1245625000000246,
+                  "median_move_points": -0.7664999999997235,
+                  "up_share": 0.5
+                },
+                "mean_net_edge_points": 6.126078124999708,
+                "paired_sign_p_value": 0.9006532462520331,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 64,
+                  "mean_move_points": -4.2515156249996835,
+                  "mean_net_points": -5.0015156249996835,
+                  "median_move_points": 4.110500000000684,
+                  "up_share": 0.59375
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              },
+              "out_of_sample": {
+                "bonferroni_alpha": 0.004166666666666667,
+                "matches": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "mean_net_edge_points": null,
+                "paired_sign_p_value": null,
+                "random_control": {
+                  "assumed_round_trip_cost_points": 4.0,
+                  "count": 0,
+                  "mean_move_points": null,
+                  "mean_net_points": null,
+                  "median_move_points": null,
+                  "up_share": null
+                },
+                "trial_count": 12,
+                "verdict": "NOT_FOUND"
+              }
+            }
+          ],
+          "k": 8,
+          "length": 30,
+          "medoid_start": "2024-10-30T06:32:00+00:00",
+          "member_count": 563,
+          "oos_query_count": 0
+        }
+      ],
+      "elapsed_seconds": 21.149,
+      "instrument": "NSXUSD",
+      "library_window_cap": 50000,
+      "library_windows": 19720,
+      "oos_queries": 12824,
+      "oos_window_cap": 20000,
+      "queries_evaluated": 6,
+      "query_stride": 3841,
+      "results": [
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 6,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -0.04459999999944557,
+            "mean_net_points": -0.04459999999944557,
+            "median_move_points": 0.09299999999893771,
+            "up_share": 0.5
+          },
+          "mean_net_edge_points": -4.535049999999683,
+          "method": "dtw",
+          "paired_sign_p_value": 0.26317596435546875,
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 5.690450000000237,
+            "mean_net_points": 4.490450000000237,
+            "median_move_points": 3.7224999999998545,
+            "up_share": 0.65
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 12,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 1.874800000000323,
+            "mean_net_points": 0.674800000000323,
+            "median_move_points": 1.672500000000582,
+            "up_share": 0.65
+          },
+          "mean_net_edge_points": -3.071799999999712,
+          "method": "dtw",
+          "paired_sign_p_value": 0.26317596435546875,
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.546600000000035,
+            "mean_net_points": 3.746600000000035,
+            "median_move_points": 1.7054999999982101,
+            "up_share": 0.6
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 30,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 7.343050000000403,
+            "mean_net_points": 6.143050000000403,
+            "median_move_points": 8.250500000000102,
+            "up_share": 0.65
+          },
+          "mean_net_edge_points": -5.931749999999192,
+          "method": "dtw",
+          "paired_sign_p_value": 0.26317596435546875,
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 13.674799999999596,
+            "mean_net_points": 12.074799999999595,
+            "median_move_points": 7.587999999999738,
+            "up_share": 0.7
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 6,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 0.9845500000001266,
+            "mean_net_points": 0.9845500000001266,
+            "median_move_points": 0.1484999999993306,
+            "up_share": 0.5
+          },
+          "mean_net_edge_points": -3.5059000000001106,
+          "method": "correlation",
+          "paired_sign_p_value": 1.0,
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 5.690450000000237,
+            "mean_net_points": 4.490450000000237,
+            "median_move_points": 3.7224999999998545,
+            "up_share": 0.65
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 12,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -4.168900000000031,
+            "mean_net_points": -4.168900000000031,
+            "median_move_points": 0.2885000000005675,
+            "up_share": 0.5
+          },
+          "mean_net_edge_points": -7.9155000000000655,
+          "method": "correlation",
+          "paired_sign_p_value": 1.0,
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.546600000000035,
+            "mean_net_points": 3.746600000000035,
+            "median_move_points": 1.7054999999982101,
+            "up_share": 0.6
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 30,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -10.07614999999987,
+            "mean_net_points": -8.876149999999871,
+            "median_move_points": -5.304999999998472,
+            "up_share": 0.35
+          },
+          "mean_net_edge_points": -20.950949999999466,
+          "method": "correlation",
+          "paired_sign_p_value": 0.26317596435546875,
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 13.674799999999596,
+            "mean_net_points": 12.074799999999595,
+            "median_move_points": 7.587999999999738,
+            "up_share": 0.7
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 6,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 1.9285000000001673,
+            "mean_net_points": 1.5285000000001674,
+            "median_move_points": 1.5559999999986758,
+            "up_share": 0.55
+          },
+          "mean_net_edge_points": 0.3690499999995154,
+          "method": "dtw",
+          "paired_sign_p_value": 0.5034446716308594,
+          "query": 1,
+          "query_start": "2025-01-31T04:16:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 0.3594500000006519,
+            "mean_net_points": 1.159450000000652,
+            "median_move_points": -4.895999999998821,
+            "up_share": 0.4
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 12,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -0.5209500000002663,
+            "mean_net_points": -0.5209500000002663,
+            "median_move_points": 0.004000000000814907,
+            "up_share": 0.5
+          },
+          "mean_net_edge_points": -4.3545500000001995,
+          "method": "dtw",
+          "paired_sign_p_value": 0.5034446716308594,
+          "query": 1,
+          "query_start": "2025-01-31T04:16:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.233599999999933,
+            "mean_net_points": 3.833599999999933,
+            "median_move_points": 0.3274999999994179,
+            "up_share": 0.55
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 30,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 3.0813999999998485,
+            "mean_net_points": 1.0813999999998487,
+            "median_move_points": 3.5390000000006694,
+            "up_share": 0.75
+          },
+          "mean_net_edge_points": -10.12765000000054,
+          "method": "dtw",
+          "paired_sign_p_value": 0.5034446716308594,
+          "query": 1,
+          "query_start": "2025-01-31T04:16:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 12.00905000000039,
+            "mean_net_points": 11.209050000000389,
+            "median_move_points": 10.979000000001179,
+            "up_share": 0.6
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 6,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 2.8776999999998223,
+            "mean_net_points": 2.0776999999998225,
+            "median_move_points": 3.3510000000023865,
+            "up_share": 0.6
+          },
+          "mean_net_edge_points": 0.9182499999991705,
+          "method": "correlation",
+          "paired_sign_p_value": 0.8238029479980469,
+          "query": 1,
+          "query_start": "2025-01-31T04:16:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 0.3594500000006519,
+            "mean_net_points": 1.159450000000652,
+            "median_move_points": -4.895999999998821,
+            "up_share": 0.4
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 12,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 6.618800000000374,
+            "mean_net_points": 6.618800000000374,
+            "median_move_points": 1.0615000000016153,
+            "up_share": 0.5
+          },
+          "mean_net_edge_points": 2.785200000000441,
+          "method": "correlation",
+          "paired_sign_p_value": 0.5034446716308594,
+          "query": 1,
+          "query_start": "2025-01-31T04:16:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.233599999999933,
+            "mean_net_points": 3.833599999999933,
+            "median_move_points": 0.3274999999994179,
+            "up_share": 0.55
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        },
+        {
+          "bonferroni_alpha": 0.004166666666666667,
+          "horizon": 30,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 16.033150000000568,
+            "mean_net_points": 15.633150000000569,
+            "median_move_points": 3.460000000000946,
+            "up_share": 0.55
+          },
+          "mean_net_edge_points": 4.42410000000018,
+          "method": "correlation",
+          "paired_sign_p_value": 0.26317596435546875,
+          "query": 1,
+          "query_start": "2025-01-31T04:16:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 12.00905000000039,
+            "mean_net_points": 11.209050000000389,
+            "median_move_points": 10.979000000001179,
+            "up_share": 0.6
+          },
+          "trial_count": 12,
+          "verdict": "NOT_FOUND"
+        }
+      ],
+      "timeframe": 1
+    }
+  ],
+  "parameters": {
+    "assumed_cost_points": {
+      "NSXUSD": 4.0,
+      "XAUUSD": 1.6
+    },
+    "cluster_counts": [
+      8
+    ],
+    "correlation_prefilter": 200,
+    "horizons": [
+      6,
+      12,
+      30
+    ],
+    "library_window_cap": 50000,
+    "max_queries": 2,
+    "methods": [
+      "dtw",
+      "correlation"
+    ],
+    "oos_window_cap": 20000,
+    "query_sampling": "every m-th OOS window, deterministic",
+    "run_order": [
+      1
+    ],
+    "sealed_holdout_read": false,
+    "stride": "N/4",
+    "top_k": 20,
+    "window_lengths": [
+      30
+    ]
+  },
+  "safety": {
+    "broker_calls": 0,
+    "gate1_evaluated": false,
+    "ledger_writes": 0,
+    "orders": 0,
+    "paper_trading": false,
+    "promotion_writes": 0
+  },
+  "split": {
+    "holdout_end": "2025-03-01T00:00:00+00:00",
+    "in_sample_end": "2025-01-01T00:00:00+00:00",
+    "in_sample_start": "2024-10-01T00:00:00+00:00",
+    "oos_start": "2025-01-01T00:00:00+00:00"
+  },
+  "study": "T-146 movement matching",
+  "system": {
+    "cpu_count": 384,
+    "memory_limit_bytes": 16000000000
+  },
+  "trial_count": 12
+}

@@ -1,0 +1,19 @@
+{
+  "task": "T-028",
+  "captured_at": "2026-10-05T15:22:07Z",
+  "environment": "demo",
+  "endpoint": "GET /accounts",
+  "redacted": true,
+  "account_count": 1,
+  "currency": "USD",
+  "fields_present": ["balance", "profitLoss", "deposit", "available"],
+  "observed_values": {
+    "balance": "1000.00",
+    "profitLoss": "0.00",
+    "deposit": "1000.00",
+    "available": "1000.00"
+  },
+  "open_position_snapshot": "not_available_flat_account",
+  "mapping_status": "unverified_hypothesis",
+  "notes": "A flat account cannot distinguish cash/equity semantics; no additional order was placed."
+}

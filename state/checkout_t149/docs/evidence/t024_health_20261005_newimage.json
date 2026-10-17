@@ -1,0 +1,27 @@
+{
+  "status": "healthy",
+  "role": "all",
+  "version": "c91aa61f4c9392374ebd9ea20bedaabe25a6c296",
+  "last_backup_at": "2026-10-05T15:14:48+00:00",
+  "last_backup_age_seconds": 57,
+  "mode": "paper",
+  "broker_env": "demo",
+  "live_enabled": false,
+  "db": "reachable",
+  "redis": "reachable",
+  "data_recorder": {
+    "configured": true,
+    "status": "healthy",
+    "ping_reply_ok": true,
+    "market_status": "TRADEABLE,TRADEABLE",
+    "market_status_source": "broker,broker",
+    "expected_open": true,
+    "stale_epics": [],
+    "reconnect_count": 0,
+    "last_reconnect_reason": null,
+    "last_update_at": "2026-10-05T15:15:00.899830+00:00",
+    "last_closed_bar_at": "2026-10-05T15:13:00+00:00",
+    "last_liveness_at": "2026-10-05T15:15:43.226042+00:00"
+  },
+  "time": "2026-10-05T15:15:45.735558+00:00"
+}

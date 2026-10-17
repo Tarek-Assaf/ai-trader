@@ -1,0 +1,331 @@
+{
+  "generated_at": "2026-10-16T20:32:24.314198+00:00",
+  "groups": [
+    {
+      "charts_dir": "/workspace/state/t146_evidence_smoke_nsx_30/t146_charts/nsxusd_1m",
+      "instrument": "NSXUSD",
+      "library_windows": 19720,
+      "oos_queries": 12824,
+      "results": [
+        {
+          "horizon": 6,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -1.1322999999998502,
+            "mean_net_points": -2.33229999999985,
+            "median_move_points": 0.6564999999973224,
+            "up_share": 0.65
+          },
+          "method": "dtw",
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 5.690450000000237,
+            "mean_net_points": 4.490450000000237,
+            "median_move_points": 3.7224999999998545,
+            "up_share": 0.65
+          }
+        },
+        {
+          "horizon": 12,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 6.0198499999998605,
+            "mean_net_points": 5.61984999999986,
+            "median_move_points": 0.7729999999992287,
+            "up_share": 0.55
+          },
+          "method": "dtw",
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.546600000000035,
+            "mean_net_points": 3.746600000000035,
+            "median_move_points": 1.7054999999982101,
+            "up_share": 0.6
+          }
+        },
+        {
+          "horizon": 30,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 8.975799999999982,
+            "mean_net_points": 8.975799999999982,
+            "median_move_points": -0.4885000000012951,
+            "up_share": 0.5
+          },
+          "method": "dtw",
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 13.674799999999596,
+            "mean_net_points": 12.074799999999595,
+            "median_move_points": 7.587999999999738,
+            "up_share": 0.7
+          }
+        },
+        {
+          "horizon": 6,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 0.9845500000001266,
+            "mean_net_points": 0.9845500000001266,
+            "median_move_points": 0.1484999999993306,
+            "up_share": 0.5
+          },
+          "method": "correlation",
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 5.690450000000237,
+            "mean_net_points": 4.490450000000237,
+            "median_move_points": 3.7224999999998545,
+            "up_share": 0.65
+          }
+        },
+        {
+          "horizon": 12,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -4.168900000000031,
+            "mean_net_points": -4.168900000000031,
+            "median_move_points": 0.2885000000005675,
+            "up_share": 0.5
+          },
+          "method": "correlation",
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.546600000000035,
+            "mean_net_points": 3.746600000000035,
+            "median_move_points": 1.7054999999982101,
+            "up_share": 0.6
+          }
+        },
+        {
+          "horizon": 30,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -10.07614999999987,
+            "mean_net_points": -8.876149999999871,
+            "median_move_points": -5.304999999998472,
+            "up_share": 0.35
+          },
+          "method": "correlation",
+          "query": 0,
+          "query_start": "2025-01-01T23:14:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 13.674799999999596,
+            "mean_net_points": 12.074799999999595,
+            "median_move_points": 7.587999999999738,
+            "up_share": 0.7
+          }
+        },
+        {
+          "horizon": 6,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.08395000000055,
+            "mean_net_points": 2.48395000000055,
+            "median_move_points": 2.2770000000000437,
+            "up_share": 0.7
+          },
+          "method": "dtw",
+          "query": 1,
+          "query_start": "2025-01-01T23:21:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 0.3594500000006519,
+            "mean_net_points": 1.159450000000652,
+            "median_move_points": -4.895999999998821,
+            "up_share": 0.4
+          }
+        },
+        {
+          "horizon": 12,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.847949999999946,
+            "mean_net_points": 3.647949999999946,
+            "median_move_points": 3.894000000000233,
+            "up_share": 0.65
+          },
+          "method": "dtw",
+          "query": 1,
+          "query_start": "2025-01-01T23:21:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.233599999999933,
+            "mean_net_points": 3.833599999999933,
+            "median_move_points": 0.3274999999994179,
+            "up_share": 0.55
+          }
+        },
+        {
+          "horizon": 30,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 8.111700000000383,
+            "mean_net_points": 6.511700000000383,
+            "median_move_points": 9.266500000001543,
+            "up_share": 0.7
+          },
+          "method": "dtw",
+          "query": 1,
+          "query_start": "2025-01-01T23:21:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 12.00905000000039,
+            "mean_net_points": 11.209050000000389,
+            "median_move_points": 10.979000000001179,
+            "up_share": 0.6
+          }
+        },
+        {
+          "horizon": 6,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -2.3160500000003594,
+            "mean_net_points": -3.5160500000003596,
+            "median_move_points": 4.332999999998719,
+            "up_share": 0.65
+          },
+          "method": "correlation",
+          "query": 1,
+          "query_start": "2025-01-01T23:21:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 0.3594500000006519,
+            "mean_net_points": 1.159450000000652,
+            "median_move_points": -4.895999999998821,
+            "up_share": 0.4
+          }
+        },
+        {
+          "horizon": 12,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -5.496399999999994,
+            "mean_net_points": -4.696399999999994,
+            "median_move_points": -1.3340000000007421,
+            "up_share": 0.4
+          },
+          "method": "correlation",
+          "query": 1,
+          "query_start": "2025-01-01T23:21:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 4.233599999999933,
+            "mean_net_points": 3.833599999999933,
+            "median_move_points": 0.3274999999994179,
+            "up_share": 0.55
+          }
+        },
+        {
+          "horizon": 30,
+          "length": 30,
+          "matches": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": -13.479949999999736,
+            "mean_net_points": -14.279949999999735,
+            "median_move_points": 5.344999999999345,
+            "up_share": 0.6
+          },
+          "method": "correlation",
+          "query": 1,
+          "query_start": "2025-01-01T23:21:00+00:00",
+          "random_control": {
+            "assumed_round_trip_cost_points": 4.0,
+            "count": 20,
+            "mean_move_points": 12.00905000000039,
+            "mean_net_points": 11.209050000000389,
+            "median_move_points": 10.979000000001179,
+            "up_share": 0.6
+          }
+        }
+      ],
+      "timeframe": 1
+    }
+  ],
+  "parameters": {
+    "assumed_cost_points": {
+      "NSXUSD": 4.0,
+      "XAUUSD": 1.6
+    },
+    "horizons": [
+      6,
+      12,
+      30
+    ],
+    "methods": [
+      "dtw",
+      "correlation"
+    ],
+    "sealed_holdout_read": false,
+    "stride": "N/4",
+    "top_k": 20,
+    "window_lengths": [
+      30
+    ]
+  },
+  "safety": {
+    "broker_calls": 0,
+    "gate1_evaluated": false,
+    "ledger_writes": 0,
+    "orders": 0,
+    "paper_trading": false,
+    "promotion_writes": 0
+  },
+  "split": {
+    "holdout_end": "2025-03-01T00:00:00+00:00",
+    "in_sample_end": "2025-01-01T00:00:00+00:00",
+    "in_sample_start": "2024-10-01T00:00:00+00:00",
+    "oos_start": "2025-01-01T00:00:00+00:00"
+  },
+  "study": "T-146 movement matching",
+  "system": {
+    "cpu_count": 384,
+    "memory_limit_bytes": 16000000000
+  },
+  "trial_count": 6
+}

@@ -362,7 +362,295 @@
       "variant": 2
     }
   ],
-  "comparison": {},
+  "comparison": {
+    "NSXUSD:60_overnight_london_break": {
+      "2022": {
+        "mirror": {
+          "candles": 5619,
+          "normal_cost": {
+            "average_trade_points": -2.6861884369049123,
+            "best_trade_points": 373.87914632059073,
+            "max_drawdown_points": 2800.842348377424,
+            "net_points": -607.0785867405102,
+            "profit_factor": 0.955909087963571,
+            "trades": 226,
+            "worst_trade_points": -400.271999999999
+          },
+          "zero_cost": {
+            "average_trade_points": 1.3138115630950875,
+            "best_trade_points": 377.87914632059073,
+            "max_drawdown_points": 2380.842348377424,
+            "net_points": 296.9214132594898,
+            "profit_factor": 1.0225044943936972,
+            "trades": 226,
+            "worst_trade_points": -396.271999999999
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 5619,
+          "normal_cost": {
+            "average_trade_points": -7.96438157088975,
+            "best_trade_points": 392.271999999999,
+            "max_drawdown_points": 2151.89135188215,
+            "net_points": -1545.0900247526115,
+            "profit_factor": 0.8745828375783903,
+            "trades": 194,
+            "worst_trade_points": -200.65307747001862
+          },
+          "zero_cost": {
+            "average_trade_points": -3.96438157088975,
+            "best_trade_points": 396.271999999999,
+            "max_drawdown_points": 1761.0601105933747,
+            "net_points": -769.0900247526115,
+            "profit_factor": 0.9348648637370213,
+            "trades": 194,
+            "worst_trade_points": -196.65307747001862
+          }
+        }
+      },
+      "2023": {
+        "mirror": {
+          "candles": 4916,
+          "normal_cost": {
+            "average_trade_points": -15.105805628790373,
+            "best_trade_points": 259.1705539252125,
+            "max_drawdown_points": 4373.756502187694,
+            "net_points": -3731.133990311222,
+            "profit_factor": 0.6609708828408891,
+            "trades": 247,
+            "worst_trade_points": -230.20999999999913
+          },
+          "zero_cost": {
+            "average_trade_points": -11.105805628790373,
+            "best_trade_points": 263.1705539252125,
+            "max_drawdown_points": 3450.766407679679,
+            "net_points": -2743.133990311222,
+            "profit_factor": 0.734054308045501,
+            "trades": 247,
+            "worst_trade_points": -226.20999999999913
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 4916,
+          "normal_cost": {
+            "average_trade_points": 3.943611517115368,
+            "best_trade_points": 269.65200000000004,
+            "max_drawdown_points": 768.2784114894748,
+            "net_points": 812.3839725257658,
+            "profit_factor": 1.1084844186410088,
+            "trades": 206,
+            "worst_trade_points": -135.58527696260535
+          },
+          "zero_cost": {
+            "average_trade_points": 7.943611517115368,
+            "best_trade_points": 273.65200000000004,
+            "max_drawdown_points": 708.2784114894748,
+            "net_points": 1636.3839725257658,
+            "profit_factor": 1.2338865739189175,
+            "trades": 206,
+            "worst_trade_points": -131.58527696260535
+          }
+        }
+      },
+      "2023_to_today": {
+        "mirror": {
+          "candles": 18559,
+          "normal_cost": {
+            "average_trade_points": -6.902606980266524,
+            "best_trade_points": 683.9347384757821,
+            "max_drawdown_points": 8490.874390621306,
+            "net_points": -6012.170679812143,
+            "profit_factor": 0.8759622249171255,
+            "trades": 871,
+            "worst_trade_points": -404.574866102932
+          },
+          "zero_cost": {
+            "average_trade_points": -2.902606980266525,
+            "best_trade_points": 687.9347384757821,
+            "max_drawdown_points": 5246.517205109587,
+            "net_points": -2528.170679812143,
+            "profit_factor": 0.9452875539313618,
+            "trades": 871,
+            "worst_trade_points": -400.574866102932
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 18559,
+          "normal_cost": {
+            "average_trade_points": -0.6707345548502798,
+            "best_trade_points": 817.9128708393255,
+            "max_drawdown_points": 3253.4749646515993,
+            "net_points": -497.0143051440573,
+            "profit_factor": 0.9875145716641686,
+            "trades": 741,
+            "worst_trade_points": -687.2439999999988
+          },
+          "zero_cost": {
+            "average_trade_points": 3.32926544514972,
+            "best_trade_points": 821.9128708393255,
+            "max_drawdown_points": 2781.5711205424595,
+            "net_points": 2466.9856948559427,
+            "profit_factor": 1.0648840092180138,
+            "trades": 741,
+            "worst_trade_points": -683.2439999999988
+          }
+        }
+      },
+      "2024": {
+        "mirror": {
+          "candles": 5448,
+          "normal_cost": {
+            "average_trade_points": -9.274637089384198,
+            "best_trade_points": 356.55141205405016,
+            "max_drawdown_points": 2899.4508272765815,
+            "net_points": -2420.680280329276,
+            "profit_factor": 0.8070372124013631,
+            "trades": 261,
+            "worst_trade_points": -211.36171715290402
+          },
+          "zero_cost": {
+            "average_trade_points": -5.274637089384198,
+            "best_trade_points": 360.55141205405016,
+            "max_drawdown_points": 2183.4508272765815,
+            "net_points": -1376.6802803292758,
+            "profit_factor": 0.8839846053833098,
+            "trades": 261,
+            "worst_trade_points": -207.36171715290402
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 5448,
+          "normal_cost": {
+            "average_trade_points": 3.8121838585037424,
+            "best_trade_points": 373.7498173014137,
+            "max_drawdown_points": 1692.1938733012066,
+            "net_points": 869.1779197388532,
+            "profit_factor": 1.0877401689984025,
+            "trades": 228,
+            "worst_trade_points": -184.27570602702326
+          },
+          "zero_cost": {
+            "average_trade_points": 7.812183858503742,
+            "best_trade_points": 377.7498173014137,
+            "max_drawdown_points": 1576.1938733012066,
+            "net_points": 1781.1779197388532,
+            "profit_factor": 1.190169370385747,
+            "trades": 228,
+            "worst_trade_points": -180.27570602702326
+          }
+        }
+      },
+      "2025": {
+        "mirror": {
+          "candles": 5470,
+          "normal_cost": {
+            "average_trade_points": -4.9964670279571495,
+            "best_trade_points": 683.9347384757821,
+            "max_drawdown_points": 2498.355233564682,
+            "net_points": -1219.1379548215446,
+            "profit_factor": 0.9210966836361405,
+            "trades": 244,
+            "worst_trade_points": -404.574866102932
+          },
+          "zero_cost": {
+            "average_trade_points": -0.9964670279571498,
+            "best_trade_points": 687.9347384757821,
+            "max_drawdown_points": 1946.3552335646818,
+            "net_points": -243.13795482154455,
+            "profit_factor": 0.9836227038896416,
+            "trades": 244,
+            "worst_trade_points": -400.574866102932
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 5470,
+          "normal_cost": {
+            "average_trade_points": 1.3966684910180385,
+            "best_trade_points": 817.9128708393255,
+            "max_drawdown_points": 2406.6151028553286,
+            "net_points": 282.12703518564376,
+            "profit_factor": 1.0219995228753616,
+            "trades": 202,
+            "worst_trade_points": -687.2439999999988
+          },
+          "zero_cost": {
+            "average_trade_points": 5.396668491018039,
+            "best_trade_points": 821.9128708393255,
+            "max_drawdown_points": 2306.6151028553286,
+            "net_points": 1090.1270351856438,
+            "profit_factor": 1.088339249589502,
+            "trades": 202,
+            "worst_trade_points": -683.2439999999988
+          }
+        }
+      },
+      "2026_to_holdout": {
+        "mirror": {
+          "candles": 2725,
+          "normal_cost": {
+            "average_trade_points": 10.379019177307564,
+            "best_trade_points": 582.0370000000003,
+            "max_drawdown_points": 1977.507950184896,
+            "net_points": 1214.345243744985,
+            "profit_factor": 1.129339916010468,
+            "trades": 117,
+            "worst_trade_points": -337.48099999999977
+          },
+          "zero_cost": {
+            "average_trade_points": 14.379019177307564,
+            "best_trade_points": 586.0370000000003,
+            "max_drawdown_points": 1813.507950184896,
+            "net_points": 1682.345243744985,
+            "profit_factor": 1.1847758529800652,
+            "trades": 117,
+            "worst_trade_points": -333.48099999999977
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 2725,
+          "normal_cost": {
+            "average_trade_points": -22.00765950471798,
+            "best_trade_points": 550.6680000000015,
+            "max_drawdown_points": 3109.5711205424595,
+            "net_points": -2266.788928985952,
+            "profit_factor": 0.7586805307709904,
+            "trades": 103,
+            "worst_trade_points": -370.76800000000003
+          },
+          "zero_cost": {
+            "average_trade_points": -18.00765950471798,
+            "best_trade_points": 554.6680000000015,
+            "max_drawdown_points": 2781.5711205424595,
+            "net_points": -1854.7889289859522,
+            "profit_factor": 0.7968742850027162,
+            "trades": 103,
+            "worst_trade_points": -366.76800000000003
+          }
+        }
+      },
+      "label": "closest readable London break seed; exact historical 5-of-6 winner not identifiable",
+      "parameters": {
+        "direction": "long",
+        "stop": 1.5,
+        "target": 3.0,
+        "with_trend": false
+      },
+      "rules_readable": "long during london; entry when close above the rolling high over 7 bars; exits: stop at 1.5 atr, target at 3 atr, close after 12 bars",
+      "strategy_hash": "a2c8fa3c1de6bdc0e7fc88a5dbc71e0505b891ac8b6630f76bd8d1a53b0bb343"
+    }
+  },
   "diagnostic_zero_cost": true,
   "gate1_evaluated": false,
   "generated_at": "2026-10-15T15:43:39.659481+00:00",
@@ -370,6 +658,50 @@
     "NSXUSD:1": {
       "candidates": {
         "8e12fa7d140556e5ae0c075c23551170103e831326cf1e2c33dbf4acaa577d47": {
+          "continuous_2023_to_today": {
+            "candles": 1149116,
+            "normal_cost": {
+              "average_trade_points": -4.476390980430872,
+              "best_trade_points": 96.0060552442119,
+              "max_drawdown_points": 1034.6415746099956,
+              "net_points": -774.4156396145409,
+              "profit_factor": 0.6602145689232195,
+              "trades": 173,
+              "worst_trade_points": -39.678834782018384
+            },
+            "zero_cost": {
+              "average_trade_points": -0.47639098043087197,
+              "best_trade_points": 100.0060552442119,
+              "max_drawdown_points": 373.8658858329145,
+              "net_points": -82.41563961454085,
+              "profit_factor": 0.9542930479887013,
+              "trades": 173,
+              "worst_trade_points": -35.678834782018384
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 1149116,
+            "normal_cost": {
+              "average_trade_points": -0.8826572917154015,
+              "best_trade_points": 67.35766956403313,
+              "max_drawdown_points": 491.8671646358416,
+              "net_points": -163.29159896734927,
+              "profit_factor": 0.9242504262861893,
+              "trades": 185,
+              "worst_trade_points": -54.00302762210413
+            },
+            "zero_cost": {
+              "average_trade_points": 3.1173427082845984,
+              "best_trade_points": 71.35766956403313,
+              "max_drawdown_points": 234.56612386892084,
+              "net_points": 576.7084010326507,
+              "profit_factor": 1.3353585974370246,
+              "trades": 185,
+              "worst_trade_points": -50.00302762210413
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 1,
           "group": "NSXUSD:1",
           "instrument": "NSXUSD",
           "mirror_hash": "1e0ea2d8267a3281ec8704b3279a016336918f0187aa524ae85e298b21d710b7",
@@ -388,6 +720,50 @@
           "variant": 0
         },
         "c054d05b7b119a573703768ef678356d38addae4e903a938b71889609a855260": {
+          "continuous_2023_to_today": {
+            "candles": 1149116,
+            "normal_cost": {
+              "average_trade_points": -4.912358322351364,
+              "best_trade_points": 96.0060552442119,
+              "max_drawdown_points": 1134.6257163740229,
+              "net_points": -874.3997813785427,
+              "profit_factor": 0.6324685488776995,
+              "trades": 178,
+              "worst_trade_points": -39.678834782018384
+            },
+            "zero_cost": {
+              "average_trade_points": -0.9123583223513634,
+              "best_trade_points": 100.0060552442119,
+              "max_drawdown_points": 446.6257163740229,
+              "net_points": -162.39978137854268,
+              "profit_factor": 0.9137600539096163,
+              "trades": 178,
+              "worst_trade_points": -35.678834782018384
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 1149116,
+            "normal_cost": {
+              "average_trade_points": -0.3980910760191029,
+              "best_trade_points": 67.35766956403313,
+              "max_drawdown_points": 456.5301529494609,
+              "net_points": -75.63730444362955,
+              "profit_factor": 0.9653003931414158,
+              "trades": 190,
+              "worst_trade_points": -54.00302762210413
+            },
+            "zero_cost": {
+              "average_trade_points": 3.601908923980897,
+              "best_trade_points": 71.35766956403313,
+              "max_drawdown_points": 234.56612386892084,
+              "net_points": 684.3626955563705,
+              "profit_factor": 1.3933629624946458,
+              "trades": 190,
+              "worst_trade_points": -50.00302762210413
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 1,
           "group": "NSXUSD:1",
           "instrument": "NSXUSD",
           "mirror_hash": "5b621a3f1d18c7db77f465b049ae7c4e7b87387b08b3aa6dc807b3a41e119393",
@@ -406,6 +782,50 @@
           "variant": 0
         },
         "ff8a7a29441a600b0c1b81b1ec72537546bb144c4295ed78bb5b9dd4bab59265": {
+          "continuous_2023_to_today": {
+            "candles": 1149116,
+            "normal_cost": {
+              "average_trade_points": -4.932504690027292,
+              "best_trade_points": 96.0060552442119,
+              "max_drawdown_points": 1019.8316572596959,
+              "net_points": -759.605722264203,
+              "profit_factor": 0.6537428981614257,
+              "trades": 154,
+              "worst_trade_points": -39.678834782018384
+            },
+            "zero_cost": {
+              "average_trade_points": -0.9325046900272922,
+              "best_trade_points": 100.0060552442119,
+              "max_drawdown_points": 427.83165725969593,
+              "net_points": -143.605722264203,
+              "profit_factor": 0.9184874514895724,
+              "trades": 154,
+              "worst_trade_points": -35.678834782018384
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 1149116,
+            "normal_cost": {
+              "average_trade_points": -0.6369599564626675,
+              "best_trade_points": 67.35766956403313,
+              "max_drawdown_points": 452.534185468583,
+              "net_points": -105.7353527728028,
+              "profit_factor": 0.9485737697025295,
+              "trades": 166,
+              "worst_trade_points": -54.00302762210413
+            },
+            "zero_cost": {
+              "average_trade_points": 3.3630400435373327,
+              "best_trade_points": 71.35766956403313,
+              "max_drawdown_points": 234.5661238689063,
+              "net_points": 558.2646472271972,
+              "profit_factor": 1.335483728710971,
+              "trades": 166,
+              "worst_trade_points": -50.00302762210413
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 1,
           "group": "NSXUSD:1",
           "instrument": "NSXUSD",
           "mirror_hash": "df7d411661d42aa520e90bba81073b82a5314dfbaf8de5b30bf5c1d9c00ea157",
@@ -1296,6 +1716,50 @@
     "NSXUSD:3": {
       "candidates": {
         "4225cd15cd6c1f8028820f8def2f30bddabd52f709fab82333bac9b03389fe7a": {
+          "continuous_2023_to_today": {
+            "candles": 382822,
+            "normal_cost": {
+              "average_trade_points": -6.919944402074722,
+              "best_trade_points": 151.79632366321312,
+              "max_drawdown_points": 1407.7507181284745,
+              "net_points": -788.8736618365183,
+              "profit_factor": 0.7198183061229341,
+              "trades": 114,
+              "worst_trade_points": -83.35747870383784
+            },
+            "zero_cost": {
+              "average_trade_points": -2.919944402074722,
+              "best_trade_points": 155.79632366321312,
+              "max_drawdown_points": 1087.7507181284745,
+              "net_points": -332.8736618365183,
+              "profit_factor": 0.8664200276990164,
+              "trades": 114,
+              "worst_trade_points": -79.35747870383784
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 382822,
+            "normal_cost": {
+              "average_trade_points": -1.6785795526263414,
+              "best_trade_points": 132.44453410405185,
+              "max_drawdown_points": 558.2582039326808,
+              "net_points": -211.501023630919,
+              "profit_factor": 0.9203792305963587,
+              "trades": 126,
+              "worst_trade_points": -81.89816183160656
+            },
+            "zero_cost": {
+              "average_trade_points": 2.321420447373659,
+              "best_trade_points": 136.44453410405185,
+              "max_drawdown_points": 396.69477522649686,
+              "net_points": 292.498976369081,
+              "profit_factor": 1.1234133355008475,
+              "trades": 126,
+              "worst_trade_points": -77.89816183160656
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 2,
           "group": "NSXUSD:3",
           "instrument": "NSXUSD",
           "mirror_hash": "c505c31a5bbca3c509e3be157ff97b7e3be68277abb296f8221266d210dbdd74",
@@ -1314,6 +1778,50 @@
           "variant": 3
         },
         "4eb63ce0bfa23d6de5079d96fdd0ea94eda6b063281f05b448727ca306efebcd": {
+          "continuous_2023_to_today": {
+            "candles": 382822,
+            "normal_cost": {
+              "average_trade_points": -5.420376367456346,
+              "best_trade_points": 307.59264732642623,
+              "max_drawdown_points": 1842.9150988655456,
+              "net_points": -509.51537854089656,
+              "profit_factor": 0.8695343226217689,
+              "trades": 94,
+              "worst_trade_points": -128.13075912784552
+            },
+            "zero_cost": {
+              "average_trade_points": -1.4203763674563463,
+              "best_trade_points": 311.59264732642623,
+              "max_drawdown_points": 1610.9150988655456,
+              "net_points": -133.51537854089656,
+              "profit_factor": 0.9635339340830009,
+              "trades": 94,
+              "worst_trade_points": -124.13075912784552
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 382822,
+            "normal_cost": {
+              "average_trade_points": 8.405474662724409,
+              "best_trade_points": 219.3857257601121,
+              "max_drawdown_points": 668.8446950270009,
+              "net_points": 848.9529409351653,
+              "profit_factor": 1.2483666214632505,
+              "trades": 101,
+              "worst_trade_points": -162.71495740767932
+            },
+            "zero_cost": {
+              "average_trade_points": 12.405474662724409,
+              "best_trade_points": 223.3857257601121,
+              "max_drawdown_points": 652.8446950270009,
+              "net_points": 1252.9529409351653,
+              "profit_factor": 1.3881230619301175,
+              "trades": 101,
+              "worst_trade_points": -158.71495740767932
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 2,
           "group": "NSXUSD:3",
           "instrument": "NSXUSD",
           "mirror_hash": "18b29c60d2941c9d08b3c7b9526eb71f3699be4a3bd14237690db5aa95d9be61",
@@ -1332,6 +1840,50 @@
           "variant": 3
         },
         "f2677183f40306b6422c0b425b3ac55a4a966f7aebf7c2f3f2c2d72ea6718688": {
+          "continuous_2023_to_today": {
+            "candles": 382822,
+            "normal_cost": {
+              "average_trade_points": -7.218146216314773,
+              "best_trade_points": 307.59264732642623,
+              "max_drawdown_points": 1995.7350659286021,
+              "net_points": -736.2509140641068,
+              "profit_factor": 0.8224893780280043,
+              "trades": 102,
+              "worst_trade_points": -128.13075912784552
+            },
+            "zero_cost": {
+              "average_trade_points": -3.2181462163147727,
+              "best_trade_points": 311.59264732642623,
+              "max_drawdown_points": 1739.7350659286021,
+              "net_points": -328.25091406410684,
+              "profit_factor": 0.9152166647596734,
+              "trades": 102,
+              "worst_trade_points": -124.13075912784552
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 382822,
+            "normal_cost": {
+              "average_trade_points": 7.476874066752291,
+              "best_trade_points": 219.3857257601121,
+              "max_drawdown_points": 668.8446950270009,
+              "net_points": 814.9792732759997,
+              "profit_factor": 1.2280943469222878,
+              "trades": 109,
+              "worst_trade_points": -162.71495740767932
+            },
+            "zero_cost": {
+              "average_trade_points": 11.476874066752291,
+              "best_trade_points": 223.3857257601121,
+              "max_drawdown_points": 652.8446950270009,
+              "net_points": 1250.9792732759997,
+              "profit_factor": 1.3724167895257733,
+              "trades": 109,
+              "worst_trade_points": -158.71495740767932
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 2,
           "group": "NSXUSD:3",
           "instrument": "NSXUSD",
           "mirror_hash": "1fddf3e0136c452d0ab999a84a33068db629f87dc647ee75ed8167af14fb9184",
@@ -2222,6 +2774,50 @@
     "NSXUSD:5": {
       "candidates": {
         "143087d2fdc58b5866f5b81e1409ae627293ae6ecc321380391286c2967e0987": {
+          "continuous_2023_to_today": {
+            "candles": 229530,
+            "normal_cost": {
+              "average_trade_points": -1.2306986217023208,
+              "best_trade_points": 133.04746980353593,
+              "max_drawdown_points": 1073.9469136234256,
+              "net_points": -312.5974499123895,
+              "profit_factor": 0.9255164069284703,
+              "trades": 254,
+              "worst_trade_points": -102.72157123767101
+            },
+            "zero_cost": {
+              "average_trade_points": 2.769301378297679,
+              "best_trade_points": 137.04746980353593,
+              "max_drawdown_points": 438.1304438114021,
+              "net_points": 703.4025500876105,
+              "profit_factor": 1.1997812787433253,
+              "trades": 254,
+              "worst_trade_points": -98.72157123767101
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 229530,
+            "normal_cost": {
+              "average_trade_points": -4.303083115937795,
+              "best_trade_points": 193.44314247534203,
+              "max_drawdown_points": 1348.6084238570038,
+              "net_points": -1144.6201088394537,
+              "profit_factor": 0.7579637294859557,
+              "trades": 266,
+              "worst_trade_points": -73.85461098021187
+            },
+            "zero_cost": {
+              "average_trade_points": -0.3030831159377958,
+              "best_trade_points": 197.44314247534203,
+              "max_drawdown_points": 569.3283492542541,
+              "net_points": -80.62010883945368,
+              "profit_factor": 0.9799309004848057,
+              "trades": 266,
+              "worst_trade_points": -69.85461098021187
+            }
+          },
+          "five_year_wins_normal_cost": 2,
+          "five_year_wins_zero_cost": 4,
           "group": "NSXUSD:5",
           "instrument": "NSXUSD",
           "mirror_hash": "8f115279b56559cf2c4dcc88c68030faab15159c00ba7da2a40936742688d671",
@@ -2240,6 +2836,50 @@
           "variant": 2
         },
         "517772c7340d317e9d700515d69fa0593f167784ed2caec864a6b43d429d7847": {
+          "continuous_2023_to_today": {
+            "candles": 229530,
+            "normal_cost": {
+              "average_trade_points": -0.9371114457387072,
+              "best_trade_points": 133.04746980353593,
+              "max_drawdown_points": 1028.4865554476855,
+              "net_points": -203.35318372529946,
+              "profit_factor": 0.9393717067632514,
+              "trades": 217,
+              "worst_trade_points": -72.10408267807725
+            },
+            "zero_cost": {
+              "average_trade_points": 3.062888554261293,
+              "best_trade_points": 137.04746980353593,
+              "max_drawdown_points": 460.5267164908728,
+              "net_points": 664.6468162747005,
+              "profit_factor": 1.239245349462983,
+              "trades": 217,
+              "worst_trade_points": -68.10408267807725
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 229530,
+            "normal_cost": {
+              "average_trade_points": -5.666135646614167,
+              "best_trade_points": 88.12273463794918,
+              "max_drawdown_points": 1354.5343143752689,
+              "net_points": -1286.212791781416,
+              "profit_factor": 0.6720133756217267,
+              "trades": 227,
+              "worst_trade_points": -73.85461098021187
+            },
+            "zero_cost": {
+              "average_trade_points": -1.6661356466141672,
+              "best_trade_points": 92.12273463794918,
+              "max_drawdown_points": 686.5343143752689,
+              "net_points": -378.21279178141594,
+              "profit_factor": 0.8853045760981014,
+              "trades": 227,
+              "worst_trade_points": -69.85461098021187
+            }
+          },
+          "five_year_wins_normal_cost": 3,
+          "five_year_wins_zero_cost": 4,
           "group": "NSXUSD:5",
           "instrument": "NSXUSD",
           "mirror_hash": "47ef9268aa1e2a07d4d7879ff050b85da41e3f82e94ed610d6935902febadb2b",
@@ -2258,6 +2898,50 @@
           "variant": 2
         },
         "ff94a4401ed8a5d03d7881d84591fca7190d4918630f12a613236aeca5b96c2f": {
+          "continuous_2023_to_today": {
+            "candles": 229530,
+            "normal_cost": {
+              "average_trade_points": 0.04158156261822802,
+              "best_trade_points": 133.04746980353593,
+              "max_drawdown_points": 860.4935474794765,
+              "net_points": 8.19156783579092,
+              "profit_factor": 1.002278539188688,
+              "trades": 197,
+              "worst_trade_points": -102.72157123767101
+            },
+            "zero_cost": {
+              "average_trade_points": 4.041581562618228,
+              "best_trade_points": 137.04746980353593,
+              "max_drawdown_points": 351.90844511865,
+              "net_points": 796.1915678357909,
+              "profit_factor": 1.2575757877689986,
+              "trades": 197,
+              "worst_trade_points": -98.72157123767101
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 229530,
+            "normal_cost": {
+              "average_trade_points": -4.082566054169703,
+              "best_trade_points": 193.44314247534203,
+              "max_drawdown_points": 1142.5170617488184,
+              "net_points": -857.3388713756376,
+              "profit_factor": 0.7938914947147335,
+              "trades": 210,
+              "worst_trade_points": -73.85461098021187
+            },
+            "zero_cost": {
+              "average_trade_points": -0.0825660541697029,
+              "best_trade_points": 197.44314247534203,
+              "max_drawdown_points": 530.3130177837884,
+              "net_points": -17.33887137563761,
+              "profit_factor": 0.9951885227270806,
+              "trades": 210,
+              "worst_trade_points": -69.85461098021187
+            }
+          },
+          "five_year_wins_normal_cost": 2,
+          "five_year_wins_zero_cost": 3,
           "group": "NSXUSD:5",
           "instrument": "NSXUSD",
           "mirror_hash": "398c3622c5ab2fe7c986f7ac8f2107aaee16d3dfcb7258a877897f42ecf0b66d",
@@ -3148,6 +3832,50 @@
     "NSXUSD:60": {
       "candidates": {
         "75911ac5e4c5611875986faea37a69378360385e152c80044399dc613f1a0263": {
+          "continuous_2023_to_today": {
+            "candles": 18559,
+            "normal_cost": {
+              "average_trade_points": -3.8394524148968467,
+              "best_trade_points": 200.6897855469433,
+              "max_drawdown_points": 978.7618639888242,
+              "net_points": -280.2800262874698,
+              "profit_factor": 0.874978090064815,
+              "trades": 73,
+              "worst_trade_points": -95.66136770161756
+            },
+            "zero_cost": {
+              "average_trade_points": 0.1605475851031533,
+              "best_trade_points": 204.6897855469433,
+              "max_drawdown_points": 822.7618639888242,
+              "net_points": 11.71997371253019,
+              "profit_factor": 1.0057398875711239,
+              "trades": 73,
+              "worst_trade_points": -91.66136770161756
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 18559,
+            "normal_cost": {
+              "average_trade_points": -4.732284622663349,
+              "best_trade_points": 139.68374326576668,
+              "max_drawdown_points": 499.53064583445666,
+              "net_points": -326.5276389637711,
+              "profit_factor": 0.8410972658815712,
+              "trades": 69,
+              "worst_trade_points": -113.38515701049982
+            },
+            "zero_cost": {
+              "average_trade_points": -0.7322846226633493,
+              "best_trade_points": 143.68374326576668,
+              "max_drawdown_points": 415.88328040545457,
+              "net_points": -50.527638963771096,
+              "profit_factor": 0.9733907082614374,
+              "trades": 69,
+              "worst_trade_points": -109.38515701049982
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 2,
           "group": "NSXUSD:60",
           "instrument": "NSXUSD",
           "mirror_hash": "6f8b44438e6885191e599b025b47d41c81b2a3868faa55512672e41453fc1076",
@@ -3166,6 +3894,50 @@
           "variant": 1
         },
         "92555c98f97623e665d463b68406a8601071cfaaae8425446b1500763c4fa675": {
+          "continuous_2023_to_today": {
+            "candles": 18559,
+            "normal_cost": {
+              "average_trade_points": -6.292060089457336,
+              "best_trade_points": 200.6897855469433,
+              "max_drawdown_points": 985.3335820203938,
+              "net_points": -383.8156654568975,
+              "profit_factor": 0.8001342699488192,
+              "trades": 61,
+              "worst_trade_points": -95.66136770161756
+            },
+            "zero_cost": {
+              "average_trade_points": -2.2920600894573355,
+              "best_trade_points": 204.6897855469433,
+              "max_drawdown_points": 801.3335820203938,
+              "net_points": -139.81566545689748,
+              "profit_factor": 0.9200307371223402,
+              "trades": 61,
+              "worst_trade_points": -91.66136770161756
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 18559,
+            "normal_cost": {
+              "average_trade_points": -6.713754133810429,
+              "best_trade_points": 128.29616106308094,
+              "max_drawdown_points": 733.5094090997009,
+              "net_points": -382.6839856271945,
+              "profit_factor": 0.7802677539393408,
+              "trades": 57,
+              "worst_trade_points": -113.38515701049982
+            },
+            "zero_cost": {
+              "average_trade_points": -2.7137541338104296,
+              "best_trade_points": 132.29616106308094,
+              "max_drawdown_points": 673.5094090997009,
+              "net_points": -154.6839856271945,
+              "profit_factor": 0.903897579268064,
+              "trades": 57,
+              "worst_trade_points": -109.38515701049982
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 1,
           "group": "NSXUSD:60",
           "instrument": "NSXUSD",
           "mirror_hash": "0cde3549e1b9e9d4c70b6a1463275df8f5aac05c7b040371f1cdc2b49594e1b9",
@@ -3184,6 +3956,50 @@
           "variant": 2
         },
         "d7650179ca2d60baa51b3ad18bd5e99eb5a70f0c0ebe67b7da1cf278b4c81325": {
+          "continuous_2023_to_today": {
+            "candles": 18559,
+            "normal_cost": {
+              "average_trade_points": -5.227793082089283,
+              "best_trade_points": 200.6897855469433,
+              "max_drawdown_points": 985.3335820203938,
+              "net_points": -313.667584925357,
+              "profit_factor": 0.8304700672197071,
+              "trades": 60,
+              "worst_trade_points": -95.66136770161756
+            },
+            "zero_cost": {
+              "average_trade_points": -1.2277930820892835,
+              "best_trade_points": 204.6897855469433,
+              "max_drawdown_points": 801.3335820203938,
+              "net_points": -73.667584925357,
+              "profit_factor": 0.9562081015104936,
+              "trades": 60,
+              "worst_trade_points": -91.66136770161756
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 18559,
+            "normal_cost": {
+              "average_trade_points": -9.124645476612061,
+              "best_trade_points": 111.67025346211085,
+              "max_drawdown_points": 861.8055701627745,
+              "net_points": -510.98014669027543,
+              "profit_factor": 0.7066017404918536,
+              "trades": 56,
+              "worst_trade_points": -113.38515701049982
+            },
+            "zero_cost": {
+              "average_trade_points": -5.124645476612061,
+              "best_trade_points": 115.67025346211085,
+              "max_drawdown_points": 805.8055701627745,
+              "net_points": -286.98014669027543,
+              "profit_factor": 0.8217043174371575,
+              "trades": 56,
+              "worst_trade_points": -109.38515701049982
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 1,
           "group": "NSXUSD:60",
           "instrument": "NSXUSD",
           "mirror_hash": "dc8d923a5f36f8c200897021cf3af5834d77d556ada84efc348230d4caebc923",
@@ -4074,6 +4890,50 @@
     "XAUUSD:1": {
       "candidates": {
         "05d54ee0f27ea897697f629ad32f22a2ac8e3c40cfa9b89043da1899fbd13afe": {
+          "continuous_2023_to_today": {
+            "candles": 1192763,
+            "normal_cost": {
+              "average_trade_points": -1.3923544940148005,
+              "best_trade_points": 4.439079740957277,
+              "max_drawdown_points": 37.1138151272462,
+              "net_points": -26.454735386281207,
+              "profit_factor": 0.3161610495658364,
+              "trades": 19,
+              "worst_trade_points": -6.730184269422443
+            },
+            "zero_cost": {
+              "average_trade_points": 0.20764550598519954,
+              "best_trade_points": 6.039079740957277,
+              "max_drawdown_points": 16.12900939657993,
+              "net_points": 3.9452646137187912,
+              "profit_factor": 1.196061156674746,
+              "trades": 19,
+              "worst_trade_points": -5.130184269422443
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 1192763,
+            "normal_cost": {
+              "average_trade_points": -2.310234741256373,
+              "best_trade_points": 5.972999999999866,
+              "max_drawdown_points": 41.58422534260899,
+              "net_points": -41.584225342614715,
+              "profit_factor": 0.22458679949123433,
+              "trades": 18,
+              "worst_trade_points": -7.822866876894841
+            },
+            "zero_cost": {
+              "average_trade_points": -0.7102347412563732,
+              "best_trade_points": 7.572999999999865,
+              "max_drawdown_points": 20.32961009730934,
+              "net_points": -12.784225342614718,
+              "profit_factor": 0.5789326282553302,
+              "trades": 18,
+              "worst_trade_points": -6.222866876894841
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 2,
           "group": "XAUUSD:1",
           "instrument": "XAUUSD",
           "mirror_hash": "c0211bef4dfee757a999b6966e0d02aac6a63d61eec8d4c49f3fa775106571ab",
@@ -4092,6 +4952,50 @@
           "variant": 3
         },
         "3ae64b747aa85ab3527965474b3fb7e3e2439e989aebd3be70491d93e2ef1bd0": {
+          "continuous_2023_to_today": {
+            "candles": 1192763,
+            "normal_cost": {
+              "average_trade_points": -1.3238959086003328,
+              "best_trade_points": 4.684726284953195,
+              "max_drawdown_points": 34.83229557561572,
+              "net_points": -34.421293623608655,
+              "profit_factor": 0.3411152421103455,
+              "trades": 26,
+              "worst_trade_points": -4.460819557318791
+            },
+            "zero_cost": {
+              "average_trade_points": 0.2761040913996672,
+              "best_trade_points": 6.284726284953194,
+              "max_drawdown_points": 10.05581584056199,
+              "net_points": 7.178706376391347,
+              "profit_factor": 1.2885404621064662,
+              "trades": 26,
+              "worst_trade_points": -2.8608195573187913
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 1192763,
+            "normal_cost": {
+              "average_trade_points": -2.116008163142446,
+              "best_trade_points": 3.995098868074274,
+              "max_drawdown_points": 51.88684488766012,
+              "net_points": -46.552179589133814,
+              "profit_factor": 0.16226694620226123,
+              "trades": 22,
+              "worst_trade_points": -4.742363142476824
+            },
+            "zero_cost": {
+              "average_trade_points": -0.516008163142446,
+              "best_trade_points": 5.595098868074274,
+              "max_drawdown_points": 19.88684488768922,
+              "net_points": -11.352179589133812,
+              "profit_factor": 0.5759242916475629,
+              "trades": 22,
+              "worst_trade_points": -3.1423631424768246
+            }
+          },
+          "five_year_wins_normal_cost": 0,
+          "five_year_wins_zero_cost": 2,
           "group": "XAUUSD:1",
           "instrument": "XAUUSD",
           "mirror_hash": "4f8aafffc0d9e50b541f4172c58c5444973b6d9a6294991f936044fcdac8bf62",
@@ -4110,6 +5014,50 @@
           "variant": 0
         },
         "b16f23b6ffcd871649ef59e4b2cb3c7442e672bd479e3e9f74c3df7a976d797d": {
+          "continuous_2023_to_today": {
+            "candles": 1192763,
+            "normal_cost": {
+              "average_trade_points": -1.3183050478904534,
+              "best_trade_points": 6.697155835859485,
+              "max_drawdown_points": 35.378301870499854,
+              "net_points": -23.72949086202816,
+              "profit_factor": 0.4000057933885193,
+              "trades": 18,
+              "worst_trade_points": -5.0201228462816285
+            },
+            "zero_cost": {
+              "average_trade_points": 0.28169495210954665,
+              "best_trade_points": 8.297155835859485,
+              "max_drawdown_points": 14.328383950181887,
+              "net_points": 5.07050913797184,
+              "profit_factor": 1.2543060669580988,
+              "trades": 18,
+              "worst_trade_points": -3.420122846281629
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 1192763,
+            "normal_cost": {
+              "average_trade_points": -2.1399617703002947,
+              "best_trade_points": 5.240245692563258,
+              "max_drawdown_points": 34.23938832481508,
+              "net_points": -34.239388324804715,
+              "profit_factor": 0.20515437219052962,
+              "trades": 16,
+              "worst_trade_points": -5.748577917929287
+            },
+            "zero_cost": {
+              "average_trade_points": -0.5399617703002946,
+              "best_trade_points": 6.840245692563258,
+              "max_drawdown_points": 14.585496044615866,
+              "net_points": -8.639388324804713,
+              "profit_factor": 0.6121796210770698,
+              "trades": 16,
+              "worst_trade_points": -4.148577917929288
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 2,
           "group": "XAUUSD:1",
           "instrument": "XAUUSD",
           "mirror_hash": "d6f5957fc622bb8b74c9a79ff84650e17125a43062be97f87334a285d298837a",
@@ -5000,6 +5948,50 @@
     "XAUUSD:3": {
       "candidates": {
         "0e4cd6ac3b5d07e38995778924dee1d81d97f8e28b904b90199c0e2b78d7346b": {
+          "continuous_2023_to_today": {
+            "candles": 397381,
+            "normal_cost": {
+              "average_trade_points": -0.5307600079118143,
+              "best_trade_points": 28.966816141520574,
+              "max_drawdown_points": 85.0932631254982,
+              "net_points": -44.05308065668059,
+              "profit_factor": 0.7973378906419972,
+              "trades": 83,
+              "worst_trade_points": -14.881524891433946
+            },
+            "zero_cost": {
+              "average_trade_points": 1.0692399920881857,
+              "best_trade_points": 30.566816141520576,
+              "max_drawdown_points": 52.08567508812121,
+              "net_points": 88.7469193433194,
+              "profit_factor": 1.6061256534480783,
+              "trades": 83,
+              "worst_trade_points": -13.281524891433946
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 397381,
+            "normal_cost": {
+              "average_trade_points": -2.536631218036564,
+              "best_trade_points": 24.49283194123327,
+              "max_drawdown_points": 230.83344084129203,
+              "net_points": -230.83344084132736,
+              "profit_factor": 0.2549095025366274,
+              "trades": 91,
+              "worst_trade_points": -16.883408070760744
+            },
+            "zero_cost": {
+              "average_trade_points": -0.9366312180365645,
+              "best_trade_points": 26.09283194123327,
+              "max_drawdown_points": 86.56344084141892,
+              "net_points": -85.23344084132736,
+              "profit_factor": 0.5678059008218878,
+              "trades": 91,
+              "worst_trade_points": -15.283408070760743
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 4,
           "group": "XAUUSD:3",
           "instrument": "XAUUSD",
           "mirror_hash": "6dc3e2d02f2b7c4c3c2096ecdc0263568bfc746032555884de124b8655954587",
@@ -5018,6 +6010,50 @@
           "variant": 1
         },
         "94c58b1b10f2e0070b71dfcc47be0886bdb52f772f5088795affdf9c57f1ee0f": {
+          "continuous_2023_to_today": {
+            "candles": 397381,
+            "normal_cost": {
+              "average_trade_points": -0.4892747459122404,
+              "best_trade_points": 25.078910348328826,
+              "max_drawdown_points": 50.97148131635913,
+              "net_points": -34.73850695976907,
+              "profit_factor": 0.8045435489309025,
+              "trades": 71,
+              "worst_trade_points": -14.881524891433946
+            },
+            "zero_cost": {
+              "average_trade_points": 1.1107252540877595,
+              "best_trade_points": 26.678910348328827,
+              "max_drawdown_points": 41.91370240472315,
+              "net_points": 78.86149304023093,
+              "profit_factor": 1.6587642129271507,
+              "trades": 71,
+              "worst_trade_points": -13.281524891433946
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 397381,
+            "normal_cost": {
+              "average_trade_points": -2.441768841410173,
+              "best_trade_points": 24.49283194123327,
+              "max_drawdown_points": 190.36330310589983,
+              "net_points": -178.24912542294263,
+              "profit_factor": 0.2782306148015817,
+              "trades": 73,
+              "worst_trade_points": -14.611137361752844
+            },
+            "zero_cost": {
+              "average_trade_points": -0.8417688414101732,
+              "best_trade_points": 26.09283194123327,
+              "max_drawdown_points": 79.69330310598889,
+              "net_points": -61.44912542294264,
+              "profit_factor": 0.6042730308437788,
+              "trades": 73,
+              "worst_trade_points": -13.011137361752844
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 4,
           "group": "XAUUSD:3",
           "instrument": "XAUUSD",
           "mirror_hash": "a3e2396d6f3c3405fc2a61cedd37458de2393e75c7963794ddb592ae18c99843",
@@ -5036,6 +6072,50 @@
           "variant": 1
         },
         "eaa204624ddc3e61ada1f44a18d2efdc7759292d59cd72dfda81b2ba548bb2c5": {
+          "continuous_2023_to_today": {
+            "candles": 397381,
+            "normal_cost": {
+              "average_trade_points": -0.5199890628474995,
+              "best_trade_points": 25.078910348328826,
+              "max_drawdown_points": 56.579838882011245,
+              "net_points": -38.47919065071496,
+              "profit_factor": 0.7901194442045785,
+              "trades": 74,
+              "worst_trade_points": -14.881524891433946
+            },
+            "zero_cost": {
+              "average_trade_points": 1.0800109371525004,
+              "best_trade_points": 26.678910348328827,
+              "max_drawdown_points": 41.91370240472315,
+              "net_points": 79.92080934928504,
+              "profit_factor": 1.654265157255613,
+              "trades": 74,
+              "worst_trade_points": -13.281524891433946
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 397381,
+            "normal_cost": {
+              "average_trade_points": -2.4983862386584885,
+              "best_trade_points": 24.49283194123327,
+              "max_drawdown_points": 196.99475934368093,
+              "net_points": -184.88058166072815,
+              "profit_factor": 0.2708389388828619,
+              "trades": 74,
+              "worst_trade_points": -14.611137361752844
+            },
+            "zero_cost": {
+              "average_trade_points": -0.8983862386584885,
+              "best_trade_points": 26.09283194123327,
+              "max_drawdown_points": 83.39475934377697,
+              "net_points": -66.48058166072815,
+              "profit_factor": 0.5852034767767299,
+              "trades": 74,
+              "worst_trade_points": -13.011137361752844
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 4,
           "group": "XAUUSD:3",
           "instrument": "XAUUSD",
           "mirror_hash": "8cff3869af8da74810cb786e5c01025ab979fd93e0510f2b8c59204db6bd57d4",
@@ -5926,6 +7006,50 @@
     "XAUUSD:5": {
       "candidates": {
         "30df9a90712e56a6855a4606ba5b0653db7ed821c2ffc6a95f0a4f67d7e1b4ca": {
+          "continuous_2023_to_today": {
+            "candles": 238320,
+            "normal_cost": {
+              "average_trade_points": -0.6514810434546879,
+              "best_trade_points": 26.853236797187854,
+              "max_drawdown_points": 200.85571282396268,
+              "net_points": -128.9932466040282,
+              "profit_factor": 0.7496821524159452,
+              "trades": 198,
+              "worst_trade_points": -17.807712417149197
+            },
+            "zero_cost": {
+              "average_trade_points": 0.948518956545312,
+              "best_trade_points": 28.453236797187856,
+              "max_drawdown_points": 40.23712986226019,
+              "net_points": 187.80675339597178,
+              "profit_factor": 1.5658163044103421,
+              "trades": 198,
+              "worst_trade_points": -16.207712417149196
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 238320,
+            "normal_cost": {
+              "average_trade_points": -2.351831414532929,
+              "best_trade_points": 30.81542483429748,
+              "max_drawdown_points": 516.5612199721654,
+              "net_points": -505.6437541245798,
+              "profit_factor": 0.30955556745828705,
+              "trades": 215,
+              "worst_trade_points": -15.826618398593927
+            },
+            "zero_cost": {
+              "average_trade_points": -0.7518314145329293,
+              "best_trade_points": 32.41542483429748,
+              "max_drawdown_points": 177.76701007821248,
+              "net_points": -161.6437541245798,
+              "profit_factor": 0.6572743386670267,
+              "trades": 215,
+              "worst_trade_points": -14.226618398593928
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 5,
           "group": "XAUUSD:5",
           "instrument": "XAUUSD",
           "mirror_hash": "d4111e0c85ce3d95878dec6ce7ba0b034a5fdfbe8f2c543d34379e12a80d0fb7",
@@ -5944,6 +7068,50 @@
           "variant": 0
         },
         "42209dbf1decf3299679530e7341a102d83029fcf942414fbc8ff8d86848fa00": {
+          "continuous_2023_to_today": {
+            "candles": 238320,
+            "normal_cost": {
+              "average_trade_points": -1.1211878499121932,
+              "best_trade_points": 44.22000000000062,
+              "max_drawdown_points": 181.6104025120585,
+              "net_points": -67.2712709947316,
+              "profit_factor": 0.817428460525358,
+              "trades": 60,
+              "worst_trade_points": -23.91067222820275
+            },
+            "zero_cost": {
+              "average_trade_points": 0.47881215008780675,
+              "best_trade_points": 45.82000000000062,
+              "max_drawdown_points": 109.6350306768436,
+              "net_points": 28.728729005268406,
+              "profit_factor": 1.0945941086634812,
+              "trades": 60,
+              "worst_trade_points": -22.310672228202748
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 238320,
+            "normal_cost": {
+              "average_trade_points": -0.4110857154699956,
+              "best_trade_points": 43.021344456405494,
+              "max_drawdown_points": 198.92401068200707,
+              "net_points": -23.43188578178975,
+              "profit_factor": 0.9274655881758777,
+              "trades": 57,
+              "worst_trade_points": -29.032209480668463
+            },
+            "zero_cost": {
+              "average_trade_points": 1.1889142845300045,
+              "best_trade_points": 44.621344456405495,
+              "max_drawdown_points": 163.11838750091556,
+              "net_points": 67.76811421821026,
+              "profit_factor": 1.2515771474173543,
+              "trades": 57,
+              "worst_trade_points": -27.43220948066846
+            }
+          },
+          "five_year_wins_normal_cost": 2,
+          "five_year_wins_zero_cost": 2,
           "group": "XAUUSD:5",
           "instrument": "XAUUSD",
           "mirror_hash": "0f49fa83ab7611d4eb643255202858d498f2d5372d1d2c918b21121aff681f9d",
@@ -5962,6 +7130,50 @@
           "variant": 2
         },
         "70de6d5a40dfca0fe1336337cb9731b2253f0997216d99074e257dbd6820a5c0": {
+          "continuous_2023_to_today": {
+            "candles": 238320,
+            "normal_cost": {
+              "average_trade_points": -0.2468992594332684,
+              "best_trade_points": 26.853236797187854,
+              "max_drawdown_points": 85.8984653231164,
+              "net_points": -29.874810391425477,
+              "profit_factor": 0.9124577518049175,
+              "trades": 121,
+              "worst_trade_points": -17.807712417149197
+            },
+            "zero_cost": {
+              "average_trade_points": 1.3531007405667315,
+              "best_trade_points": 28.453236797187856,
+              "max_drawdown_points": 40.23712986226019,
+              "net_points": 163.7251896085745,
+              "profit_factor": 1.6910805127829869,
+              "trades": 121,
+              "worst_trade_points": -16.207712417149196
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 238320,
+            "normal_cost": {
+              "average_trade_points": -2.4644325911189275,
+              "best_trade_points": 30.81542483429748,
+              "max_drawdown_points": 336.22256787527294,
+              "net_points": -325.3051020276984,
+              "profit_factor": 0.36303250034597184,
+              "trades": 132,
+              "worst_trade_points": -15.826618398593927
+            },
+            "zero_cost": {
+              "average_trade_points": -0.8644325911189275,
+              "best_trade_points": 32.41542483429748,
+              "max_drawdown_points": 126.79256787519262,
+              "net_points": -114.10510202769842,
+              "profit_factor": 0.670129811013453,
+              "trades": 132,
+              "worst_trade_points": -14.226618398593928
+            }
+          },
+          "five_year_wins_normal_cost": 1,
+          "five_year_wins_zero_cost": 5,
           "group": "XAUUSD:5",
           "instrument": "XAUUSD",
           "mirror_hash": "1eec073d398e0df8dbe5af7823b2120cb062f7e727d29237a34d2d8e63810d4a",
@@ -6852,6 +8064,50 @@
     "XAUUSD:60": {
       "candidates": {
         "2d4115080a9fc17c129068acecab35207470f3332974a3c313ba4ebf9c408749": {
+          "continuous_2023_to_today": {
+            "candles": 19653,
+            "normal_cost": {
+              "average_trade_points": -0.2971124804968608,
+              "best_trade_points": 72.5724856807914,
+              "max_drawdown_points": 217.42890227923635,
+              "net_points": -18.42097379080537,
+              "profit_factor": 0.9508944884617183,
+              "trades": 62,
+              "worst_trade_points": -20.16807797242982
+            },
+            "zero_cost": {
+              "average_trade_points": 1.302887519503139,
+              "best_trade_points": 74.1724856807914,
+              "max_drawdown_points": 161.72697954147588,
+              "net_points": 80.77902620919463,
+              "profit_factor": 1.259178380897273,
+              "trades": 62,
+              "worst_trade_points": -18.56807797242982
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 19653,
+            "normal_cost": {
+              "average_trade_points": -2.3510082087183926,
+              "best_trade_points": 35.53615594485964,
+              "max_drawdown_points": 179.1556402592396,
+              "net_points": -138.70948431438515,
+              "profit_factor": 0.6600137926214493,
+              "trades": 59,
+              "worst_trade_points": -38.686242840395245
+            },
+            "zero_cost": {
+              "average_trade_points": -0.7510082087183922,
+              "best_trade_points": 37.13615594485964,
+              "max_drawdown_points": 110.89083035307704,
+              "net_points": -44.309484314385145,
+              "profit_factor": 0.8700318150197907,
+              "trades": 59,
+              "worst_trade_points": -37.08624284039524
+            }
+          },
+          "five_year_wins_normal_cost": 3,
+          "five_year_wins_zero_cost": 3,
           "group": "XAUUSD:60",
           "instrument": "XAUUSD",
           "mirror_hash": "aa800a97450ec93c54d88f6c30ad0d9afd591af20bc99457ee05399e8290d630",
@@ -6870,6 +8126,50 @@
           "variant": 2
         },
         "e63d1ed1aafc80027006bc1e3db2c0011280d20315111ae20db1c2a60dba14c0": {
+          "continuous_2023_to_today": {
+            "candles": 19653,
+            "normal_cost": {
+              "average_trade_points": -0.6568922065902701,
+              "best_trade_points": 52.0230000000005,
+              "max_drawdown_points": 207.93281615733576,
+              "net_points": -40.070424602006476,
+              "profit_factor": 0.8788508437583541,
+              "trades": 61,
+              "worst_trade_points": -29.500000000000547
+            },
+            "zero_cost": {
+              "average_trade_points": 0.9431077934097302,
+              "best_trade_points": 53.6230000000005,
+              "max_drawdown_points": 142.78281615728338,
+              "net_points": 57.52957539799354,
+              "profit_factor": 1.2044479654012488,
+              "trades": 61,
+              "worst_trade_points": -27.900000000000546
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 19653,
+            "normal_cost": {
+              "average_trade_points": -3.4009260802800783,
+              "best_trade_points": 27.19300000000012,
+              "max_drawdown_points": 237.41586826877028,
+              "net_points": -207.45649089708476,
+              "profit_factor": 0.5544982141974811,
+              "trades": 61,
+              "worst_trade_points": -112.85872852118663
+            },
+            "zero_cost": {
+              "average_trade_points": -1.8009260802800782,
+              "best_trade_points": 28.79300000000012,
+              "max_drawdown_points": 215.41868310757854,
+              "net_points": -109.85649089708477,
+              "profit_factor": 0.7328758265845868,
+              "trades": 61,
+              "worst_trade_points": -111.25872852118664
+            }
+          },
+          "five_year_wins_normal_cost": 2,
+          "five_year_wins_zero_cost": 2,
           "group": "XAUUSD:60",
           "instrument": "XAUUSD",
           "mirror_hash": "2c9710a9b43666731bf5cf0c9c2efc6121fb4a8f1cf744fe0b86890cef3a0576",
@@ -6888,6 +8188,50 @@
           "variant": 2
         },
         "f9f305d393cc6d43b558c635c43e02ccb8db8d964b9f1e4c8e554a52dde1df10": {
+          "continuous_2023_to_today": {
+            "candles": 19653,
+            "normal_cost": {
+              "average_trade_points": 0.09655108505684258,
+              "best_trade_points": 72.5724856807914,
+              "max_drawdown_points": 179.3900395156088,
+              "net_points": 5.98616727352424,
+              "profit_factor": 1.016987740258074,
+              "trades": 62,
+              "worst_trade_points": -20.16807797242982
+            },
+            "zero_cost": {
+              "average_trade_points": 1.6965510850568424,
+              "best_trade_points": 74.1724856807914,
+              "max_drawdown_points": 127.73562780486827,
+              "net_points": 105.18616727352423,
+              "profit_factor": 1.3587747779904231,
+              "trades": 62,
+              "worst_trade_points": -18.56807797242982
+            }
+          },
+          "continuous_mirror_2023_to_today": {
+            "candles": 19653,
+            "normal_cost": {
+              "average_trade_points": -2.3724852384471964,
+              "best_trade_points": 35.53615594485964,
+              "max_drawdown_points": 180.42278501323017,
+              "net_points": -139.9766290683846,
+              "profit_factor": 0.653312534389762,
+              "trades": 59,
+              "worst_trade_points": -38.686242840395245
+            },
+            "zero_cost": {
+              "average_trade_points": -0.7724852384471964,
+              "best_trade_points": 37.13615594485964,
+              "max_drawdown_points": 110.89083035309159,
+              "net_points": -45.57662906838459,
+              "profit_factor": 0.8652195158493858,
+              "trades": 59,
+              "worst_trade_points": -37.08624284039524
+            }
+          },
+          "five_year_wins_normal_cost": 3,
+          "five_year_wins_zero_cost": 4,
           "group": "XAUUSD:60",
           "instrument": "XAUUSD",
           "mirror_hash": "17e2443f9cc3ddb80d65ed6ed065a937ea984a44209ec471040b572ba023a043",
@@ -7806,6 +9150,7 @@
   "preflight": {
     "cpu_count": 384,
     "memory_limit_gb": 12.0,
+    "rss_end_bytes": 660975616,
     "rss_start_bytes": 50827264
   },
   "sealed_holdout_read": false,

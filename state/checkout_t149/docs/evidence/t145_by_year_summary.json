@@ -1,0 +1,5287 @@
+{
+  "broker_calls": 0,
+  "candidate_count": 24,
+  "comparison": {
+    "NSXUSD:60_overnight_london_break": {
+      "2022": {
+        "mirror": {
+          "candles": 5619,
+          "normal_cost": {
+            "average_trade_points": -2.6861884369049123,
+            "best_trade_points": 373.87914632059073,
+            "max_drawdown_points": 2800.842348377424,
+            "net_points": -607.0785867405102,
+            "profit_factor": 0.955909087963571,
+            "trades": 226,
+            "worst_trade_points": -400.271999999999
+          },
+          "zero_cost": {
+            "average_trade_points": 1.3138115630950875,
+            "best_trade_points": 377.87914632059073,
+            "max_drawdown_points": 2380.842348377424,
+            "net_points": 296.9214132594898,
+            "profit_factor": 1.0225044943936972,
+            "trades": 226,
+            "worst_trade_points": -396.271999999999
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 5619,
+          "normal_cost": {
+            "average_trade_points": -7.96438157088975,
+            "best_trade_points": 392.271999999999,
+            "max_drawdown_points": 2151.89135188215,
+            "net_points": -1545.0900247526115,
+            "profit_factor": 0.8745828375783903,
+            "trades": 194,
+            "worst_trade_points": -200.65307747001862
+          },
+          "zero_cost": {
+            "average_trade_points": -3.96438157088975,
+            "best_trade_points": 396.271999999999,
+            "max_drawdown_points": 1761.0601105933747,
+            "net_points": -769.0900247526115,
+            "profit_factor": 0.9348648637370213,
+            "trades": 194,
+            "worst_trade_points": -196.65307747001862
+          }
+        }
+      },
+      "2023": {
+        "mirror": {
+          "candles": 4916,
+          "normal_cost": {
+            "average_trade_points": -15.105805628790373,
+            "best_trade_points": 259.1705539252125,
+            "max_drawdown_points": 4373.756502187694,
+            "net_points": -3731.133990311222,
+            "profit_factor": 0.6609708828408891,
+            "trades": 247,
+            "worst_trade_points": -230.20999999999913
+          },
+          "zero_cost": {
+            "average_trade_points": -11.105805628790373,
+            "best_trade_points": 263.1705539252125,
+            "max_drawdown_points": 3450.766407679679,
+            "net_points": -2743.133990311222,
+            "profit_factor": 0.734054308045501,
+            "trades": 247,
+            "worst_trade_points": -226.20999999999913
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 4916,
+          "normal_cost": {
+            "average_trade_points": 3.943611517115368,
+            "best_trade_points": 269.65200000000004,
+            "max_drawdown_points": 768.2784114894748,
+            "net_points": 812.3839725257658,
+            "profit_factor": 1.1084844186410088,
+            "trades": 206,
+            "worst_trade_points": -135.58527696260535
+          },
+          "zero_cost": {
+            "average_trade_points": 7.943611517115368,
+            "best_trade_points": 273.65200000000004,
+            "max_drawdown_points": 708.2784114894748,
+            "net_points": 1636.3839725257658,
+            "profit_factor": 1.2338865739189175,
+            "trades": 206,
+            "worst_trade_points": -131.58527696260535
+          }
+        }
+      },
+      "2023_to_today": {
+        "mirror": {
+          "candles": 18559,
+          "normal_cost": {
+            "average_trade_points": -6.902606980266524,
+            "best_trade_points": 683.9347384757821,
+            "max_drawdown_points": 8490.874390621306,
+            "net_points": -6012.170679812143,
+            "profit_factor": 0.8759622249171255,
+            "trades": 871,
+            "worst_trade_points": -404.574866102932
+          },
+          "zero_cost": {
+            "average_trade_points": -2.902606980266525,
+            "best_trade_points": 687.9347384757821,
+            "max_drawdown_points": 5246.517205109587,
+            "net_points": -2528.170679812143,
+            "profit_factor": 0.9452875539313618,
+            "trades": 871,
+            "worst_trade_points": -400.574866102932
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 18559,
+          "normal_cost": {
+            "average_trade_points": -0.6707345548502798,
+            "best_trade_points": 817.9128708393255,
+            "max_drawdown_points": 3253.4749646515993,
+            "net_points": -497.0143051440573,
+            "profit_factor": 0.9875145716641686,
+            "trades": 741,
+            "worst_trade_points": -687.2439999999988
+          },
+          "zero_cost": {
+            "average_trade_points": 3.32926544514972,
+            "best_trade_points": 821.9128708393255,
+            "max_drawdown_points": 2781.5711205424595,
+            "net_points": 2466.9856948559427,
+            "profit_factor": 1.0648840092180138,
+            "trades": 741,
+            "worst_trade_points": -683.2439999999988
+          }
+        }
+      },
+      "2024": {
+        "mirror": {
+          "candles": 5448,
+          "normal_cost": {
+            "average_trade_points": -9.274637089384198,
+            "best_trade_points": 356.55141205405016,
+            "max_drawdown_points": 2899.4508272765815,
+            "net_points": -2420.680280329276,
+            "profit_factor": 0.8070372124013631,
+            "trades": 261,
+            "worst_trade_points": -211.36171715290402
+          },
+          "zero_cost": {
+            "average_trade_points": -5.274637089384198,
+            "best_trade_points": 360.55141205405016,
+            "max_drawdown_points": 2183.4508272765815,
+            "net_points": -1376.6802803292758,
+            "profit_factor": 0.8839846053833098,
+            "trades": 261,
+            "worst_trade_points": -207.36171715290402
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 5448,
+          "normal_cost": {
+            "average_trade_points": 3.8121838585037424,
+            "best_trade_points": 373.7498173014137,
+            "max_drawdown_points": 1692.1938733012066,
+            "net_points": 869.1779197388532,
+            "profit_factor": 1.0877401689984025,
+            "trades": 228,
+            "worst_trade_points": -184.27570602702326
+          },
+          "zero_cost": {
+            "average_trade_points": 7.812183858503742,
+            "best_trade_points": 377.7498173014137,
+            "max_drawdown_points": 1576.1938733012066,
+            "net_points": 1781.1779197388532,
+            "profit_factor": 1.190169370385747,
+            "trades": 228,
+            "worst_trade_points": -180.27570602702326
+          }
+        }
+      },
+      "2025": {
+        "mirror": {
+          "candles": 5470,
+          "normal_cost": {
+            "average_trade_points": -4.9964670279571495,
+            "best_trade_points": 683.9347384757821,
+            "max_drawdown_points": 2498.355233564682,
+            "net_points": -1219.1379548215446,
+            "profit_factor": 0.9210966836361405,
+            "trades": 244,
+            "worst_trade_points": -404.574866102932
+          },
+          "zero_cost": {
+            "average_trade_points": -0.9964670279571498,
+            "best_trade_points": 687.9347384757821,
+            "max_drawdown_points": 1946.3552335646818,
+            "net_points": -243.13795482154455,
+            "profit_factor": 0.9836227038896416,
+            "trades": 244,
+            "worst_trade_points": -400.574866102932
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 5470,
+          "normal_cost": {
+            "average_trade_points": 1.3966684910180385,
+            "best_trade_points": 817.9128708393255,
+            "max_drawdown_points": 2406.6151028553286,
+            "net_points": 282.12703518564376,
+            "profit_factor": 1.0219995228753616,
+            "trades": 202,
+            "worst_trade_points": -687.2439999999988
+          },
+          "zero_cost": {
+            "average_trade_points": 5.396668491018039,
+            "best_trade_points": 821.9128708393255,
+            "max_drawdown_points": 2306.6151028553286,
+            "net_points": 1090.1270351856438,
+            "profit_factor": 1.088339249589502,
+            "trades": 202,
+            "worst_trade_points": -683.2439999999988
+          }
+        }
+      },
+      "2026_to_holdout": {
+        "mirror": {
+          "candles": 2725,
+          "normal_cost": {
+            "average_trade_points": 10.379019177307564,
+            "best_trade_points": 582.0370000000003,
+            "max_drawdown_points": 1977.507950184896,
+            "net_points": 1214.345243744985,
+            "profit_factor": 1.129339916010468,
+            "trades": 117,
+            "worst_trade_points": -337.48099999999977
+          },
+          "zero_cost": {
+            "average_trade_points": 14.379019177307564,
+            "best_trade_points": 586.0370000000003,
+            "max_drawdown_points": 1813.507950184896,
+            "net_points": 1682.345243744985,
+            "profit_factor": 1.1847758529800652,
+            "trades": 117,
+            "worst_trade_points": -333.48099999999977
+          }
+        },
+        "mirror_direction": "short",
+        "missing_data": false,
+        "stats": {
+          "candles": 2725,
+          "normal_cost": {
+            "average_trade_points": -22.00765950471798,
+            "best_trade_points": 550.6680000000015,
+            "max_drawdown_points": 3109.5711205424595,
+            "net_points": -2266.788928985952,
+            "profit_factor": 0.7586805307709904,
+            "trades": 103,
+            "worst_trade_points": -370.76800000000003
+          },
+          "zero_cost": {
+            "average_trade_points": -18.00765950471798,
+            "best_trade_points": 554.6680000000015,
+            "max_drawdown_points": 2781.5711205424595,
+            "net_points": -1854.7889289859522,
+            "profit_factor": 0.7968742850027162,
+            "trades": 103,
+            "worst_trade_points": -366.76800000000003
+          }
+        }
+      },
+      "label": "closest readable London break seed; exact historical 5-of-6 winner not identifiable",
+      "parameters": {
+        "direction": "long",
+        "stop": 1.5,
+        "target": 3.0,
+        "with_trend": false
+      },
+      "rules_readable": "long during london; entry when close above the rolling high over 7 bars; exits: stop at 1.5 atr, target at 3 atr, close after 12 bars",
+      "strategy_hash": "a2c8fa3c1de6bdc0e7fc88a5dbc71e0505b891ac8b6630f76bd8d1a53b0bb343"
+    }
+  },
+  "diagnostic_zero_cost": true,
+  "gate1_evaluated": false,
+  "generated_at": "2026-10-15T15:43:39.659481+00:00",
+  "group_summary": {
+    "NSXUSD:1": {
+      "candidates": 3,
+      "period_results": 18
+    },
+    "NSXUSD:3": {
+      "candidates": 3,
+      "period_results": 18
+    },
+    "NSXUSD:5": {
+      "candidates": 3,
+      "period_results": 18
+    },
+    "NSXUSD:60": {
+      "candidates": 3,
+      "period_results": 18
+    },
+    "XAUUSD:1": {
+      "candidates": 3,
+      "period_results": 18
+    },
+    "XAUUSD:3": {
+      "candidates": 3,
+      "period_results": 18
+    },
+    "XAUUSD:5": {
+      "candidates": 3,
+      "period_results": 18
+    },
+    "XAUUSD:60": {
+      "candidates": 3,
+      "period_results": 18
+    }
+  },
+  "orders": 0,
+  "periods": {
+    "2022": [
+      "2022-01-01T00:00:00+00:00",
+      "2023-01-01T00:00:00+00:00"
+    ],
+    "2023": [
+      "2023-01-01T00:00:00+00:00",
+      "2024-01-01T00:00:00+00:00"
+    ],
+    "2023_to_today": [
+      "2023-01-01T00:00:00+00:00",
+      "2026-07-01T00:00:00+00:00"
+    ],
+    "2024": [
+      "2024-01-01T00:00:00+00:00",
+      "2025-01-01T00:00:00+00:00"
+    ],
+    "2025": [
+      "2025-01-01T00:00:00+00:00",
+      "2026-01-01T00:00:00+00:00"
+    ],
+    "2026_to_holdout": [
+      "2026-01-01T00:00:00+00:00",
+      "2026-07-01T00:00:00+00:00"
+    ]
+  },
+  "preflight": {
+    "cpu_count": 384,
+    "memory_limit_gb": 12.0,
+    "rss_end_bytes": 660975616,
+    "rss_start_bytes": 50827264
+  },
+  "rows": [
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 491.8671646358416,
+            "net_points": -163.29159896734927,
+            "profit_factor": 0.9242504262861893,
+            "trades": 185
+          },
+          "zero_cost": {
+            "max_drawdown_points": 234.56612386892084,
+            "net_points": 576.7084010326507,
+            "profit_factor": 1.3353585974370246,
+            "trades": 185
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 1034.6415746099956,
+            "net_points": -774.4156396145409,
+            "profit_factor": 0.6602145689232195,
+            "trades": 173
+          },
+          "zero_cost": {
+            "max_drawdown_points": 373.8658858329145,
+            "net_points": -82.41563961454085,
+            "profit_factor": 0.9542930479887013,
+            "trades": 173
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 1,
+      "group": "NSXUSD:1",
+      "mirror_rules_readable": "long during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 240 bars and close below the open and close below the sma over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "periods": {
+        "2022": {
+          "candles": 342711,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 115.8546576579829,
+              "net_points": -3.1513592431310826,
+              "profit_factor": 0.9915624696990214,
+              "trades": 30
+            },
+            "zero_cost": {
+              "max_drawdown_points": 99.8546576579829,
+              "net_points": 116.84864075686892,
+              "profit_factor": 1.3824919303627454,
+              "trades": 30
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 354.77759446807613,
+              "net_points": -354.77759446809796,
+              "profit_factor": 0.2991506610797355,
+              "trades": 29
+            },
+            "zero_cost": {
+              "max_drawdown_points": 238.77759446807613,
+              "net_points": -238.77759446809796,
+              "profit_factor": 0.41218323333902257,
+              "trades": 29
+            }
+          }
+        },
+        "2023": {
+          "candles": 299289,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 96.12967225803004,
+              "net_points": 30.23813108326067,
+              "profit_factor": 1.154101764887784,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 84.12967225803004,
+              "net_points": 118.23813108326067,
+              "profit_factor": 1.8198351593708257,
+              "trades": 22
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 180.33383047107782,
+              "net_points": -108.92406710825526,
+              "profit_factor": 0.5128285764906705,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 108.33383047107782,
+              "net_points": -24.924067108255258,
+              "profit_factor": 0.8547418858989544,
+              "trades": 21
+            }
+          }
+        },
+        "2024": {
+          "candles": 340926,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 185.03398511321575,
+              "net_points": -162.80378474388635,
+              "profit_factor": 0.7710737136006032,
+              "trades": 75
+            },
+            "zero_cost": {
+              "max_drawdown_points": 132.54417576713604,
+              "net_points": 137.19621525611365,
+              "profit_factor": 1.2563636676931875,
+              "trades": 75
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 470.00451263194554,
+              "net_points": -420.3631491517044,
+              "profit_factor": 0.48171747013509775,
+              "trades": 71
+            },
+            "zero_cost": {
+              "max_drawdown_points": 211.59069182683015,
+              "net_points": -136.36314915170442,
+              "profit_factor": 0.7753747296799305,
+              "trades": 71
+            }
+          }
+        },
+        "2025": {
+          "candles": 340493,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 347.0927553634974,
+              "net_points": 96.1502488022561,
+              "profit_factor": 1.1178494552494984,
+              "trades": 64
+            },
+            "zero_cost": {
+              "max_drawdown_points": 206.24077112537634,
+              "net_points": 352.1502488022561,
+              "profit_factor": 1.5241317645848893,
+              "trades": 64
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 388.0503557815973,
+              "net_points": -320.4336281245596,
+              "profit_factor": 0.6497756610372527,
+              "trades": 59
+            },
+            "zero_cost": {
+              "max_drawdown_points": 255.84848065456026,
+              "net_points": -84.43362812455962,
+              "profit_factor": 0.886960356919238,
+              "trades": 59
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 168408,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 192.6444977135834,
+              "net_points": -126.87619410897969,
+              "profit_factor": 0.7065896747145088,
+              "trades": 24
+            },
+            "zero_cost": {
+              "max_drawdown_points": 148.7404977135884,
+              "net_points": -30.87619410897969,
+              "profit_factor": 0.9161927163516602,
+              "trades": 24
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 195.78729123412631,
+              "net_points": 75.30520476997845,
+              "profit_factor": 1.2285168186238264,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 155.78729123412631,
+              "net_points": 163.30520476997845,
+              "profit_factor": 1.588404521564586,
+              "trades": 22
+            }
+          }
+        }
+      },
+      "rank": 1,
+      "rules": "short; sessions=london; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; close lt 0.0; close lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 180 bars",
+      "rules_readable": "short during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 240 bars and close below the open and close below the sma over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_sow_48_london_short_1_2",
+      "strategy_hash": "8e12fa7d140556e5ae0c075c23551170103e831326cf1e2c33dbf4acaa577d47"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 452.534185468583,
+            "net_points": -105.7353527728028,
+            "profit_factor": 0.9485737697025295,
+            "trades": 166
+          },
+          "zero_cost": {
+            "max_drawdown_points": 234.5661238689063,
+            "net_points": 558.2646472271972,
+            "profit_factor": 1.335483728710971,
+            "trades": 166
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 1019.8316572596959,
+            "net_points": -759.605722264203,
+            "profit_factor": 0.6537428981614257,
+            "trades": 154
+          },
+          "zero_cost": {
+            "max_drawdown_points": 427.83165725969593,
+            "net_points": -143.605722264203,
+            "profit_factor": 0.9184874514895724,
+            "trades": 154
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 1,
+      "group": "NSXUSD:1",
+      "mirror_rules_readable": "long during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 240 bars and close below the open and close below the sma over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "periods": {
+        "2022": {
+          "candles": 342711,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 156.7510611769976,
+              "net_points": -76.55425643475064,
+              "profit_factor": 0.8500768998610204,
+              "trades": 33
+            },
+            "zero_cost": {
+              "max_drawdown_points": 124.75106117699761,
+              "net_points": 55.44574356524936,
+              "profit_factor": 1.1287568955615566,
+              "trades": 33
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 338.47263594121614,
+              "net_points": -298.9822166246813,
+              "profit_factor": 0.4559374176609354,
+              "trades": 30
+            },
+            "zero_cost": {
+              "max_drawdown_points": 238.47263594121614,
+              "net_points": -178.9822166246813,
+              "profit_factor": 0.6018515981280237,
+              "trades": 30
+            }
+          }
+        },
+        "2023": {
+          "candles": 299289,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 96.12967225803004,
+              "net_points": 23.482803247423362,
+              "profit_factor": 1.1156918488718588,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 84.12967225803004,
+              "net_points": 107.48280324742336,
+              "profit_factor": 1.6935396240295841,
+              "trades": 21
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 215.11507432309736,
+              "net_points": -143.7053109602548,
+              "profit_factor": 0.41979908784016207,
+              "trades": 20
+            },
+            "zero_cost": {
+              "max_drawdown_points": 147.11507432309736,
+              "net_points": -63.70531096025479,
+              "profit_factor": 0.6676510185071997,
+              "trades": 20
+            }
+          }
+        },
+        "2024": {
+          "candles": 340926,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 152.62127078145568,
+              "net_points": -116.71547774077044,
+              "profit_factor": 0.8170039996351026,
+              "trades": 60
+            },
+            "zero_cost": {
+              "max_drawdown_points": 132.5441757671215,
+              "net_points": 123.28452225922956,
+              "profit_factor": 1.2496631521000026,
+              "trades": 60
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 391.7802643297764,
+              "net_points": -342.1389008495389,
+              "profit_factor": 0.5214830325658663,
+              "trades": 56
+            },
+            "zero_cost": {
+              "max_drawdown_points": 197.3446593482804,
+              "net_points": -118.13890084953891,
+              "profit_factor": 0.787136529787596,
+              "trades": 56
+            }
+          }
+        },
+        "2025": {
+          "candles": 340493,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 347.0927553634974,
+              "net_points": 96.1502488022561,
+              "profit_factor": 1.1178494552494984,
+              "trades": 64
+            },
+            "zero_cost": {
+              "max_drawdown_points": 206.24077112537634,
+              "net_points": 352.1502488022561,
+              "profit_factor": 1.5241317645848893,
+              "trades": 64
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 388.0503557815973,
+              "net_points": -320.4336281245596,
+              "profit_factor": 0.6497756610372527,
+              "trades": 59
+            },
+            "zero_cost": {
+              "max_drawdown_points": 255.84848065456026,
+              "net_points": -84.43362812455962,
+              "profit_factor": 0.886960356919238,
+              "trades": 59
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 168408,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 191.9313584301126,
+              "net_points": -108.65292708171182,
+              "profit_factor": 0.7279628089411295,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 156.0273584301176,
+              "net_points": -24.652927081711823,
+              "profit_factor": 0.9282102762132812,
+              "trades": 21
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 224.42037833397626,
+              "net_points": 46.67211767015033,
+              "profit_factor": 1.1476295407421166,
+              "trades": 19
+            },
+            "zero_cost": {
+              "max_drawdown_points": 196.42037833397626,
+              "net_points": 122.67211767015033,
+              "profit_factor": 1.4574868456724883,
+              "trades": 19
+            }
+          }
+        }
+      },
+      "rank": 2,
+      "rules": "short; sessions=new_york; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; close lt 0.0; close lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 180 bars",
+      "rules_readable": "short during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 240 bars and close below the open and close below the sma over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_sow_48_newyork_short_1_2",
+      "strategy_hash": "ff8a7a29441a600b0c1b81b1ec72537546bb144c4295ed78bb5b9dd4bab59265"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 456.5301529494609,
+            "net_points": -75.63730444362955,
+            "profit_factor": 0.9653003931414158,
+            "trades": 190
+          },
+          "zero_cost": {
+            "max_drawdown_points": 234.56612386892084,
+            "net_points": 684.3626955563705,
+            "profit_factor": 1.3933629624946458,
+            "trades": 190
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 1134.6257163740229,
+            "net_points": -874.3997813785427,
+            "profit_factor": 0.6324685488776995,
+            "trades": 178
+          },
+          "zero_cost": {
+            "max_drawdown_points": 446.6257163740229,
+            "net_points": -162.39978137854268,
+            "profit_factor": 0.9137600539096163,
+            "trades": 178
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 1,
+      "group": "NSXUSD:1",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 240 bars and close below the open and close below the sma over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "periods": {
+        "2022": {
+          "candles": 342711,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 180.73555334434786,
+              "net_points": -86.58790872114878,
+              "profit_factor": 0.844593253966385,
+              "trades": 36
+            },
+            "zero_cost": {
+              "max_drawdown_points": 140.73555334434786,
+              "net_points": 57.41209127885122,
+              "profit_factor": 1.121335131864221,
+              "trades": 36
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 410.57547784749477,
+              "net_points": -388.36584940776993,
+              "profit_factor": 0.39215269056418606,
+              "trades": 34
+            },
+            "zero_cost": {
+              "max_drawdown_points": 298.57547784749477,
+              "net_points": -252.36584940776993,
+              "profit_factor": 0.5173911640063632,
+              "trades": 34
+            }
+          }
+        },
+        "2023": {
+          "candles": 299289,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 96.12967225803004,
+              "net_points": 6.140831242035347,
+              "profit_factor": 1.0278724371644667,
+              "trades": 23
+            },
+            "zero_cost": {
+              "max_drawdown_points": 84.12967225803004,
+              "net_points": 98.14083124203535,
+              "profit_factor": 1.5972574730017306,
+              "trades": 23
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 204.43113031231042,
+              "net_points": -133.02136694948058,
+              "profit_factor": 0.462934821788299,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 128.43113031231042,
+              "net_points": -45.02136694948058,
+              "profit_factor": 0.7651246775891469,
+              "trades": 22
+            }
+          }
+        },
+        "2024": {
+          "candles": 340926,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 179.3161041809508,
+              "net_points": -132.2147847438864,
+              "profit_factor": 0.8140863879416037,
+              "trades": 76
+            },
+            "zero_cost": {
+              "max_drawdown_points": 132.54417576713604,
+              "net_points": 171.7852152561136,
+              "profit_factor": 1.3209963755655318,
+              "trades": 76
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 487.31005737226224,
+              "net_points": -437.66869389200656,
+              "profit_factor": 0.47165393267490696,
+              "trades": 72
+            },
+            "zero_cost": {
+              "max_drawdown_points": 224.89623656714684,
+              "net_points": -149.66869389200656,
+              "profit_factor": 0.7587448162968123,
+              "trades": 72
+            }
+          }
+        },
+        "2025": {
+          "candles": 340493,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 318.2474438358913,
+              "net_points": 124.99556032985129,
+              "profit_factor": 1.1532045821719512,
+              "trades": 66
+            },
+            "zero_cost": {
+              "max_drawdown_points": 206.24077112537634,
+              "net_points": 388.9955603298513,
+              "profit_factor": 1.578971419571141,
+              "trades": 66
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 414.47301154540037,
+              "net_points": -346.85628388835903,
+              "profit_factor": 0.6315373856570349,
+              "trades": 61
+            },
+            "zero_cost": {
+              "max_drawdown_points": 265.744738510708,
+              "net_points": -102.85628388835903,
+              "profit_factor": 0.8656107345854418,
+              "trades": 61
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 168408,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 192.6444977135834,
+              "net_points": -74.55891127162977,
+              "profit_factor": 0.8275771545420855,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 148.7404977135884,
+              "net_points": 25.441088728370232,
+              "profit_factor": 1.0690547718366952,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 227.94593265280128,
+              "net_points": 43.146563351303485,
+              "profit_factor": 1.1192890357924452,
+              "trades": 23
+            },
+            "zero_cost": {
+              "max_drawdown_points": 183.94593265280128,
+              "net_points": 135.14656335130348,
+              "profit_factor": 1.442092261577454,
+              "trades": 23
+            }
+          }
+        }
+      },
+      "rank": 3,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; close lt 0.0; close lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 180 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 240 bars and close below the open and close below the sma over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_sow_48_any_short_1_2",
+      "strategy_hash": "c054d05b7b119a573703768ef678356d38addae4e903a938b71889609a855260"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 558.2582039326808,
+            "net_points": -211.501023630919,
+            "profit_factor": 0.9203792305963587,
+            "trades": 126
+          },
+          "zero_cost": {
+            "max_drawdown_points": 396.69477522649686,
+            "net_points": 292.498976369081,
+            "profit_factor": 1.1234133355008475,
+            "trades": 126
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 1407.7507181284745,
+            "net_points": -788.8736618365183,
+            "profit_factor": 0.7198183061229341,
+            "trades": 114
+          },
+          "zero_cost": {
+            "max_drawdown_points": 1087.7507181284745,
+            "net_points": -332.8736618365183,
+            "profit_factor": 0.8664200276990164,
+            "trades": 114
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 2,
+      "group": "NSXUSD:3",
+      "mirror_rules_readable": "long during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and close below the open and close below the sma over 160 bars; exits: stop at 1.5 atr, target at 3 atr, close after 12 bars",
+      "periods": {
+        "2022": {
+          "candles": 114215,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 231.31486362013675,
+              "net_points": -148.98592685019867,
+              "profit_factor": 0.7004638066444309,
+              "trades": 19
+            },
+            "zero_cost": {
+              "max_drawdown_points": 203.31486362013675,
+              "net_points": -72.98592685019867,
+              "profit_factor": 0.8386554756326365,
+              "trades": 19
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 409.0119106298371,
+              "net_points": -267.6249893141958,
+              "profit_factor": 0.4109377187216357,
+              "trades": 16
+            },
+            "zero_cost": {
+              "max_drawdown_points": 361.0119106298371,
+              "net_points": -203.62498931419577,
+              "profit_factor": 0.49886024305619847,
+              "trades": 16
+            }
+          }
+        },
+        "2023": {
+          "candles": 99742,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 204.4814569583832,
+              "net_points": -36.21235129482557,
+              "profit_factor": 0.9212935817533159,
+              "trades": 28
+            },
+            "zero_cost": {
+              "max_drawdown_points": 171.22331843154097,
+              "net_points": 75.78764870517443,
+              "profit_factor": 1.1894246039844139,
+              "trades": 28
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 572.6632854476775,
+              "net_points": -553.2147549960209,
+              "profit_factor": 0.12093844946005496,
+              "trades": 26
+            },
+            "zero_cost": {
+              "max_drawdown_points": 480.6632854476775,
+              "net_points": -449.21475499602093,
+              "profit_factor": 0.17015587012540848,
+              "trades": 26
+            }
+          }
+        },
+        "2024": {
+          "candles": 113547,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 411.9928482134128,
+              "net_points": -289.19180731555025,
+              "profit_factor": 0.6255174852391064,
+              "trades": 43
+            },
+            "zero_cost": {
+              "max_drawdown_points": 270.36095591282356,
+              "net_points": -117.19180731555025,
+              "profit_factor": 0.8247847572389116,
+              "trades": 43
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 578.0720940864994,
+              "net_points": -501.4190532694738,
+              "profit_factor": 0.47510489098995845,
+              "trades": 41
+            },
+            "zero_cost": {
+              "max_drawdown_points": 437.9073912423337,
+              "net_points": -337.4190532694738,
+              "profit_factor": 0.5943535541398319,
+              "trades": 41
+            }
+          }
+        },
+        "2025": {
+          "candles": 113441,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 272.6540995696414,
+              "net_points": 46.3193386695275,
+              "profit_factor": 1.0794236110627073,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 220.6540995696414,
+              "net_points": 146.3193386695275,
+              "profit_factor": 1.276955484583035,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 272.22071301506367,
+              "net_points": -26.521718336152844,
+              "profit_factor": 0.9588963853072656,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 236.6456574712647,
+              "net_points": 61.478281663847156,
+              "profit_factor": 1.1043347801256522,
+              "trades": 22
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 56092,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 428.6947752264823,
+              "net_points": -8.598874140549015,
+              "profit_factor": 0.98802341347906,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 396.6947752264823,
+              "net_points": 75.40112585945099,
+              "profit_factor": 1.1132193746292876,
+              "trades": 21
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 415.6258779275522,
+              "net_points": 252.16036288975738,
+              "profit_factor": 1.540855657490114,
+              "trades": 17
+            },
+            "zero_cost": {
+              "max_drawdown_points": 378.6556155729777,
+              "net_points": 320.1603628897574,
+              "profit_factor": 1.7444587794382609,
+              "trades": 17
+            }
+          }
+        }
+      },
+      "rank": 1,
+      "rules": "short; sessions=london; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; close lt 0.0; close lt 0.0; exits: stop 1.5 atr; target 3.0 atr; time_stop 12 bars",
+      "rules_readable": "short during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and close below the open and close below the sma over 160 bars; exits: stop at 1.5 atr, target at 3 atr, close after 12 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "staged",
+      "source_name": "volatility_high_volatility",
+      "strategy_hash": "4225cd15cd6c1f8028820f8def2f30bddabd52f709fab82333bac9b03389fe7a"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 668.8446950270009,
+            "net_points": 814.9792732759997,
+            "profit_factor": 1.2280943469222878,
+            "trades": 109
+          },
+          "zero_cost": {
+            "max_drawdown_points": 652.8446950270009,
+            "net_points": 1250.9792732759997,
+            "profit_factor": 1.3724167895257733,
+            "trades": 109
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 1995.7350659286021,
+            "net_points": -736.2509140641068,
+            "profit_factor": 0.8224893780280043,
+            "trades": 102
+          },
+          "zero_cost": {
+            "max_drawdown_points": 1739.7350659286021,
+            "net_points": -328.25091406410684,
+            "profit_factor": 0.9152166647596734,
+            "trades": 102
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 2,
+      "group": "NSXUSD:3",
+      "mirror_rules_readable": "long during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and close below the open and close below the sma over 160 bars; exits: stop at 3 atr, target at 6 atr, close after 60 bars",
+      "periods": {
+        "2022": {
+          "candles": 114215,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 690.6790177725343,
+              "net_points": 149.51799483025388,
+              "profit_factor": 1.1693074775556171,
+              "trades": 20
+            },
+            "zero_cost": {
+              "max_drawdown_points": 670.6790177725343,
+              "net_points": 229.51799483025388,
+              "profit_factor": 1.2709407340939747,
+              "trades": 20
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 869.8629017088824,
+              "net_points": -306.22144922798,
+              "profit_factor": 0.7036261432479273,
+              "trades": 19
+            },
+            "zero_cost": {
+              "max_drawdown_points": 817.8629017088824,
+              "net_points": -230.22144922797997,
+              "profit_factor": 0.7644135227052299,
+              "trades": 19
+            }
+          }
+        },
+        "2023": {
+          "candles": 99742,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 260.6387013977801,
+              "net_points": 441.2677222878665,
+              "profit_factor": 1.9917277191360565,
+              "trades": 26
+            },
+            "zero_cost": {
+              "max_drawdown_points": 248.6387013977801,
+              "net_points": 545.2677222878665,
+              "profit_factor": 2.3465114079953464,
+              "trades": 26
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 954.5979286951333,
+              "net_points": -806.5824674334272,
+              "profit_factor": 0.2693979058072979,
+              "trades": 28
+            },
+            "zero_cost": {
+              "max_drawdown_points": 850.5979286951333,
+              "net_points": -694.5824674334272,
+              "profit_factor": 0.3109279916666287,
+              "trades": 28
+            }
+          }
+        },
+        "2024": {
+          "candles": 113547,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 257.02676400619384,
+              "net_points": 373.1500796447435,
+              "profit_factor": 1.3475103870586405,
+              "trades": 36
+            },
+            "zero_cost": {
+              "max_drawdown_points": 237.02676400619384,
+              "net_points": 517.1500796447435,
+              "profit_factor": 1.5183001448334004,
+              "trades": 36
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 607.1606406016363,
+              "net_points": -490.19246113029294,
+              "profit_factor": 0.6004156614280152,
+              "trades": 32
+            },
+            "zero_cost": {
+              "max_drawdown_points": 527.0429859807336,
+              "net_points": -362.19246113029294,
+              "profit_factor": 0.6841590714342981,
+              "trades": 32
+            }
+          }
+        },
+        "2025": {
+          "candles": 113441,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 543.562930042186,
+              "net_points": -61.91901217823397,
+              "profit_factor": 0.9405089855556411,
+              "trades": 28
+            },
+            "zero_cost": {
+              "max_drawdown_points": 499.71721374949266,
+              "net_points": 50.08098782176603,
+              "profit_factor": 1.050778900748641,
+              "trades": 28
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 565.4846761031804,
+              "net_points": -15.5836960930028,
+              "profit_factor": 0.9860407738385979,
+              "trades": 26
+            },
+            "zero_cost": {
+              "max_drawdown_points": 541.4846761031804,
+              "net_points": 88.4163039069972,
+              "profit_factor": 1.0840161678477398,
+              "trades": 26
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 56092,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 668.8446950270009,
+              "net_points": 62.48048352162368,
+              "profit_factor": 1.0616512986516426,
+              "trades": 19
+            },
+            "zero_cost": {
+              "max_drawdown_points": 652.8446950270009,
+              "net_points": 138.48048352162368,
+              "profit_factor": 1.1427488757658157,
+              "trades": 19
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 489.54787389365083,
+              "net_points": 576.1077105926161,
+              "profit_factor": 1.8224013693940382,
+              "trades": 16
+            },
+            "zero_cost": {
+              "max_drawdown_points": 469.54787389365083,
+              "net_points": 640.1077105926161,
+              "profit_factor": 1.9632648541453874,
+              "trades": 16
+            }
+          }
+        }
+      },
+      "rank": 2,
+      "rules": "short; sessions=new_york; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; close lt 0.0; close lt 0.0; exits: stop 3.0 atr; target 6.0 atr; time_stop 60 bars",
+      "rules_readable": "short during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and close below the open and close below the sma over 160 bars; exits: stop at 3 atr, target at 6 atr, close after 60 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "staged",
+      "source_name": "session_new_york",
+      "strategy_hash": "f2677183f40306b6422c0b425b3ac55a4a966f7aebf7c2f3f2c2d72ea6718688"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 668.8446950270009,
+            "net_points": 848.9529409351653,
+            "profit_factor": 1.2483666214632505,
+            "trades": 101
+          },
+          "zero_cost": {
+            "max_drawdown_points": 652.8446950270009,
+            "net_points": 1252.9529409351653,
+            "profit_factor": 1.3881230619301175,
+            "trades": 101
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 1842.9150988655456,
+            "net_points": -509.51537854089656,
+            "profit_factor": 0.8695343226217689,
+            "trades": 94
+          },
+          "zero_cost": {
+            "max_drawdown_points": 1610.9150988655456,
+            "net_points": -133.51537854089656,
+            "profit_factor": 0.9635339340830009,
+            "trades": 94
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 2,
+      "group": "NSXUSD:3",
+      "mirror_rules_readable": "long during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and close below the open and close below the sma over 160 bars; exits: stop at 3 atr, target at 6 atr, close after 60 bars",
+      "periods": {
+        "2022": {
+          "candles": 114215,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 627.629512606276,
+              "net_points": 256.7224572117648,
+              "profit_factor": 1.330865998314076,
+              "trades": 18
+            },
+            "zero_cost": {
+              "max_drawdown_points": 611.629512606276,
+              "net_points": 328.7224572117648,
+              "profit_factor": 1.4395210177076958,
+              "trades": 18
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 903.5816391924018,
+              "net_points": -376.1655023452404,
+              "profit_factor": 0.6196783309288552,
+              "trades": 17
+            },
+            "zero_cost": {
+              "max_drawdown_points": 847.5816391924018,
+              "net_points": -308.1655023452404,
+              "profit_factor": 0.6711399846416257,
+              "trades": 17
+            }
+          }
+        },
+        "2023": {
+          "candles": 99742,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 231.8916924924124,
+              "net_points": 482.1257357933955,
+              "profit_factor": 2.3960154714430093,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 223.8916924924124,
+              "net_points": 566.1257357933955,
+              "profit_factor": 2.76166439792247,
+              "trades": 21
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 827.6407396815193,
+              "net_points": -694.1652784198322,
+              "profit_factor": 0.29994003380000284,
+              "trades": 23
+            },
+            "zero_cost": {
+              "max_drawdown_points": 743.6407396815193,
+              "net_points": -602.1652784198322,
+              "profit_factor": 0.3423125775832433,
+              "trades": 23
+            }
+          }
+        },
+        "2024": {
+          "candles": 113547,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 239.2147640061885,
+              "net_points": 343.3862542779898,
+              "profit_factor": 1.3253711351961428,
+              "trades": 34
+            },
+            "zero_cost": {
+              "max_drawdown_points": 223.2147640061885,
+              "net_points": 479.3862542779898,
+              "profit_factor": 1.487494304394482,
+              "trades": 34
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 566.7578625522001,
+              "net_points": -409.8216295382008,
+              "profit_factor": 0.6375940822796542,
+              "trades": 30
+            },
+            "zero_cost": {
+              "max_drawdown_points": 490.6402079312975,
+              "net_points": -289.8216295382008,
+              "profit_factor": 0.726282775316352,
+              "trades": 30
+            }
+          }
+        },
+        "2025": {
+          "candles": 113441,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 511.71721374949266,
+              "net_points": -163.50858137604519,
+              "profit_factor": 0.8196540501158031,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 499.71721374949266,
+              "net_points": -75.50858137604519,
+              "profit_factor": 0.9126140515351915,
+              "trades": 22
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 473.53726320499845,
+              "net_points": -41.97691184494761,
+              "profit_factor": 0.958447448459111,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 450.6737468177889,
+              "net_points": 42.02308815505239,
+              "profit_factor": 1.0438557032115459,
+              "trades": 21
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 56092,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 668.8446950270009,
+              "net_points": -72.06645567362284,
+              "profit_factor": 0.9217014011028594,
+              "trades": 16
+            },
+            "zero_cost": {
+              "max_drawdown_points": 652.8446950270009,
+              "net_points": -8.06645567362284,
+              "profit_factor": 0.9908445433236008,
+              "trades": 16
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 493.197910454488,
+              "net_points": 731.2192615276581,
+              "profit_factor": 2.2722977931418145,
+              "trades": 14
+            },
+            "zero_cost": {
+              "max_drawdown_points": 473.197910454488,
+              "net_points": 787.2192615276581,
+              "profit_factor": 2.4398859100069297,
+              "trades": 14
+            }
+          }
+        }
+      },
+      "rank": 3,
+      "rules": "short; sessions=new_york; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; close lt 0.0; close lt 0.0; exits: stop 3.0 atr; target 6.0 atr; time_stop 60 bars",
+      "rules_readable": "short during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and close below the open and close below the sma over 160 bars; exits: stop at 3 atr, target at 6 atr, close after 60 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "staged",
+      "source_name": "volatility_high_volatility",
+      "strategy_hash": "4eb63ce0bfa23d6de5079d96fdd0ea94eda6b063281f05b448727ca306efebcd"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 1142.5170617488184,
+            "net_points": -857.3388713756376,
+            "profit_factor": 0.7938914947147335,
+            "trades": 210
+          },
+          "zero_cost": {
+            "max_drawdown_points": 530.3130177837884,
+            "net_points": -17.33887137563761,
+            "profit_factor": 0.9951885227270806,
+            "trades": 210
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 860.4935474794765,
+            "net_points": 8.19156783579092,
+            "profit_factor": 1.002278539188688,
+            "trades": 197
+          },
+          "zero_cost": {
+            "max_drawdown_points": 351.90844511865,
+            "net_points": 796.1915678357909,
+            "profit_factor": 1.2575757877689986,
+            "trades": 197
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 2,
+      "five_year_wins_zero_cost": 3,
+      "group": "NSXUSD:5",
+      "mirror_rules_readable": "long during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and close below the open and close below the sma over 96 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "periods": {
+        "2022": {
+          "candles": 68515,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 493.3344611331704,
+              "net_points": -199.0879369659142,
+              "profit_factor": 0.8023611658204616,
+              "trades": 39
+            },
+            "zero_cost": {
+              "max_drawdown_points": 391.5432527489029,
+              "net_points": -43.087936965914196,
+              "profit_factor": 0.9527198283255461,
+              "trades": 39
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 362.5134927487088,
+              "net_points": -96.945504371286,
+              "profit_factor": 0.896155897455282,
+              "trades": 38
+            },
+            "zero_cost": {
+              "max_drawdown_points": 302.5134927487088,
+              "net_points": 55.054495628713994,
+              "profit_factor": 1.0663652801533923,
+              "trades": 38
+            }
+          }
+        },
+        "2023": {
+          "candles": 59837,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 143.51292865903815,
+              "net_points": 184.02763697762748,
+              "profit_factor": 1.2192647189735408,
+              "trades": 64
+            },
+            "zero_cost": {
+              "max_drawdown_points": 119.51292865903815,
+              "net_points": 440.0276369776275,
+              "profit_factor": 1.643979633717329,
+              "trades": 64
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 380.45060040785756,
+              "net_points": -309.2437098951268,
+              "profit_factor": 0.6942701292651559,
+              "trades": 61
+            },
+            "zero_cost": {
+              "max_drawdown_points": 261.1543235974823,
+              "net_points": -65.24370989512681,
+              "profit_factor": 0.9226505872616064,
+              "trades": 61
+            }
+          }
+        },
+        "2024": {
+          "candles": 68057,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 461.64931633400556,
+              "net_points": -258.9526035817471,
+              "profit_factor": 0.7769937202576811,
+              "trades": 68
+            },
+            "zero_cost": {
+              "max_drawdown_points": 333.77210827660747,
+              "net_points": 13.047396418252902,
+              "profit_factor": 1.0133519580781076,
+              "trades": 68
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 349.3772546554246,
+              "net_points": -302.34623349117464,
+              "profit_factor": 0.7327943502182459,
+              "trades": 65
+            },
+            "zero_cost": {
+              "max_drawdown_points": 250.48886587498419,
+              "net_points": -42.346233491174644,
+              "profit_factor": 0.9556821254213211,
+              "trades": 65
+            }
+          }
+        },
+        "2025": {
+          "candles": 68001,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 577.309102972853,
+              "net_points": -485.49901941819553,
+              "profit_factor": 0.6214858989266798,
+              "trades": 53
+            },
+            "zero_cost": {
+              "max_drawdown_points": 416.1408003853867,
+              "net_points": -273.49901941819553,
+              "profit_factor": 0.7606438169917396,
+              "trades": 53
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 292.5094060569536,
+              "net_points": 309.59625684050843,
+              "profit_factor": 1.3430565384537636,
+              "trades": 49
+            },
+            "zero_cost": {
+              "max_drawdown_points": 225.42341488500824,
+              "net_points": 505.59625684050843,
+              "profit_factor": 1.6428725347854396,
+              "trades": 49
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 33635,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 432.9286703527323,
+              "net_points": -296.91488535332246,
+              "profit_factor": 0.661257009769529,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 408.9286703527323,
+              "net_points": -196.91488535332246,
+              "profit_factor": 0.7540161734680516,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 219.71641067952442,
+              "net_points": 310.18525438158395,
+              "profit_factor": 1.5643554980039518,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 207.71641067952442,
+              "net_points": 398.18525438158395,
+              "profit_factor": 1.787507246148632,
+              "trades": 22
+            }
+          }
+        }
+      },
+      "rank": 1,
+      "rules": "short; sessions=new_york; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; close lt 0.0; close lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 36 bars",
+      "rules_readable": "short during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and close below the open and close below the sma over 96 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_sow_96_newyork_short_1_2",
+      "strategy_hash": "ff94a4401ed8a5d03d7881d84591fca7190d4918630f12a613236aeca5b96c2f"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 1354.5343143752689,
+            "net_points": -1286.212791781416,
+            "profit_factor": 0.6720133756217267,
+            "trades": 227
+          },
+          "zero_cost": {
+            "max_drawdown_points": 686.5343143752689,
+            "net_points": -378.21279178141594,
+            "profit_factor": 0.8853045760981014,
+            "trades": 227
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 1028.4865554476855,
+            "net_points": -203.35318372529946,
+            "profit_factor": 0.9393717067632514,
+            "trades": 217
+          },
+          "zero_cost": {
+            "max_drawdown_points": 460.5267164908728,
+            "net_points": 664.6468162747005,
+            "profit_factor": 1.239245349462983,
+            "trades": 217
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 3,
+      "five_year_wins_zero_cost": 4,
+      "group": "NSXUSD:5",
+      "mirror_rules_readable": "long during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and close below the open and close below the sma over 96 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "periods": {
+        "2022": {
+          "candles": 68515,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 289.1466602239525,
+              "net_points": -187.58373916866913,
+              "profit_factor": 0.712934884648264,
+              "trades": 33
+            },
+            "zero_cost": {
+              "max_drawdown_points": 240.34593722384307,
+              "net_points": -55.583739168669126,
+              "profit_factor": 0.902391104223557,
+              "trades": 33
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 173.37503997577005,
+              "net_points": 9.026596381043419,
+              "profit_factor": 1.0154625353087656,
+              "trades": 33
+            },
+            "zero_cost": {
+              "max_drawdown_points": 157.37503997577005,
+              "net_points": 141.02659638104342,
+              "profit_factor": 1.2821818231896758,
+              "trades": 33
+            }
+          }
+        },
+        "2023": {
+          "candles": 59837,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 199.87493486246967,
+              "net_points": -16.078477685345206,
+              "profit_factor": 0.981123663431721,
+              "trades": 75
+            },
+            "zero_cost": {
+              "max_drawdown_points": 158.74808966838464,
+              "net_points": 283.9215223146548,
+              "profit_factor": 1.4277346558576574,
+              "trades": 75
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 601.2302775979188,
+              "net_points": -520.9909479765556,
+              "profit_factor": 0.5111155694702197,
+              "trades": 73
+            },
+            "zero_cost": {
+              "max_drawdown_points": 373.23027759791876,
+              "net_points": -228.99094797655562,
+              "profit_factor": 0.726634447749413,
+              "trades": 73
+            }
+          }
+        },
+        "2024": {
+          "candles": 68057,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 589.322442953955,
+              "net_points": -559.1288127940061,
+              "profit_factor": 0.5464245128544082,
+              "trades": 78
+            },
+            "zero_cost": {
+              "max_drawdown_points": 406.2140882062522,
+              "net_points": -247.12881279400608,
+              "profit_factor": 0.7540306648155718,
+              "trades": 78
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 233.37255077077134,
+              "net_points": -150.50122869725237,
+              "profit_factor": 0.8564793917067578,
+              "trades": 77
+            },
+            "zero_cost": {
+              "max_drawdown_points": 178.64901994490356,
+              "net_points": 157.49877130274763,
+              "profit_factor": 1.183856760919478,
+              "trades": 77
+            }
+          }
+        },
+        "2025": {
+          "candles": 68001,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 370.6074482804106,
+              "net_points": -223.62907542496396,
+              "profit_factor": 0.7498360133955854,
+              "trades": 45
+            },
+            "zero_cost": {
+              "max_drawdown_points": 216.77079476506333,
+              "net_points": -43.62907542496396,
+              "profit_factor": 0.943626582141851,
+              "trades": 45
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 346.19883311179,
+              "net_points": 105.65956528425886,
+              "profit_factor": 1.1497740676803638,
+              "trades": 41
+            },
+            "zero_cost": {
+              "max_drawdown_points": 294.19883311179,
+              "net_points": 269.65956528425886,
+              "profit_factor": 1.4453798921682806,
+              "trades": 41
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 33635,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 612.0093052931625,
+              "net_points": -487.3764258771007,
+              "profit_factor": 0.48322802138645227,
+              "trades": 29
+            },
+            "zero_cost": {
+              "max_drawdown_points": 529.2337530307996,
+              "net_points": -371.3764258771007,
+              "profit_factor": 0.5657010254798363,
+              "trades": 29
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 182.74966161452176,
+              "net_points": 362.47942766424967,
+              "profit_factor": 1.678386319243428,
+              "trades": 26
+            },
+            "zero_cost": {
+              "max_drawdown_points": 166.74966161452176,
+              "net_points": 466.47942766424967,
+              "profit_factor": 1.9752333293540467,
+              "trades": 26
+            }
+          }
+        }
+      },
+      "rank": 2,
+      "rules": "short; sessions=london; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; close lt 0.0; close lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 36 bars",
+      "rules_readable": "short during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and close below the open and close below the sma over 96 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_sow_96_london_short_1_2",
+      "strategy_hash": "517772c7340d317e9d700515d69fa0593f167784ed2caec864a6b43d429d7847"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 1348.6084238570038,
+            "net_points": -1144.6201088394537,
+            "profit_factor": 0.7579637294859557,
+            "trades": 266
+          },
+          "zero_cost": {
+            "max_drawdown_points": 569.3283492542541,
+            "net_points": -80.62010883945368,
+            "profit_factor": 0.9799309004848057,
+            "trades": 266
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 1073.9469136234256,
+            "net_points": -312.5974499123895,
+            "profit_factor": 0.9255164069284703,
+            "trades": 254
+          },
+          "zero_cost": {
+            "max_drawdown_points": 438.1304438114021,
+            "net_points": 703.4025500876105,
+            "profit_factor": 1.1997812787433253,
+            "trades": 254
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 2,
+      "five_year_wins_zero_cost": 4,
+      "group": "NSXUSD:5",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and close below the open and close below the sma over 96 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "periods": {
+        "2022": {
+          "candles": 68515,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 423.18466002515925,
+              "net_points": -130.01053497987596,
+              "profit_factor": 0.8813182505126362,
+              "trades": 47
+            },
+            "zero_cost": {
+              "max_drawdown_points": 300.5307397056313,
+              "net_points": 57.989465020124044,
+              "profit_factor": 1.0592058394660833,
+              "trades": 47
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 341.72549167204124,
+              "net_points": -142.06530023896084,
+              "profit_factor": 0.8654374450286825,
+              "trades": 46
+            },
+            "zero_cost": {
+              "max_drawdown_points": 299.1128995914769,
+              "net_points": 41.934699761039155,
+              "profit_factor": 1.044813685012825,
+              "trades": 46
+            }
+          }
+        },
+        "2023": {
+          "candles": 59837,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 162.23844985233154,
+              "net_points": 86.46126933783125,
+              "profit_factor": 1.0854370062865397,
+              "trades": 86
+            },
+            "zero_cost": {
+              "max_drawdown_points": 125.1116046582465,
+              "net_points": 430.46126933783125,
+              "profit_factor": 1.5380843098142267,
+              "trades": 86
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 559.859671091559,
+              "net_points": -559.8596710916263,
+              "profit_factor": 0.5604660029455008,
+              "trades": 84
+            },
+            "zero_cost": {
+              "max_drawdown_points": 281.3438573966123,
+              "net_points": -223.8596710916263,
+              "profit_factor": 0.7800461326048561,
+              "trades": 84
+            }
+          }
+        },
+        "2024": {
+          "candles": 68057,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 521.3720060561172,
+              "net_points": -389.966588526313,
+              "profit_factor": 0.7219531751222675,
+              "trades": 91
+            },
+            "zero_cost": {
+              "max_drawdown_points": 342.33707513086847,
+              "net_points": -25.96658852631299,
+              "profit_factor": 0.9774305882089901,
+              "trades": 91
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 413.38349427520006,
+              "net_points": -336.3905289514114,
+              "profit_factor": 0.7482542833860527,
+              "trades": 89
+            },
+            "zero_cost": {
+              "max_drawdown_points": 248.86154539075505,
+              "net_points": 19.609471048588603,
+              "profit_factor": 1.0177584799872066,
+              "trades": 89
+            }
+          }
+        },
+        "2025": {
+          "candles": 68001,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 638.9915898038598,
+              "net_points": -547.1815062492133,
+              "profit_factor": 0.6010341465782885,
+              "trades": 59
+            },
+            "zero_cost": {
+              "max_drawdown_points": 437.15493628851254,
+              "net_points": -311.18150624921327,
+              "profit_factor": 0.7431435325096148,
+              "trades": 59
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 292.5094060569536,
+              "net_points": 323.89489370406955,
+              "profit_factor": 1.3410041348544806,
+              "trades": 54
+            },
+            "zero_cost": {
+              "max_drawdown_points": 225.42341488500824,
+              "net_points": 539.8948937040695,
+              "profit_factor": 1.656944797503532,
+              "trades": 54
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 33635,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 432.9286703527323,
+              "net_points": -293.9332834017587,
+              "profit_factor": 0.6883384661649464,
+              "trades": 30
+            },
+            "zero_cost": {
+              "max_drawdown_points": 408.9286703527323,
+              "net_points": -173.93328340175867,
+              "profit_factor": 0.796597087610222,
+              "trades": 30
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 264.43604698817944,
+              "net_points": 259.75785642657866,
+              "profit_factor": 1.4077527026671746,
+              "trades": 27
+            },
+            "zero_cost": {
+              "max_drawdown_points": 224.43604698817944,
+              "net_points": 367.75785642657866,
+              "profit_factor": 1.6373094598302766,
+              "trades": 27
+            }
+          }
+        }
+      },
+      "rank": 3,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; close lt 0.0; close lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 36 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and close below the open and close below the sma over 96 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_sow_96_any_short_1_2",
+      "strategy_hash": "143087d2fdc58b5866f5b81e1409ae627293ae6ecc321380391286c2967e0987"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 499.53064583445666,
+            "net_points": -326.5276389637711,
+            "profit_factor": 0.8410972658815712,
+            "trades": 69
+          },
+          "zero_cost": {
+            "max_drawdown_points": 415.88328040545457,
+            "net_points": -50.527638963771096,
+            "profit_factor": 0.9733907082614374,
+            "trades": 69
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 978.7618639888242,
+            "net_points": -280.2800262874698,
+            "profit_factor": 0.874978090064815,
+            "trades": 73
+          },
+          "zero_cost": {
+            "max_drawdown_points": 822.7618639888242,
+            "net_points": 11.71997371253019,
+            "profit_factor": 1.0057398875711239,
+            "trades": 73
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 2,
+      "group": "NSXUSD:60",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 16 bars and rolling high below the rolling high over 16 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 5 bars",
+      "periods": {
+        "2022": {
+          "candles": 5619,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 164.34743033109407,
+              "net_points": 119.54739189700013,
+              "profit_factor": 1.3624419030995276,
+              "trades": 12
+            },
+            "zero_cost": {
+              "max_drawdown_points": 152.34743033109407,
+              "net_points": 167.54739189700013,
+              "profit_factor": 1.5407567017090065,
+              "trades": 12
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 347.29580022812297,
+              "net_points": -227.03156344485978,
+              "profit_factor": 0.5617497202648359,
+              "trades": 12
+            },
+            "zero_cost": {
+              "max_drawdown_points": 311.29580022812297,
+              "net_points": -179.03156344485978,
+              "profit_factor": 0.6316532859702458,
+              "trades": 12
+            }
+          }
+        },
+        "2023": {
+          "candles": 4916,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 114.32538111603935,
+              "net_points": 1.0006853438444523,
+              "profit_factor": 1.0077533211089713,
+              "trades": 10
+            },
+            "zero_cost": {
+              "max_drawdown_points": 94.32538111603935,
+              "net_points": 41.00068534384445,
+              "profit_factor": 1.373632322837485,
+              "trades": 10
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 239.95555195551424,
+              "net_points": -238.58555195553345,
+              "profit_factor": 0.054490934366723816,
+              "trades": 10
+            },
+            "zero_cost": {
+              "max_drawdown_points": 203.95555195551424,
+              "net_points": -198.58555195553345,
+              "profit_factor": 0.08204846517158869,
+              "trades": 10
+            }
+          }
+        },
+        "2024": {
+          "candles": 5448,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 215.65693749285128,
+              "net_points": -102.8105638868401,
+              "profit_factor": 0.8287819356020958,
+              "trades": 23
+            },
+            "zero_cost": {
+              "max_drawdown_points": 191.65686591001577,
+              "net_points": -10.8105638868401,
+              "profit_factor": 0.9803713967038276,
+              "trades": 23
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 471.6369658201729,
+              "net_points": -393.2369658201642,
+              "profit_factor": 0.45344479956929845,
+              "trades": 24
+            },
+            "zero_cost": {
+              "max_drawdown_points": 379.6369658201729,
+              "net_points": -297.2369658201642,
+              "profit_factor": 0.5409344465512911,
+              "trades": 24
+            }
+          }
+        },
+        "2025": {
+          "candles": 5470,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 236.18146360370156,
+              "net_points": 68.45127317952574,
+              "profit_factor": 1.0980542346041553,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 208.18146360370156,
+              "net_points": 168.45127317952574,
+              "profit_factor": 1.2635683267222966,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 345.56929060768744,
+              "net_points": -62.152187089493964,
+              "profit_factor": 0.9283829156789214,
+              "trades": 29
+            },
+            "zero_cost": {
+              "max_drawdown_points": 321.56929060768744,
+              "net_points": 53.847812910506036,
+              "profit_factor": 1.0676615867471329,
+              "trades": 29
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 2725,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 392.12697799627495,
+              "net_points": -293.1689779962762,
+              "profit_factor": 0.5326218300857128,
+              "trades": 11
+            },
+            "zero_cost": {
+              "max_drawdown_points": 354.9709607037221,
+              "net_points": -249.16897799627623,
+              "profit_factor": 0.5842075567411947,
+              "trades": 11
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 367.73043619345117,
+              "net_points": 413.6947341840678,
+              "profit_factor": 2.0286082809329593,
+              "trades": 10
+            },
+            "zero_cost": {
+              "max_drawdown_points": 351.73043619345117,
+              "net_points": 453.6947341840678,
+              "profit_factor": 2.187095826882713,
+              "trades": 10
+            }
+          }
+        }
+      },
+      "rank": 1,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 5 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 16 bars and rolling high below the rolling high over 16 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 5 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_test_192_any_short_1_2",
+      "strategy_hash": "75911ac5e4c5611875986faea37a69378360385e152c80044399dc613f1a0263"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 861.8055701627745,
+            "net_points": -510.98014669027543,
+            "profit_factor": 0.7066017404918536,
+            "trades": 56
+          },
+          "zero_cost": {
+            "max_drawdown_points": 805.8055701627745,
+            "net_points": -286.98014669027543,
+            "profit_factor": 0.8217043174371575,
+            "trades": 56
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 985.3335820203938,
+            "net_points": -313.667584925357,
+            "profit_factor": 0.8304700672197071,
+            "trades": 60
+          },
+          "zero_cost": {
+            "max_drawdown_points": 801.3335820203938,
+            "net_points": -73.667584925357,
+            "profit_factor": 0.9562081015104936,
+            "trades": 60
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 1,
+      "group": "NSXUSD:60",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 16 bars and rolling high below the rolling high over 16 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 5 bars",
+      "periods": {
+        "2022": {
+          "candles": 5619,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 140.17943033108895,
+              "net_points": 104.18010747436892,
+              "profit_factor": 1.577432858995217,
+              "trades": 8
+            },
+            "zero_cost": {
+              "max_drawdown_points": 132.17943033108895,
+              "net_points": 136.18010747436892,
+              "profit_factor": 1.8085771766752692,
+              "trades": 8
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 304.85571545815037,
+              "net_points": -200.75947867486866,
+              "profit_factor": 0.42206963737519054,
+              "trades": 8
+            },
+            "zero_cost": {
+              "max_drawdown_points": 280.85571545815037,
+              "net_points": -168.75947867486866,
+              "profit_factor": 0.47813328531046845,
+              "trades": 8
+            }
+          }
+        },
+        "2023": {
+          "candles": 4916,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 103.98538111604284,
+              "net_points": -11.089314656153874,
+              "profit_factor": 0.896666120542753,
+              "trades": 7
+            },
+            "zero_cost": {
+              "max_drawdown_points": 91.98538111604284,
+              "net_points": 16.910685343846126,
+              "profit_factor": 1.1838410097199288,
+              "trades": 7
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 190.81741434597643,
+              "net_points": -189.44741434599018,
+              "profit_factor": 0.0,
+              "trades": 7
+            },
+            "zero_cost": {
+              "max_drawdown_points": 166.81741434597643,
+              "net_points": -161.44741434599018,
+              "profit_factor": 0.0,
+              "trades": 7
+            }
+          }
+        },
+        "2024": {
+          "candles": 5448,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 188.76833578378137,
+              "net_points": -16.665942466370325,
+              "profit_factor": 0.965932183060601,
+              "trades": 20
+            },
+            "zero_cost": {
+              "max_drawdown_points": 168.76833578378137,
+              "net_points": 63.334057533629675,
+              "profit_factor": 1.1415320946629446,
+              "trades": 20
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 466.72443569393363,
+              "net_points": -378.4704356939292,
+              "profit_factor": 0.403172525846849,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 386.72443569393363,
+              "net_points": -294.4704356939292,
+              "profit_factor": 0.48350941801972697,
+              "trades": 21
+            }
+          }
+        },
+        "2025": {
+          "candles": 5470,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 300.6566878376616,
+              "net_points": 77.92404836139394,
+              "profit_factor": 1.1504862834591834,
+              "trades": 20
+            },
+            "zero_cost": {
+              "max_drawdown_points": 280.6566878376616,
+              "net_points": 157.92404836139394,
+              "profit_factor": 1.3354113267793308,
+              "trades": 20
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 416.0456763750408,
+              "net_points": -305.4343656275814,
+              "profit_factor": 0.6035565118664028,
+              "trades": 24
+            },
+            "zero_cost": {
+              "max_drawdown_points": 340.0456763750408,
+              "net_points": -209.43436562758143,
+              "profit_factor": 0.7035338758343005,
+              "trades": 24
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 2725,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 660.1068823251117,
+              "net_points": -561.1488823251239,
+              "profit_factor": 0.10540078468365308,
+              "trades": 9
+            },
+            "zero_cost": {
+              "max_drawdown_points": 628.1068823251117,
+              "net_points": -525.1488823251239,
+              "profit_factor": 0.12367527204828324,
+              "trades": 9
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 221.7404840290401,
+              "net_points": 559.6846863484898,
+              "profit_factor": 3.1845714083795706,
+              "trades": 8
+            },
+            "zero_cost": {
+              "max_drawdown_points": 213.7404840290401,
+              "net_points": 591.6846863484898,
+              "profit_factor": 3.422962606733689,
+              "trades": 8
+            }
+          }
+        }
+      },
+      "rank": 2,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 5 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 16 bars and rolling high below the rolling high over 16 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 5 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_test_192_any_short_1_2",
+      "strategy_hash": "d7650179ca2d60baa51b3ad18bd5e99eb5a70f0c0ebe67b7da1cf278b4c81325"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 733.5094090997009,
+            "net_points": -382.6839856271945,
+            "profit_factor": 0.7802677539393408,
+            "trades": 57
+          },
+          "zero_cost": {
+            "max_drawdown_points": 673.5094090997009,
+            "net_points": -154.6839856271945,
+            "profit_factor": 0.903897579268064,
+            "trades": 57
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 985.3335820203938,
+            "net_points": -383.8156654568975,
+            "profit_factor": 0.8001342699488192,
+            "trades": 61
+          },
+          "zero_cost": {
+            "max_drawdown_points": 801.3335820203938,
+            "net_points": -139.81566545689748,
+            "profit_factor": 0.9200307371223402,
+            "trades": 61
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 1,
+      "group": "NSXUSD:60",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 16 bars and rolling high below the rolling high over 16 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 5 bars",
+      "periods": {
+        "2022": {
+          "candles": 5619,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 140.17943033108895,
+              "net_points": 104.18010747436892,
+              "profit_factor": 1.577432858995217,
+              "trades": 8
+            },
+            "zero_cost": {
+              "max_drawdown_points": 132.17943033108895,
+              "net_points": 136.18010747436892,
+              "profit_factor": 1.8085771766752692,
+              "trades": 8
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 304.85571545815037,
+              "net_points": -200.75947867486866,
+              "profit_factor": 0.42206963737519054,
+              "trades": 8
+            },
+            "zero_cost": {
+              "max_drawdown_points": 280.85571545815037,
+              "net_points": -168.75947867486866,
+              "profit_factor": 0.47813328531046845,
+              "trades": 8
+            }
+          }
+        },
+        "2023": {
+          "candles": 4916,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 103.98538111604284,
+              "net_points": -11.089314656153874,
+              "profit_factor": 0.896666120542753,
+              "trades": 7
+            },
+            "zero_cost": {
+              "max_drawdown_points": 91.98538111604284,
+              "net_points": 16.910685343846126,
+              "profit_factor": 1.1838410097199288,
+              "trades": 7
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 190.81741434597643,
+              "net_points": -189.44741434599018,
+              "profit_factor": 0.0,
+              "trades": 7
+            },
+            "zero_cost": {
+              "max_drawdown_points": 166.81741434597643,
+              "net_points": -161.44741434599018,
+              "profit_factor": 0.0,
+              "trades": 7
+            }
+          }
+        },
+        "2024": {
+          "candles": 5448,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 188.76833578378137,
+              "net_points": -16.665942466370325,
+              "profit_factor": 0.965932183060601,
+              "trades": 20
+            },
+            "zero_cost": {
+              "max_drawdown_points": 168.76833578378137,
+              "net_points": 63.334057533629675,
+              "profit_factor": 1.1415320946629446,
+              "trades": 20
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 466.72443569393363,
+              "net_points": -378.4704356939292,
+              "profit_factor": 0.403172525846849,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 386.72443569393363,
+              "net_points": -294.4704356939292,
+              "profit_factor": 0.48350941801972697,
+              "trades": 21
+            }
+          }
+        },
+        "2025": {
+          "candles": 5470,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 300.6566878376616,
+              "net_points": 77.92404836139394,
+              "profit_factor": 1.1504862834591834,
+              "trades": 20
+            },
+            "zero_cost": {
+              "max_drawdown_points": 280.6566878376616,
+              "net_points": 157.92404836139394,
+              "profit_factor": 1.3354113267793308,
+              "trades": 20
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 416.0456763750408,
+              "net_points": -305.4343656275814,
+              "profit_factor": 0.6035565118664028,
+              "trades": 24
+            },
+            "zero_cost": {
+              "max_drawdown_points": 340.0456763750408,
+              "net_points": -209.43436562758143,
+              "profit_factor": 0.7035338758343005,
+              "trades": 24
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 2725,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 531.810721262038,
+              "net_points": -432.8527212620429,
+              "profit_factor": 0.3099341066419301,
+              "trades": 10
+            },
+            "zero_cost": {
+              "max_drawdown_points": 495.810721262038,
+              "net_points": -392.8527212620429,
+              "profit_factor": 0.3444400899021371,
+              "trades": 10
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 291.8885645605769,
+              "net_points": 489.5366058169493,
+              "profit_factor": 2.5000496631756293,
+              "trades": 9
+            },
+            "zero_cost": {
+              "max_drawdown_points": 279.8885645605769,
+              "net_points": 525.5366058169493,
+              "profit_factor": 2.693384245778474,
+              "trades": 9
+            }
+          }
+        }
+      },
+      "rank": 3,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 5 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 16 bars and rolling high below the rolling high over 16 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 5 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_test_192_any_short_1_2",
+      "strategy_hash": "92555c98f97623e665d463b68406a8601071cfaaae8425446b1500763c4fa675"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 34.23938832481508,
+            "net_points": -34.239388324804715,
+            "profit_factor": 0.20515437219052962,
+            "trades": 16
+          },
+          "zero_cost": {
+            "max_drawdown_points": 14.585496044615866,
+            "net_points": -8.639388324804713,
+            "profit_factor": 0.6121796210770698,
+            "trades": 16
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 35.378301870499854,
+            "net_points": -23.72949086202816,
+            "profit_factor": 0.4000057933885193,
+            "trades": 18
+          },
+          "zero_cost": {
+            "max_drawdown_points": 14.328383950181887,
+            "net_points": 5.07050913797184,
+            "profit_factor": 1.2543060669580988,
+            "trades": 18
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 2,
+      "group": "XAUUSD:1",
+      "mirror_rules_readable": "short during any session; entry when prior trend in ATR at most the trend atr parameter and flat range width in ATR at least 1.5 and low below the rolling low over 240 bars and low above the rolling low over 240 bars and close above the rolling low over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "periods": {
+        "2022": {
+          "candles": 354568,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 15.048396805199445,
+              "net_points": -15.048396805206995,
+              "profit_factor": 0.0,
+              "trades": 8
+            },
+            "zero_cost": {
+              "max_drawdown_points": 3.85906984686153,
+              "net_points": -2.248396805206994,
+              "profit_factor": 0.5183184214194094,
+              "trades": 8
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 13.18624966306379,
+              "net_points": -12.902538818789072,
+              "profit_factor": 0.021515658471620774,
+              "trades": 8
+            },
+            "zero_cost": {
+              "max_drawdown_points": 3.3513912378402893,
+              "net_points": -0.10253881878907123,
+              "profit_factor": 0.97405736490615,
+              "trades": 8
+            }
+          }
+        },
+        "2023": {
+          "candles": 308752,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 4.525645222995081,
+              "net_points": -4.5256452230016295,
+              "profit_factor": 0.0,
+              "trades": 2
+            },
+            "zero_cost": {
+              "max_drawdown_points": 1.6256452230009018,
+              "net_points": -1.3256452230016293,
+              "profit_factor": 0.0,
+              "trades": 2
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 3.303736122092232,
+              "net_points": -1.8499179202601228,
+              "profit_factor": 0.09038448982209495,
+              "trades": 2
+            },
+            "zero_cost": {
+              "max_drawdown_points": 0.6437361220887396,
+              "net_points": 1.3500820797398774,
+              "profit_factor": 4.112680754467121,
+              "trades": 2
+            }
+          }
+        },
+        "2024": {
+          "candles": 355592,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 12.26427944956231,
+              "net_points": -12.264279449556945,
+              "profit_factor": 0.16974923861413627,
+              "trades": 6
+            },
+            "zero_cost": {
+              "max_drawdown_points": 6.295345816441113,
+              "net_points": -2.6642794495569433,
+              "profit_factor": 0.606561278596153,
+              "trades": 6
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 16.86098875258176,
+              "net_points": -16.64191344876472,
+              "profit_factor": 0.0,
+              "trades": 6
+            },
+            "zero_cost": {
+              "max_drawdown_points": 8.230988752562553,
+              "net_points": -7.041913448764717,
+              "profit_factor": 0.14446324002418798,
+              "trades": 6
+            }
+          }
+        },
+        "2025": {
+          "candles": 353951,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 6.502407011357718,
+              "net_points": -2.9660202241552724,
+              "profit_factor": 0.6809328252473291,
+              "trades": 5
+            },
+            "zero_cost": {
+              "max_drawdown_points": 4.902052616525907,
+              "net_points": 5.0339797758447276,
+              "profit_factor": 2.1196794594265786,
+              "trades": 5
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 16.886470501456643,
+              "net_points": -13.765466608229598,
+              "profit_factor": 0.20250388036246497,
+              "trades": 7
+            },
+            "zero_cost": {
+              "max_drawdown_points": 8.136470501427539,
+              "net_points": -2.565466608229599,
+              "profit_factor": 0.7229774130643821,
+              "trades": 7
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 174468,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 14.483443428092869,
+              "net_points": -14.483443428090867,
+              "profit_factor": 0.0,
+              "trades": 3
+            },
+            "zero_cost": {
+              "max_drawdown_points": 9.683443428089959,
+              "net_points": -9.683443428090868,
+              "profit_factor": 0.0,
+              "trades": 3
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 5.679999999993015,
+              "net_points": 8.52780711522628,
+              "profit_factor": 3.360294596690492,
+              "trades": 3
+            },
+            "zero_cost": {
+              "max_drawdown_points": 5.680000000007567,
+              "net_points": 13.327807115226278,
+              "profit_factor": 7.620780493178405,
+              "trades": 3
+            }
+          }
+        }
+      },
+      "rank": 1,
+      "rules": "long; sessions=any; entry: pre_trend_atr lte parameter='trend_atr'; flat_range_width_atr gte 1.5; low lt 0.0; low gt 0.0; close gt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 180 bars",
+      "rules_readable": "long during any session; entry when prior trend in ATR at most the trend atr parameter and flat range width in ATR at least 1.5 and low below the rolling low over 240 bars and low above the rolling low over 240 bars and close above the rolling low over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "selection": "top 3 zero-cost net points among strategies with at least 10 trades",
+      "source": "round_d",
+      "source_name": "wyckoff_spring_48_any_long_1_2",
+      "strategy_hash": "b16f23b6ffcd871649ef59e4b2cb3c7442e672bd479e3e9f74c3df7a976d797d"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 51.88684488766012,
+            "net_points": -46.552179589133814,
+            "profit_factor": 0.16226694620226123,
+            "trades": 22
+          },
+          "zero_cost": {
+            "max_drawdown_points": 19.88684488768922,
+            "net_points": -11.352179589133812,
+            "profit_factor": 0.5759242916475629,
+            "trades": 22
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 34.83229557561572,
+            "net_points": -34.421293623608655,
+            "profit_factor": 0.3411152421103455,
+            "trades": 26
+          },
+          "zero_cost": {
+            "max_drawdown_points": 10.05581584056199,
+            "net_points": 7.178706376391347,
+            "profit_factor": 1.2885404621064662,
+            "trades": 26
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 0,
+      "five_year_wins_zero_cost": 2,
+      "group": "XAUUSD:1",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and high above the rolling high over 240 bars and high below the rolling high over 240 bars and close below the rolling high over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "periods": {
+        "2022": {
+          "candles": 354568,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 12.424847886723,
+              "net_points": -12.42484788671677,
+              "profit_factor": 0.13992127496710535,
+              "trades": 9
+            },
+            "zero_cost": {
+              "max_drawdown_points": 3.1745493633206934,
+              "net_points": 1.9751521132832295,
+              "profit_factor": 1.4135067668333166,
+              "trades": 9
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 17.536011170610436,
+              "net_points": -14.261612275081143,
+              "profit_factor": 0.07819087702158208,
+              "trades": 9
+            },
+            "zero_cost": {
+              "max_drawdown_points": 4.471329063206213,
+              "net_points": 0.1383877249188572,
+              "profit_factor": 1.025680408504448,
+              "trades": 9
+            }
+          }
+        },
+        "2023": {
+          "candles": 308752,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 13.1032153913402,
+              "net_points": -13.103215391327922,
+              "profit_factor": 0.0,
+              "trades": 5
+            },
+            "zero_cost": {
+              "max_drawdown_points": 5.1032153913402,
+              "net_points": -5.103215391327922,
+              "profit_factor": 0.0,
+              "trades": 5
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 9.161527536911308,
+              "net_points": -9.161527536898348,
+              "profit_factor": 0.1008695339291511,
+              "trades": 5
+            },
+            "zero_cost": {
+              "max_drawdown_points": 2.7405190582212526,
+              "net_points": -1.1615275368983475,
+              "profit_factor": 0.6934733122040779,
+              "trades": 5
+            }
+          }
+        },
+        "2024": {
+          "candles": 355592,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 26.86770316323964,
+              "net_points": -23.474281824107855,
+              "profit_factor": 0.03780926188895055,
+              "trades": 9
+            },
+            "zero_cost": {
+              "max_drawdown_points": 13.218891258453368,
+              "net_points": -9.074281824107857,
+              "profit_factor": 0.21751193452315212,
+              "trades": 9
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 20.878296782335383,
+              "net_points": -18.380063152591312,
+              "profit_factor": 0.20004973814804455,
+              "trades": 11
+            },
+            "zero_cost": {
+              "max_drawdown_points": 9.545920591888716,
+              "net_points": -0.7800631525913104,
+              "profit_factor": 0.9221037619514177,
+              "trades": 11
+            }
+          }
+        },
+        "2025": {
+          "candles": 353951,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 15.309347672213335,
+              "net_points": -13.969781241772306,
+              "profit_factor": 0.22687799417505078,
+              "trades": 7
+            },
+            "zero_cost": {
+              "max_drawdown_points": 6.449347672241856,
+              "net_points": -2.769781241772307,
+              "profit_factor": 0.7249283988938896,
+              "trades": 7
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 10.085240619053366,
+              "net_points": -2.482153500081858,
+              "profit_factor": 0.8308972544289823,
+              "trades": 9
+            },
+            "zero_cost": {
+              "max_drawdown_points": 5.6152406190522015,
+              "net_points": 11.917846499918141,
+              "profit_factor": 2.439635992579929,
+              "trades": 9
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 174468,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 1.1499999999941792,
+              "net_points": 3.995098868074274,
+              "profit_factor": "inf",
+              "trades": 1
+            },
+            "zero_cost": {
+              "max_drawdown_points": 0.0,
+              "net_points": 5.595098868074274,
+              "profit_factor": "inf",
+              "trades": 1
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 4.397549434041139,
+              "net_points": -4.397549434037137,
+              "profit_factor": 0.0,
+              "trades": 1
+            },
+            "zero_cost": {
+              "max_drawdown_points": 2.797549434035318,
+              "net_points": -2.797549434037137,
+              "profit_factor": 0.0,
+              "trades": 1
+            }
+          }
+        }
+      },
+      "rank": 2,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; high gt 0.0; high lt 0.0; close lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 180 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and high above the rolling high over 240 bars and high below the rolling high over 240 bars and close below the rolling high over 240 bars; exits: stop at 1 atr, target at 2 atr, close after 180 bars",
+      "selection": "top 3 zero-cost net points among strategies with at least 10 trades",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_48_any_short_1_2",
+      "strategy_hash": "3ae64b747aa85ab3527965474b3fb7e3e2439e989aebd3be70491d93e2ef1bd0"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 41.58422534260899,
+            "net_points": -41.584225342614715,
+            "profit_factor": 0.22458679949123433,
+            "trades": 18
+          },
+          "zero_cost": {
+            "max_drawdown_points": 20.32961009730934,
+            "net_points": -12.784225342614718,
+            "profit_factor": 0.5789326282553302,
+            "trades": 18
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 37.1138151272462,
+            "net_points": -26.454735386281207,
+            "profit_factor": 0.3161610495658364,
+            "trades": 19
+          },
+          "zero_cost": {
+            "max_drawdown_points": 16.12900939657993,
+            "net_points": 3.9452646137187912,
+            "profit_factor": 1.196061156674746,
+            "trades": 19
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 2,
+      "group": "XAUUSD:1",
+      "mirror_rules_readable": "short during any session; entry when prior trend in ATR at most the trend atr parameter and flat range width in ATR at least 1.5 and low below the rolling low over 240 bars and low above the rolling low over 240 bars and close above the rolling low over 240 bars; exits: stop at 1.5 atr, target at 3 atr, close after 12 bars",
+      "periods": {
+        "2022": {
+          "candles": 354568,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 14.528473887417931,
+              "net_points": -14.52847388742016,
+              "profit_factor": 0.004197387827036281,
+              "trades": 7
+            },
+            "zero_cost": {
+              "max_drawdown_points": 4.0693496353924274,
+              "net_points": -3.3284738874201594,
+              "profit_factor": 0.3707646977454683,
+              "trades": 7
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 17.372157627803972,
+              "net_points": -17.19215762779554,
+              "profit_factor": 0.0,
+              "trades": 8
+            },
+            "zero_cost": {
+              "max_drawdown_points": 6.1721576277777785,
+              "net_points": -4.392157627795541,
+              "profit_factor": 0.4017409716674773,
+              "trades": 8
+            }
+          }
+        },
+        "2023": {
+          "candles": 308752,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 7.881064969187719,
+              "net_points": -7.881064969178897,
+              "profit_factor": 0.0,
+              "trades": 3
+            },
+            "zero_cost": {
+              "max_drawdown_points": 3.381064969173167,
+              "net_points": -3.0810649691788967,
+              "profit_factor": 0.0,
+              "trades": 3
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 3.1900000000023283,
+              "net_points": -1.514805730646731,
+              "profit_factor": 0.2786639377872241,
+              "trades": 3
+            },
+            "zero_cost": {
+              "max_drawdown_points": 1.639999999999418,
+              "net_points": 3.285194269353269,
+              "profit_factor": "inf",
+              "trades": 3
+            }
+          }
+        },
+        "2024": {
+          "candles": 355592,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 9.23076192694134,
+              "net_points": -9.230761926957802,
+              "profit_factor": 0.33071664860243505,
+              "trades": 6
+            },
+            "zero_cost": {
+              "max_drawdown_points": 5.150092580268392,
+              "net_points": 0.36923807304219736,
+              "profit_factor": 1.0589365601876755,
+              "trades": 6
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 17.854124958612374,
+              "net_points": -15.953512002920524,
+              "profit_factor": 0.011378294223237944,
+              "trades": 6
+            },
+            "zero_cost": {
+              "max_drawdown_points": 10.524124958610628,
+              "net_points": -6.3535120029205245,
+              "profit_factor": 0.29067507350019933,
+              "trades": 6
+            }
+          }
+        },
+        "2025": {
+          "candles": 353951,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 8.15361051702348,
+              "net_points": -5.4008672739738355,
+              "profit_factor": 0.5808038720730928,
+              "trades": 6
+            },
+            "zero_cost": {
+              "max_drawdown_points": 6.058078924805159,
+              "net_points": 4.199132726026164,
+              "profit_factor": 1.622659455685321,
+              "trades": 6
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 18.355497393684345,
+              "net_points": -14.062497393671674,
+              "profit_factor": 0.26625972158097466,
+              "trades": 7
+            },
+            "zero_cost": {
+              "max_drawdown_points": 9.68549739367154,
+              "net_points": -2.862497393671674,
+              "profit_factor": 0.7436301050686648,
+              "trades": 7
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 174468,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 19.071531172507093,
+              "net_points": -19.07153117250418,
+              "profit_factor": 0.0,
+              "trades": 3
+            },
+            "zero_cost": {
+              "max_drawdown_points": 14.271531172504183,
+              "net_points": -14.271531172504183,
+              "profit_factor": 0.0,
+              "trades": 3
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 11.10000000000582,
+              "net_points": 5.076079740957721,
+              "profit_factor": 4.956414451253117,
+              "trades": 3
+            },
+            "zero_cost": {
+              "max_drawdown_points": 9.85000000000582,
+              "net_points": 9.87607974095772,
+              "profit_factor": "inf",
+              "trades": 3
+            }
+          }
+        }
+      },
+      "rank": 3,
+      "rules": "long; sessions=any; entry: pre_trend_atr lte parameter='trend_atr'; flat_range_width_atr gte 1.5; low lt 0.0; low gt 0.0; close gt 0.0; exits: stop 1.5 atr; target 3.0 atr; time_stop 12 bars",
+      "rules_readable": "long during any session; entry when prior trend in ATR at most the trend atr parameter and flat range width in ATR at least 1.5 and low below the rolling low over 240 bars and low above the rolling low over 240 bars and close above the rolling low over 240 bars; exits: stop at 1.5 atr, target at 3 atr, close after 12 bars",
+      "selection": "top 3 zero-cost net points among strategies with at least 10 trades",
+      "source": "staged",
+      "source_name": "session_any",
+      "strategy_hash": "05d54ee0f27ea897697f629ad32f22a2ac8e3c40cfa9b89043da1899fbd13afe"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 190.36330310589983,
+            "net_points": -178.24912542294263,
+            "profit_factor": 0.2782306148015817,
+            "trades": 73
+          },
+          "zero_cost": {
+            "max_drawdown_points": 79.69330310598889,
+            "net_points": -61.44912542294264,
+            "profit_factor": 0.6042730308437788,
+            "trades": 73
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 50.97148131635913,
+            "net_points": -34.73850695976907,
+            "profit_factor": 0.8045435489309025,
+            "trades": 71
+          },
+          "zero_cost": {
+            "max_drawdown_points": 41.91370240472315,
+            "net_points": 78.86149304023093,
+            "profit_factor": 1.6587642129271507,
+            "trades": 71
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 4,
+      "group": "XAUUSD:3",
+      "mirror_rules_readable": "long during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and rolling high below the rolling high over 160 bars and high below the rolling high over 100 bars; exits: stop at 1 atr, target at 2 atr, close after 60 bars",
+      "periods": {
+        "2022": {
+          "candles": 118147,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 30.968121779165813,
+              "net_points": -30.96812177916636,
+              "profit_factor": 0.0,
+              "trades": 11
+            },
+            "zero_cost": {
+              "max_drawdown_points": 13.368121779159992,
+              "net_points": -13.368121779166358,
+              "profit_factor": 0.0,
+              "trades": 11
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 15.232761705294251,
+              "net_points": -14.845560355911084,
+              "profit_factor": 0.06630250443442506,
+              "trades": 9
+            },
+            "zero_cost": {
+              "max_drawdown_points": 6.660870885927579,
+              "net_points": -0.4455603559110841,
+              "profit_factor": 0.9435480783437687,
+              "trades": 9
+            }
+          }
+        },
+        "2023": {
+          "candles": 102794,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 51.8066613219853,
+              "net_points": -48.965757259794515,
+              "profit_factor": 0.11382233665594993,
+              "trades": 24
+            },
+            "zero_cost": {
+              "max_drawdown_points": 15.746661322045838,
+              "net_points": -10.565757259794509,
+              "profit_factor": 0.5689166071041344,
+              "trades": 24
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 25.928365461499197,
+              "net_points": -25.928365461518027,
+              "profit_factor": 0.2682655152754933,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 5.071126341514173,
+              "net_points": 9.271634538481976,
+              "profit_factor": 1.532387104061224,
+              "trades": 22
+            }
+          }
+        },
+        "2024": {
+          "candles": 118491,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 42.13354021219129,
+              "net_points": -39.64782195061334,
+              "profit_factor": 0.07208153137138083,
+              "trades": 14
+            },
+            "zero_cost": {
+              "max_drawdown_points": 26.383540212220396,
+              "net_points": -17.247821950613343,
+              "profit_factor": 0.3099002489556738,
+              "trades": 14
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 9.755627384365653,
+              "net_points": -3.526319989540934,
+              "profit_factor": 0.8229367225540931,
+              "trades": 12
+            },
+            "zero_cost": {
+              "max_drawdown_points": 4.6622422848886345,
+              "net_points": 15.673680010459066,
+              "profit_factor": 2.5194164357998843,
+              "trades": 12
+            }
+          }
+        },
+        "2025": {
+          "candles": 117955,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 44.632228722868604,
+              "net_points": -39.88583724582458,
+              "profit_factor": 0.4065977477511066,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 22.8884673613793,
+              "net_points": -4.685837245824587,
+              "profit_factor": 0.887401672513819,
+              "trades": 22
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 27.081183509610128,
+              "net_points": -11.295699006416086,
+              "profit_factor": 0.7841252717547952,
+              "trades": 23
+            },
+            "zero_cost": {
+              "max_drawdown_points": 16.658546393722645,
+              "net_points": 25.50430099358391,
+              "profit_factor": 1.7699353639099393,
+              "trades": 23
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 58141,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 63.54183783203189,
+              "net_points": -49.7497089667102,
+              "profit_factor": 0.3915383850457758,
+              "trades": 13
+            },
+            "zero_cost": {
+              "max_drawdown_points": 52.32356654186151,
+              "net_points": -28.949708966710205,
+              "profit_factor": 0.5488106379956227,
+              "trades": 13
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 46.71370240471151,
+              "net_points": 6.011877497705976,
+              "profit_factor": 1.0858162862642173,
+              "trades": 14
+            },
+            "zero_cost": {
+              "max_drawdown_points": 41.91370240472315,
+              "net_points": 28.411877497705973,
+              "profit_factor": 1.482741970911869,
+              "trades": 14
+            }
+          }
+        }
+      },
+      "rank": 1,
+      "rules": "short; sessions=london; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 60 bars",
+      "rules_readable": "short during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and rolling high below the rolling high over 160 bars and high below the rolling high over 100 bars; exits: stop at 1 atr, target at 2 atr, close after 60 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_test_96_london_short_1_2",
+      "strategy_hash": "94c58b1b10f2e0070b71dfcc47be0886bdb52f772f5088795affdf9c57f1ee0f"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 196.99475934368093,
+            "net_points": -184.88058166072815,
+            "profit_factor": 0.2708389388828619,
+            "trades": 74
+          },
+          "zero_cost": {
+            "max_drawdown_points": 83.39475934377697,
+            "net_points": -66.48058166072815,
+            "profit_factor": 0.5852034767767299,
+            "trades": 74
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 56.579838882011245,
+            "net_points": -38.47919065071496,
+            "profit_factor": 0.7901194442045785,
+            "trades": 74
+          },
+          "zero_cost": {
+            "max_drawdown_points": 41.91370240472315,
+            "net_points": 79.92080934928504,
+            "profit_factor": 1.654265157255613,
+            "trades": 74
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 4,
+      "group": "XAUUSD:3",
+      "mirror_rules_readable": "long during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and rolling high below the rolling high over 160 bars and high below the rolling high over 100 bars; exits: stop at 1 atr, target at 2 atr, close after 60 bars",
+      "periods": {
+        "2022": {
+          "candles": 118147,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 30.968121779165813,
+              "net_points": -30.96812177916636,
+              "profit_factor": 0.0,
+              "trades": 11
+            },
+            "zero_cost": {
+              "max_drawdown_points": 13.368121779159992,
+              "net_points": -13.368121779166358,
+              "profit_factor": 0.0,
+              "trades": 11
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 15.232761705294251,
+              "net_points": -14.845560355911084,
+              "profit_factor": 0.06630250443442506,
+              "trades": 9
+            },
+            "zero_cost": {
+              "max_drawdown_points": 6.660870885927579,
+              "net_points": -0.4455603559110841,
+              "profit_factor": 0.9435480783437687,
+              "trades": 9
+            }
+          }
+        },
+        "2023": {
+          "candles": 102794,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 55.157463463940076,
+              "net_points": -52.31655940175324,
+              "profit_factor": 0.1073145159517042,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 16.167463464007596,
+              "net_points": -12.316559401753238,
+              "profit_factor": 0.530986732863778,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 28.120136820420157,
+              "net_points": -26.252462945728578,
+              "profit_factor": 0.30227659786065164,
+              "trades": 24
+            },
+            "zero_cost": {
+              "max_drawdown_points": 5.071126341514173,
+              "net_points": 12.147537054271424,
+              "profit_factor": 1.67333267525409,
+              "trades": 24
+            }
+          }
+        },
+        "2024": {
+          "candles": 118491,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 42.13354021219129,
+              "net_points": -39.688144352955895,
+              "profit_factor": 0.07113782500890432,
+              "trades": 14
+            },
+            "zero_cost": {
+              "max_drawdown_points": 26.383540212205844,
+              "net_points": -17.288144352955896,
+              "profit_factor": 0.3082869159854134,
+              "trades": 14
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 9.73546618319233,
+              "net_points": -3.5061587883698846,
+              "profit_factor": 0.8237706523640499,
+              "trades": 12
+            },
+            "zero_cost": {
+              "max_drawdown_points": 4.912081083719386,
+              "net_points": 15.693841211630115,
+              "profit_factor": 2.524350125574615,
+              "trades": 12
+            }
+          }
+        },
+        "2025": {
+          "candles": 117955,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 40.902754756680224,
+              "net_points": -36.156363279636565,
+              "profit_factor": 0.43048324635980445,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 20.75899339519674,
+              "net_points": -2.556363279636571,
+              "profit_factor": 0.9352590613397204,
+              "trades": 21
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 30.517930917514605,
+              "net_points": -14.732446414322473,
+              "profit_factor": 0.7357977252751997,
+              "trades": 24
+            },
+            "zero_cost": {
+              "max_drawdown_points": 16.658546393722645,
+              "net_points": 23.667553585677524,
+              "profit_factor": 1.6769508526250085,
+              "trades": 24
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 58141,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 70.51164349169994,
+              "net_points": -56.71951462638244,
+              "profit_factor": 0.3607837695360849,
+              "trades": 14
+            },
+            "zero_cost": {
+              "max_drawdown_points": 57.693372201538295,
+              "net_points": -34.31951462638244,
+              "profit_factor": 0.5064277350287079,
+              "trades": 14
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 46.71370240471151,
+              "net_points": 6.011877497705976,
+              "profit_factor": 1.0858162862642173,
+              "trades": 14
+            },
+            "zero_cost": {
+              "max_drawdown_points": 41.91370240472315,
+              "net_points": 28.411877497705973,
+              "profit_factor": 1.482741970911869,
+              "trades": 14
+            }
+          }
+        }
+      },
+      "rank": 2,
+      "rules": "short; sessions=london; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 60 bars",
+      "rules_readable": "short during london; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and rolling high below the rolling high over 160 bars and high below the rolling high over 100 bars; exits: stop at 1 atr, target at 2 atr, close after 60 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_test_96_london_short_1_2",
+      "strategy_hash": "eaa204624ddc3e61ada1f44a18d2efdc7759292d59cd72dfda81b2ba548bb2c5"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 230.83344084129203,
+            "net_points": -230.83344084132736,
+            "profit_factor": 0.2549095025366274,
+            "trades": 91
+          },
+          "zero_cost": {
+            "max_drawdown_points": 86.56344084141892,
+            "net_points": -85.23344084132736,
+            "profit_factor": 0.5678059008218878,
+            "trades": 91
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 85.0932631254982,
+            "net_points": -44.05308065668059,
+            "profit_factor": 0.7973378906419972,
+            "trades": 83
+          },
+          "zero_cost": {
+            "max_drawdown_points": 52.08567508812121,
+            "net_points": 88.7469193433194,
+            "profit_factor": 1.6061256534480783,
+            "trades": 83
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 4,
+      "group": "XAUUSD:3",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and rolling high below the rolling high over 160 bars and high below the rolling high over 100 bars; exits: stop at 1 atr, target at 2 atr, close after 60 bars",
+      "periods": {
+        "2022": {
+          "candles": 118147,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 30.968121779165813,
+              "net_points": -30.96812177916636,
+              "profit_factor": 0.0,
+              "trades": 11
+            },
+            "zero_cost": {
+              "max_drawdown_points": 13.368121779159992,
+              "net_points": -13.368121779166358,
+              "profit_factor": 0.0,
+              "trades": 11
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 15.232761705294251,
+              "net_points": -14.845560355911084,
+              "profit_factor": 0.06630250443442506,
+              "trades": 9
+            },
+            "zero_cost": {
+              "max_drawdown_points": 6.660870885927579,
+              "net_points": -0.4455603559110841,
+              "profit_factor": 0.9435480783437687,
+              "trades": 9
+            }
+          }
+        },
+        "2023": {
+          "candles": 102794,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 54.384744145179866,
+              "net_points": -51.54384008299235,
+              "profit_factor": 0.1087483662440956,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 16.724744145249133,
+              "net_points": -11.543840082992347,
+              "profit_factor": 0.5470847391524505,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 25.928365461499197,
+              "net_points": -25.928365461518027,
+              "profit_factor": 0.2682655152754933,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 5.071126341514173,
+              "net_points": 9.271634538481976,
+              "profit_factor": 1.532387104061224,
+              "trades": 22
+            }
+          }
+        },
+        "2024": {
+          "candles": 118491,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 61.681933993895655,
+              "net_points": -61.681933993910754,
+              "profit_factor": 0.07032599157766546,
+              "trades": 26
+            },
+            "zero_cost": {
+              "max_drawdown_points": 26.383540212205844,
+              "net_points": -20.081933993910752,
+              "profit_factor": 0.4110570223374218,
+              "trades": 26
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 16.213201569771627,
+              "net_points": -12.907751538581943,
+              "profit_factor": 0.5789696561492638,
+              "trades": 19
+            },
+            "zero_cost": {
+              "max_drawdown_points": 3.9328304784430657,
+              "net_points": 17.492248461418058,
+              "profit_factor": 2.2046109246431462,
+              "trades": 19
+            }
+          }
+        },
+        "2025": {
+          "candles": 117955,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 50.7707536649541,
+              "net_points": -38.0823278781504,
+              "profit_factor": 0.48597249965891226,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 28.37075366495992,
+              "net_points": 1.9176721218495913,
+              "profit_factor": 1.0409005937829114,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 39.64689869218273,
+              "net_points": -27.303435447004265,
+              "profit_factor": 0.6004354984749817,
+              "trades": 26
+            },
+            "zero_cost": {
+              "max_drawdown_points": 21.929200898230192,
+              "net_points": 14.296564552995733,
+              "profit_factor": 1.3224814269612521,
+              "trades": 26
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 58141,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 81.2032900686172,
+              "net_points": -79.52533888627386,
+              "profit_factor": 0.2870159301784688,
+              "trades": 15
+            },
+            "zero_cost": {
+              "max_drawdown_points": 61.98501877843228,
+              "net_points": -55.52533888627386,
+              "profit_factor": 0.3880745539175698,
+              "trades": 15
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 56.885675088109565,
+              "net_points": 22.08647179042364,
+              "profit_factor": 1.26627072977524,
+              "trades": 16
+            },
+            "zero_cost": {
+              "max_drawdown_points": 52.08567508812121,
+              "net_points": 47.68647179042364,
+              "profit_factor": 1.6798035817040655,
+              "trades": 16
+            }
+          }
+        }
+      },
+      "rank": 3,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 60 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 160 bars and rolling high below the rolling high over 160 bars and high below the rolling high over 100 bars; exits: stop at 1 atr, target at 2 atr, close after 60 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_test_96_any_short_1_2",
+      "strategy_hash": "0e4cd6ac3b5d07e38995778924dee1d81d97f8e28b904b90199c0e2b78d7346b"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 336.22256787527294,
+            "net_points": -325.3051020276984,
+            "profit_factor": 0.36303250034597184,
+            "trades": 132
+          },
+          "zero_cost": {
+            "max_drawdown_points": 126.79256787519262,
+            "net_points": -114.10510202769842,
+            "profit_factor": 0.670129811013453,
+            "trades": 132
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 85.8984653231164,
+            "net_points": -29.874810391425477,
+            "profit_factor": 0.9124577518049175,
+            "trades": 121
+          },
+          "zero_cost": {
+            "max_drawdown_points": 40.23712986226019,
+            "net_points": 163.7251896085745,
+            "profit_factor": 1.6910805127829869,
+            "trades": 121
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 5,
+      "group": "XAUUSD:5",
+      "mirror_rules_readable": "long during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and rolling high below the rolling high over 96 bars and high below the rolling high over 60 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "periods": {
+        "2022": {
+          "candles": 70864,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 30.885454132090672,
+              "net_points": -27.605978420761765,
+              "profit_factor": 0.3563485939733158,
+              "trades": 19
+            },
+            "zero_cost": {
+              "max_drawdown_points": 7.071807387852459,
+              "net_points": 2.7940215792382332,
+              "profit_factor": 1.1264855976703354,
+              "trades": 19
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 26.301774391773506,
+              "net_points": -26.30177439182726,
+              "profit_factor": 0.3813565879419255,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 9.810303409598419,
+              "net_points": 7.298225608172743,
+              "profit_factor": 1.3148846355040797,
+              "trades": 21
+            }
+          }
+        },
+        "2023": {
+          "candles": 61611,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 113.12643987777119,
+              "net_points": -110.18050690748282,
+              "profit_factor": 0.14576439892349713,
+              "trades": 45
+            },
+            "zero_cost": {
+              "max_drawdown_points": 45.02034022109001,
+              "net_points": -38.18050690748282,
+              "profit_factor": 0.4528555619495285,
+              "trades": 45
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 43.24893758674443,
+              "net_points": -39.93514770971074,
+              "profit_factor": 0.4503530075913982,
+              "trades": 38
+            },
+            "zero_cost": {
+              "max_drawdown_points": 12.811762961908244,
+              "net_points": 20.864852290289264,
+              "profit_factor": 1.5602215553545227,
+              "trades": 38
+            }
+          }
+        },
+        "2024": {
+          "candles": 71072,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 63.579236055447836,
+              "net_points": -63.579236055448376,
+              "profit_factor": 0.1537326230104626,
+              "trades": 21
+            },
+            "zero_cost": {
+              "max_drawdown_points": 37.269269712487585,
+              "net_points": -29.979236055448382,
+              "profit_factor": 0.3745075946977687,
+              "trades": 21
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 21.111337921291124,
+              "net_points": -3.5841063182877835,
+              "profit_factor": 0.8981493166003571,
+              "trades": 16
+            },
+            "zero_cost": {
+              "max_drawdown_points": 11.511337921270751,
+              "net_points": 22.015893681712214,
+              "profit_factor": 1.9893835779417948,
+              "trades": 16
+            }
+          }
+        },
+        "2025": {
+          "candles": 70759,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 115.46171691865311,
+              "net_points": -91.64676417823537,
+              "profit_factor": 0.48781451930203257,
+              "trades": 48
+            },
+            "zero_cost": {
+              "max_drawdown_points": 54.661716918606544,
+              "net_points": -14.84676417823539,
+              "profit_factor": 0.8792285832330075,
+              "trades": 48
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 54.32991853526619,
+              "net_points": -30.07756790718821,
+              "profit_factor": 0.7906912287098875,
+              "trades": 47
+            },
+            "zero_cost": {
+              "max_drawdown_points": 39.929918535242905,
+              "net_points": 45.12243209281178,
+              "profit_factor": 1.4419456275629297,
+              "trades": 47
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 34878,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 75.10266469506314,
+              "net_points": -59.898594886531825,
+              "profit_factor": 0.5308176620888543,
+              "trades": 18
+            },
+            "zero_cost": {
+              "max_drawdown_points": 59.10266469506314,
+              "net_points": -31.098594886531828,
+              "profit_factor": 0.704571101047124,
+              "trades": 18
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 40.23712986224564,
+              "net_points": 43.722011543761255,
+              "profit_factor": 1.4873362275773754,
+              "trades": 20
+            },
+            "zero_cost": {
+              "max_drawdown_points": 40.23712986226019,
+              "net_points": 75.72201154376125,
+              "profit_factor": 2.0053865407410165,
+              "trades": 20
+            }
+          }
+        }
+      },
+      "rank": 1,
+      "rules": "short; sessions=new_york; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 36 bars",
+      "rules_readable": "short during new_york; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and rolling high below the rolling high over 96 bars and high below the rolling high over 60 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_test_96_newyork_short_1_2",
+      "strategy_hash": "70de6d5a40dfca0fe1336337cb9731b2253f0997216d99074e257dbd6820a5c0"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 198.92401068200707,
+            "net_points": -23.43188578178975,
+            "profit_factor": 0.9274655881758777,
+            "trades": 57
+          },
+          "zero_cost": {
+            "max_drawdown_points": 163.11838750091556,
+            "net_points": 67.76811421821026,
+            "profit_factor": 1.2515771474173543,
+            "trades": 57
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 181.6104025120585,
+            "net_points": -67.2712709947316,
+            "profit_factor": 0.817428460525358,
+            "trades": 60
+          },
+          "zero_cost": {
+            "max_drawdown_points": 109.6350306768436,
+            "net_points": 28.728729005268406,
+            "profit_factor": 1.0945941086634812,
+            "trades": 60
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 2,
+      "five_year_wins_zero_cost": 2,
+      "group": "XAUUSD:5",
+      "mirror_rules_readable": "short during new_york; entry when prior trend in ATR at most the trend atr parameter and flat range width in ATR at least 1.5 and rolling low below the rolling low over 48 bars and close above the open and close above the sma over 48 bars; exits: stop at 3 atr, target at 6 atr, close after 72 bars",
+      "periods": {
+        "2022": {
+          "candles": 70864,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 33.59726550387859,
+              "net_points": 4.978779185846003,
+              "profit_factor": 1.067137119958361,
+              "trades": 27
+            },
+            "zero_cost": {
+              "max_drawdown_points": 22.52513370027009,
+              "net_points": 48.178779185846,
+              "profit_factor": 1.8518417642227132,
+              "trades": 27
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 153.9676221157133,
+              "net_points": -153.9676221157181,
+              "profit_factor": 0.08741646006034312,
+              "trades": 30
+            },
+            "zero_cost": {
+              "max_drawdown_points": 110.6945961460442,
+              "net_points": -105.96762211571809,
+              "profit_factor": 0.1557454203331674,
+              "trades": 30
+            }
+          }
+        },
+        "2023": {
+          "candles": 61611,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 31.93952822027495,
+              "net_points": -3.5077923353154317,
+              "profit_factor": 0.8849095100111729,
+              "trades": 11
+            },
+            "zero_cost": {
+              "max_drawdown_points": 23.529528220329667,
+              "net_points": 14.092207664684565,
+              "profit_factor": 1.6474544213056381,
+              "trades": 11
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 55.497615891115856,
+              "net_points": -55.44761589111426,
+              "profit_factor": 0.15435341270079345,
+              "trades": 12
+            },
+            "zero_cost": {
+              "max_drawdown_points": 37.897615891110036,
+              "net_points": -36.247615891114265,
+              "profit_factor": 0.24434241260395792,
+              "trades": 12
+            }
+          }
+        },
+        "2024": {
+          "candles": 71072,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 18.5272777696955,
+              "net_points": 9.569151581709143,
+              "profit_factor": 1.1762814920068398,
+              "trades": 17
+            },
+            "zero_cost": {
+              "max_drawdown_points": 12.997277769682114,
+              "net_points": 36.76915158170914,
+              "profit_factor": 1.9270306943591076,
+              "trades": 17
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 90.92314562623505,
+              "net_points": -80.52291993488807,
+              "profit_factor": 0.2019682377833249,
+              "trades": 18
+            },
+            "zero_cost": {
+              "max_drawdown_points": 65.05014562625729,
+              "net_points": -51.72291993488807,
+              "profit_factor": 0.33468411655017505,
+              "trades": 18
+            }
+          }
+        },
+        "2025": {
+          "candles": 70759,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 133.557656723744,
+              "net_points": -133.55765672375873,
+              "profit_factor": 0.0874569891765831,
+              "trades": 17
+            },
+            "zero_cost": {
+              "max_drawdown_points": 106.35765672376147,
+              "net_points": -106.35765672375874,
+              "profit_factor": 0.1533291351964973,
+              "trades": 17
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 75.87095583994233,
+              "net_points": 58.37552908660664,
+              "profit_factor": 1.640368841608957,
+              "trades": 19
+            },
+            "zero_cost": {
+              "max_drawdown_points": 55.687584004728706,
+              "net_points": 88.77552908660664,
+              "profit_factor": 2.156545364904014,
+              "trades": 19
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 34878,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 65.92711793146736,
+              "net_points": 104.06441169557527,
+              "profit_factor": 2.1320514152742724,
+              "trades": 12
+            },
+            "zero_cost": {
+              "max_drawdown_points": 61.127117931479006,
+              "net_points": 123.26441169557529,
+              "profit_factor": 2.49728074705173,
+              "trades": 12
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 67.9720811569423,
+              "net_points": 10.32373574466409,
+              "profit_factor": 1.0931443876920244,
+              "trades": 11
+            },
+            "zero_cost": {
+              "max_drawdown_points": 56.08908115695522,
+              "net_points": 27.9237357446641,
+              "profit_factor": 1.2758285784631798,
+              "trades": 11
+            }
+          }
+        }
+      },
+      "rank": 2,
+      "rules": "long; sessions=new_york; entry: pre_trend_atr lte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_low lt 0.0; close gt 0.0; close gt 0.0; exits: stop 3.0 atr; target 6.0 atr; time_stop 72 bars",
+      "rules_readable": "long during new_york; entry when prior trend in ATR at most the trend atr parameter and flat range width in ATR at least 1.5 and rolling low below the rolling low over 48 bars and close above the open and close above the sma over 48 bars; exits: stop at 3 atr, target at 6 atr, close after 72 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "staged",
+      "source_name": "time_stop_72",
+      "strategy_hash": "42209dbf1decf3299679530e7341a102d83029fcf942414fbc8ff8d86848fa00"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 516.5612199721654,
+            "net_points": -505.6437541245798,
+            "profit_factor": 0.30955556745828705,
+            "trades": 215
+          },
+          "zero_cost": {
+            "max_drawdown_points": 177.76701007821248,
+            "net_points": -161.6437541245798,
+            "profit_factor": 0.6572743386670267,
+            "trades": 215
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 200.85571282396268,
+            "net_points": -128.9932466040282,
+            "profit_factor": 0.7496821524159452,
+            "trades": 198
+          },
+          "zero_cost": {
+            "max_drawdown_points": 40.23712986226019,
+            "net_points": 187.80675339597178,
+            "profit_factor": 1.5658163044103421,
+            "trades": 198
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 1,
+      "five_year_wins_zero_cost": 5,
+      "group": "XAUUSD:5",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and rolling high below the rolling high over 96 bars and high below the rolling high over 60 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "periods": {
+        "2022": {
+          "candles": 70864,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 69.46564191496873,
+              "net_points": -66.18616620362104,
+              "profit_factor": 0.22115321075859293,
+              "trades": 40
+            },
+            "zero_cost": {
+              "max_drawdown_points": 13.00243281731673,
+              "net_points": -2.186166203621042,
+              "profit_factor": 0.9431038978424485,
+              "trades": 40
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 60.90255792958487,
+              "net_points": -60.902557929641446,
+              "profit_factor": 0.24438312886044788,
+              "trades": 42
+            },
+            "zero_cost": {
+              "max_drawdown_points": 13.35380693989282,
+              "net_points": 6.2974420703585565,
+              "profit_factor": 1.164876074962893,
+              "trades": 42
+            }
+          }
+        },
+        "2023": {
+          "candles": 61611,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 134.04328974652162,
+              "net_points": -130.78193112340725,
+              "profit_factor": 0.14135987728267932,
+              "trades": 62
+            },
+            "zero_cost": {
+              "max_drawdown_points": 43.77298019597947,
+              "net_points": -31.58193112340723,
+              "profit_factor": 0.5909571627579523,
+              "trades": 62
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 69.6569577952323,
+              "net_points": -67.50658973982786,
+              "profit_factor": 0.33056764529481486,
+              "trades": 55
+            },
+            "zero_cost": {
+              "max_drawdown_points": 17.08142538566608,
+              "net_points": 20.49341026017214,
+              "profit_factor": 1.4352804521790297,
+              "trades": 55
+            }
+          }
+        },
+        "2024": {
+          "candles": 71072,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 149.43785628197656,
+              "net_points": -149.43785628197443,
+              "profit_factor": 0.116707313181985,
+              "trades": 64
+            },
+            "zero_cost": {
+              "max_drawdown_points": 53.40726118009479,
+              "net_points": -47.03785628197443,
+              "profit_factor": 0.47256757709056546,
+              "trades": 64
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 58.96768322249409,
+              "net_points": -58.89768322247473,
+              "profit_factor": 0.4263516463240704,
+              "trades": 54
+            },
+            "zero_cost": {
+              "max_drawdown_points": 14.923504141217563,
+              "net_points": 27.502316777525266,
+              "profit_factor": 1.5346830642264657,
+              "trades": 54
+            }
+          }
+        },
+        "2025": {
+          "candles": 70759,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 136.07326233686763,
+              "net_points": -121.89395049143285,
+              "profit_factor": 0.4575508041268809,
+              "trades": 60
+            },
+            "zero_cost": {
+              "max_drawdown_points": 65.81710888602538,
+              "net_points": -25.89395049143286,
+              "profit_factor": 0.8321956373926671,
+              "trades": 60
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 69.45688926886942,
+              "net_points": -52.38580672745619,
+              "profit_factor": 0.7126789202122736,
+              "trades": 58
+            },
+            "zero_cost": {
+              "max_drawdown_points": 39.929918535242905,
+              "net_points": 40.4141932725438,
+              "profit_factor": 1.3159210735013795,
+              "trades": 58
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 34878,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 119.17584715006524,
+              "net_points": -104.41838130250362,
+              "profit_factor": 0.4390312769247475,
+              "trades": 28
+            },
+            "zero_cost": {
+              "max_drawdown_points": 85.31687265480286,
+              "net_points": -59.61838130250362,
+              "profit_factor": 0.6050177656457542,
+              "trades": 28
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 41.201129862252856,
+              "net_points": 52.64101562309952,
+              "profit_factor": 1.4156908168499398,
+              "trades": 30
+            },
+            "zero_cost": {
+              "max_drawdown_points": 40.23712986226019,
+              "net_points": 100.64101562309952,
+              "profit_factor": 1.9655201673736091,
+              "trades": 30
+            }
+          }
+        }
+      },
+      "rank": 3,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 36 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 96 bars and rolling high below the rolling high over 96 bars and high below the rolling high over 60 bars; exits: stop at 1 atr, target at 2 atr, close after 36 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "round_d",
+      "source_name": "wyckoff_upthrust_test_96_any_short_1_2",
+      "strategy_hash": "30df9a90712e56a6855a4606ba5b0653db7ed821c2ffc6a95f0a4f67d7e1b4ca"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 180.42278501323017,
+            "net_points": -139.9766290683846,
+            "profit_factor": 0.653312534389762,
+            "trades": 59
+          },
+          "zero_cost": {
+            "max_drawdown_points": 110.89083035309159,
+            "net_points": -45.57662906838459,
+            "profit_factor": 0.8652195158493858,
+            "trades": 59
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 179.3900395156088,
+            "net_points": 5.98616727352424,
+            "profit_factor": 1.016987740258074,
+            "trades": 62
+          },
+          "zero_cost": {
+            "max_drawdown_points": 127.73562780486827,
+            "net_points": 105.18616727352423,
+            "profit_factor": 1.3587747779904231,
+            "trades": 62
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 3,
+      "five_year_wins_zero_cost": 4,
+      "group": "XAUUSD:60",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 8 bars and rolling high below the rolling high over 8 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 12 bars",
+      "periods": {
+        "2022": {
+          "candles": 5859,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 83.68561954567849,
+              "net_points": -62.46187327492443,
+              "profit_factor": 0.4301761268655071,
+              "trades": 24
+            },
+            "zero_cost": {
+              "max_drawdown_points": 63.91561954567442,
+              "net_points": -24.061873274924437,
+              "profit_factor": 0.7136040358859708,
+              "trades": 24
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 40.07243152726733,
+              "net_points": 0.32913005712426147,
+              "profit_factor": 1.0042207611445184,
+              "trades": 23
+            },
+            "zero_cost": {
+              "max_drawdown_points": 24.07243152722367,
+              "net_points": 37.12913005712426,
+              "profit_factor": 1.6493508820171532,
+              "trades": 23
+            }
+          }
+        },
+        "2023": {
+          "candles": 5020,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 78.66223627857107,
+              "net_points": -75.68223627858387,
+              "profit_factor": 0.05398778593462917,
+              "trades": 16
+            },
+            "zero_cost": {
+              "max_drawdown_points": 54.66223627862928,
+              "net_points": -50.08223627858388,
+              "profit_factor": 0.10569560805450944,
+              "trades": 16
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 17.96369346010033,
+              "net_points": 7.591647669014313,
+              "profit_factor": 1.1847500456088922,
+              "trades": 17
+            },
+            "zero_cost": {
+              "max_drawdown_points": 12.863693460109062,
+              "net_points": 34.79164766901431,
+              "profit_factor": 2.1639330009922864,
+              "trades": 17
+            }
+          }
+        },
+        "2024": {
+          "candles": 5878,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 38.08654499569093,
+              "net_points": -13.88616451709258,
+              "profit_factor": 0.7571587720380764,
+              "trades": 13
+            },
+            "zero_cost": {
+              "max_drawdown_points": 26.886544995650183,
+              "net_points": 6.913835482907416,
+              "profit_factor": 1.1557799177215609,
+              "trades": 13
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 57.396862186986255,
+              "net_points": -53.82686218700814,
+              "profit_factor": 0.35174663678280055,
+              "trades": 15
+            },
+            "zero_cost": {
+              "max_drawdown_points": 36.62455383318593,
+              "net_points": -29.826862187008146,
+              "profit_factor": 0.5441665166816887,
+              "trades": 15
+            }
+          }
+        },
+        "2025": {
+          "candles": 5866,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 54.49624137885985,
+              "net_points": 6.077042162218728,
+              "profit_factor": 1.0348155436574258,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 43.14862291541067,
+              "net_points": 46.07704216221873,
+              "profit_factor": 1.302840208337629,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 124.85363430652069,
+              "net_points": -38.808956124316865,
+              "profit_factor": 0.7942336592463931,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 103.14922259571904,
+              "net_points": 1.1910438756831354,
+              "profit_factor": 1.0073791375422338,
+              "trades": 25
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 2889,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 93.91770450616605,
+              "net_points": -56.45154856130922,
+              "profit_factor": 0.386314194224474,
+              "trades": 5
+            },
+            "zero_cost": {
+              "max_drawdown_points": 85.91770450616605,
+              "net_points": -48.45154856130921,
+              "profit_factor": 0.4338959218398362,
+              "trades": 5
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 20.168077972426545,
+              "net_points": 90.96289416860145,
+              "profit_factor": 3.2941717691894143,
+              "trades": 5
+            },
+            "zero_cost": {
+              "max_drawdown_points": 18.898077972437022,
+              "net_points": 98.96289416860145,
+              "profit_factor": 3.715064393235997,
+              "trades": 5
+            }
+          }
+        }
+      },
+      "rank": 1,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 12 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 8 bars and rolling high below the rolling high over 8 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 12 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "staged",
+      "source_name": "session_any",
+      "strategy_hash": "f9f305d393cc6d43b558c635c43e02ccb8db8d964b9f1e4c8e554a52dde1df10"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 179.1556402592396,
+            "net_points": -138.70948431438515,
+            "profit_factor": 0.6600137926214493,
+            "trades": 59
+          },
+          "zero_cost": {
+            "max_drawdown_points": 110.89083035307704,
+            "net_points": -44.309484314385145,
+            "profit_factor": 0.8700318150197907,
+            "trades": 59
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 217.42890227923635,
+            "net_points": -18.42097379080537,
+            "profit_factor": 0.9508944884617183,
+            "trades": 62
+          },
+          "zero_cost": {
+            "max_drawdown_points": 161.72697954147588,
+            "net_points": 80.77902620919463,
+            "profit_factor": 1.259178380897273,
+            "trades": 62
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 3,
+      "five_year_wins_zero_cost": 3,
+      "group": "XAUUSD:60",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 8 bars and rolling high below the rolling high over 8 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 24 bars",
+      "periods": {
+        "2022": {
+          "candles": 5859,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 83.68561954567849,
+              "net_points": -58.139975046795044,
+              "profit_factor": 0.48693959624476074,
+              "trades": 24
+            },
+            "zero_cost": {
+              "max_drawdown_points": 63.91561954567442,
+              "net_points": -19.739975046795053,
+              "profit_factor": 0.7749659352002798,
+              "trades": 24
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 37.44759440733469,
+              "net_points": 12.8064325275022,
+              "profit_factor": 1.1564636946987583,
+              "trades": 23
+            },
+            "zero_cost": {
+              "max_drawdown_points": 23.047594407311408,
+              "net_points": 49.60643252750219,
+              "profit_factor": 1.8125644604988935,
+              "trades": 23
+            }
+          }
+        },
+        "2023": {
+          "candles": 5020,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 80.27257843771076,
+              "net_points": -77.29257843772015,
+              "profit_factor": 0.052922511760101,
+              "trades": 16
+            },
+            "zero_cost": {
+              "max_drawdown_points": 56.27257843775442,
+              "net_points": -51.69257843772016,
+              "profit_factor": 0.10274123988018273,
+              "trades": 16
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 20.32069346010394,
+              "net_points": 9.732968935406056,
+              "profit_factor": 1.2309211471885375,
+              "trades": 17
+            },
+            "zero_cost": {
+              "max_drawdown_points": 15.220693460098119,
+              "net_points": 36.93296893540605,
+              "profit_factor": 2.2355695762815806,
+              "trades": 17
+            }
+          }
+        },
+        "2024": {
+          "candles": 5878,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 39.247311255079694,
+              "net_points": -17.833930776488884,
+              "profit_factor": 0.7017878854060013,
+              "trades": 13
+            },
+            "zero_cost": {
+              "max_drawdown_points": 28.0473112550535,
+              "net_points": 2.966069223511113,
+              "profit_factor": 1.0651270178638081,
+              "trades": 13
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 62.66115522797918,
+              "net_points": -59.09115522799856,
+              "profit_factor": 0.32889832644461064,
+              "trades": 15
+            },
+            "zero_cost": {
+              "max_drawdown_points": 40.261155228014104,
+              "net_points": -35.09115522799857,
+              "profit_factor": 0.4903317443036859,
+              "trades": 15
+            }
+          }
+        },
+        "2025": {
+          "candles": 5866,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 54.49624137885985,
+              "net_points": 12.902295334750757,
+              "profit_factor": 1.0739176090139242,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 43.14862291541067,
+              "net_points": 52.90229533475076,
+              "profit_factor": 1.3476990142794194,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 157.6282040291553,
+              "net_points": -60.09312541404779,
+              "profit_factor": 0.7072647661021577,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 131.87628129134828,
+              "net_points": -20.09312541404779,
+              "profit_factor": 0.8861459904427333,
+              "trades": 25
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 2889,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 93.91770450616605,
+              "net_points": -56.45154856130922,
+              "profit_factor": 0.386314194224474,
+              "trades": 5
+            },
+            "zero_cost": {
+              "max_drawdown_points": 85.91770450616605,
+              "net_points": -48.45154856130921,
+              "profit_factor": 0.4338959218398362,
+              "trades": 5
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 20.168077972426545,
+              "net_points": 90.96289416860145,
+              "profit_factor": 3.2941717691894143,
+              "trades": 5
+            },
+            "zero_cost": {
+              "max_drawdown_points": 18.898077972437022,
+              "net_points": 98.96289416860145,
+              "profit_factor": 3.715064393235997,
+              "trades": 5
+            }
+          }
+        }
+      },
+      "rank": 2,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 1.0 atr; target 2.0 atr; time_stop 24 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 8 bars and rolling high below the rolling high over 8 bars and high below the rolling high over 5 bars; exits: stop at 1 atr, target at 2 atr, close after 24 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "staged",
+      "source_name": "session_any",
+      "strategy_hash": "2d4115080a9fc17c129068acecab35207470f3332974a3c313ba4ebf9c408749"
+    },
+    {
+      "continuous_2023_to_today": {
+        "mirror": {
+          "normal_cost": {
+            "max_drawdown_points": 237.41586826877028,
+            "net_points": -207.45649089708476,
+            "profit_factor": 0.5544982141974811,
+            "trades": 61
+          },
+          "zero_cost": {
+            "max_drawdown_points": 215.41868310757854,
+            "net_points": -109.85649089708477,
+            "profit_factor": 0.7328758265845868,
+            "trades": 61
+          }
+        },
+        "original": {
+          "normal_cost": {
+            "max_drawdown_points": 207.93281615733576,
+            "net_points": -40.070424602006476,
+            "profit_factor": 0.8788508437583541,
+            "trades": 61
+          },
+          "zero_cost": {
+            "max_drawdown_points": 142.78281615728338,
+            "net_points": 57.52957539799354,
+            "profit_factor": 1.2044479654012488,
+            "trades": 61
+          }
+        }
+      },
+      "five_year_wins_normal_cost": 2,
+      "five_year_wins_zero_cost": 2,
+      "group": "XAUUSD:60",
+      "mirror_rules_readable": "long during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 8 bars and rolling high below the rolling high over 8 bars and high below the rolling high over 5 bars; exits: stop at 3 atr, target at 6 atr, close after 5 bars",
+      "periods": {
+        "2022": {
+          "candles": 5859,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 48.46700000000419,
+              "net_points": -9.873999999999294,
+              "profit_factor": 0.8670723334365538,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 38.09399999999732,
+              "net_points": 25.326000000000704,
+              "profit_factor": 1.4678649941808017,
+              "trades": 22
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 65.8049385628401,
+              "net_points": -56.9451524735311,
+              "profit_factor": 0.4000162152765742,
+              "trades": 22
+            },
+            "zero_cost": {
+              "max_drawdown_points": 51.404938562831376,
+              "net_points": -21.745152473531107,
+              "profit_factor": 0.7134125576396757,
+              "trades": 22
+            }
+          }
+        },
+        "2023": {
+          "candles": 5020,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 88.46419577764755,
+              "net_points": -74.80419577765174,
+              "profit_factor": 0.09262471938561476,
+              "trades": 17
+            },
+            "zero_cost": {
+              "max_drawdown_points": 62.930195777647896,
+              "net_points": -47.60419577765174,
+              "profit_factor": 0.2341321840203179,
+              "trades": 17
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 14.33299999999872,
+              "net_points": 35.753391555303594,
+              "profit_factor": 2.4100564582466784,
+              "trades": 17
+            },
+            "zero_cost": {
+              "max_drawdown_points": 11.58299999999872,
+              "net_points": 62.9533915553036,
+              "profit_factor": 5.32580165981606,
+              "trades": 17
+            }
+          }
+        },
+        "2024": {
+          "candles": 5878,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 25.36320487326884,
+              "net_points": 43.83057314934863,
+              "profit_factor": 1.912182856762891,
+              "trades": 14
+            },
+            "zero_cost": {
+              "max_drawdown_points": 23.023204873286886,
+              "net_points": 66.23057314934863,
+              "profit_factor": 2.7225024773633355,
+              "trades": 14
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 89.87990050048393,
+              "net_points": -83.7599005004719,
+              "profit_factor": 0.18700941119655853,
+              "trades": 14
+            },
+            "zero_cost": {
+              "max_drawdown_points": 70.67990050047229,
+              "net_points": -61.359900500471895,
+              "profit_factor": 0.3110807701212489,
+              "trades": 14
+            }
+          }
+        },
+        "2025": {
+          "candles": 5866,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 56.070185161195695,
+              "net_points": 24.495814838801827,
+              "profit_factor": 1.1999492108070064,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 44.87018516121316,
+              "net_points": 64.49581483880183,
+              "profit_factor": 1.617893278683099,
+              "trades": 25
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 115.37691565685964,
+              "net_points": -101.85691565683966,
+              "profit_factor": 0.4567049206311934,
+              "trades": 25
+            },
+            "zero_cost": {
+              "max_drawdown_points": 78.57691565679852,
+              "net_points": -61.85691565683965,
+              "profit_factor": 0.6239242012630034,
+              "trades": 25
+            }
+          }
+        },
+        "2026_to_holdout": {
+          "candles": 2889,
+          "mirror": {
+            "normal_cost": {
+              "max_drawdown_points": 214.5986766471906,
+              "net_points": -200.9786766472007,
+              "profit_factor": 0.05496813251625525,
+              "trades": 5
+            },
+            "zero_cost": {
+              "max_drawdown_points": 206.5986766471906,
+              "net_points": -192.9786766472007,
+              "profit_factor": 0.06443052923023795,
+              "trades": 5
+            }
+          },
+          "missing_data": false,
+          "original": {
+            "normal_cost": {
+              "max_drawdown_points": 54.18300000000454,
+              "net_points": 109.79300000000148,
+              "profit_factor": 8.37360644728017,
+              "trades": 5
+            },
+            "zero_cost": {
+              "max_drawdown_points": 52.58299999999872,
+              "net_points": 117.79300000000148,
+              "profit_factor": 9.86328066215213,
+              "trades": 5
+            }
+          }
+        }
+      },
+      "rank": 3,
+      "rules": "short; sessions=any; entry: pre_trend_atr gte parameter='trend_atr'; flat_range_width_atr gte 1.5; rolling_high gt 0.0; rolling_high lt 0.0; high lt 0.0; exits: stop 3.0 atr; target 6.0 atr; time_stop 5 bars",
+      "rules_readable": "short during any session; entry when prior trend in ATR at least the trend atr parameter and flat range width in ATR at least 1.5 and rolling high above the rolling high over 8 bars and rolling high below the rolling high over 8 bars and high below the rolling high over 5 bars; exits: stop at 3 atr, target at 6 atr, close after 5 bars",
+      "selection": "top 3 distinct entries from T-144 top-10 evidence",
+      "source": "staged",
+      "source_name": "session_any",
+      "strategy_hash": "e63d1ed1aafc80027006bc1e3db2c0011280d20315111ae20db1c2a60dba14c0"
+    }
+  ],
+  "sealed_holdout_read": false,
+  "task": "T-145"
+}

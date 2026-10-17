@@ -1,0 +1,50 @@
+{
+  "image": "ghcr.io/tarek-assaf/ai-trader:ff65a2d9a6474c9a7a77315c45f6cb56d894015e",
+  "timeframes": [
+    1
+  ],
+  "instruments": [
+    "NSXUSD"
+  ],
+  "command": "python scripts/lab_run.py --instruments NSXUSD --timeframes 1 --idea-sources round_c --max-ideas 400 --force --workers 2 --evaluation-batch-size 5 --years 2 --results results_1m_c_nsx.json --progress progress_1m_c_nsx.json",
+  "runs": {
+    "nsxusd_1m": {
+      "run_id": "20261013T120412Z",
+      "status": "stopped_unexpected_process_exit",
+      "started_at": "2026-10-13T12:04:12.448943+00:00",
+      "elapsed_observed_seconds": 5987,
+      "elapsed_observed": "01:39:47",
+      "phase": "evaluating:90/212:NSXUSD:1m",
+      "ideas_done": 90,
+      "ideas_total": 212,
+      "peak_cgroup_anon_bytes": 3021221888,
+      "peak_rss_bytes": 801746944,
+      "peak_memory_current_bytes": 3771043840,
+      "memory_limit_bytes": 16000000000,
+      "result_file": "not emitted",
+      "progress_file": "/workspace/state/progress_1m_c_nsx.json",
+      "log_file": "/workspace/state/t140_round_c_1m.log",
+      "process_pid": 8311,
+      "process_present_at_check": false
+    }
+  },
+  "families": {},
+  "overall_best10": {},
+  "random_baseline": {
+    "status": "skipped",
+    "reason": "No NSXUSD result file was emitted."
+  },
+  "safety": {
+    "mode": "paper",
+    "live_enabled": false,
+    "broker_calls": "unavailable (no result emitted)",
+    "orders": "unavailable (no result emitted)"
+  },
+  "notes": [
+    "Verified image health version ff65a2d9a6474c9a7a77315c45f6cb56d894015e before start.",
+    "NSXUSD-only Round C 1m run advanced through 90/212 evaluations; batches were completing within the allowed window.",
+    "The lab process disappeared unexpectedly after the evaluating:90/212 progress update. No traceback or terminal failure was emitted in the log, and the atomic result file was not created.",
+    "The stale run.lock was removed only after /proc/8311 confirmed the process had exited.",
+    "XAUUSD 1m was not evaluated. No retry was started; handed to Claude for diagnosis."
+  ]
+}
