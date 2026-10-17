@@ -18,7 +18,14 @@
           "gaps_gt_1": 313,
           "gaps_gt_5": 27,
           "gaps_gt_60": 2,
-          "exact_one_minute_share": 0.9809134703
+          "exact_one_minute_share": 0.9809134703,
+          "continuity_examples": [
+            {"start_row": 14, "length": 30, "first_bad_row": 31},
+            {"start_row": 104, "length": 30, "first_bad_row": null},
+            {"start_row": 104, "length": 120, "first_bad_row": 208},
+            {"start_row": 134, "length": 60, "first_bad_row": null},
+            {"start_row": 134, "length": 120, "first_bad_row": 208}
+          ]
         }
       ]
     },
@@ -43,7 +50,8 @@
           "gaps_gt_1": 2643,
           "gaps_gt_5": 156,
           "gaps_gt_60": 4,
-          "exact_one_minute_share": 0.8989833359
+          "exact_one_minute_share": 0.8989833359,
+          "continuity_examples": "Pending bounded sample; same _continuous rule is being applied after confirming the folder and timestamp schema."
         }
       ]
     }
