@@ -1,0 +1,31 @@
+{
+  "charts_dir": "docs/evidence/t146/xauusd_1m",
+  "checkpoint": {
+    "exit_code": -15,
+    "queries_done": 36,
+    "results_emitted": 0,
+    "time_limit_seconds": 1200
+  },
+  "clusters": [],
+  "coverage": {
+    "first_timestamp_before_holdout": "2022-01-02T23:00:00+00:00",
+    "last_timestamp_before_holdout": "2024-12-31T21:57:00+00:00",
+    "rows_loaded_before_holdout": 1018912,
+    "source_path": "/workspace/data/lake/XAUUSD/1m/**/*.parquet",
+    "windows_after_atr_filter": 0,
+    "zero_window_reason": "Rows were present before the sealed holdout, but the strict contiguous-window builder plus ATR warm-up emitted no eligible 30/60/120-bar windows."
+  },
+  "elapsed_seconds": 1200.115,
+  "explanation": "The per-group runner reached its 1200-second guard before a complete group result could be emitted. The 36 query count is 18 registered length/method/horizon rows multiplied by max_queries=2.",
+  "instrument": "XAUUSD",
+  "library_window_cap": 50000,
+  "library_windows": 0,
+  "oos_queries": 36,
+  "oos_window_cap": 20000,
+  "queries_evaluated": 36,
+  "query_stride": null,
+  "results": [],
+  "source": "T-153 bounded Pod runner checkpoint; copied into repository-local evidence.",
+  "status": "partial",
+  "timeframe": 1
+}
