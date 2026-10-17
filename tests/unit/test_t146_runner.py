@@ -70,7 +70,18 @@ def test_partial_marking_on_time_limit(tmp_path: Path) -> None:
     output = tmp_path / "output"
     child_progress = output / "groups" / "nsxusd_60m" / "progress.json"
     child_progress.parent.mkdir(parents=True)
-    child_progress.write_text(json.dumps({"queries_done": 2, "elapsed_seconds": 2.0}))
+    child_progress.write_text(
+        json.dumps(
+            {
+                "queries_done": 2,
+                "elapsed_seconds": 2.0,
+                "library_windows": 123,
+                "oos_queries": 7,
+                "library_windows_by_length": {"30": 50, "60": 40, "120": 33},
+                "oos_windows_by_length": {"30": 3, "60": 2, "120": 2},
+            }
+        )
+    )
     process = FakeProcess(complete=False)
 
     def popen(*args, **kwargs):
@@ -89,6 +100,9 @@ def test_partial_marking_on_time_limit(tmp_path: Path) -> None:
     )
     assert record["status"] == "partial"
     assert record["queries_done"] == 2
+    assert record["library_windows"] == 123
+    assert record["oos_queries"] == 7
+    assert record["library_windows_by_length"] == {"30": 50, "60": 40, "120": 33}
     assert process.terminated
     assert clock.now >= 2
 

@@ -55,6 +55,16 @@ def test_histdata_coverage_and_resampling(tmp_path) -> None:
     assert len(load_histdata_candles(tmp_path, "NSXUSD", 3)) == 6
 
 
+def test_nsxusd_loader_falls_back_to_legacy_nas100_lake_path(tmp_path) -> None:
+    _write_bars(tmp_path)
+    canonical = tmp_path / "NSXUSD" / "1m" / "2024" / "01.parquet"
+    legacy = tmp_path / "NAS100" / "1m_capital" / "2024" / "01.parquet"
+    legacy.parent.mkdir(parents=True)
+    canonical.rename(legacy)
+    assert runner_module._parquet_files(tmp_path, "NSXUSD") == (legacy,)
+    assert len(load_histdata_candles(tmp_path, "NSXUSD")) == 20
+
+
 def test_columnar_loader_returns_read_only_numeric_arrays(tmp_path) -> None:
     _write_bars(tmp_path)
     series = load_histdata_columns(tmp_path, "NSXUSD")

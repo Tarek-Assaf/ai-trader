@@ -124,12 +124,32 @@ def normalise_shape(closes: Sequence[float], atr: float) -> tuple[float, ...]:
     return tuple((float(value) - origin) / atr for value in closes)
 
 
+def _daily_break_gap(previous: datetime, current: datetime, timeframe: int) -> bool:
+    """Return whether an hourly bar step crosses the known HistData daily break.
+
+    HistData's fixed-UTC feeds print the last hourly bar at 20:00 or 21:00 UTC
+    and resume at 23:00 UTC (the exact break differs by symbol). For
+    60-minute bars those non-trading hours are skipped trading-time intervals,
+    so they must not make every 30/60/120-bar window unusable. Smaller
+    timeframes keep the strict rule and never bridge a session break. Weekend
+    gaps remain hard boundaries for every timeframe.
+    """
+    if timeframe < 60 or previous.date() != current.date():
+        return False
+    return (
+        previous.hour in {20, 21}
+        and current.hour == 23
+        and current - previous in {timedelta(hours=2), timedelta(hours=3)}
+    )
+
+
 def _continuous(candles: Sequence[Candle], start: int, end: int, timeframe: int) -> bool:
     if end > len(candles) or end <= start:
         return False
     expected = timedelta(minutes=timeframe)
     return all(
         candles[index].ts_utc - candles[index - 1].ts_utc == expected
+        or _daily_break_gap(candles[index - 1].ts_utc, candles[index].ts_utc, timeframe)
         for index in range(start + 1, end)
     )
 
@@ -637,6 +657,29 @@ def run_group(
         timeframe=timeframe,
         max_windows=MAX_OOS_WINDOWS,
     )
+    # Persist the window inventory before the expensive matching and cluster
+    # loops begin.  The bounded T-153 parent may stop a child during those
+    # loops; keeping these counts in the heartbeat prevents a partial
+    # checkpoint from being misreported as an empty library.
+    if progress_path is not None:
+        _write_json(
+            progress_path,
+            {
+                "status": "running",
+                "instrument": instrument,
+                "timeframe": timeframe,
+                "queries_done": queries_done,
+                "library_windows_by_length": {
+                    str(length): len(value) for length, value in in_sample.items()
+                },
+                "oos_windows_by_length": {
+                    str(length): len(value) for length, value in out_of_sample.items()
+                },
+                "library_windows": sum(len(value) for value in in_sample.values()),
+                "oos_queries": sum(len(value) for value in out_of_sample.values()),
+                "started_at": datetime.now(UTC).isoformat(),
+            },
+        )
     results: list[dict[str, Any]] = []
     chart_dir = output_root / "t146_charts" / f"{instrument.lower()}_{timeframe}m"
     cluster_rows: list[dict[str, Any]] = []

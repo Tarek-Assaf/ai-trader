@@ -147,6 +147,10 @@ def _read_child_progress(path: Path, instrument: str, timeframe: int) -> dict[st
         "timeframe": timeframe,
         "queries_done": int(child.get("queries_done", 0) or 0),
         "elapsed_seconds": float(child.get("elapsed_seconds", 0.0) or 0.0),
+        "library_windows": int(child.get("library_windows", 0) or 0),
+        "oos_queries": int(child.get("oos_queries", 0) or 0),
+        "library_windows_by_length": child.get("library_windows_by_length", {}),
+        "oos_windows_by_length": child.get("oos_windows_by_length", {}),
     }
 
 
@@ -239,6 +243,10 @@ def _supervise(
         "timeframe": timeframe,
         "status": status,
         "queries_done": child["queries_done"],
+        "library_windows": child["library_windows"],
+        "oos_queries": child["oos_queries"],
+        "library_windows_by_length": child["library_windows_by_length"],
+        "oos_windows_by_length": child["oos_windows_by_length"],
         "elapsed_seconds": round(elapsed, 3),
         "exit_code": process.returncode,
         "rss_peak_bytes": peak_rss or None,
@@ -259,9 +267,11 @@ def _aggregate_record(record: dict[str, Any]) -> dict[str, Any]:
     return {
         "instrument": record["instrument"],
         "timeframe": record["timeframe"],
-        "library_windows": 0,
-        "oos_queries": record.get("queries_done", 0),
+        "library_windows": record.get("library_windows", 0),
+        "oos_queries": record.get("oos_queries", record.get("queries_done", 0)),
         "queries_evaluated": record.get("queries_done", 0),
+        "library_windows_by_length": record.get("library_windows_by_length", {}),
+        "oos_windows_by_length": record.get("oos_windows_by_length", {}),
         "results": [],
         "elapsed_seconds": record.get("elapsed_seconds", 0.0),
         "charts_dir": record.get("output_dir", ""),
