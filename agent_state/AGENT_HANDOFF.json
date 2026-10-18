@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 446,
+  "revision": 448,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-162 accepted as negative diagnostic: faithful Pine port reproduces 1/31 owner entries; only 3/30 owner entries pass all four smart filters on our recorded data, so our indicator inputs differ from the owner's chart. T-163 queued: diagnose VWAP anchor/weighting, 54m Heikin Ashi anchor and filter subsets. Historical Tai rerun waits. Owner away 8 hours (D-045): Claude decides, no turn human. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-163 accepted as negative diagnostic: no VWAP anchor, 54m HA anchor or filter subset reproduces the owner's entries (best 9/29 all filters; EMA200 alone 24/29). T-164 queued: replay-only clock/price alignment scan. Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -136,7 +136,8 @@
         "T-160",
         "T-161",
         "T-162",
-        "T-163"
+        "T-163",
+        "T-164"
       ]
     },
     {
@@ -5407,7 +5408,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5424,6 +5425,40 @@
         "docs/evidence/t163_report.md",
         "docs/evidence/t163_variants.json",
         "docs/evidence/t163_entries.csv"
+      ],
+      "review_cycles": 1,
+      "evidence": [
+        "scripts/lab_t163_filter_anchor_diagnosis.py",
+        "tests/unit/test_t163_filter_anchor_diagnosis.py",
+        "docs/evidence/t163_report.md",
+        "docs/evidence/t163_variants.json",
+        "docs/evidence/t163_entries.csv"
+      ],
+      "completion_note": "Completed the specified one-shot offline Pod diagnosis. No registered VWAP variant or 54m HA anchor reaches the 25/31 reproduction bar: best VWAP ny_18:00_equal passes 9/29 all filters; best HA anchors reproduce 5 entries within +/-2 bars; best filter subset is EMA alone at 24/29. ATR risk passes 19/29 rows with bars. Coverage and safety counters are recorded; no broker calls, orders, holdout reads, lake writes or tuning. Owner action is a Pine Inputs/Style screenshot."
+    },
+    {
+      "id": "T-164",
+      "title": "Diagnose clock/price alignment between the owner's chart and our recorded bars",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-163"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t164_clock_price_alignment.md exactly (time-shift scan -360..+360 min with permutation p-value, per-entry best shifts, filter re-check at the best constant shift, bar-open vs bar-close label test, plain verdict first; offline replay with NY owner times; NSXUSD 1m/3m/5m/60m with 1m mandatory, XAUUSD has no owner rows; no broker calls, orders, holdout reads, lake or production writes, no tuning).",
+        "One log entry; hand turn to claude after one bounded Pod run. Stop after the run."
+      ],
+      "deliverables": [
+        "scripts/lab_t164_clock_price_alignment.py",
+        "tests/unit/test_t164_clock_price_alignment.py",
+        "docs/evidence/t164_report.md",
+        "docs/evidence/t164_shifts.json",
+        "docs/evidence/t164_entries.csv"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -5797,6 +5832,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-18T22:15:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-047",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-163 shows no VWAP anchor, 54m HA anchor or filter subset reproduces the owner's entries, and even the EMA200 side filter alone fails 5 of 29. The owner cannot supply his Pine Inputs/Style screenshot while away, so the safe next step is a replay-only alignment diagnostic (T-164): scan time shifts of our recorded bars against the owner's entry prices and re-check the filters at the best shift. Historical Tai rerun stays blocked until >=25/31 entries reproduce. A screenshot of his indicator Inputs/Style tabs (or a CSV export of his chart bars) is still requested from the owner as the next status question.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T02:30:00+03:00",
       "do_not_reopen": false
     }
   ],
@@ -14033,6 +14076,41 @@
       "validated_by": "claude",
       "date": "2026-10-19T02:05:00+03:00",
       "reverify_if": "Port contract or owner CSV time handling changes."
+    },
+    {
+      "id": "V-420",
+      "task_id": "T-163",
+      "subject": "T-163 filter and anchor diagnosis",
+      "validated_by": "codex",
+      "date": "2026-10-19T03:20:00+03:00",
+      "result": "pass",
+      "method": "Ran the bounded Pod command against the owner CSV and unsealed lake after fetching codex/t163-filter-anchor. Read the JSON/report/CSV outputs; ran ruff check, py_compile, git diff --check and handoff validation. Confirmed VWAP variants, 54m HA anchors, all 15 filter subsets, ATR risk counts, NSXUSD 1m/3m/5m/60m coverage, XAUUSD no-owner-row statement, and zero safety counters.",
+      "checked": "Negative diagnostic accepted: best registered result remains below 25/31, so no tuning or historical rerun was started.",
+      "evidence": [
+        "scripts/lab_t163_filter_anchor_diagnosis.py",
+        "tests/unit/test_t163_filter_anchor_diagnosis.py",
+        "docs/evidence/t163_report.md",
+        "docs/evidence/t163_variants.json",
+        "docs/evidence/t163_entries.csv"
+      ],
+      "reverify_if": "Owner supplies Pine Inputs/Style settings or requests a corrected replay."
+    },
+    {
+      "id": "V-421",
+      "task_id": "T-163",
+      "subject": "Claude review of T-163 filter and anchor diagnosis",
+      "method": "Read report, variants JSON, entries CSV and script; ran ruff check/format (line length 100, no findings); confirmed diagnostic only (broker calls 0, orders 0, holdout not read, lake writes 0); compared report numbers with the JSON.",
+      "result": "pass",
+      "checked": "Acceptance met as a negative diagnostic. All four spec items covered (VWAP anchor/weighting variants, 54m HA anchors, 15 filter subsets, ATR risk), NSXUSD 1m/3m/5m/60m coverage stated, XAUUSD has no owner rows. Finding: no VWAP anchor gets past 9/29 all-filters, no HA anchor past 5 within +-2 bars, EMA200 side alone is the best subset (24/29), so indicator settings alone do not explain the owner's trades. Remaining suspects: time/price alignment of our bars against his NQ1 chart, or his Pine settings. T-164 tests alignment directly.",
+      "evidence": [
+        "docs/evidence/t163_report.md",
+        "docs/evidence/t163_variants.json",
+        "docs/evidence/t163_entries.csv",
+        "scripts/lab_t163_filter_anchor_diagnosis.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T02:30:00+03:00",
+      "reverify_if": "The owner supplies Pine Inputs/Style settings or a chart bar export."
     }
   ],
   "blockers": [
@@ -24330,7 +24408,40 @@
         "tests/unit/test_t162_pine_port.py"
       ],
       "summary": "Reviewed T-162: pass as negative diagnostic (1/31). Computing filter pass counts from its CSV shows only 3 of 30 owner entries pass all four Pine smart filters on our recorded data, so our indicator inputs (VWAP anchor/weighting, 54m HA anchor, or owner settings) differ from his chart. Queued T-163 to diagnose exactly that. Lint fixed. Turn to codex (D-045)."
+    },
+    {
+      "revision": 447,
+      "ts": "2026-10-19T03:20:00+03:00",
+      "agent": "codex",
+      "action": "complete_t163_filter_anchor_diagnosis",
+      "task_ids": [
+        "T-163"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t163_entries.csv",
+        "docs/evidence/t163_report.md",
+        "docs/evidence/t163_variants.json",
+        "scripts/lab_t163_filter_anchor_diagnosis.py",
+        "tests/unit/test_t163_filter_anchor_diagnosis.py"
+      ],
+      "summary": "Started T-163 from origin/main after T-162 merged. Will run the specified bounded offline VWAP/54m HA anchor and filter-subset diagnosis once; no tuning, broker calls, holdout reads or lake writes. | Completed one bounded Pod diagnosis. Best VWAP ny_18:00_equal passes 9/29 all filters; best 54m HA anchors pass 5 within +/-2; best subset EMA alone 24/29; ATR risk 19/29. No broker/holdout/lake activity or tuning. Owner settings screenshot is the next dependency. Turn to Claude."
+    },
+    {
+      "revision": 448,
+      "ts": "2026-10-19T02:30:00+03:00",
+      "agent": "claude",
+      "action": "accept_t163_queue_t164",
+      "task_ids": [
+        "T-163",
+        "T-164"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t164_clock_price_alignment.md"
+      ],
+      "summary": "Reviewed T-163: pass as negative diagnostic (no anchor or filter subset gets past 9/29 all-filters or 5 entries within +-2 bars; EMA200 side alone 24/29). Lint clean. Rebuilt on main (old entries restored, Codex's two log entries merged). Recorded D-047 and queued T-164: replay-only clock/price alignment scan, since indicator settings alone do not explain his trades. Historical Tai rerun still waits for >=25/31. Turn to codex (D-045)."
     }
   ],
-  "project_summary": "T-161 accepted: with the correct clock the best registered switch reproduces only 9/31 owner entries. The real Pine script (stored in docs/evidence/owner) shows our replay differs: refresh entries ignore the Heikin Ashi state, management starts on the entry bar, targets before stop. T-162 queued: faithful port, must reproduce at least 25/31 before the historical Tai rerun. Owner away 8 hours (D-045): Claude decides, no turn human. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
+  "project_summary": "T-163 accepted as negative diagnostic: no VWAP anchor, 54m HA anchor or filter subset reproduces the owner's entries (best 9/29 all filters; EMA200 alone 24/29). T-164 queued: replay-only clock/price alignment scan. Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
 }
