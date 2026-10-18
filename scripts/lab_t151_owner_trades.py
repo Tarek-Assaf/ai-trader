@@ -586,7 +586,9 @@ def _daily_basis(entries: Sequence[OwnerEntry], minutes: Sequence[Candle]) -> di
     values: dict[str, list[float]] = defaultdict(list)
     for entry in entries:
         if entry.entry_time in prices:
-            values[entry.entry_time.date().isoformat()].append(entry.entry_price - prices[entry.entry_time])
+            values[entry.entry_time.date().isoformat()].append(
+                entry.entry_price - prices[entry.entry_time]
+            )
     return {day: sorted(items)[len(items) // 2] for day, items in values.items()}
 
 
@@ -608,7 +610,14 @@ def _condition_table(
     for entry_number, entry in enumerate(entries, start=1):
         index = by_time.get(entry.entry_time)
         if index is None:
-            rows.append({"entry": entry_number, "time": entry.entry_time, "direction": entry.direction, "missing_bar": True})
+            rows.append(
+                {
+                    "entry": entry_number,
+                    "time": entry.entry_time,
+                    "direction": entry.direction,
+                    "missing_bar": True,
+                }
+            )
             continue
         bar = chart[index]
         atr = features.atr[index]
@@ -619,7 +628,9 @@ def _condition_table(
         vwap = features.vwap[index]
         risk_data = _risk(features, index, entry.direction, params)
         ha_ok = ha_states.get(entry.entry_time) == entry.direction
-        ema_ok = ema is not None and (bar.close > ema if entry.direction == "long" else bar.close < ema)
+        ema_ok = ema is not None and (
+            bar.close > ema if entry.direction == "long" else bar.close < ema
+        )
         adx_ok = (
             adx is not None
             and adx >= params.adx_min
@@ -627,12 +638,21 @@ def _condition_table(
             and minus is not None
             and (plus > minus if entry.direction == "long" else minus > plus)
         )
-        vwap_ok = vwap is not None and (bar.close > vwap if entry.direction == "long" else bar.close < vwap)
+        vwap_ok = vwap is not None and (
+            bar.close > vwap if entry.direction == "long" else bar.close < vwap
+        )
         chase_ratio = abs(bar.close - vwap) / atr if atr and vwap is not None else None
         chase_ok = chase_ratio is not None and chase_ratio <= params.vwap_distance_atr
         risk_ratio = risk_data[1] / atr if risk_data and atr else None
         risk_ok = risk_ratio is not None and risk_ratio <= params.max_risk_atr
-        checks = {"ha_state": ha_ok, "ema_side": ema_ok, "adx_di": adx_ok, "vwap_side": vwap_ok, "dont_chase": chase_ok, "risk_atr": risk_ok}
+        checks = {
+            "ha_state": ha_ok,
+            "ema_side": ema_ok,
+            "adx_di": adx_ok,
+            "vwap_side": vwap_ok,
+            "dont_chase": chase_ok,
+            "risk_atr": risk_ok,
+        }
         failed = [name for name in names if not checks[name]]
         for name in names:
             counts[name] += int(checks[name])
@@ -662,7 +682,11 @@ def _condition_table(
             structure_stop, structure_distance = risk_data
             day_basis = basis.get(entry.entry_time.date().isoformat(), 0.0)
             adjusted_stop = structure_stop + day_basis
-            owner_distance = abs(entry.entry_price - entry.stop_price) if entry.stop_price is not None else None
+            owner_distance = (
+                abs(entry.entry_price - entry.stop_price)
+                if entry.stop_price is not None
+                else None
+            )
             adjusted_distance = abs(entry.entry_price - adjusted_stop)
             row.update({
                 "structure_stop_price": structure_stop,
@@ -670,8 +694,16 @@ def _condition_table(
                 "basis_points": day_basis,
                 "basis_adjusted_structure_stop_price": adjusted_stop,
                 "owner_stop_distance_points": owner_distance,
-                "structure_stop_error_points": abs(owner_distance - structure_distance) if owner_distance is not None else None,
-                "basis_adjusted_stop_error_points": abs(owner_distance - adjusted_distance) if owner_distance is not None else None,
+                "structure_stop_error_points": (
+                    abs(owner_distance - structure_distance)
+                    if owner_distance is not None
+                    else None
+                ),
+                "basis_adjusted_stop_error_points": (
+                    abs(owner_distance - adjusted_distance)
+                    if owner_distance is not None
+                    else None
+                ),
             })
             if owner_distance is not None:
                 raw_errors.append(abs(owner_distance - structure_distance))
@@ -715,7 +747,8 @@ def _plain_report(payload: dict[str, Any]) -> str:
         )
     lines += [
         "",
-        f"Trial count: {payload['trial_count']} ({len(payload['variants'])} variants x three session anchors).",
+        f"Trial count: {payload['trial_count']} "
+        f"({len(payload['variants'])} variants x three session anchors).",
         "",
         (
             "The forming-candle hypothesis is supported only when a forming variant materially "
@@ -727,19 +760,26 @@ def _plain_report(payload: dict[str, Any]) -> str:
         "",
         "## Refresh path and per-entry conditions",
         "",
-        "Variant `refresh` emits a filter-and-risk refresh every 12 flat bars without virtual in-trade gating; `refresh_gated` keeps a virtual trade open until its stop or 3R target. The condition table uses the UTC-midnight 54m anchor and evaluates all 31 owner entries without parameter tuning.",
+        "Variant `refresh` emits a filter-and-risk refresh every 12 flat bars "
+        "without virtual in-trade gating; `refresh_gated` keeps a virtual trade "
+        "open until its stop or 3R target. The condition table uses the "
+        "UTC-midnight 54m anchor and evaluates all 31 owner entries without "
+        "parameter tuning.",
         "",
         f"Condition pass counts: {payload['condition_table']['condition_pass_counts']}",
         f"Condition failure counts: {payload['condition_table']['condition_fail_counts']}",
         f"All filters passed: {payload['condition_table']['all_filters_passed']}/31.",
         f"Stop fit: {payload['condition_table']['stop_fit']}",
         "",
-        "| Entry | Time | Direction | HA | EMA | ADX/DI | VWAP | Chase | Risk | Failed conditions |",
+        "| Entry | Time | Direction | HA | EMA | ADX/DI | VWAP | Chase | Risk | "
+        "Failed conditions |",
         "|---:|---|---|---|---|---|---|---|---|---|",
         *(
-            f"| {row['entry']} | {row['time']} | {row['direction']} | {row.get('ha_state')} | "
-            f"{row.get('ema_side')} | {row.get('adx_di')} | {row.get('vwap_side')} | "
-            f"{row.get('dont_chase')} | {row.get('risk_atr_ok')} | {', '.join(row.get('failed_conditions', [])) or 'none'} |"
+            f"| {row['entry']} | {row['time']} | {row['direction']} | "
+            f"{row.get('ha_state')} | {row.get('ema_side')} | {row.get('adx_di')} | "
+            f"{row.get('vwap_side')} | {row.get('dont_chase')} | "
+            f"{row.get('risk_atr_ok')} | "
+            f"{', '.join(row.get('failed_conditions', [])) or 'none'} |"
             for row in payload['condition_table']['entries']
         ),
         "",
