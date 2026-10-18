@@ -1,0 +1,32 @@
+{
+  "task": "T-159",
+  "trades": 54,
+  "stage1_offset_confirmation": {
+    "grid_minutes": [-360, 360, 5],
+    "zero_shift": {"offset_minutes": 0, "comparable": 43, "agreement": 0.4651162791, "correlation": -0.1106495608},
+    "best_shift": {"offset_minutes": 240, "comparable": 49, "agreement": 0.8775510204, "correlation": 0.7543368257},
+    "top10_offsets": [240, 235, -140, -345, -320, -35, -165, 230, 220, -325],
+    "permutation": {"permutations": 2000, "null_max_median": 0.6851851852, "null_max_p95": 0.7441860465, "p_value": 0.0004997501}
+  },
+  "stage2_session_gap_check": {
+    "max_gap_minutes": 2975,
+    "gap_histogram": {"1": 12188, "2": 129, "3": 7, "4": 4, "5": 2, "6": 10, "13": 1, "42": 1, "44": 1, "75": 1, "85": 1, "96": 1},
+    "large_gap_examples": ["2026-10-05T13:29:00Z/96m", "2026-10-05T15:32:00Z/13m", "2026-10-05T16:01:00Z/85m", "2026-10-06T13:34:00Z/75m", "2026-10-09T20:59:00Z/2975m"],
+    "known_schedule": "CME Globex break 21:00-22:00 UTC and Sunday open 22:00 UTC before 2026-11-01; observed gaps are irregular recorder/connectivity gaps rather than a clean DST/session translation."
+  },
+  "stage3_timestamp_convention": {
+    "lake_minute_mod_3": {"0": 4114, "1": 4104, "2": 4132},
+    "owner_entry_minute_mod_3": {"0": 54},
+    "bar_time": "resample_ohlc uses UTC bucket start; no close-time shift",
+    "owner_csv_contract": "docs/specs/t151_owner_trades_comparison.md:3,14 records owner confirmation that export times are UTC",
+    "located_layers": [
+      "src/trader/integrations/capital_com/stream.py:243,257-273 parses stream/REST timestamps as UTC",
+      "src/trader/data/recorder.py:60,259,289,299 normalizes aware timestamps to UTC",
+      "src/trader/data/resample.py:53-68 floors timestamps into UTC buckets"
+    ],
+    "timezone_arithmetic": {"America/New_York_2026-10-06": "UTC-4, +240 minutes, but contradicts owner UTC contract", "Asia/Riyadh": "UTC+3, not +240", "raw_owner_naive_as_utc": "no correction"}
+  },
+  "verdict": "STOP_NO_SAFE_CORRECTION",
+  "safety": {"broker_calls": 0, "orders": 0, "sealed_holdout_read": false, "lake_writes": 0, "production_state_writes": 0},
+  "pod": {"environment": "env@5cdff5454c57", "lake": "/workspace/data/lake", "run_exit": 0}
+}
