@@ -353,6 +353,16 @@ def _report(
         lines.append(f"| {basis} | {baseline.get('center_pass', 0)} | {baseline.get('window_pass', 0)} |")
     lines += [
         "",
+        "## Baseline first-failure counts",
+        "",
+        "The complete Pod CSV has one row for every available entry/basis/variant/offset. The committed repository CSV is a compact center-bar index; rerun this script to regenerate the full 5,104-row artifact.",
+        "",
+    ]
+    baseline = variants.get(baseline_name, {})
+    for name, count in baseline.get("first_failed_rule", {}).items():
+        lines.append(f"- `{name}`: {count}")
+    lines += [
+        "",
         "## Suspected implementation differences tested",
         "",
         "- 54m Heikin Ashi: closed versus forming values, with UTC and CME-open grouping.",
