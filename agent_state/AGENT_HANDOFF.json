@@ -5,7 +5,7 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
+  "turn": "codex",
   "revision": 425,
   "current_phase": 1,
   "protocol": {
@@ -5136,11 +5136,11 @@
     },
     {
       "id": "T-155",
-      "title": "Tai indicator parity: compare our features with TradingView's own exported indicator values on NQ1! 3m",
+      "title": "Tai indicator parity without TradingView export: check our indicator math against independent references on Pod data",
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "todo",
       "requirements": [
         "R-03"
       ],
@@ -5148,7 +5148,7 @@
         "T-151"
       ],
       "acceptance_criteria": [
-        "Blocked until the owner supplies the TradingView 'Export chart data' CSV (NQ1! 3m, 6-16 Oct 2026, Tai indicator visible, all plots included) answering Q-065. Then: (1) run our lab_tai_smart_filter feature code (EMA200, ADX/DI, VWAP, ATR14, 54m HA, structure stop, signals) on the exported NQ1! OHLCV and compare each indicator value with TradingView's plotted values per bar (median and max difference); (2) list every deviation and the Pine rule it breaks; (3) re-run the 31 owner entries against the TradingView signals/plots; (4) fix deviations in scripts/lab_tai_smart_filter.py only if they are plain implementation errors, with tests; no gate, cost, ledger or broker edits. Diagnostic only."
+        "Owner cannot export TradingView data (Q-065 answered B). Diagnostic only, Pod data only, no broker/gate/cost/ledger edits. (1) Compare our EMA200, ATR14, ADX/DI(14,14) and HA from scripts/lab_tai_smart_filter.py with independent reference implementations (hand-written Pine-exact RMA/Wilder code and, if installable, TA-Lib or pandas-ta) on the same recorded NAS100 3m bars; report max and median difference per indicator. (2) List remaining unverifiable items honestly: VWAP session anchor and volume (TradingView uses real NQ1! volume and the CME session reset, our CFD data has none), 54m bar session anchoring, futures-vs-CFD data. (3) Sensitivity: recompute the 31-entry condition table with VWAP reset at CME session open (17:00 Chicago) and equal-weight vs tick-volume weighting, and report how many entries then pass all filters. (4) Fix plain implementation errors in lab_tai_smart_filter.py with tests. Optional owner help, free: TradingView Data Window readings (EMA, ADX, VWAP values) for 3 of his entry bars."
       ],
       "deliverables": [
         "docs/evidence/t155_tai_parity_report.md"
@@ -14514,7 +14514,7 @@
       "id": "Q-065",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "All 31 of your entries fail at least one Tai filter on our recorded data (0/31 pass all), so either our indicator numbers differ from TradingView's or the entries are not only the indicator's signals. To settle it we need TradingView's own numbers: on the NQ1! 3m chart with the Tai indicator on, use the chart menu 'Export chart data' (all plots) for 6-16 Oct 2026 and upload the CSV. Can you provide it?",
       "options": [
         "A: Yes, I will export and upload the chart data CSV (recommended)",
@@ -14522,7 +14522,7 @@
         "C: I take some entries without the indicator signal (tell us which kind)"
       ],
       "recommendation": "A: it gives the exact indicator values and signals per bar and the real NQ futures prices, which removes the CFD data differences.",
-      "answer": ""
+      "answer": "Owner 2026-10-18 17:57 Riyadh: TradingView chart-data export needs a paid plan (about $60), so it is not doable (option B: work with Pod data only)."
     }
   ],
   "log": [
@@ -23393,7 +23393,7 @@
         "agent_state/AGENT_HANDOFF.json",
         "scripts/lab_t151_owner_trades.py"
       ],
-      "summary": "Accepted T-151 (V-406): refresh-path variants hit 1 of 31 owner entries within 5 bars and 0 of 31 entries pass all Tai filters on our data (ADX/DI fails 21, dont-chase 20, HA state 20, EMA 12). Fixed a mypy error and formatting myself. Added T-155 (indicator parity against TradingView's exported plot values, blocked on the owner's chart-data export) and Q-065 to the owner. Turn to human."
+      "summary": "Accepted T-151 (V-406): refresh-path variants hit 1 of 31 owner entries within 5 bars and 0 of 31 entries pass all Tai filters on our data (ADX/DI fails 21, dont-chase 20, HA state 20, EMA 12). Fixed a mypy error and formatting myself. Added T-155 (indicator parity against TradingView's exported plot values, blocked on the owner's chart-data export) and Q-065 to the owner. Turn to human. Owner then answered Q-065 (export is paid, option B): T-155 re-scoped to Pod-only parity against independent indicator references and VWAP-anchor sensitivity, status todo, turn to codex."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
