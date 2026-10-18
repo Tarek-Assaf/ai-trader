@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 435,
+  "revision": 437,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-157 accepted: our replay matches 0/31 owner entries. Owner says the fault is in our system, not the indicator (Q-069 answered). T-158 queued for Codex: pipeline audit with known-answer tests (time alignment, bar building, indicator maths, replay rules, engine arithmetic). Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-158 accepted: bars, indicator maths, replay rules and engine arithmetic pass known-answer tests; the time alignment fails (best fit +240 minutes, small sample). T-159 queued for Codex to confirm the offset, locate it, apply one minimal fix and rerun the T-157 replay. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -131,7 +131,8 @@
         "T-155",
         "T-156",
         "T-157",
-        "T-158"
+        "T-158",
+        "T-159"
       ]
     },
     {
@@ -5232,7 +5233,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5247,6 +5248,37 @@
         "scripts/lab_t158_pipeline_audit.py",
         "docs/evidence/t158_pipeline_audit.json",
         "docs/evidence/t158_report.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "scripts/lab_t158_pipeline_audit.py",
+        "tests/unit/test_t158_pipeline_audit.py",
+        "docs/evidence/t158_pipeline_audit.json",
+        "docs/evidence/t158_report.md"
+      ],
+      "completion_note": "Completed the diagnostic-only five-stage audit on the reachable CPU Pod with no broker, holdout, gate, ledger, promotion or lake writes. Stage 1 fails at zero timestamp shift and finds +240 minutes as the best tested alignment; stages 2-5 pass their independent known answers. Proposed timestamp/session correction is recorded but not applied. Handing to Claude for review."
+    },
+    {
+      "id": "T-159",
+      "title": "Time alignment: confirm the T-158 clock offset with more evidence, locate where it enters, apply the smallest fix, rerun the T-157 replay",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-158"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t159_time_alignment.md exactly (confirm offset with at least three independent checks, locate the layer, one minimal correction with unit test, rerun T-157 replay; stop rules honoured; no broker calls, sealed holdout never read, no lake rewrite, all four timeframes 1m/3m/5m/60m and both NSXUSD and XAUUSD wherever lake data is used, 1m mandatory).",
+        "Report starts with a plain-language owner verdict; one log entry; hand turn to claude."
+      ],
+      "deliverables": [
+        "scripts/lab_t159_time_alignment.py",
+        "docs/evidence/t159_time_alignment.json",
+        "docs/evidence/t159_report.md"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -13709,6 +13741,23 @@
       "validated_by": "claude",
       "date": "2026-10-18T22:45:00+03:00",
       "reverify_if": "The indicator's Pine source or exact HA/timeframe settings are supplied."
+    },
+    {
+      "id": "V-413",
+      "task_id": "T-158",
+      "subject": "Claude review of T-158 pipeline audit",
+      "method": "Read report, JSON and script; confirmed diagnostic only (broker calls 0, orders 0, holdout not read, no lake/gate/ledger writes), five stages run, NSXUSD and XAUUSD and 1m/3m/5m/54m/60m covered; checked old handoff entries identical to main; ran ruff check and ruff format (line length 100) and fixed lint (zip strict, unused variable, long report strings marked noqa). pytest is not installed on this machine so unit tests run in CI.",
+      "result": "pass",
+      "checked": "Acceptance met. Stage 1 FAIL: zero-shift agreement 0.3704 of 27 points (correlation -0.2352); best tested shift +240 minutes, agreement 0.8621 of 29 points (correlation 0.7448). Stages 2 to 5 PASS: bar building, EMA/ATR/ADX/DI/Heikin Ashi, replay rule controls and engine arithmetic all match independent known answers. So the first fault found is a clock offset; sample is small so T-159 must confirm it before fixing.",
+      "evidence": [
+        "docs/evidence/t158_report.md",
+        "docs/evidence/t158_pipeline_audit.json",
+        "scripts/lab_t158_pipeline_audit.py",
+        "tests/unit/test_t158_pipeline_audit.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-18T23:30:00+03:00",
+      "reverify_if": "The time handling, bar-time convention or owner CSV time zone changes."
     }
   ],
   "blockers": [
@@ -23785,6 +23834,39 @@
         "docs/specs/t158_pipeline_audit.md"
       ],
       "summary": "Owner declined to send the indicator source and told us to find the fault in our own system. Wrote spec t158_pipeline_audit.md and queued T-158 for Codex: five known-answer stages (time alignment, bar building, indicator maths, replay rule logic, engine arithmetic), no fixes or tuning. Q-069 marked answered; Q-022, Q-057, Q-058 left open as the owner asked. Turn to codex."
+    },
+    {
+      "revision": 436,
+      "ts": "2026-10-18T19:16:17.231575+00:00",
+      "agent": "codex",
+      "action": "complete_t158_pipeline_audit",
+      "task_ids": [
+        "T-158"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t158_pipeline_audit.py",
+        "tests/unit/test_t158_pipeline_audit.py",
+        "docs/evidence/t158_pipeline_audit.json",
+        "docs/evidence/t158_report.md"
+      ],
+      "summary": "Started T-158 from authoritative origin/main revision 434. Five-stage production-path audit is in progress; safety scope is diagnostic-only with no broker, holdout, config, ledger, promotion or lake writes. Completed T-158 diagnostic pipeline audit. Stage 1 zero-shift alignment fails (agreement 0.3704; best tested +240m agreement 0.8621); stages 2-5 pass known answers. No fix/tuning, broker call, order, holdout read, gate, ledger/promotion or lake write. Handing to Claude for review."
+    },
+    {
+      "revision": 437,
+      "ts": "2026-10-18T23:30:00+03:00",
+      "agent": "claude",
+      "action": "accept_t158_queue_t159",
+      "task_ids": [
+        "T-158",
+        "T-159"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t158_pipeline_audit.py",
+        "docs/specs/t159_time_alignment.md"
+      ],
+      "summary": "Reviewed T-158: pass (lint fixed). Stages 2 to 5 pass; Stage 1 time alignment fails: zero-shift agreement 0.37, best shift +240 minutes agreement 0.86 (small sample). Wrote spec t159_time_alignment.md and queued T-159 for Codex under the owner's instruction to find and fix the fault on our side: confirm the offset, locate it, one minimal fix, rerun the T-157 replay. Turn to codex."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
