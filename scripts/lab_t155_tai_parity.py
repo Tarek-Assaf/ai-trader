@@ -5,6 +5,7 @@ The command reads only recorded NAS100 candles and the owner-entry CSV.  It neve
 calls a broker, reads the sealed holdout, or writes gate, cost, ledger, or
 promotion state.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -385,9 +386,7 @@ def indicators_heikin(chart: Sequence[Candle]) -> tuple[Candle, ...]:
     for index, bar in enumerate(chart):
         close = (bar.open + bar.high + bar.low + bar.close) / 4.0
         open_price = (
-            (bar.open + bar.close) / 2.0
-            if index == 0
-            else (out[-1].open + out[-1].close) / 2.0
+            (bar.open + bar.close) / 2.0 if index == 0 else (out[-1].open + out[-1].close) / 2.0
         )
         out.append(
             Candle(
@@ -464,9 +463,7 @@ def main() -> int:
     parser.add_argument(
         "--owner-file",
         type=Path,
-        default=Path(
-            "docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv"
-        ),
+        default=Path("docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv"),
     )
     parser.add_argument(
         "--output", type=Path, default=Path("docs/evidence/t155_tai_parity_summary.json")
@@ -477,9 +474,7 @@ def main() -> int:
     args = parser.parse_args()
     payload = run(args.lake, args.owner_file)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    args.output.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
+    args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(report(payload), encoding="utf-8")
     print(
