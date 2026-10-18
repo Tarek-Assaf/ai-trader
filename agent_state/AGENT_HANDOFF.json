@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 440,
+  "revision": 442,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Owner confirmed his trade export is New York time (UTC-4); D-044. T-160 queued for Codex: read the owner list as New York time in the comparison scripts only, re-check alignment, rerun the 31-trade replay (was 0/31). Recorder, parser and bars stay UTC. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-160 accepted: owner clock fixed (New York time), alignment now exact (shift 0, 87.8%). The 31-trade replay still passes only 1/31; the 54m Heikin Ashi state fails first in 19. Earlier switch tests used the wrong clock, so T-161 reruns them once with the correct clock (no new variants). Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -133,7 +133,8 @@
         "T-157",
         "T-158",
         "T-159",
-        "T-160"
+        "T-160",
+        "T-161"
       ]
     },
     {
@@ -5300,7 +5301,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5316,6 +5317,43 @@
         "docs/evidence/t160_report.md",
         "docs/evidence/t160_owner_time_ny.json",
         "docs/evidence/t160_replay.csv"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "scripts/lab_t160_owner_time_ny.py: shared zoneinfo America/New_York conversion, T-159 alignment/T-157 replay orchestration, explicit fold=0 DST rule.",
+        "scripts/lab_t151_owner_trades.py, scripts/lab_t158_pipeline_audit.py, scripts/lab_t159_time_alignment.py: owner CSV readers use the shared conversion; T-155/T-156/T-157 inherit it through T-151.",
+        "tests/unit/test_t160_owner_time_ny.py: known summer, winter and DST fall-back timestamps; direct assertions passed.",
+        "docs/specs/t151_owner_trades_comparison.md: prior UTC note marked superseded by T-160; production src/trader UTC paths unchanged.",
+        "docs/evidence/t160_owner_time_ny.json: Pod run summary, alignment/replay metrics, safety counters and artifact hashes.",
+        "docs/evidence/t160_report.md: plain owner verdict, first-failure counts, compact-artifact caveat and safety evidence.",
+        "docs/evidence/t160_replay.csv: 31-row compact baseline center-bar index with full-run SHA-256.",
+        "python -m py_compile touched scripts/tests passed; git diff --check passed. Full desktop pytest/ruff unavailable."
+      ],
+      "completion_note": "Completed the one New York-time correction and the required bounded Pod reruns. The shared owner readers parse America/New_York with zoneinfo and reject nonexistent local times; fold=0 is explicit for the 2026-11-01 fallback. T-159 now selects 0 minutes (49 comparable, 87.76% agreement). T-157 baseline remains 1/31 center and 2/31 within +/-3 bars; ha_state is first failure for 19/31. No variants or tuning were run, production UTC paths were unchanged, and safety counters stayed zero.",
+      "review_notes": "Ready for Claude review; Pod execution and artifacts are complete."
+    },
+    {
+      "id": "T-161",
+      "title": "Rerun the registered T-157 switches and T-158 HA checks with the corrected New York clock (one rerun, no new variants)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-160"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t161_variants_correct_clock.md exactly (rerun only the switches already coded in T-157 plus T-158 Stage 4 HA categories with the New York clock; print the last 8 54m HA candles before the first 5 owner entries; no new switches or tuning; one Pod run; no broker calls, sealed holdout never read, no lake writes, all four timeframes 1m/3m/5m/60m and both NSXUSD and XAUUSD wherever lake data is used, 1m mandatory).",
+        "Report starts with a plain-language owner verdict (best switch and how many of 31); one log entry; hand turn to claude."
+      ],
+      "deliverables": [
+        "scripts/lab_t161_variants_correct_clock.py",
+        "docs/evidence/t161_report.md",
+        "docs/evidence/t161_variants.json",
+        "docs/evidence/t161_replay.csv"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -13820,6 +13858,24 @@
       "validated_by": "claude",
       "date": "2026-10-18T23:45:00+03:00",
       "reverify_if": "The owner confirms the export time zone or the parser/recorder time handling changes."
+    },
+    {
+      "id": "V-415",
+      "task_id": "T-160",
+      "subject": "Claude review of T-160 owner time as New York",
+      "method": "Read report, JSON, CSV, script and diff; confirmed the change is limited to owner-CSV reading (one shared zoneinfo helper used by the T-151/T-158/T-159 readers, production UTC code untouched), broker calls 0, orders 0, holdout not read, lake writes 0; checked old handoff entries identical to main; ran ruff check and ruff format (line length 100). Unit tests run in CI.",
+      "result": "pass",
+      "checked": "Acceptance met. Known timestamps pass (2026-10-06 10:00 NY = 14:00 UTC; 2026-12-01 10:00 NY = 15:00 UTC; 2026-11-01 01:30 uses the earlier occurrence). Alignment re-check: best shift now 0 minutes, 49 pairs, 87.76% agreement, correlation 0.754, p=0.0005. Baseline T-157 replay with the correct clock: 1/31 entries pass at the center bar, 2/31 within +-3 bars; first failing rule is the 54m Heikin Ashi state in 19 entries (EMA side 3, ADX/DI 2, VWAP 1, don't chase 4, 1 missing bar). So the clock was one fault, not the only one. The nine registered T-157 switches and the T-158 HA counts were tested with the wrong clock and are not valid; T-161 reruns them once.",
+      "evidence": [
+        "docs/evidence/t160_report.md",
+        "docs/evidence/t160_owner_time_ny.json",
+        "docs/evidence/t160_replay.csv",
+        "scripts/lab_t160_owner_time_ny.py",
+        "tests/unit/test_t160_owner_time_ny.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T00:55:00+03:00",
+      "reverify_if": "The owner CSV time handling changes."
     }
   ],
   "blockers": [
@@ -14033,6 +14089,14 @@
       "status": "resolved",
       "text": "T-159 confirms a repeatable +240-minute offset (49 comparable tranches, 87.76% agreement, permutation p=0.0005), but the owner export is documented and confirmed as UTC while Capital.com parsing, recorder normalization and resampling are explicit UTC. +240 is America/New_York EDT arithmetic, not Asia/Riyadh. No safe layer is identified; applying a timezone guess would violate the owner contract, so no correction or T-157 rerun is authorized.",
       "resolution": "Owner answered Q-070: the export is New York time (UTC-4). Fix scoped to T-160 (owner CSV reading only)."
+    },
+    {
+      "id": "B-030",
+      "task_id": "T-160",
+      "raised_by": "codex",
+      "status": "resolved",
+      "text": "T-160 requires a bounded read-only Pod run of scripts/lab_t160_owner_time_ny.py against /workspace/data/lake and the owner CSV. The prior Pod tab/session expired, and opening the owner-provided URL returned ERR_BLOCKED_BY_CLIENT. No T-159 alignment rerun or T-157 replay result can be claimed until a reachable Pod terminal/session is provided.",
+      "resolution": "Owner supplied a reachable Pod URL. The direct-execution import fallback was fixed, then the bounded T-160 run completed at commit 786dc430. Artifacts and hashes are recorded in docs/evidence/t160_report.md and t160_owner_time_ny.json."
     }
   ],
   "questions": [
@@ -23996,7 +24060,50 @@
         "docs/specs/t160_owner_time_new_york.md"
       ],
       "summary": "Owner answered Q-070: the trade export is New York time (UTC-4). Recorded D-044, marked Q-070 answered and B-029 resolved. Wrote spec t160_owner_time_new_york.md and queued T-160 for Codex: read the owner CSV as New York time in the comparison scripts only, re-check alignment (best shift must be 0), rerun the T-157 31-trade replay. No variant rounds. Turn to codex."
+    },
+    {
+      "revision": 441,
+      "ts": "2026-10-18T21:00:00Z",
+      "agent": "codex",
+      "action": "complete_t160_owner_time_ny_replay",
+      "task_ids": [
+        "T-160"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t160_owner_time_ny.py",
+        "scripts/lab_t151_owner_trades.py",
+        "scripts/lab_t158_pipeline_audit.py",
+        "scripts/lab_t159_time_alignment.py",
+        "tests/unit/test_t160_owner_time_ny.py",
+        "docs/specs/t151_owner_trades_comparison.md",
+        "docs/evidence/t160_report.md",
+        "docs/evidence/t160_owner_time_ny.json",
+        "docs/evidence/t160_replay.csv"
+      ],
+      "summary": "Started T-160 from the accepted T-159 lineage after owner Q-070 confirmed the TradingView export uses New York/exchange time. Will use zoneinfo America/New_York in owner-CSV readers only, then rerun T-159 alignment and T-157 rule-by-rule replay once; no production UTC changes or broker/holdout/lake activity. Implemented New York zoneinfo conversion in owner-CSV readers and known timestamp tests. Required Pod-only T-159 alignment/T-157 replay was not run: prior Pod session unavailable and owner URL rejected with ERR_BLOCKED_BY_CLIENT. No replay verdict or artifacts claimed; B-030 records the exact blocker. Turn to Claude. Completed T-160 after the owner supplied a reachable Pod URL. Shared New York zoneinfo conversion passes known timestamps; T-159 alignment now selects 0 minutes (49 comparable, 87.76% agreement). T-157 baseline replay remains 1/31 center and 2/31 within +/-3 bars, with ha_state first for 19 entries. No variants, tuning, broker calls, orders, holdout reads, lake writes or production changes. B-030 resolved; handed to Claude for review."
+    },
+    {
+      "revision": 442,
+      "ts": "2026-10-19T00:55:00+03:00",
+      "agent": "claude",
+      "action": "accept_t160_queue_t161",
+      "task_ids": [
+        "T-160",
+        "T-161"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t151_owner_trades.py",
+        "scripts/lab_t158_pipeline_audit.py",
+        "scripts/lab_t159_time_alignment.py",
+        "scripts/lab_t160_owner_time_ny.py",
+        "tests/unit/test_t160_owner_time_ny.py",
+        "docs/specs/t151_owner_trades_comparison.md",
+        "docs/specs/t161_variants_correct_clock.md"
+      ],
+      "summary": "Reviewed T-160: pass. Owner clock fixed (New York time): alignment best shift is now 0 (49 pairs, 87.8%). But the replay still passes only 1/31 entries; the 54m Heikin Ashi state is the first failing rule in 19. The earlier nine-switch test and HA counts used the wrong clock, so they are not valid. Wrote spec t161_variants_correct_clock.md and queued T-161: rerun those registered switches once with the correct clock, no new variants. Turn to codex."
     }
   ],
-  "project_summary": "Owner confirmed his trade export is New York time (UTC-4); D-044. T-160 queued for Codex: read the owner list as New York time in the comparison scripts only, re-check alignment, rerun the 31-trade replay (was 0/31). Recorder, parser and bars stay UTC. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
+  "project_summary": "T-160 accepted: owner clock fixed (New York time), alignment now exact (shift 0, 87.8%). The 31-trade replay still passes only 1/31; the 54m Heikin Ashi state fails first in 19. Earlier switch tests used the wrong clock, so T-161 reruns them once with the correct clock (no new variants). Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
 }

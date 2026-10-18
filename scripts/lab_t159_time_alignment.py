@@ -14,6 +14,7 @@ import json
 import math
 import random
 import statistics
+import sys
 from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -22,10 +23,14 @@ from pathlib import Path
 from typing import Any
 
 try:
+    from scripts.lab_t160_owner_time_ny import parse_owner_datetime
+except ModuleNotFoundError:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from lab_t160_owner_time_ny import parse_owner_datetime
+
+try:
     from scripts.lab_t151_owner_trades import read_nas100_minutes
 except ModuleNotFoundError:
-    import sys
-
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from scripts.lab_t151_owner_trades import read_nas100_minutes
 
@@ -48,9 +53,7 @@ def read_trades(path: Path) -> tuple[Trade, ...]:
             if not number or not (kind.startswith("entry") or kind.startswith("exit")):
                 continue
             try:
-                stamp = datetime.strptime(str(row["Date and time"]), "%Y-%m-%d %H:%M").replace(
-                    tzinfo=UTC
-                )
+                stamp = parse_owner_datetime(str(row["Date and time"]))
                 price = float(row["Price USD"])
             except (KeyError, TypeError, ValueError):
                 continue

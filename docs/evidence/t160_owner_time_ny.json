@@ -1,0 +1,72 @@
+{
+  "owner_time_conversion": {
+    "known_answers": {
+      "2026-10-06 10:00": "2026-10-06T14:00:00+00:00",
+      "2026-11-01 01:30": "fold=0 (earlier occurrence), 2026-11-01T05:30:00+00:00",
+      "2026-12-01 10:00": "2026-12-01T15:00:00+00:00"
+    },
+    "zone": "America/New_York"
+  },
+  "pod": {
+    "commit": "786dc43024c3bf805cddea27c53bcb2504850628",
+    "environment": "env@5cdff5454c57",
+    "lake": "/workspace/data/lake",
+    "run_exit": 0
+  },
+  "safety": {
+    "broker_calls": 0,
+    "lake_writes": 0,
+    "orders": 0,
+    "production_state_writes": 0,
+    "sealed_holdout_read": false
+  },
+  "stage1_offset_confirmation": {
+    "best_shift": {
+      "agreement": 0.8775510204,
+      "comparable": 49,
+      "correlation": 0.7543368257,
+      "offset_minutes": 0,
+      "p_value": 0.0004997501
+    },
+    "grid_minutes": [
+      -360,
+      360,
+      5
+    ],
+    "permutation": {
+      "p_value": 0.0004997501,
+      "permutations": 2000
+    },
+    "zero_shift": {
+      "agreement": 0.8775510204,
+      "comparable": 49,
+      "correlation": 0.7543368257,
+      "offset_minutes": 0
+    }
+  },
+  "stage3_timestamp_convention": {
+    "conversion": "zoneinfo.America/New_York; DST fall-back fold=0",
+    "owner_csv_contract": "America/New_York local export converted to UTC with zoneinfo",
+    "production_utc_unchanged": true
+  },
+  "t157_replay": {
+    "baseline_first_failure_counts": {
+      "adx_di": 2,
+      "dont_chase": 4,
+      "ema_side": 3,
+      "ha_state": 19,
+      "missing_bar": 1,
+      "pass": 1,
+      "risk_atr": 0,
+      "vwap_side": 1
+    },
+    "center_pass": "1/31",
+    "compact_index_rows": 31,
+    "full_artifact_sha256": "635db718e01bbf79c4dc06789462c74e6b6b890cff054394430001ae77a755c7",
+    "report_artifact_sha256": "6f7f0113738dd22bf5c7879a9073f7fefd3580d60f74489065986d72ddccf5db",
+    "rows": 5670,
+    "window_pass": "2/31"
+  },
+  "task": "T-160",
+  "trades": 54
+}

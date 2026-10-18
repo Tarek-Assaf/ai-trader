@@ -1,6 +1,6 @@
 # T-151: Reproduce the owner's own Tai entries (forming-candle replay)
 
-Owner 2026-10-17: supplied his TradingView Replay Trading export (NQ1 CME mini, 3m, times in UTC (owner confirmed 2026-10-17 13:46 Riyadh; an earlier message said Riyadh, that was a mistake),
+**SUPERSEDED by T-160:** Owner 2026-10-17: supplied his TradingView Replay Trading export (NQ1 CME mini, 3m, times in UTC (owner confirmed 2026-10-17 13:46 Riyadh; an earlier message said Riyadh, that was a mistake),
 6 to 16 Oct 2026), file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv.
 Unparks T-151 (D-040 condition met: the owner finished validating his trades).
 
