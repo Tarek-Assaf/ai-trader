@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 448,
+  "revision": 450,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-163 accepted as negative diagnostic: no VWAP anchor, 54m HA anchor or filter subset reproduces the owner's entries (best 9/29 all filters; EMA200 alone 24/29). T-164 queued: replay-only clock/price alignment scan. Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-164 accepted as negative diagnostic: no constant clock shift aligns the owner's chart (best +3 min p=0.0005, per-entry shifts -330..+161, shifted replay 4/31). T-165 queued: within-trade move alignment (basis cancels). Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -137,7 +137,8 @@
         "T-161",
         "T-162",
         "T-163",
-        "T-164"
+        "T-164",
+        "T-165"
       ]
     },
     {
@@ -5442,7 +5443,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5459,6 +5460,40 @@
         "docs/evidence/t164_report.md",
         "docs/evidence/t164_shifts.json",
         "docs/evidence/t164_entries.csv"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "scripts/lab_t164_clock_price_alignment.py",
+        "tests/unit/test_t164_clock_price_alignment.py",
+        "docs/evidence/t164_report.md",
+        "docs/evidence/t164_shifts.json",
+        "docs/evidence/t164_entries.csv"
+      ],
+      "completion_note": "Completed one bounded Pod clock/price alignment scan. Best constant alignment is +3 minutes on 1m open after removing a 221.05-point median basis (30 samples, median residual 6.30, permutation p=0.0005); per-entry best shifts range -330 to +161 minutes and do not share one offset. Shifted T-162 replay matches 4/31 within +/-2 bars, below 25/31; bar-close labeling gives 9 all-four filter passes versus 7 for bar-open. No safe correction or historical rerun."
+    },
+    {
+      "id": "T-165",
+      "title": "Align our bars to the owner's chart using within-trade price moves (basis cancels)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-164"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t165_trade_pair_alignment.md exactly (entry/exit move comparison over shifts -360..+360 min with permutation p-value, excursion check, bar-open vs bar-close and duration cross-check, plain verdict first; offline replay with NY owner times; NSXUSD 1m mandatory, XAUUSD has no owner rows; no broker calls, orders, holdout reads, lake or production writes, no tuning).",
+        "One log entry; hand turn to claude after one bounded Pod run. Stop after the run."
+      ],
+      "deliverables": [
+        "scripts/lab_t165_trade_pair_alignment.py",
+        "tests/unit/test_t165_trade_pair_alignment.py",
+        "docs/evidence/t165_report.md",
+        "docs/evidence/t165_shifts.json",
+        "docs/evidence/t165_trades.csv"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -5840,6 +5875,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T02:30:00+03:00",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-048",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-164 does not align the owner's chart with our bars with a constant shift (4/31 within +-2 bars). Because the NQ1 vs NAS100 basis drifts, the next narrowest step is T-165, a within-trade test (entry-to-exit moves and excursions, basis cancels). Historical Tai rerun stays blocked until >=25/31 entries reproduce. If T-165 also fails, the next dependency is the owner's chart-bar CSV or Pine Inputs/Style screenshot.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T03:00:00+03:00",
       "do_not_reopen": false
     }
   ],
@@ -14111,6 +14154,23 @@
       "validated_by": "claude",
       "date": "2026-10-19T02:30:00+03:00",
       "reverify_if": "The owner supplies Pine Inputs/Style settings or a chart bar export."
+    },
+    {
+      "id": "V-422",
+      "task_id": "T-164",
+      "subject": "Claude review of T-164 clock/price alignment",
+      "method": "Read report, shifts JSON, entries CSV and script; ran ruff check/format (line length 100; three long report strings marked noqa E501); confirmed diagnostic only (broker calls 0, orders 0, holdout not read, lake writes 0, production writes 0, tuning false).",
+      "result": "pass",
+      "checked": "Acceptance met as a negative diagnostic. Best constant shift +3 min on 1m open after a 221.05-point basis (p=0.0005, 30 samples) but per-entry shifts range -330 to +161 min, shifted T-162 replay matches 4/31 within +-2 bars (need 25), bar-close labelling gives 9 all-four passes vs 7. Weakness: a constant price basis is a poor assumption (futures carry), so T-165 tests within-trade moves where the basis cancels.",
+      "evidence": [
+        "docs/evidence/t164_report.md",
+        "docs/evidence/t164_shifts.json",
+        "docs/evidence/t164_entries.csv",
+        "scripts/lab_t164_clock_price_alignment.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T03:00:00+03:00",
+      "reverify_if": "The owner supplies a chart-bar CSV or Pine Inputs/Style screenshot, or the recorded NSXUSD bars are rebuilt."
     }
   ],
   "blockers": [
@@ -24441,7 +24501,40 @@
         "docs/specs/t164_clock_price_alignment.md"
       ],
       "summary": "Reviewed T-163: pass as negative diagnostic (no anchor or filter subset gets past 9/29 all-filters or 5 entries within +-2 bars; EMA200 side alone 24/29). Lint clean. Rebuilt on main (old entries restored, Codex's two log entries merged). Recorded D-047 and queued T-164: replay-only clock/price alignment scan, since indicator settings alone do not explain his trades. Historical Tai rerun still waits for >=25/31. Turn to codex (D-045)."
+    },
+    {
+      "revision": 449,
+      "ts": "2026-10-19T02:35:00+03:00",
+      "agent": "codex",
+      "action": "complete_t164_clock_price_alignment",
+      "task_ids": [
+        "T-164"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t164_clock_price_alignment.py",
+        "tests/unit/test_t164_clock_price_alignment.py",
+        "docs/evidence/t164_report.md",
+        "docs/evidence/t164_shifts.json",
+        "docs/evidence/t164_entries.csv"
+      ],
+      "summary": "Started T-164 from the accepted T-163 lineage. Will run the specified bounded offline clock/price alignment scan once; no broker, orders, holdout, lake or production writes. | Completed one bounded Pod scan. Best constant alignment +3 minutes on 1m open after 221.05-point basis; p=0.0005, but per-entry shifts are dispersed and shifted T-162 matches 4/31 within +/-2 bars. No safe correction or historical rerun. Turn to Claude."
+    },
+    {
+      "revision": 450,
+      "ts": "2026-10-19T03:00:00+03:00",
+      "agent": "claude",
+      "action": "accept_t164_queue_t165",
+      "task_ids": [
+        "T-164",
+        "T-165"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t165_trade_pair_alignment.md"
+      ],
+      "summary": "Reviewed T-164: pass as negative diagnostic (constant shift +3 min p=0.0005 but per-entry shifts scattered, shifted replay 4/31). Lint clean. Rebuilt on main (old entries restored, Codex's two log entries merged). Recorded D-048 and queued T-165: within-trade entry-to-exit move alignment where the price basis cancels. Historical Tai rerun still waits for >=25/31. Turn to codex (D-045)."
     }
   ],
-  "project_summary": "T-163 accepted as negative diagnostic: no VWAP anchor, 54m HA anchor or filter subset reproduces the owner's entries (best 9/29 all filters; EMA200 alone 24/29). T-164 queued: replay-only clock/price alignment scan. Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
+  "project_summary": "T-164 accepted as negative diagnostic: no constant clock shift aligns the owner's chart (best +3 min p=0.0005, per-entry shifts -330..+161, shifted replay 4/31). T-165 queued: within-trade move alignment (basis cancels). Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
 }
