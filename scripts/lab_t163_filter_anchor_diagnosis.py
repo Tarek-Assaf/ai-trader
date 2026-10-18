@@ -310,26 +310,28 @@ def _owner_rows(
         }
         if idx is not None:
             close, vwap, atr = bar.close, f.vwap[idx], f.atr[idx]
-            row.update(
-                {
-                    "close": close,
-                    "vwap": vwap,
-                    "atr14": atr,
-                    "ema_side": close > f.ema[idx]
-                    if owner.direction == "long"
-                    else close < f.ema[idx],
-                    "adx_di": f.adx[idx] is not None
-                    and f.adx[idx] >= 20
-                    and (
-                        f.plus_di[idx] > f.minus_di[idx]
-                        if owner.direction == "long"
-                        else f.minus_di[idx] > f.plus_di[idx]
-                    ),
-                    "vwap_side": close > vwap if owner.direction == "long" else close < vwap,
-                    "vwap_distance": abs(close - vwap) / atr if vwap and atr else None,
-                    "atr_risk_pass": port._risk(bars, f, idx, owner.direction)[0],
-                }
+            row.update({"close": close, "vwap": vwap, "atr14": atr})
+            row["ema_side"] = (
+                close > f.ema[idx] if owner.direction == "long" else close < f.ema[idx]
             )
+            row["adx_di"] = (
+                f.adx[idx] is not None
+                and f.adx[idx] >= 20
+                and (
+                    f.plus_di[idx] > f.minus_di[idx]
+                    if owner.direction == "long"
+                    else f.minus_di[idx] > f.plus_di[idx]
+                )
+            )
+            row["vwap_side"] = (
+                None
+                if vwap is None
+                else close > vwap
+                if owner.direction == "long"
+                else close < vwap
+            )
+            row["vwap_distance"] = abs(close - vwap) / atr if vwap and atr else None
+            row["atr_risk_pass"] = port._risk(bars, f, idx, owner.direction)[0]
         rows.append(row)
     return rows
 
