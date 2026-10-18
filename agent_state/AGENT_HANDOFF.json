@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 424,
+  "turn": "codex",
+  "revision": 425,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4985,7 +4985,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03"
       ],
@@ -4993,7 +4993,8 @@
       "acceptance_criteria": [
         "Follow docs/specs/t151_owner_trades_comparison.md exactly (owner file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv, times UTC). Run after T-154 is handed back, in the same Pod session if possible. Diagnostic only; no broker calls; no gate/cost/ledger/promotion edits.",
         "Review cycle 1 (Claude, 2026-10-18): the negative result stands (0 of 31 same-direction hits at +/-1, +/-2, +/-5 in all 9 groups) and ruff check/format pass. Fix before acceptance: (1) docs/evidence/t151_owner_trades_summary.json has by_day = {} in every group although match_entries builds it; the spec asks for hits, misses and extra signals per day, so regenerate the summary with by_day filled (or show why the redaction removed it) and add a per-day table to the report. (2) Spec step 6 asks what remains unexplained: add a short section stating it. Add, per owner entry (31), which Tai condition would have blocked a signal at that bar (HA crossover absent, EMA200 trend, ADX/DI, VWAP side, max 1.5 ATR from VWAP), as counts per condition, diagnostic only and no parameter changes. Only 3 to 12 signals against 31 owner entries suggests the filters or HA timing, not the anchor, decide this. (3) Add a unit test that the forming-candle signal fires on a partial candle and is not fired again after it reverses (current test only checks the HA numbers). (4) Keep the Pod run read-only; if the rerun needs the Pod, say so as a question instead of waiting.",
-        "Scope extension (Claude, 2026-10-18, same cycle 1 hand-back, not a new cycle): follow the Addendum 2026-10-18 in docs/specs/t151_owner_trades_comparison.md: add variant D (refresh entries without a cross, with and without in-trade gating), per-entry condition table for all 31 entries, stop-distance fit, basis-adjusted second column. Diagnostic only."
+        "Scope extension (Claude, 2026-10-18, same cycle 1 hand-back, not a new cycle): follow the Addendum 2026-10-18 in docs/specs/t151_owner_trades_comparison.md: add variant D (refresh entries without a cross, with and without in-trade gating), per-entry condition table for all 31 entries, stop-distance fit, basis-adjusted second column. Diagnostic only.",
+        "Review cycle 2 (Claude, 2026-10-18), last allowed cycle. Fix only these: (1) docs/evidence/t151_owner_trades_summary.json still has by_day = {} in every group; fill it (hits, misses, extra signals per owner day) and add the per-day table to the report. (2) The report still has no section 'What remains unexplained'; add 5 to 10 plain lines: what the refresh path and per-entry condition table do and do not explain (HA state fails 20/31, ADX/DI 21/31, dont_chase 20/31, all filters pass 0/31; entries 1, 11, 12, 13 have no condition data - say why, e.g. no bars/warm-up, and whether recorded data is missing). (3) Replace test_forming_partial_can_cross_then_reverse with a test that runs the signal logic on a partial candle: signal fires on the partial cross and is not fired again after the candle reverses and re-crosses within the same bar. The current test only checks HA numbers. Claude already applied ruff format (line length 100) to the two Python files; do not reformat. Diagnostic only, no parameter changes. If a Pod rerun is needed, ask as a question instead of waiting."
       ],
       "deliverables": [
         "scripts/lab_t151_owner_trades.py",
@@ -5001,7 +5002,7 @@
         "docs/evidence/t151_owner_trades_summary.json",
         "docs/evidence/t151_owner_trades_report.md"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "docs/specs/t151_owner_trades_comparison.md",
         "scripts/lab_t151_owner_trades.py",
@@ -13477,6 +13478,22 @@
       "validated_by": "codex",
       "date": "2026-10-18T13:35:00Z",
       "reverify_if": "Claude requests a correction to the refresh-path calculations or Pod evidence."
+    },
+    {
+      "id": "V-406",
+      "task_id": "T-151",
+      "subject": "T-151 cycle-2 review",
+      "method": "Checked out codex/t151-cycle2, ruff check and ruff format --check (line length 100), read summary JSON, report and unit test against the cycle-1 and addendum criteria.",
+      "result": "fail",
+      "checked": "Addendum items present: variants D, 31-row condition table, stop fit, basis-adjusted column. ruff check passes; ruff format needed a fix (applied by Claude). Still missing from cycle 1: by_day filled, unexplained section, partial-candle signal test. Safety: no broker calls, no holdout read.",
+      "evidence": [
+        "docs/evidence/t151_owner_trades_summary.json",
+        "docs/evidence/t151_owner_trades_report.md",
+        "tests/unit/test_t151_owner_trades.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-18T17:00:00+03:00",
+      "reverify_if": "Codex hands back T-151 again."
     }
   ],
   "blockers": [
@@ -23325,6 +23342,21 @@
         "docs/evidence/t151_owner_trades_report.md"
       ],
       "summary": "Completed the T-151 cycle-1 scope extension requested in the Claude handoff: added refresh and refresh_gated replay variants, per-entry condition diagnostics for all 31 owner entries, stop-fit and basis-adjusted columns, and aligned the 15-group redacted summary/report. Read-only Pod execution exited 0 with 31 entries and 15 groups. Refresh groups had 0/31 hits at +/-1 and +/-2 and 1/31 at +/-5, all filters passed for 0/31. Safety remained zero broker calls/orders with no holdout, gate, cost, ledger, promotion or lake writes. Handed T-151 to Claude for review; T-154 remains parked/blocked per D-043."
+    },
+    {
+      "revision": 425,
+      "ts": "2026-10-18T17:00:00+03:00",
+      "agent": "claude",
+      "action": "t151_cycle2_changes_requested",
+      "task_ids": [
+        "T-151"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t151_owner_trades.py",
+        "tests/unit/test_t151_owner_trades.py"
+      ],
+      "summary": "Reviewed T-151. Addendum work is in (variant D, 31-row condition table, stop fit). Three cycle-1 fixes still missing: by_day empty, no unexplained section, weak partial-candle test. Applied ruff format. Set changes_requested, review_cycles 2 (last allowed), turn codex. Findings so far: refresh path also gives 0/31 at +/-2, all six filters pass for 0 of 31 owner entries, so the filters/HA timing, not the anchor, separate the agent from the owner. T-149 still waits as already done."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
