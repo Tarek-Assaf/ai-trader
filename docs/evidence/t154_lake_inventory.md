@@ -52,5 +52,51 @@ windows, so T-154 does not write a matching or net-of-cost verdict. The
 diagnostic report identifies the remaining source-data gap for owner review;
 no arbitrary gap bridging was added.
 
+## NSXUSD 60m missing-hour diagnosis
+
+The bounded 2022-01 through 2026-06 scan covered 1,491,827 source 1m rows and
+1,389 UTC days. Resampling produced 24,178 complete 60m bars. The most common
+per-day missing-hour patterns were:
+
+| Days | Missing hours in 1m | Missing hours in complete 60m |
+| ---: | --- | --- |
+| 486 | 22 | 21, 22 |
+| 184 | 22 | 21, 22, 23 |
+| 176 | 22, 23 | 21, 22, 23 |
+| 160 | 00-22 | 00-22 |
+| 55 | 00-22 | 00-23 |
+| 24 | 21 | 20-22 |
+| 21 | 21 | 20-21 |
+| 16 | 18-22 | 17-22 |
+| 11 | 21-23 | 20-23 |
+| 8 | 00-21 | 00-21 |
+
+The dominant 22:00 source gap is present before resampling, so the zero-window
+result is primarily a source coverage defect. Resampling also drops adjacent
+hours when a 60-minute bin is incomplete, as shown where the complete-bar
+pattern is wider than the 1m pattern. Those bins are not filled or bridged;
+the NSXUSD 60m group remains stopped under the acceptance rule.
+
 The checks were read-only. No broker calls, orders, holdout reads, gate changes,
 cost calculations, ledger writes, or promotion activity occurred.
+
+## Review-cycle per-group rerun
+
+The format fix was applied and the seven groups with windows were rerun in the
+required order: XAUUSD 60m, NSXUSD 5m, XAUUSD 5m, NSXUSD 3m, XAUUSD 3m,
+NSXUSD 1m, and XAUUSD 1m. Each group had a checkpoint and a 20-minute limit.
+
+| Group | Library windows or inventory (30/60/120) | OOS queries | Rerun elapsed | Status | Verdict / trials |
+| --- | --- | ---: | ---: | --- | --- |
+| XAUUSD 60m | 1,458 | 918 | 58.553s | complete | all `NOT_FOUND`; 360 per result, 6,480 total |
+| NSXUSD 5m | 12,652 / 5,039 / 1,717 | 19,408 | 1,200.114s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| XAUUSD 5m | 13,428 / 5,478 / 1,971 | 20,877 | 1,200.115s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| NSXUSD 3m | 11,169 / 9,534 / 3,914 | 24,617 | 1,200.166s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| XAUUSD 3m | 11,736 / 10,170 / 4,301 | 26,207 | 1,200.115s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| NSXUSD 1m | 17,693 / 16,051 / 15,162 | 48,906 | 1,200.064s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| XAUUSD 1m | 18,450 / 16,805 / 16,009 | 51,264 | 1,200.115s | partial timeout at 18 queries | no final verdict or trial count emitted |
+
+The machine-readable record is `t154_review_cycle1_rerun.json`. NSXUSD 60m
+remains stopped because its source coverage has same-day missing hours; no
+matching or net-of-cost verdict is claimed, and the reviewer must supply the
+pass validation. The reruns were read-only and made no broker calls or orders.

@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 417,
+  "turn": "claude",
+  "revision": 418,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -5079,7 +5079,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-03",
         "R-04"
@@ -5098,7 +5098,8 @@
       "deliverables": [
         "docs/evidence/t154_lake_inventory.json",
         "docs/evidence/t154_lake_inventory.md",
-        "docs/evidence/t154_report.md"
+        "docs/evidence/t154_report.md",
+        "docs/evidence/t154_review_cycle1_rerun.json"
       ],
       "review_cycles": 1,
       "evidence": [
@@ -5112,9 +5113,11 @@
         "tests/unit/test_t146_runner.py",
         "tests/unit/test_lab_runner.py",
         "Pod read-only inventory: XAUUSD 211 parquet files / 6,140,217 rows; NSXUSD 191 files / 5,285,568 rows.",
-        "Pod read-only OOS window counts for 2025-2026 recorded in t154_lake_inventory.json; NSXUSD 60m remains zero and stops matching per acceptance rule."
+        "Pod read-only OOS window counts for 2025-2026 recorded in t154_lake_inventory.json; NSXUSD 60m remains zero and stops matching per acceptance rule.",
+        "docs/evidence/t154_review_cycle1_rerun.json: seven-group rerun in required order; XAUUSD 60m complete (1,458 library windows, 918 OOS queries, 58.553s, all NOT_FOUND, 360 trials per result); the other six groups each reached 18 queries and the 1,200s limit with no final verdict or trial count emitted.",
+        "NSXUSD 60m gap diagnosis: 1,491,827 source 1m rows across 1,389 UTC days, 24,178 complete 60m bars; dominant source gap is hour 22 (486 days), so the defect is source coverage with incomplete-bin effects during resampling."
       ],
-      "completion_note": "Completed T-154 diagnostic and handed to Claude for review. Fixed the parent timeout fallback that misreported partial groups as library_windows=0, preserved pre-match window counts in child checkpoints, added canonical NSXUSD loader fallback for legacy NAS100/1m_capital (and NAS100/1m or US100/1m) trees, and added narrow hourly handling for the confirmed HistData 20:00/21:00-to-23:00 UTC daily break while keeping weekends and unknown gaps hard. Pod evidence records exact inventory, timestamp dtype, 10 representative continuity failures, NSXUSD price/date proof and 2025-2026 OOS window counts. NSXUSD 60m still has zero windows because of additional unknown same-day source-hour gaps, so the acceptance stop rule was followed: no T-146 matching or net-of-cost verdict was written. No broker calls, orders, holdout reads, gate/cost/ledger/promotion edits or lake writes. Desktop pytest, Ruff and mypy are unavailable; compileall, continuity smoke tests, JSON validation, handoff validation and git diff --check pass."
+      "completion_note": "Completed the T-154 review-cycle fixes and handed the turn to Claude for review. Ruff formatting was fixed in src/trader/lab/runner.py. The seven groups with usable inventories were rerun in the required 60m, 5m, 3m, 1m order for XAUUSD and NSXUSD with checkpoints and 1,200-second per-group limits: XAUUSD 60m completed in 58.553s with 1,458 library windows, 918 OOS queries, all NOT_FOUND and 360 trials per result; NSXUSD 5m, XAUUSD 5m, NSXUSD 3m, XAUUSD 3m, NSXUSD 1m and XAUUSD 1m each reached 18 queries and timed out at 1,200s without a final verdict or trial count. NSXUSD 60m remains a defect and was not given a matching verdict: the 1m source has 1,491,827 rows across 1,389 days with the dominant missing hour at 22:00 on 486 days, while complete resampling produced 24,178 bars. No own pass validation is claimed; Claude must validate. All work was read-only with no broker calls, orders, holdout reads, gate/cost/ledger/promotion edits or lake writes."
     }
   ],
   "decisions": [
@@ -23120,7 +23123,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed T-154 (cycle 1 of 2). Good: the zero-window cause is a timeout-fallback reporting defect, counts are now saved before matching, the NSXUSD folder alias is mapped, and window counts are nonzero for 7 of 8 groups. Not accepted: ruff format fails on src/trader/lab/runner.py; the T-146 groups were not rerun (Step 3) although 7 of 8 groups have windows; NSXUSD 60m has 0 windows and the cause (1m data or resample step) is not shown. Details in the T-154 acceptance criteria. Codex's merged entries 416/417 combined into one. Turn to Codex."
+    },
+    {
+      "revision": 418,
+      "ts": "2026-10-18T04:15:00+03:00",
+      "agent": "codex",
+      "action": "t154_review_cycle1_fixes",
+      "task_ids": [
+        "T-154"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t154_lake_inventory.json",
+        "docs/evidence/t154_lake_inventory.md",
+        "docs/evidence/t154_report.md",
+        "docs/evidence/t154_review_cycle1_rerun.json",
+        "src/trader/lab/runner.py"
+      ],
+      "summary": "Completed T-154 review-cycle fixes: applied Ruff formatting, diagnosed NSXUSD 60m source gaps (1,491,827 source rows across 1,389 days; 24,178 complete 60m bars; dominant missing hour 22:00 on 486 days), and reran the seven required groups in order. XAUUSD 60m completed with 1,458 library windows, 918 OOS queries, all NOT_FOUND and 360 trials per result; the other six groups each reached 18 queries before their 1,200-second limit and emitted no final verdict or trial count. NSXUSD 60m remains stopped; no own pass validation, broker calls, orders, holdout reads, gate/cost/ledger/promotion edits or lake writes. Turn handed to Claude for review."
     }
   ],
-  "project_summary": "T-154: sent back for format fix, rerun of 7 groups, and NSXUSD 60m gap explanation; Codex to fix."
+  "project_summary": "T-154: review-cycle fixes complete; seven groups rerun with six bounded partial timeouts, XAUUSD 60m all NOT_FOUND, NSXUSD 60m source-gap diagnosis recorded; handoff to Claude for review."
 }
