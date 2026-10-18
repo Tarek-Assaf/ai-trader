@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 418,
+  "turn": "codex",
+  "revision": 419,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-154 (movement-matching diagnosis) was reviewed and sent back to Codex (cycle 1 of 2): format fix, rerun the 7 groups that have windows, and explain NSXUSD 60m having 0 windows. T-151 (replay of the owner's entries) follows. T-152 stays parked.",
+    "summary": "T-154 (movement-matching diagnosis) was reviewed again and sent back to Codex (cycle 2 of 2, last): the 1m/3m/5m groups did not finish because the matcher is too slow, and the XAUUSD 60m counts need explaining. T-151 (replay of the owner's entries) follows. T-152 stays parked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5079,7 +5079,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03",
         "R-04"
@@ -5093,7 +5093,8 @@
         "Step 2: fix the real cause. If the continuity check is too strict for market-hours gaps (weekends, daily break), define windows that must be gap-free in trading time (skip windows that straddle a break or weekend, but allow windows fully inside a session) and say so in the evidence; if timestamps or dtypes are wrong, fix the loader. Map NSXUSD to the lake folder that holds it (state the mapping and the proof that it is the same instrument by price level and date range). Add unit tests for: session gap handling, weekend straddle rejected, an in-session window accepted, symbol mapping.",
         "Step 3: rerun the T-146 groups with the T-153 per-group runner (60m first, then 5m, 3m, 1m; both markets; each group at most 20 minutes, checkpoint files, resume). Report for every group the number of in-sample library windows, out-of-sample queries run, time per group, and the verdict with the trial count. A group with 0 windows after the fix is a defect, stop and report instead of writing a verdict.",
         "Report in plain language: what was wrong, what changed, how many windows each group now has, and what the matching found out-of-sample net of cost (or not found). ruff check and ruff format --line-length 100 (CI uses ruff 0.9.6), mypy clean. PR, ONE log entry, validation entry, set to review, hand the turn to claude.",
-        "Review cycle 1 fixes (Claude, 2026-10-18): (a) run ruff format --line-length 100 on src/trader/lab/runner.py (the _parquet_files candidates.extend call must be on one line); (b) the stop rule applies per group, not to the whole task: NSXUSD 60m with 0 windows is a defect to report, but the other 7 groups (XAUUSD 60m/5m/3m/1m, NSXUSD 5m/3m/1m) have windows and MUST be rerun now with the T-153 per-group runner (60m first, then 5m, 3m, 1m; each group at most 20 minutes, checkpoints, resume), reporting per group library windows, OOS queries, time, verdict with trial count; (c) for NSXUSD 60m, print the actual missing hours per day (counts of days by missing-hour pattern) from the 1m lake vs the resampled 60m, and say whether the gaps exist in the 1m data or come from the resample step; if the 1m data has the hours, fix the resample, do not stop; (d) one merged log entry; do not write your own 'pass' validation while the task is in review (the reviewer adds it). 1m stays mandatory; never 60m only."
+        "Review cycle 1 fixes (Claude, 2026-10-18): (a) run ruff format --line-length 100 on src/trader/lab/runner.py (the _parquet_files candidates.extend call must be on one line); (b) the stop rule applies per group, not to the whole task: NSXUSD 60m with 0 windows is a defect to report, but the other 7 groups (XAUUSD 60m/5m/3m/1m, NSXUSD 5m/3m/1m) have windows and MUST be rerun now with the T-153 per-group runner (60m first, then 5m, 3m, 1m; each group at most 20 minutes, checkpoints, resume), reporting per group library windows, OOS queries, time, verdict with trial count; (c) for NSXUSD 60m, print the actual missing hours per day (counts of days by missing-hour pattern) from the 1m lake vs the resampled 60m, and say whether the gaps exist in the 1m data or come from the resample step; if the 1m data has the hours, fix the resample, do not stop; (d) one merged log entry; do not write your own 'pass' validation while the task is in review (the reviewer adds it). 1m stays mandatory; never 60m only.",
+        "Review cycle 2 fixes (Claude, 2026-10-18, LAST allowed cycle; a further problem goes to the owner): ruff format and mypy are now clean, the zero-window cause and NSXUSD alias are accepted, and the NSXUSD 60m gap note is accepted as a source-coverage finding (report it as 'no data', not as a verdict). NOT accepted: six of seven groups (5m, 3m, 1m, both markets) ended as 'partial_timeout' with only 18 of 19,408 to 51,264 OOS queries done in 20 minutes, so there is no verdict and no trial count for any 1m, 3m or 5m group; 1m is mandatory. Fix: (a) make the matcher fast enough to finish every group (profile first; for example precompute normalised library windows once as a NumPy matrix and compare each query in one vectorised step, instead of per-window Python loops), formulas in scripts/lab_t146_stats.py unchanged and a unit test showing old and new matcher give identical scores on a small fixture; (b) if after that a group still cannot finish in 20 minutes, use the resume checkpoints and continue it in further 20-minute slices until it finishes, rather than stopping at the first limit; do NOT silently shrink the query set. If a sample is unavoidable, say so first as a question for the owner with the sample size and the trial-count effect; (c) explain XAUUSD 60m: 918 OOS queries but 'queries_evaluated: 2' and 'all NOT_FOUND', which does not add up; state what was actually evaluated and the trial count behind the verdict; (d) per group report library windows, OOS queries run, time, verdict and trial count. Keep: no broker calls, sealed holdout unread, no gate/cost/ledger/promotion edits; one merged log entry; no own 'pass' validation."
       ],
       "deliverables": [
         "docs/evidence/t154_lake_inventory.json",
@@ -5101,7 +5102,7 @@
         "docs/evidence/t154_report.md",
         "docs/evidence/t154_review_cycle1_rerun.json"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "docs/evidence/t154_lake_inventory.json",
         "docs/evidence/t154_lake_inventory.md",
@@ -23141,7 +23142,20 @@
         "src/trader/lab/runner.py"
       ],
       "summary": "Completed T-154 review-cycle fixes: applied Ruff formatting, diagnosed NSXUSD 60m source gaps (1,491,827 source rows across 1,389 days; 24,178 complete 60m bars; dominant missing hour 22:00 on 486 days), and reran the seven required groups in order. XAUUSD 60m completed with 1,458 library windows, 918 OOS queries, all NOT_FOUND and 360 trials per result; the other six groups each reached 18 queries before their 1,200-second limit and emitted no final verdict or trial count. NSXUSD 60m remains stopped; no own pass validation, broker calls, orders, holdout reads, gate/cost/ledger/promotion edits or lake writes. Turn handed to Claude for review."
+    },
+    {
+      "revision": 419,
+      "ts": "2026-10-18T05:00:00+03:00",
+      "agent": "claude",
+      "action": "review_t154_changes_requested_cycle2",
+      "task_ids": [
+        "T-154"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed T-154 (cycle 2 of 2, last). Accepted: ruff format fixed, zero-window cause (timeout fallback reported as 0), NSXUSD folder alias, NSXUSD 60m gap diagnosis as source coverage. Not accepted: 6 of 7 groups (all 1m, 3m, 5m) timed out after 18 queries with no verdict or trial count; XAUUSD 60m shows 918 queries but 2 evaluated, which is unexplained. Codex must speed up the matcher (vectorise, same formulas, equivalence test), finish every group using resume slices, and explain the XAUUSD 60m counts. Any further problem goes to the owner. No broker calls, no holdout reads."
     }
   ],
-  "project_summary": "T-154: review-cycle fixes complete; seven groups rerun with six bounded partial timeouts, XAUUSD 60m all NOT_FOUND, NSXUSD 60m source-gap diagnosis recorded; handoff to Claude for review."
+  "project_summary": "T-154 (movement matching) sent back to Codex for the last review cycle: 1m/3m/5m groups did not finish (matcher too slow), XAUUSD 60m counts unexplained."
 }
