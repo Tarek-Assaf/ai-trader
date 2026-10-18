@@ -754,9 +754,7 @@ def run_group(
         queries, stride = _sample_queries(out_of_sample.get(length, ()), max_queries)
         query_stride = max(query_stride, stride)
         for method in ("dtw", "correlation"):
-            records_by_horizon: dict[int, list[QueryRecord]] = {
-                horizon: [] for horizon in HORIZONS
-            }
+            records_by_horizon: dict[int, list[QueryRecord]] = {horizon: [] for horizon in HORIZONS}
             for query_number, query in enumerate(queries):
                 # Matching and control selection do not depend on the forward horizon.
                 # Compute them once and reuse them for all three horizons.
