@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 450,
+  "revision": 452,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-164 accepted as negative diagnostic: no constant clock shift aligns the owner's chart (best +3 min p=0.0005, per-entry shifts -330..+161, shifted replay 4/31). T-165 queued: within-trade move alignment (basis cancels). Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-165 accepted as negative diagnostic: within-trade moves do not align (best +3 min, 17/31 within tolerance, need 20). Owner NQ1 bars cannot be matched with our data, so 25/31 cannot be proven and the historical Tai rerun stays blocked (D-049). T-166 queued: rule-by-rule conformance audit of the Pine port. Owner needed: chart-bar CSV export or Pine Inputs/Style screenshot; Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -138,7 +138,8 @@
         "T-162",
         "T-163",
         "T-164",
-        "T-165"
+        "T-165",
+        "T-166"
       ]
     },
     {
@@ -5477,7 +5478,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5494,6 +5495,37 @@
         "docs/evidence/t165_report.md",
         "docs/evidence/t165_shifts.json",
         "docs/evidence/t165_trades.csv"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "scripts/lab_t165_trade_pair_alignment.py",
+        "tests/unit/test_t165_trade_pair_alignment.py",
+        "docs/evidence/t165_report.md",
+        "docs/evidence/t165_shifts.json",
+        "docs/evidence/t165_trades.csv"
+      ],
+      "completion_note": "Completed one bounded Pod within-trade move alignment scan over 31 parent trades collapsed from 54 tranches. Best +3 minutes: 25/31 sign matches, 17/31 tolerance matches, p=0.0005; below 20/31 acceptance, so no historical rerun. 3m open/close cross-checks each 12/31. Excursions and duration misfit recorded. Safety counters all zero/false. Pod ruff and pytest binaries were unavailable; desktop py_compile, git diff --check and handoff validation pass."
+    },
+    {
+      "id": "T-166",
+      "title": "Pine-port conformance audit: prove the port follows the Tai source rule by rule",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-165"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t166_port_conformance_audit.md exactly (rule-by-rule table Pine lines -> port function -> known-answer test; add tests for missing rows; fix the port only where a test proves a difference; list hard-coded and unknown inputs as owner dependencies; plain verdict first).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets; if lake data is touched, all four timeframes 1m/3m/5m/60m and both NSXUSD and XAUUSD with 1m mandatory. One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t166_conformance.md",
+        "tests/unit/test_t166_conformance.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -5883,6 +5915,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T03:00:00+03:00",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-049",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-165 also fails to align the owner's NQ1 chart with our data (best +3 min, 17/31 within tolerance, 3m open/close 12/31). Conclusion: our NAS100/NSXUSD bars cannot reproduce the owner's 31 entries, so 25/31 cannot be proven on our data and the historical Tai rerun stays blocked. Reason for T-166: prove the port follows the Pine source rule by rule, which needs no owner bars. The owner must supply a chart-bar CSV export (same NQ1 3m window) or the Pine Inputs/Style screenshot to unblock the rerun.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T04:10:00+03:00",
       "do_not_reopen": false
     }
   ],
@@ -14171,6 +14211,22 @@
       "validated_by": "claude",
       "date": "2026-10-19T03:00:00+03:00",
       "reverify_if": "The owner supplies a chart-bar CSV or Pine Inputs/Style screenshot, or the recorded NSXUSD bars are rebuilt."
+    },
+    {
+      "id": "V-423",
+      "task_id": "T-165",
+      "subject": "Claude review of T-165 within-trade alignment",
+      "method": "Read report, shifts JSON, trades CSV and script; ran ruff check and format (line length 100); checked diagnostic-only counters (broker calls 0, orders 0, holdout not read, lake writes 0, production writes 0, tuning false). Fixed one unused loop variable and marked three long report strings noqa E501.",
+      "result": "pass",
+      "checked": "Acceptance met as a negative diagnostic: best +3 min, 25/31 sign matches but 17/31 within tolerance (need 20), p=0.0005, 3m open/close 12/31 each, one duration misfit; no safe alignment, no rerun.",
+      "evidence": [
+        "docs/evidence/t165_report.md",
+        "docs/evidence/t165_shifts.json",
+        "docs/evidence/t165_trades.csv"
+      ],
+      "reverify_if": "script or evidence files change",
+      "validated_by": "claude",
+      "date": "2026-10-19T04:10:00+03:00"
     }
   ],
   "blockers": [
@@ -24534,6 +24590,39 @@
         "docs/specs/t165_trade_pair_alignment.md"
       ],
       "summary": "Reviewed T-164: pass as negative diagnostic (constant shift +3 min p=0.0005 but per-entry shifts scattered, shifted replay 4/31). Lint clean. Rebuilt on main (old entries restored, Codex's two log entries merged). Recorded D-048 and queued T-165: within-trade entry-to-exit move alignment where the price basis cancels. Historical Tai rerun still waits for >=25/31. Turn to codex (D-045)."
+    },
+    {
+      "revision": 451,
+      "ts": "2026-10-19T03:55:00+03:00",
+      "agent": "codex",
+      "action": "complete_t165_trade_pair_alignment",
+      "task_ids": [
+        "T-165"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t165_trade_pair_alignment.py",
+        "tests/unit/test_t165_trade_pair_alignment.py",
+        "docs/evidence/t165_report.md",
+        "docs/evidence/t165_shifts.json",
+        "docs/evidence/t165_trades.csv"
+      ],
+      "summary": "Started T-165 from the accepted T-164 lineage. Will run one bounded offline within-trade move alignment scan; no broker calls, orders, holdout, lake or production writes. Completed one bounded Pod scan. Best +3 minutes, 17/31 within tolerance, p=0.0005; 3m open/close each 12/31; no safe alignment or historical rerun. Turn to Claude."
+    },
+    {
+      "revision": 452,
+      "ts": "2026-10-19T04:10:00+03:00",
+      "agent": "claude",
+      "action": "accept_t165_queue_t166",
+      "task_ids": [
+        "T-165",
+        "T-166"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t166_port_conformance_audit.md"
+      ],
+      "summary": "Reviewed T-165: pass as negative diagnostic (17/31 within tolerance at best +3 min, need 20). Rebuilt on main (Codex's start and complete log entries merged). Recorded D-049 and queued T-166, a data-independent rule-by-rule audit of the Pine port. Historical Tai rerun stays blocked until the owner supplies matching bars. Turn to codex (D-045)."
     }
   ],
   "project_summary": "T-164 accepted as negative diagnostic: no constant clock shift aligns the owner's chart (best +3 min p=0.0005, per-entry shifts -330..+161, shifted replay 4/31). T-165 queued: within-trade move alignment (basis cancels). Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
