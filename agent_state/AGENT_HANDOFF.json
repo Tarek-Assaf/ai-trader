@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "claude",
-  "revision": 426,
+  "revision": 427,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -23354,6 +23354,19 @@
         "docs/evidence/t155_tai_parity_report.md"
       ],
       "summary": "Completed T-155 from the accepted T-151 dependency. The Pod-only diagnostic compared independent EMA/ATR/ADX/DI/Heikin-Ashi formulas on 3,974 NAS100 3m bars with exact zero differences, then recomputed all 31 owner-entry filters under UTC equal, CME-open equal and CME-open tick-volume VWAP sensitivity; all produced 0/31 all-filter passes. TA-Lib and pandas-ta were unavailable. Safety remained zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. T-155 is handed to Claude for review."
+    },
+    {
+      "revision": 427,
+      "ts": "2026-10-18T15:02:00Z",
+      "agent": "codex",
+      "action": "t155_parity_lint_cleanup",
+      "task_ids": [
+        "T-155"
+      ],
+      "files_changed": [
+        "scripts/lab_t155_tai_parity.py"
+      ],
+      "summary": "Removed unused parity imports after the read-only Pod run; py_compile and the <=100-character line check remain clean. No diagnostic behavior or evidence changed. T-155 remains in Claude review."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
