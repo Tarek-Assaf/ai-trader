@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 420,
+  "turn": "claude",
+  "revision": 421,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-151 owner-trade forming-candle replay is in progress from the accepted T-154 handoff. It will compare all three anchors and three signal variants on the owner CSV and recorded NAS100 data. T-155 follows; T-152 stays parked.",
+    "summary": "T-151 owner-trade forming-candle replay is complete and handed to Claude for review. The Pod run covered 31 owner entries across 9 pre-registered variants/anchors; no same-direction hits occurred at \u00b11/\u00b12/\u00b15 3m bars, while forming variants produced additional unmatched signals. T-154 remains changes_requested; T-155 follows; T-152 stays parked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4985,7 +4985,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -4994,11 +4994,20 @@
         "Follow docs/specs/t151_owner_trades_comparison.md exactly (owner file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv, times UTC). Run after T-154 is handed back, in the same Pod session if possible. Diagnostic only; no broker calls; no gate/cost/ledger/promotion edits."
       ],
       "deliverables": [
-        "docs/specs/t151_owner_trades_comparison.md"
+        "scripts/lab_t151_owner_trades.py",
+        "tests/unit/test_t151_owner_trades.py",
+        "docs/evidence/t151_owner_trades_summary.json",
+        "docs/evidence/t151_owner_trades_report.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/specs/t151_owner_trades_comparison.md",
+        "scripts/lab_t151_owner_trades.py",
+        "tests/unit/test_t151_owner_trades.py",
+        "docs/evidence/t151_owner_trades_summary.json",
+        "docs/evidence/t151_owner_trades_report.md"
+      ],
+      "completion_note": "Implemented the pre-registered diagnostic-only owner-trade replay. The read-only Pod run used 11,747 NAS100 Capital.com 1m rows to build 3,974 UTC 3m bars, collapsed the owner CSV to 31 entries (10 long, 21 short), and evaluated all 9 variant/anchor groups. Every group recorded 0/31 same-direction hits at \u00b11, \u00b12 and \u00b15 3m bars; forming variants added unmatched signals (5\u201312 at \u00b15), so the forming-candle hypothesis is not supported by this run. Price basis matched 27 entries with 4 missing minutes; owner minus NAS100 mid median 209.15 points (min -17.05, max 385.4). Pod safety flags were broker_calls=0, orders=0, sealed_holdout_read=false, gate1_evaluated=false, cost_ledger_promotion_writes=0. Local ruff format/check, py_compile and diff --check passed; desktop runtime dependencies and pytest are unavailable, so CI review remains required."
     },
     {
       "id": "T-152",
@@ -13402,6 +13411,23 @@
       "validated_by": "claude",
       "date": "2026-10-17T21:00:00+03:00",
       "reverify_if": "Codex re-runs T-146 after the loader/continuity cause is found."
+    },
+    {
+      "id": "V-403",
+      "task_id": "T-151",
+      "subject": "T-151 owner-trade forming-candle replay and Pod evidence",
+      "method": "Read docs/specs/t151_owner_trades_comparison.md, reviewed the script and CI-importable unit tests, ran ruff format/check, py_compile and git diff --check locally, then ran the script read-only in the reachable owner-provided Pod against the NAS100 Capital.com 1m lake and owner CSV.",
+      "result": "pass",
+      "checked": "Pod run completed with 31 owner entries, 9 groups, 0 same-direction hits at \u00b11/\u00b12/\u00b15 for every group, forming variant extra-signal counts of 5\u201312, price basis matched_entries=27/missing_entry_minutes=4, and safety flags showing zero broker calls/orders and no holdout/gate/cost/ledger writes. Primary owner endpoint remained ERR_BLOCKED_BY_CLIENT; alternate owner endpoint supplied in the task was used.",
+      "evidence": [
+        "scripts/lab_t151_owner_trades.py",
+        "tests/unit/test_t151_owner_trades.py",
+        "docs/evidence/t151_owner_trades_summary.json",
+        "docs/evidence/t151_owner_trades_report.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-18T01:56:30Z",
+      "reverify_if": "Claude requests a correction to the forming-candle calculations or the Pod evidence."
     }
   ],
   "blockers": [
@@ -23133,7 +23159,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity."
+    },
+    {
+      "revision": 421,
+      "ts": "2026-10-18T01:56:30Z",
+      "agent": "codex",
+      "action": "complete_t151_owner_trades",
+      "task_ids": [
+        "T-151"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t151_owner_trades.py",
+        "tests/unit/test_t151_owner_trades.py",
+        "docs/evidence/t151_owner_trades_summary.json",
+        "docs/evidence/t151_owner_trades_report.md"
+      ],
+      "summary": "Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at \u00b11/\u00b12/\u00b15, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
     }
   ],
-  "project_summary": "T-154: sent back for format fix, rerun of 7 groups, and NSXUSD 60m gap explanation; Codex to fix."
+  "project_summary": "T-151 is complete for review with Pod evidence committed; T-154 remains changes_requested for format fix, 7-group rerun and NSXUSD 60m gap explanation; T-155 follows and T-152 stays parked."
 }

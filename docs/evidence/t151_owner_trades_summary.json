@@ -1,0 +1,293 @@
+{
+  "anchors": [
+    "cme_open",
+    "utc_midnight",
+    "riyadh_midnight"
+  ],
+  "data": {
+    "bar_policy": "UTC clock 3m buckets; incomplete buckets are retained but never used in a valid 54m group.",
+    "chart_bars_3m": 3974,
+    "first_1m": "2026-10-05T08:28:00+00:00",
+    "lake_rows_1m": 11747,
+    "last_1m": "2026-10-16T10:46:00+00:00"
+  },
+  "diagnostic_only": true,
+  "generated_at": "2026-10-18T01:56:30Z",
+  "groups": [
+    {
+      "anchor": "cme_open",
+      "candidate_signals": 3,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 3,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 3,
+      "variant": "closed",
+      "warmup_excluded": 0
+    },
+    {
+      "anchor": "utc_midnight",
+      "candidate_signals": 0,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 0,
+      "variant": "closed",
+      "warmup_excluded": 1
+    },
+    {
+      "anchor": "riyadh_midnight",
+      "candidate_signals": 1,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 1,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 1,
+      "variant": "closed",
+      "warmup_excluded": 1
+    },
+    {
+      "anchor": "cme_open",
+      "candidate_signals": 9,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 9,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 9,
+      "variant": "forming_reset",
+      "warmup_excluded": 4
+    },
+    {
+      "anchor": "utc_midnight",
+      "candidate_signals": 12,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 12,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 12,
+      "variant": "forming_reset",
+      "warmup_excluded": 5
+    },
+    {
+      "anchor": "riyadh_midnight",
+      "candidate_signals": 6,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 6,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 6,
+      "variant": "forming_reset",
+      "warmup_excluded": 2
+    },
+    {
+      "anchor": "cme_open",
+      "candidate_signals": 7,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 7,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 7,
+      "variant": "forming_carried",
+      "warmup_excluded": 4
+    },
+    {
+      "anchor": "utc_midnight",
+      "candidate_signals": 10,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 10,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 10,
+      "variant": "forming_carried",
+      "warmup_excluded": 7
+    },
+    {
+      "anchor": "riyadh_midnight",
+      "candidate_signals": 5,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 5,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 5,
+      "variant": "forming_carried",
+      "warmup_excluded": 2
+    }
+  ],
+  "owner_entry_count": 31,
+  "owner_long_entries": 10,
+  "owner_short_entries": 21,
+  "pod_evidence": {
+    "endpoint": "alternate owner-provided RunPod terminal",
+    "owner_file": "/workspace/owner_trades.csv",
+    "run": "completed read-only at 2026-10-18T01:56Z",
+    "source_lake": "/workspace/data/lake/NAS100/1m_capital/2026/10.parquet"
+  },
+  "price_basis": {
+    "matched_entries": 27,
+    "missing_entry_minutes": 4,
+    "owner_minus_nas100_mid_points": {
+      "max": 385.40000000000146,
+      "median": 209.15000000000146,
+      "min": -17.05000000000291
+    }
+  },
+  "safety": {
+    "broker_calls": 0,
+    "cost_ledger_promotion_writes": 0,
+    "gate1_evaluated": false,
+    "orders": 0,
+    "sealed_holdout_read": false
+  },
+  "task": "T-151",
+  "trial_count": 9,
+  "variants": [
+    "closed",
+    "forming_reset",
+    "forming_carried"
+  ]
+}
