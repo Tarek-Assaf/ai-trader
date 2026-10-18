@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 431,
+  "turn": "codex",
+  "revision": 432,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-156 accepted: entry prices on the owner's NQ1! chart are a median 194 points above our recorded NAS100 CFD prices, a likely cause of the 0/31 replay mismatch; bid/ask choice does not matter. Q-068 asks the owner to test the indicator on a Capital.com US100 chart. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-156 accepted. Q-068 answered: the indicator prints signals on Capital.com US100 too, so our replay logic, bar construction or timing differs. T-157 queued for Codex: find the first failing indicator rule per owner entry and test timing/anchor switches. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5190,6 +5190,35 @@
         "docs/evidence/t156_report.md"
       ],
       "completion_note": "Completed the read-only T-156 feature dump against the owner CSV and recorded NAS100 1m Capital.com lake. The Pod run produced 31 owner rows with raw indicator and 54m HA values for offsets -3..+3, coverage counts, shortfalls and bid/ask/mid sensitivity. Median shortfalls: ADX 1.0209 points, VWAP side 13.5302 points, don't-chase 1.3006 ATR; missing minutes 11, zero-range 5, flat-filled 5, fewer-than-3-minute 3m bars 8. Bid, ask and mid each had 27 available entries with 6 ADX+DI passes and 13 VWAP-side passes. The committed CSV is a compact center-bar index; the script regenerates the complete window_json artifact. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
+    },
+    {
+      "id": "T-157",
+      "title": "Tai mismatch: find the first indicator rule where our replay disagrees with each of the 31 owner entries",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-156"
+      ],
+      "acceptance_criteria": [
+        "Diagnostic only, Pod data only, no broker/gate/cost/ledger edits, sealed holdout never read, no parameter tuning. Reference: the owner's 31 entries (docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv); Q-068 shows the indicator also prints these signals on Capital.com US100 CFD, so a data-source difference is not the explanation. Entry prices are NQ1! levels, so compare TIMES and DIRECTIONS only, never absolute prices.",
+        "(1) For each entry and bars -3..+3 (3m, recorded NAS100 bid/ask mid), evaluate every Tai rule separately in the order the indicator applies them and record pass/fail per rule, so the FIRST failing rule is named per entry. Use scale-free tests where the rule is price-level dependent.",
+        "(2) Count entries by first failing rule and by whether any bar within +-3 passes all rules (timing slip) versus never passes (logic or bar construction difference).",
+        "(3) Re-read the Pine rules as documented in the repo (indicator description/spec) against our implementation line by line and list every place they could differ: 54m Heikin Ashi construction (closed vs forming bar, session anchor), VWAP anchor/reset time, ADX/DI smoothing (Wilder vs simple), EMA seed, bar-open timestamp convention (bar start vs bar end, UTC vs exchange time).",
+        "(4) For each suspected difference, test it as a diagnostic switch only (not a config change) and report how many of the 31 entries then pass all rules at the entry bar or +-1 bar.",
+        "(5) State plainly the best-matching combination, its pass count out of 31, and what remains unexplained. If no combination reaches at least 20 of 31, say so and stop; do not tune further."
+      ],
+      "deliverables": [
+        "docs/evidence/t157_rule_by_rule.csv",
+        "docs/evidence/t157_report.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -14655,7 +14684,7 @@
       "id": "Q-068",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "T-156 found a likely cause. Your entry prices (NQ1! futures) are about 194 points above our recorded NAS100 prices at the same times (range -14 to +391), so EMA200, VWAP and the distance checks are computed on a different price level and volume. Bid/ask choice makes no difference. One free test settles it: put the same Tai indicator on a Capital.com US100 chart in TradingView (same 3m, same replay days) and look at 5 of your 31 entry bars: does it still print BUY/SELL there?",
       "options": [
         "A: I will test the indicator on the Capital.com US100 chart and report yes/no for 5 entries (recommended)",
@@ -14663,7 +14692,7 @@
         "C: Stop chasing the mismatch, our data is the data we trade on"
       ],
       "recommendation": "A: if the labels vanish on US100, the signals depend on futures price and volume and cannot be reproduced on our CFD data; if they stay, we chase a timing difference.",
-      "answer": ""
+      "answer": "Owner 2026-10-18: Capital.com is not linked to his TradingView, but he sent a screenshot of 'US 100 Cash CFD' (3m, 13-14 Oct, ~30,500) where the Tai indicator DOES print many BUY/SELL labels (dashboard: Trades 53, SL 12, TP1 15, TP2 9, TP3 17, win rate 77.36%). So signals exist on CFD cash data and are not futures-only; our replay differs in logic, bars or timing. Owner says the owner-trades sheet already sent is the reference; 'let's finish it up'."
     }
   ],
   "log": [
@@ -23621,6 +23650,19 @@
         "scripts/lab_t156_feature_dump.py"
       ],
       "summary": "Reviewed T-156: pass. Fixed lint/format on the script (Codex's version failed ruff). Added finding: owner NQ1! entries sit a median 194 points above recorded NAS100 closes. Asked owner Q-068 (test indicator on Capital.com US100). No further task queued; turn to human."
+    },
+    {
+      "revision": 432,
+      "ts": "2026-10-18T22:30:00+03:00",
+      "agent": "claude",
+      "action": "q068_answered_task_t157",
+      "task_ids": [
+        "T-157"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner answered Q-068 with a Capital.com US100 screenshot showing the indicator labels (53 trades). Queued T-157: rule-by-rule replay gap on the 31 owner entries (times and directions only). Turn to codex."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
