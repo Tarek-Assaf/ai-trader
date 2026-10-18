@@ -24,6 +24,11 @@ from statistics import mean
 from typing import Any
 
 try:
+    import numpy as np
+except ModuleNotFoundError:  # pragma: no cover - optional desktop dependency
+    np = None  # type: ignore[assignment]
+
+try:
     from trader.data.resample import Candle
 except ModuleNotFoundError:  # direct ``python scripts/lab_t146_matching.py`` execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -82,6 +87,29 @@ class ShapeCluster:
     members: tuple[ShapeWindow, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class MatchIndex:
+    """Precomputed matrix for one fixed-length library.
+
+    Every call in the OOS loop uses the same in-sample library.  Keeping its
+    values in one NumPy matrix makes the correlation prefilter and correlation
+    baseline a single vectorised operation instead of a Python loop over every
+    library window.  The scalar path remains available when NumPy is absent.
+    """
+
+    candidates: tuple[ShapeWindow, ...]
+    matrix: Any | None
+
+
+def build_match_index(library: Sequence[ShapeWindow]) -> MatchIndex:
+    """Build a reusable index for a fixed-length library."""
+    candidates = tuple(library)
+    matrix = None
+    if np is not None and candidates and len({len(item.values) for item in candidates}) == 1:
+        matrix = np.asarray([item.values for item in candidates], dtype=float)
+    return MatchIndex(candidates=candidates, matrix=matrix)
+
+
 def _finite(values: Iterable[float]) -> bool:
     return all(math.isfinite(float(value)) for value in values)
 
@@ -124,12 +152,32 @@ def normalise_shape(closes: Sequence[float], atr: float) -> tuple[float, ...]:
     return tuple((float(value) - origin) / atr for value in closes)
 
 
+def _daily_break_gap(previous: datetime, current: datetime, timeframe: int) -> bool:
+    """Return whether an hourly bar step crosses the known HistData daily break.
+
+    HistData's fixed-UTC feeds print the last hourly bar at 20:00 or 21:00 UTC
+    and resume at 23:00 UTC (the exact break differs by symbol). For
+    60-minute bars those non-trading hours are skipped trading-time intervals,
+    so they must not make every 30/60/120-bar window unusable. Smaller
+    timeframes keep the strict rule and never bridge a session break. Weekend
+    gaps remain hard boundaries for every timeframe.
+    """
+    if timeframe < 60 or previous.date() != current.date():
+        return False
+    return (
+        previous.hour in {20, 21}
+        and current.hour == 23
+        and current - previous in {timedelta(hours=2), timedelta(hours=3)}
+    )
+
+
 def _continuous(candles: Sequence[Candle], start: int, end: int, timeframe: int) -> bool:
     if end > len(candles) or end <= start:
         return False
     expected = timedelta(minutes=timeframe)
     return all(
         candles[index].ts_utc - candles[index - 1].ts_utc == expected
+        or _daily_break_gap(candles[index - 1].ts_utc, candles[index].ts_utc, timeframe)
         for index in range(start + 1, end)
     )
 
@@ -269,17 +317,52 @@ def find_matches(
     method: str = "dtw",
     k: int = 20,
     correlation_prefilter: int = CORRELATION_PREFILTER,
+    index: MatchIndex | None = None,
 ) -> tuple[Match, ...]:
-    """Find top past-only matches and remove overlapping candidates."""
+    """Find top past-only matches and remove overlapping candidates.
+
+    ``index`` enables the fast path used by the real-lake runner.  It computes
+    correlation distances for a whole library matrix at once, while retaining
+    the scalar implementation for callers without NumPy and for reference
+    comparisons in the unit tests.
+    """
     if method not in {"dtw", "correlation"}:
         raise ValueError("method must be dtw or correlation")
     if k <= 0:
         raise ValueError("k must be positive")
-    eligible = [
-        candidate
-        for candidate in library
+    candidates = tuple(index.candidates if index is not None else library)
+    eligible_pairs = [
+        (position, candidate)
+        for position, candidate in enumerate(candidates)
         if candidate.ts_end < query.ts_start and len(candidate.values) == len(query.values)
     ]
+    eligible = [candidate for _, candidate in eligible_pairs]
+    if index is not None and index.matrix is not None and np is not None and eligible:
+        positions = [position for position, _ in eligible_pairs]
+        query_array = np.asarray(query.values, dtype=float)
+        matrix = index.matrix[positions]
+        centred = matrix - matrix.mean(axis=1, keepdims=True)
+        query_centred = query_array - query_array.mean()
+        denominator = np.linalg.norm(centred, axis=1) * np.linalg.norm(query_centred)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            distances_array = 1.0 - (centred @ query_centred) / denominator
+        equal_constant = np.all(matrix == query_array, axis=1)
+        distances_array = np.where((denominator == 0) & equal_constant, 0.0, distances_array)
+        distances_array = np.where((denominator == 0) & ~equal_constant, 1.0, distances_array)
+        distances = [float(value) for value in distances_array]
+        if method == "correlation":
+            scored = [
+                Match(candidate, distance, method)
+                for candidate, distance in zip(eligible, distances, strict=True)
+                if math.isfinite(distance)
+            ]
+            return _non_overlapping(scored, len(query.values), k)
+        if method == "dtw" and correlation_prefilter > 0 and len(eligible) > correlation_prefilter:
+            order = sorted(
+                range(len(eligible)),
+                key=lambda position: (distances[position], eligible[position].start),
+            )[:correlation_prefilter]
+            eligible = [eligible[position] for position in order]
     if method == "dtw" and correlation_prefilter > 0 and len(eligible) > correlation_prefilter:
         eligible.sort(key=lambda candidate: correlation_distance(query.values, candidate.values))
         eligible = eligible[:correlation_prefilter]
@@ -637,6 +720,29 @@ def run_group(
         timeframe=timeframe,
         max_windows=MAX_OOS_WINDOWS,
     )
+    # Persist the window inventory before the expensive matching and cluster
+    # loops begin.  The bounded T-153 parent may stop a child during those
+    # loops; keeping these counts in the heartbeat prevents a partial
+    # checkpoint from being misreported as an empty library.
+    if progress_path is not None:
+        _write_json(
+            progress_path,
+            {
+                "status": "running",
+                "instrument": instrument,
+                "timeframe": timeframe,
+                "queries_done": queries_done,
+                "library_windows_by_length": {
+                    str(length): len(value) for length, value in in_sample.items()
+                },
+                "oos_windows_by_length": {
+                    str(length): len(value) for length, value in out_of_sample.items()
+                },
+                "library_windows": sum(len(value) for value in in_sample.values()),
+                "oos_queries": sum(len(value) for value in out_of_sample.values()),
+                "started_at": datetime.now(UTC).isoformat(),
+            },
+        )
     results: list[dict[str, Any]] = []
     chart_dir = output_root / "t146_charts" / f"{instrument.lower()}_{timeframe}m"
     cluster_rows: list[dict[str, Any]] = []
@@ -644,16 +750,33 @@ def run_group(
     query_stride = 1
     for length in WINDOW_LENGTHS:
         library = in_sample.get(length, ())
+        match_index = build_match_index(library)
         queries, stride = _sample_queries(out_of_sample.get(length, ()), max_queries)
         query_stride = max(query_stride, stride)
         for method in ("dtw", "correlation"):
-            for horizon in HORIZONS:
-                records: list[QueryRecord] = []
-                for query_number, query in enumerate(queries):
-                    matches = find_matches(query, library, method=method, k=20)
-                    controls = random_control(
-                        query, library, count=len(matches), seed=seed + query_number
+            records_by_horizon: dict[int, list[QueryRecord]] = {horizon: [] for horizon in HORIZONS}
+            for query_number, query in enumerate(queries):
+                # Matching and control selection do not depend on the forward horizon.
+                # Compute them once and reuse them for all three horizons.
+                matches = find_matches(
+                    query,
+                    library,
+                    method=method,
+                    k=20,
+                    index=match_index,
+                )
+                controls = random_control(
+                    query, library, count=len(matches), seed=seed + query_number
+                )
+                if query_number < 6 and method == "dtw":
+                    _save_shape_card(
+                        candles,
+                        query,
+                        matches,
+                        controls,
+                        chart_dir / f"query_{length}_{query_number:02d}.png",
                     )
+                for horizon in HORIZONS:
                     matched_rows = [
                         forward_move(
                             candles,
@@ -675,33 +798,29 @@ def run_group(
                     query_row = forward_move(
                         candles, query, candle_index=candle_index, horizon=horizon
                     )
-                    records.append(
+                    records_by_horizon[horizon].append(
                         QueryRecord(
                             match_moves=tuple(row.get("move_points") for row in matched_rows),
                             control_moves=tuple(row.get("move_points") for row in control_rows),
                             realized=query_row.get("move_points"),
                         )
                     )
-                    queries_done += 1
-                    if progress_path is not None:
-                        _write_json(
-                            progress_path,
-                            {
-                                "status": "running",
-                                "instrument": instrument,
-                                "timeframe": timeframe,
-                                "queries_done": queries_done,
-                                "elapsed_seconds": round(time.perf_counter() - started, 3),
-                            },
-                        )
-                    if query_number < 6 and method == "dtw" and horizon == HORIZONS[0]:
-                        _save_shape_card(
-                            candles,
-                            query,
-                            matches,
-                            controls,
-                            chart_dir / f"query_{length}_{query_number:02d}.png",
-                        )
+                # Keep the historical heartbeat unit: one query contributes one count
+                # per evaluated horizon, so a complete group still reports 6x queries.
+                queries_done += len(HORIZONS)
+                if progress_path is not None:
+                    _write_json(
+                        progress_path,
+                        {
+                            "status": "running",
+                            "instrument": instrument,
+                            "timeframe": timeframe,
+                            "queries_done": queries_done,
+                            "elapsed_seconds": round(time.perf_counter() - started, 3),
+                        },
+                    )
+            for horizon in HORIZONS:
+                records = records_by_horizon[horizon]
                 results.append(
                     {
                         "length": length,

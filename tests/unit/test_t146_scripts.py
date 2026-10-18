@@ -7,6 +7,8 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
@@ -35,6 +37,19 @@ def window(module, start: int, values: tuple[float, ...], *, day: int = 1):
     )
 
 
+def candles(module, stamps: tuple[datetime, ...]):
+    return tuple(
+        module.Candle(
+            ts_utc=stamp,
+            open=100.0,
+            high=101.0,
+            low=99.0,
+            close=100.5,
+        )
+        for stamp in stamps
+    )
+
+
 def test_dtw_identical_windows_is_zero() -> None:
     module = load_script()
     assert module.dtw_distance((0.0, 1.0, 2.0), (0.0, 1.0, 2.0)) == 0.0
@@ -45,6 +60,50 @@ def test_atr_normalisation_is_scale_invariant() -> None:
     shape = (100.0, 101.0, 99.5, 102.0)
     scaled = tuple(value * 10 for value in shape)
     assert module.normalise_shape(shape, 2.0) == module.normalise_shape(scaled, 20.0)
+
+
+def test_continuity_accepts_in_session_minute_bars() -> None:
+    module = load_script()
+    start = datetime(2024, 1, 2, 14, 0, tzinfo=UTC)
+    series = candles(module, tuple(start + timedelta(minutes=index) for index in range(5)))
+    assert module._continuous(series, 0, len(series), 1)
+
+
+def test_continuity_rejects_weekend_gap() -> None:
+    module = load_script()
+    series = candles(
+        module,
+        (
+            datetime(2024, 1, 5, 23, 59, tzinfo=UTC),
+            datetime(2024, 1, 8, 0, 0, tzinfo=UTC),
+        ),
+    )
+    assert not module._continuous(series, 0, len(series), 1)
+
+
+def test_continuity_rejects_instrument_session_gap_without_fill() -> None:
+    module = load_script()
+    series = candles(
+        module,
+        (
+            datetime(2024, 1, 2, 16, 59, tzinfo=UTC),
+            datetime(2024, 1, 2, 18, 0, tzinfo=UTC),
+        ),
+    )
+    assert not module._continuous(series, 0, len(series), 1)
+
+
+def test_continuity_skips_known_daily_break_for_hourly_bars() -> None:
+    module = load_script()
+    series = candles(
+        module,
+        (
+            datetime(2024, 1, 2, 21, 0, tzinfo=UTC),
+            datetime(2024, 1, 2, 23, 0, tzinfo=UTC),
+        ),
+    )
+    assert module._continuous(series, 0, len(series), 60)
+    assert not module._continuous(series, 0, len(series), 5)
 
 
 def test_matches_are_strictly_past_only() -> None:
@@ -85,6 +144,34 @@ def test_repeated_shape_beats_white_noise() -> None:
     matches = module.find_matches(query, (repeated, noise), method="dtw", k=2)
     assert matches[0].window.start == repeated.start
     assert matches[0].distance < matches[1].distance
+
+
+def test_vectorized_matcher_matches_scalar_scores() -> None:
+    module = load_script()
+    query = window(module, 100, (0.0, 1.0, 0.5, 1.5))
+    library = tuple(
+        window(module, index, values)
+        for index, values in enumerate(
+            (
+                (0.0, 1.0, 0.5, 1.5),
+                (0.0, 0.9, 0.4, 1.3),
+                (0.0, -0.4, 0.8, -0.2),
+                (0.0, 0.2, 0.1, 0.4),
+                (0.0, 1.5, 0.2, 0.8),
+            ),
+            start=1,
+        )
+    )
+    index = module.build_match_index(library)
+    for method in ("dtw", "correlation"):
+        scalar = module.find_matches(query, library, method=method, k=3, correlation_prefilter=3)
+        vectorized = module.find_matches(
+            query, library, method=method, k=3, correlation_prefilter=3, index=index
+        )
+        assert [item.window.start for item in vectorized] == [item.window.start for item in scalar]
+        assert [item.distance for item in vectorized] == pytest.approx(
+            [item.distance for item in scalar]
+        )
 
 
 def test_query_sampling_is_bounded_and_deterministic() -> None:

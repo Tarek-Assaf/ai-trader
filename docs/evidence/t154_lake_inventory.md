@@ -1,0 +1,102 @@
+# T-154 lake inventory
+
+The applied Pod image has both expected symbol directories: XAUUSD (211 parquet
+files, 6,140,217 rows) and NSXUSD (191 files, 5,285,568 rows). The timestamp
+column in the sampled files is `timestamp[us, tz=UTC]`.
+
+The XAUUSD sample `2009/03.parquet` has 16,400 rows. It contains 16,086 exact
+one-minute steps (98.09%); 313 steps are longer than one minute, including two
+2,881-minute weekend-sized gaps. The NSXUSD sample `2010/12.parquet` has 26,165
+rows and 23,521 exact one-minute steps (89.90%); 2,643 steps are longer than one
+minute, including four longer than 60 minutes.
+
+These results show that a strict adjacent-timestamp rule rejects windows that
+cross closures while preserving valid in-session windows. Direct bounded
+checks over copied 2022-2024 files produced 46,415/31,084/29,277 XAUUSD
+windows for lengths 30/60/120 and 44,947/30,160/28,368 NSXUSD windows. The
+maximum contiguous XAUUSD 2024 run was 1,380 one-minute bars. For 60-minute
+bars, the known HistData daily break from 20:00/21:00 to 23:00 UTC is treated
+as skipped trading-time hours; weekend and unknown gaps remain hard boundaries.
+Smaller timeframes keep strict adjacent spacing so they cannot bridge a
+session closure.
+
+The previous T-153 zero-window summary was a reporting defect: a timed-out
+child had not written its final JSON, so the parent fallback hard-coded
+`library_windows=0`. T-154 now records the window inventory in the child
+heartbeat before matching starts and preserves it in partial checkpoints. The
+loader also falls back to the legacy `NAS100/1m_capital` tree only when the
+canonical `NSXUSD/1m` tree is absent. Unit coverage accepts in-session spacing,
+handles the known hourly daily break, and rejects weekend and unknown session
+gaps without filling data.
+
+## Bounded post-fix window check
+
+The copied 2025-2026 out-of-sample lake produced these window inventories under
+the safe continuity rule (30/60/120 bars, followed by the query total):
+
+| Group | 30 | 60 | 120 | Queries |
+| --- | ---: | ---: | ---: | ---: |
+| NSXUSD 1m | 17,693 | 16,051 | 15,162 | 48,906 |
+| NSXUSD 3m | 11,169 | 9,534 | 3,914 | 24,617 |
+| NSXUSD 5m | 12,652 | 5,039 | 1,717 | 19,408 |
+| NSXUSD 60m | 0 | 0 | 0 | 0 |
+| XAUUSD 1m | 18,450 | 16,805 | 16,009 | 51,264 |
+| XAUUSD 3m | 11,736 | 10,170 | 4,301 | 26,207 |
+| XAUUSD 5m | 13,428 | 5,478 | 1,971 | 20,877 |
+| XAUUSD 60m | 724 | 190 | 0 | 914 |
+
+NSXUSD 60m remains stopped because its resampled source contains additional
+same-day missing hours, including 11:00-13:00 and 20:00-23:00 UTC. The task
+acceptance rule says to stop when a post-fix group still has zero library
+windows, so T-154 does not write a matching or net-of-cost verdict. The
+diagnostic report identifies the remaining source-data gap for owner review;
+no arbitrary gap bridging was added.
+
+## NSXUSD 60m missing-hour diagnosis
+
+The bounded 2022-01 through 2026-06 scan covered 1,491,827 source 1m rows and
+1,389 UTC days. Resampling produced 24,178 complete 60m bars. The most common
+per-day missing-hour patterns were:
+
+| Days | Missing hours in 1m | Missing hours in complete 60m |
+| ---: | --- | --- |
+| 486 | 22 | 21, 22 |
+| 184 | 22 | 21, 22, 23 |
+| 176 | 22, 23 | 21, 22, 23 |
+| 160 | 00-22 | 00-22 |
+| 55 | 00-22 | 00-23 |
+| 24 | 21 | 20-22 |
+| 21 | 21 | 20-21 |
+| 16 | 18-22 | 17-22 |
+| 11 | 21-23 | 20-23 |
+| 8 | 00-21 | 00-21 |
+
+The dominant 22:00 source gap is present before resampling, so the zero-window
+result is primarily a source coverage defect. Resampling also drops adjacent
+hours when a 60-minute bin is incomplete, as shown where the complete-bar
+pattern is wider than the 1m pattern. Those bins are not filled or bridged;
+the NSXUSD 60m group remains stopped under the acceptance rule.
+
+The checks were read-only. No broker calls, orders, holdout reads, gate changes,
+cost calculations, ledger writes, or promotion activity occurred.
+
+## Review-cycle per-group rerun
+
+The format fix was applied and the seven groups with windows were rerun in the
+required order: XAUUSD 60m, NSXUSD 5m, XAUUSD 5m, NSXUSD 3m, XAUUSD 3m,
+NSXUSD 1m, and XAUUSD 1m. Each group had a checkpoint and a 20-minute limit.
+
+| Group | Library windows or inventory (30/60/120) | OOS queries | Rerun elapsed | Status | Verdict / trials |
+| --- | --- | ---: | ---: | --- | --- |
+| XAUUSD 60m | 1,458 | 918 | 58.553s | complete | all `NOT_FOUND`; 360 per result, 6,480 total |
+| NSXUSD 5m | 12,652 / 5,039 / 1,717 | 19,408 | 1,200.114s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| XAUUSD 5m | 13,428 / 5,478 / 1,971 | 20,877 | 1,200.115s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| NSXUSD 3m | 11,169 / 9,534 / 3,914 | 24,617 | 1,200.166s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| XAUUSD 3m | 11,736 / 10,170 / 4,301 | 26,207 | 1,200.115s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| NSXUSD 1m | 17,693 / 16,051 / 15,162 | 48,906 | 1,200.064s | partial timeout at 18 queries | no final verdict or trial count emitted |
+| XAUUSD 1m | 18,450 / 16,805 / 16,009 | 51,264 | 1,200.115s | partial timeout at 18 queries | no final verdict or trial count emitted |
+
+The machine-readable record is `t154_review_cycle1_rerun.json`. NSXUSD 60m
+remains stopped because its source coverage has same-day missing hours; no
+matching or net-of-cost verdict is claimed, and the reviewer must supply the
+pass validation. The reruns were read-only and made no broker calls or orders.

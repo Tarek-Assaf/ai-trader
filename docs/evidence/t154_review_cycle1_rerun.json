@@ -1,0 +1,18 @@
+{
+  "task": "T-154",
+  "source": "RunPod read-only per-group T-153 runner",
+  "captured_at": "2026-10-18",
+  "holdout_end": "2026-07-01T00:00:00+00:00",
+  "order": ["XAUUSD/60m", "NSXUSD/5m", "XAUUSD/5m", "NSXUSD/3m", "XAUUSD/3m", "NSXUSD/1m", "XAUUSD/1m"],
+  "groups": {
+    "XAUUSD/60m": {"library_windows": 1458, "oos_queries": 918, "queries_evaluated": 2, "elapsed_seconds": 58.553, "status": "complete", "verdict": "all NOT_FOUND", "trial_count_per_result": 360, "trial_count_total": 6480},
+    "NSXUSD/5m": {"inventory_windows_by_length": {"30": 12652, "60": 5039, "120": 1717}, "inventory_oos_queries": 19408, "rerun_queries_completed": 18, "elapsed_seconds": 1200.114, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count": "not available; no final group evidence was emitted"},
+    "XAUUSD/5m": {"inventory_windows_by_length": {"30": 13428, "60": 5478, "120": 1971}, "inventory_oos_queries": 20877, "rerun_queries_completed": 18, "elapsed_seconds": 1200.115, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count": "not available; no final group evidence was emitted"},
+    "NSXUSD/3m": {"inventory_windows_by_length": {"30": 11169, "60": 9534, "120": 3914}, "inventory_oos_queries": 24617, "rerun_queries_completed": 18, "elapsed_seconds": 1200.166, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count": "not available; no final group evidence was emitted"},
+    "XAUUSD/3m": {"inventory_windows_by_length": {"30": 11736, "60": 10170, "120": 4301}, "inventory_oos_queries": 26207, "rerun_queries_completed": 18, "elapsed_seconds": 1200.115, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count": "not available; no final group evidence was emitted"},
+    "NSXUSD/1m": {"inventory_windows_by_length": {"30": 17693, "60": 16051, "120": 15162}, "inventory_oos_queries": 48906, "rerun_queries_completed": 18, "elapsed_seconds": 1200.064, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count": "not available; no final group evidence was emitted"},
+    "XAUUSD/1m": {"inventory_windows_by_length": {"30": 18450, "60": 16805, "120": 16009}, "inventory_oos_queries": 51264, "rerun_queries_completed": 18, "elapsed_seconds": 1200.115, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count": "not available; no final group evidence was emitted"}
+  },
+  "nsxusd_60m": {"status": "stopped_before_matching", "reason": "zero library windows caused by source coverage gaps; no matching verdict claimed"},
+  "safety": {"broker_calls": false, "orders": false, "holdout_read": false, "promotion_or_gate_changes": false}
+}

@@ -1,0 +1,62 @@
+{
+  "task": "T-154",
+  "source": "RunPod read-only deterministic fallback sample",
+  "captured_at": "2026-10-18T12:55:00+03:00",
+  "requested_sample_queries_per_group": 3000,
+  "trial_count_per_result": 360,
+  "group_time_limit_seconds": 1200,
+  "groups": {
+    "NSXUSD/5m": {
+      "status": "partial_timeout",
+      "runner_queries_done": 14178,
+      "elapsed_seconds": 1200.115,
+      "verdict": null,
+      "trial_count_per_result": null
+    },
+    "XAUUSD/5m": {
+      "status": "partial_timeout",
+      "runner_queries_done": 11367,
+      "elapsed_seconds": 1200.114,
+      "verdict": null,
+      "trial_count_per_result": null
+    },
+    "NSXUSD/3m": {
+      "status": "partial_timeout",
+      "runner_queries_done": 9576,
+      "elapsed_seconds": 1200.116,
+      "verdict": null,
+      "trial_count_per_result": null
+    },
+    "XAUUSD/3m": {
+      "status": "partial_timeout",
+      "runner_queries_done": 8397,
+      "elapsed_seconds": 1200.114,
+      "verdict": null,
+      "trial_count_per_result": null
+    },
+    "NSXUSD/1m": {
+      "status": "partial_timeout",
+      "runner_queries_done": 13644,
+      "elapsed_seconds": 1200.114,
+      "verdict": null,
+      "trial_count_per_result": null
+    },
+    "XAUUSD/1m": {
+      "status": "partial_timeout",
+      "runner_queries_done": 11994,
+      "elapsed_seconds": 1200.115,
+      "verdict": null,
+      "trial_count_per_result": null
+    }
+  },
+  "safety": {
+    "broker_calls": false,
+    "orders": false,
+    "holdout_read": false,
+    "gate_evaluated": false,
+    "cost_edits": false,
+    "ledger_writes": false,
+    "promotion_writes": false
+  },
+  "conclusion": "The deterministic sample was declared before execution, but all six smaller groups hit the 1200-second bound before emitting a final verdict or trial count. Acceptance remains unmet and requires owner direction after the last allowed review cycle."
+}
