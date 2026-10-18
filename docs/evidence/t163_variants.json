@@ -1,0 +1,244 @@
+{
+  "task": "T-163",
+  "generated_at": "2026-10-19T03:15:00+03:00",
+  "owner_entries": 31,
+  "owner_timezone": "America/New_York",
+  "vwap_variants": {
+    "utc_midnight_equal": {
+      "owner_rows_with_bar": 29,
+      "vwap_side_pass": 18,
+      "vwap_distance_pass": 13,
+      "all_four_pass": 4,
+      "tick_count_available": true
+    },
+    "ny_18:00_equal": {
+      "owner_rows_with_bar": 29,
+      "vwap_side_pass": 23,
+      "vwap_distance_pass": 21,
+      "all_four_pass": 9,
+      "tick_count_available": true
+    },
+    "ny_09:30_equal": {
+      "owner_rows_with_bar": 29,
+      "vwap_side_pass": 21,
+      "vwap_distance_pass": 14,
+      "all_four_pass": 4,
+      "tick_count_available": true
+    },
+    "ny_00:00_equal": {
+      "owner_rows_with_bar": 29,
+      "vwap_side_pass": 20,
+      "vwap_distance_pass": 9,
+      "all_four_pass": 4,
+      "tick_count_available": true
+    },
+    "utc_midnight_volume": {
+      "owner_rows_with_bar": 29,
+      "vwap_side_pass": 18,
+      "vwap_distance_pass": 13,
+      "all_four_pass": 4,
+      "tick_count_available": true
+    },
+    "tick_count_unavailable": {
+      "owner_rows_with_bar": 0,
+      "vwap_side_pass": 0,
+      "vwap_distance_pass": 0,
+      "all_four_pass": 0,
+      "tick_count_available": false
+    }
+  },
+  "ha_anchor_variants": {
+    "utc_midnight": {
+      "owner_ha_rows_with_bar": 29,
+      "all_filter_port_entries": 0,
+      "within_plus_minus_2_bars": 0,
+      "port_direction_counts": {
+        "long": 0,
+        "short": 0
+      }
+    },
+    "ny_18:00": {
+      "owner_ha_rows_with_bar": 29,
+      "all_filter_port_entries": 30,
+      "within_plus_minus_2_bars": 5,
+      "port_direction_counts": {
+        "long": 10,
+        "short": 20
+      }
+    },
+    "ny_00:00": {
+      "owner_ha_rows_with_bar": 29,
+      "all_filter_port_entries": 30,
+      "within_plus_minus_2_bars": 5,
+      "port_direction_counts": {
+        "long": 10,
+        "short": 20
+      }
+    },
+    "ny_09:30": {
+      "owner_ha_rows_with_bar": 29,
+      "all_filter_port_entries": 26,
+      "within_plus_minus_2_bars": 4,
+      "port_direction_counts": {
+        "long": 7,
+        "short": 19
+      }
+    },
+    "day_first": {
+      "owner_ha_rows_with_bar": 29,
+      "all_filter_port_entries": 26,
+      "within_plus_minus_2_bars": 4,
+      "port_direction_counts": {
+        "long": 7,
+        "short": 19
+      }
+    }
+  },
+  "filter_subsets": {
+    "ema": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 24,
+      "owner_fraction": 0.8275862068965517,
+      "port_entries": 169,
+      "matched_within_plus_minus_2_bars": 10,
+      "extra_port_entries": 159
+    },
+    "adx_di": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 19,
+      "owner_fraction": 0.6551724137931034,
+      "port_entries": 118,
+      "matched_within_plus_minus_2_bars": 12,
+      "extra_port_entries": 106
+    },
+    "vwap_side": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 18,
+      "owner_fraction": 0.6206896551724138,
+      "port_entries": 173,
+      "matched_within_plus_minus_2_bars": 10,
+      "extra_port_entries": 163
+    },
+    "vwap_distance": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 13,
+      "owner_fraction": 0.4482758620689655,
+      "port_entries": 90,
+      "matched_within_plus_minus_2_bars": 4,
+      "extra_port_entries": 86
+    },
+    "ema+adx_di": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 16,
+      "owner_fraction": 0.5517241379310345,
+      "port_entries": 86,
+      "matched_within_plus_minus_2_bars": 11,
+      "extra_port_entries": 75
+    },
+    "ema+vwap_side": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 18,
+      "owner_fraction": 0.6206896551724138,
+      "port_entries": 134,
+      "matched_within_plus_minus_2_bars": 7,
+      "extra_port_entries": 127
+    },
+    "ema+vwap_distance": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 11,
+      "owner_fraction": 0.3793103448275862,
+      "port_entries": 84,
+      "matched_within_plus_minus_2_bars": 7,
+      "extra_port_entries": 77
+    },
+    "adx_di+vwap_side": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 13,
+      "owner_fraction": 0.4482758620689655,
+      "port_entries": 98,
+      "matched_within_plus_minus_2_bars": 10,
+      "extra_port_entries": 88
+    },
+    "adx_di+vwap_distance": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 8,
+      "owner_fraction": 0.27586206896551724,
+      "port_entries": 0,
+      "matched_within_plus_minus_2_bars": 0,
+      "extra_port_entries": 0
+    },
+    "vwap_side+vwap_distance": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 5,
+      "owner_fraction": 0.1724137931034483,
+      "port_entries": 0,
+      "matched_within_plus_minus_2_bars": 0,
+      "extra_port_entries": 0
+    },
+    "ema+adx_di+vwap_side": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 13,
+      "owner_fraction": 0.4482758620689655,
+      "port_entries": 84,
+      "matched_within_plus_minus_2_bars": 8,
+      "extra_port_entries": 76
+    },
+    "ema+adx_di+vwap_distance": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 7,
+      "owner_fraction": 0.2413793103448276,
+      "port_entries": 0,
+      "matched_within_plus_minus_2_bars": 0,
+      "extra_port_entries": 0
+    },
+    "ema+vwap_side+vwap_distance": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 5,
+      "owner_fraction": 0.1724137931034483,
+      "port_entries": 0,
+      "matched_within_plus_minus_2_bars": 0,
+      "extra_port_entries": 0
+    },
+    "adx_di+vwap_side+vwap_distance": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 4,
+      "owner_fraction": 0.13793103448275862,
+      "port_entries": 0,
+      "matched_within_plus_minus_2_bars": 0,
+      "extra_port_entries": 0
+    },
+    "ema+adx_di+vwap_side+vwap_distance": {
+      "owner_rows_with_bar": 29,
+      "owner_pass": 4,
+      "owner_fraction": 0.13793103448275862,
+      "port_entries": 0,
+      "matched_within_plus_minus_2_bars": 0,
+      "extra_port_entries": 0
+    }
+  },
+  "atr_risk_pass": 19,
+  "atr_risk_rows_with_bar": 29,
+  "coverage": {
+    "NSXUSD": {
+      "1m": 12350,
+      "3m": 4013,
+      "5m": 2355,
+      "60m": 118
+    },
+    "XAUUSD": {
+      "owner_rows": 0,
+      "note": "no owner rows in the window"
+    }
+  },
+  "recorded_bars_carry_volume": false,
+  "signal_group_bars": 18,
+  "safety": {
+    "broker_calls": 0,
+    "orders": 0,
+    "sealed_holdout_read": false,
+    "lake_writes": 0,
+    "production_state_writes": 0,
+    "gate_evaluated": false
+  },
+  "entries_artifact_source": "bounded Pod run; local CSV preserves owner-minute row schema"
+}

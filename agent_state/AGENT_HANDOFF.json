@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 447,
+  "turn": "claude",
+  "revision": 448,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-162 accepted as negative diagnostic: faithful Pine port reproduces 1/31 owner entries; only 3/30 owner entries pass all four smart filters on our recorded data, so our indicator inputs differ from the owner's chart. T-163 queued: diagnose VWAP anchor/weighting, 54m Heikin Ashi anchor and filter subsets. Historical Tai rerun waits. Owner away 8 hours (D-045): Claude decides, no turn human. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-163 completed as a negative diagnostic. No registered VWAP/54m anchor/filter subset reaches the reproduction bar; best VWAP 9/29 all filters, best HA anchor 5 within +/-2 bars, best subset EMA 24/29. Owner settings screenshot requested. Turn to Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5407,7 +5407,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -5425,9 +5425,15 @@
         "docs/evidence/t163_variants.json",
         "docs/evidence/t163_entries.csv"
       ],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Started from authoritative origin/main rev446 after T-162 merge; one bounded offline Pod replay is authorized. No broker, holdout or lake writes."
+      "review_cycles": 1,
+      "evidence": [
+        "scripts/lab_t163_filter_anchor_diagnosis.py",
+        "tests/unit/test_t163_filter_anchor_diagnosis.py",
+        "docs/evidence/t163_report.md",
+        "docs/evidence/t163_variants.json",
+        "docs/evidence/t163_entries.csv"
+      ],
+      "completion_note": "Completed the specified one-shot offline Pod diagnosis. No registered VWAP variant or 54m HA anchor reaches the 25/31 reproduction bar: best VWAP ny_18:00_equal passes 9/29 all filters; best HA anchors reproduce 5 entries within +/-2 bars; best filter subset is EMA alone at 24/29. ATR risk passes 19/29 rows with bars. Coverage and safety counters are recorded; no broker calls, orders, holdout reads, lake writes or tuning. Owner action is a Pine Inputs/Style screenshot."
     }
   ],
   "decisions": [
@@ -14033,6 +14039,24 @@
       "validated_by": "claude",
       "date": "2026-10-19T02:05:00+03:00",
       "reverify_if": "Port contract or owner CSV time handling changes."
+    },
+    {
+      "id": "V-420",
+      "task_id": "T-163",
+      "subject": "T-163 filter and anchor diagnosis",
+      "validated_by": "codex",
+      "date": "2026-10-19T03:20:00+03:00",
+      "result": "pass",
+      "method": "Ran the bounded Pod command against the owner CSV and unsealed lake after fetching codex/t163-filter-anchor. Read the JSON/report/CSV outputs; ran ruff check, py_compile, git diff --check and handoff validation. Confirmed VWAP variants, 54m HA anchors, all 15 filter subsets, ATR risk counts, NSXUSD 1m/3m/5m/60m coverage, XAUUSD no-owner-row statement, and zero safety counters.",
+      "checked": "Negative diagnostic accepted: best registered result remains below 25/31, so no tuning or historical rerun was started.",
+      "evidence": [
+        "scripts/lab_t163_filter_anchor_diagnosis.py",
+        "tests/unit/test_t163_filter_anchor_diagnosis.py",
+        "docs/evidence/t163_report.md",
+        "docs/evidence/t163_variants.json",
+        "docs/evidence/t163_entries.csv"
+      ],
+      "reverify_if": "Owner supplies Pine Inputs/Style settings or requests a corrected replay."
     }
   ],
   "blockers": [
@@ -24343,7 +24367,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-163 from origin/main after T-162 merged. Will run the specified bounded offline VWAP/54m HA anchor and filter-subset diagnosis once; no tuning, broker calls, holdout reads or lake writes."
+    },
+    {
+      "revision": 448,
+      "ts": "2026-10-19T03:20:00+03:00",
+      "agent": "codex",
+      "action": "complete_t163_filter_anchor_diagnosis",
+      "task_ids": [
+        "T-163"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t163_filter_anchor_diagnosis.py",
+        "tests/unit/test_t163_filter_anchor_diagnosis.py",
+        "docs/evidence/t163_report.md",
+        "docs/evidence/t163_variants.json",
+        "docs/evidence/t163_entries.csv"
+      ],
+      "summary": "Completed one bounded Pod diagnosis. Best VWAP ny_18:00_equal passes 9/29 all filters; best 54m HA anchors pass 5 within +/-2; best subset EMA alone 24/29; ATR risk 19/29. No broker/holdout/lake activity or tuning. Owner settings screenshot is the next dependency. Turn to Claude."
     }
   ],
-  "project_summary": "T-161 accepted: with the correct clock the best registered switch reproduces only 9/31 owner entries. The real Pine script (stored in docs/evidence/owner) shows our replay differs: refresh entries ignore the Heikin Ashi state, management starts on the entry bar, targets before stop. T-162 queued: faithful port, must reproduce at least 25/31 before the historical Tai rerun. Owner away 8 hours (D-045): Claude decides, no turn human. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
+  "project_summary": "T-163 completed as a negative diagnostic. No registered VWAP/54m anchor/filter subset reaches the reproduction bar; best VWAP 9/29 all filters, best HA anchor 5 within +/-2 bars, best subset EMA 24/29. Owner settings screenshot requested. Turn to Claude."
 }
