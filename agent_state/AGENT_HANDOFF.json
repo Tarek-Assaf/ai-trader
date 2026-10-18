@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 442,
+  "revision": 444,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-160 accepted: owner clock fixed (New York time), alignment now exact (shift 0, 87.8%). The 31-trade replay still passes only 1/31; the 54m Heikin Ashi state fails first in 19. Earlier switch tests used the wrong clock, so T-161 reruns them once with the correct clock (no new variants). Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-161 accepted: with the correct clock the best registered switch reproduces only 9/31 owner entries. The real Pine script (stored in docs/evidence/owner) shows our replay differs: refresh entries ignore the Heikin Ashi state, management starts on the entry bar, targets before stop. T-162 queued: faithful port, must reproduce at least 25/31 before the historical Tai rerun. Owner away 8 hours (D-045): Claude decides, no turn human. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -134,7 +134,8 @@
         "T-158",
         "T-159",
         "T-160",
-        "T-161"
+        "T-161",
+        "T-162"
       ]
     },
     {
@@ -5333,8 +5334,41 @@
       "review_notes": "Ready for Claude review; Pod execution and artifacts are complete."
     },
     {
+      "acceptance_criteria": [
+        "Follow docs/specs/t161_variants_correct_clock.md exactly (rerun only the switches already coded in T-157 plus T-158 Stage 4 HA categories with the New York clock; print the last 8 54m HA candles before the first 5 owner entries; no new switches or tuning; one Pod run; no broker calls, sealed holdout never read, no lake writes, all four timeframes 1m/3m/5m/60m and both NSXUSD and XAUUSD wherever lake data is used, 1m mandatory).",
+        "Report starts with a plain-language owner verdict (best switch and how many of 31); one log entry; hand turn to claude."
+      ],
+      "completion_note": "Completed the single registered-variant rerun with owner timestamps parsed as America/New_York. Best registered switch forming_wilder_sma_ema_cme passes 9/31 within +/-3 bars and 3/31 at center; it does not reach the 20/31 stop threshold. Stage4 HA categories are flip_current_bar 7, same_colour_no_flip 15, opposite_colour 9, missing 0. NSXUSD/NAS100 lake coverage is present at 1m/3m/5m/54m/60m; XAUUSD has no rows in the owner window. Pod run exited 0 with zero broker calls, orders, holdout reads, lake writes, production writes and gate evaluation. Turn to Claude.",
+      "deliverables": [
+        "scripts/lab_t161_variants_correct_clock.py",
+        "docs/evidence/t161_report.md",
+        "docs/evidence/t161_variants.json",
+        "docs/evidence/t161_replay.csv"
+      ],
+      "depends_on": [
+        "T-160"
+      ],
+      "evidence": [
+        "docs/evidence/t161_report.md",
+        "docs/evidence/t161_variants.json",
+        "docs/evidence/t161_replay.csv",
+        "scripts/lab_t161_variants_correct_clock.py",
+        "tests/unit/test_t161_variants_correct_clock.py"
+      ],
       "id": "T-161",
-      "title": "Rerun the registered T-157 switches and T-158 HA checks with the corrected New York clock (one rerun, no new variants)",
+      "owner": "codex",
+      "phase": 8,
+      "requirements": [
+        "R-03"
+      ],
+      "review_cycles": 0,
+      "reviewer": "claude",
+      "status": "done",
+      "title": "Rerun the registered T-157 switches and T-158 HA checks with the corrected New York clock (one rerun, no new variants)"
+    },
+    {
+      "id": "T-162",
+      "title": "Faithful bar-by-bar port of the Tai Smart Filter Pine script; prove it reproduces at least 25 of the owner's 31 entries",
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
@@ -5343,17 +5377,18 @@
         "R-03"
       ],
       "depends_on": [
-        "T-160"
+        "T-161"
       ],
       "acceptance_criteria": [
-        "Follow docs/specs/t161_variants_correct_clock.md exactly (rerun only the switches already coded in T-157 plus T-158 Stage 4 HA categories with the New York clock; print the last 8 54m HA candles before the first 5 owner entries; no new switches or tuning; one Pod run; no broker calls, sealed holdout never read, no lake writes, all four timeframes 1m/3m/5m/60m and both NSXUSD and XAUUSD wherever lake data is used, 1m mandatory).",
-        "Report starts with a plain-language owner verdict (best switch and how many of 31); one log entry; hand turn to claude."
+        "Follow docs/specs/t162_pine_port.md exactly (port written from docs/evidence/owner/tai_smart_filter_pine_source.txt with source line references; refresh entries without HA state; management from the entry bar with target-first order; known-answer unit tests; replay on recorded NAS100 3m 5-16 Oct 2026 with owner times read as New York time in closed and forming HA modes; report entries reproduced within 0/1/2 three-minute bars, extra entries, and first differing rule per missing entry; stop at <25/31 and report differences with indicator values; no broker calls, sealed holdout never read, no lake writes, no tuning, all four timeframes 1m/3m/5m/60m and both NSXUSD and XAUUSD wherever lake data is used, 1m mandatory).",
+        "Report starts with a plain-language owner verdict (how many of 31 reproduced); one log entry; hand turn to claude."
       ],
       "deliverables": [
-        "scripts/lab_t161_variants_correct_clock.py",
-        "docs/evidence/t161_report.md",
-        "docs/evidence/t161_variants.json",
-        "docs/evidence/t161_replay.csv"
+        "scripts/lab_t162_pine_port.py",
+        "tests/unit/test_t162_pine_port.py",
+        "docs/evidence/t162_report.md",
+        "docs/evidence/t162_port.json",
+        "docs/evidence/t162_entries.csv"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -5711,6 +5746,22 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-18T20:40:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-045",
+      "statement": "Owner 2026-10-19 01:00 Riyadh: owner is away for 8 hours (until 2026-10-19 06:10 UTC) and delegates all authorizations to Claude; no turn human in that window; check schedule every 10 minutes (the scheduler minimum is 1 hour, so Claude adds 10-minute self check-ins while the session lives and keeps the hourly scheduled task). Claude decides, records each decision with its reason, and keeps working toward the goal: the agent must reproduce the owner's Tai indicator exactly. Safety limits unchanged: demo only, no live money, sealed holdout never read, no LLM edits to risk/gate files, no secrets in code/logs.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-18T22:00:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-046",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): the owner's Pine source (docs/evidence/owner/tai_smart_filter_pine_source.txt) is the reference. Our replay and backtest differed from it (refresh entries need no Heikin Ashi state; management from the entry bar; target-first order). T-162 writes a faithful bar-by-bar port and must reproduce at least 25 of the owner's 31 entries before the historical Tai test is rerun with the corrected logic. Earlier Tai results (T-147 to T-157) are not reliable until then.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-18T22:15:00Z",
       "do_not_reopen": false
     }
   ],
@@ -13876,6 +13927,24 @@
       "validated_by": "claude",
       "date": "2026-10-19T00:55:00+03:00",
       "reverify_if": "The owner CSV time handling changes."
+    },
+    {
+      "id": "V-416",
+      "task_id": "T-161",
+      "subject": "Claude review of T-161 corrected-clock rerun",
+      "method": "Read report, JSON, CSV and script; confirmed diagnostic only (broker calls 0, orders 0, holdout not read, lake writes 0); old handoff entries restored from main; ran ruff check and ruff format (line length 100). Unit tests run in CI.",
+      "result": "pass",
+      "checked": "Acceptance met; stop rule triggered. With the correct New York clock the best registered switch (forming Wilder, SMA-seeded EMA, CME anchor) reproduces 9/31 owner entries within +-3 bars (3/31 at center), below the 20/31 threshold; baseline 1/31. HA category counts: flip on current bar 7, same colour no flip 15, opposite colour 9. XAUUSD has no rows in the owner window; NSXUSD/NAS100 covered at 1m/3m/5m/54m/60m. Reading the real Pine source (docs/evidence/owner/tai_smart_filter_pine_source.txt) shows why switches cannot fix it: refresh entries in the indicator ignore the Heikin Ashi state entirely (source lines 584-616), while the T-157 replay requires ha_state == direction for every entry. Other differences: management runs from the entry bar, targets before stop, bar counts in chart bars. T-162 ports the script faithfully.",
+      "evidence": [
+        "docs/evidence/t161_report.md",
+        "docs/evidence/t161_variants.json",
+        "docs/evidence/t161_replay.csv",
+        "scripts/lab_t161_variants_correct_clock.py",
+        "tests/unit/test_t161_variants_correct_clock.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T01:15:00+03:00",
+      "reverify_if": "The replay or owner CSV time handling changes."
     }
   ],
   "blockers": [
@@ -24103,7 +24172,42 @@
         "docs/specs/t161_variants_correct_clock.md"
       ],
       "summary": "Reviewed T-160: pass. Owner clock fixed (New York time): alignment best shift is now 0 (49 pairs, 87.8%). But the replay still passes only 1/31 entries; the 54m Heikin Ashi state is the first failing rule in 19. The earlier nine-switch test and HA counts used the wrong clock, so they are not valid. Wrote spec t161_variants_correct_clock.md and queued T-161: rerun those registered switches once with the correct clock, no new variants. Turn to codex."
+    },
+    {
+      "action": "complete_t161_corrected_clock_rerun",
+      "agent": "codex",
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t161_variants_correct_clock.py",
+        "tests/unit/test_t161_variants_correct_clock.py",
+        "docs/evidence/t161_report.md",
+        "docs/evidence/t161_variants.json",
+        "docs/evidence/t161_replay.csv"
+      ],
+      "revision": 443,
+      "summary": "Completed the one authorized Pod rerun after T-160. New York-clock parsing is applied to owner CSV only; the nine registered switches and Stage4 HA were rerun once. Best switch forming_wilder_sma_ema_cme is 9/31 within +/-3 and 3/31 center, below threshold. HA categories 7/15/9/0. NSXUSD/NAS100 has complete coverage at 1m/3m/5m/54m/60m; XAUUSD has no rows for this window. Safety counters are all zero. Turn to Claude for review.",
+      "task_ids": [
+        "T-161"
+      ],
+      "ts": "2026-10-19T01:03:00+03:00"
+    },
+    {
+      "revision": 444,
+      "ts": "2026-10-19T01:15:00+03:00",
+      "agent": "claude",
+      "action": "accept_t161_queue_t162",
+      "task_ids": [
+        "T-161",
+        "T-162"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t161_variants_correct_clock.py",
+        "docs/specs/t162_pine_port.md",
+        "docs/evidence/owner/tai_smart_filter_pine_source.txt"
+      ],
+      "summary": "Reviewed T-161: pass (lint fixed). With the correct clock the best registered switch reproduces only 9/31 owner entries (below 20/31). The owner uploaded the real Pine script; reading it shows our replay differs from it: refresh entries ignore the Heikin Ashi state, management runs from the entry bar, targets are tested before the stop. Recorded D-045 (owner away 8 hours, delegates authorizations, no turn human) and D-046. Queued T-162: faithful port of the Pine script, must reproduce at least 25 of 31 entries before the historical Tai rerun. Turn to codex."
     }
   ],
-  "project_summary": "T-160 accepted: owner clock fixed (New York time), alignment now exact (shift 0, 87.8%). The 31-trade replay still passes only 1/31; the 54m Heikin Ashi state fails first in 19. Earlier switch tests used the wrong clock, so T-161 reruns them once with the correct clock (no new variants). Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
+  "project_summary": "T-161 accepted: with the correct clock the best registered switch reproduces only 9/31 owner entries. The real Pine script (stored in docs/evidence/owner) shows our replay differs: refresh entries ignore the Heikin Ashi state, management starts on the entry bar, targets before stop. T-162 queued: faithful port, must reproduce at least 25/31 before the historical Tai rerun. Owner away 8 hours (D-045): Claude decides, no turn human. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
 }
