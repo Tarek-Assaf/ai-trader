@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import math
 import statistics
 import sys
 from collections.abc import Sequence
@@ -23,8 +22,6 @@ from trader.data.resample import Candle
 
 try:
     from scripts.lab_t151_owner_trades import (
-        _condition_table,
-        _daily_basis,
         _ha_states,
         _risk,
         aggregate_3m,
@@ -34,15 +31,11 @@ try:
     from scripts.lab_tai_smart_filter import (
         Features,
         TaiParams,
-        _passes,
         directional_index,
-        fallback_vwap,
     )
 except ModuleNotFoundError:  # direct script execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from scripts.lab_t151_owner_trades import (
-        _condition_table,
-        _daily_basis,
         _ha_states,
         _risk,
         aggregate_3m,
@@ -52,9 +45,7 @@ except ModuleNotFoundError:  # direct script execution
     from scripts.lab_tai_smart_filter import (
         Features,
         TaiParams,
-        _passes,
         directional_index,
-        fallback_vwap,
     )
 
 PERIOD = 14
