@@ -164,9 +164,7 @@ def test_vectorized_matcher_matches_scalar_scores() -> None:
     )
     index = module.build_match_index(library)
     for method in ("dtw", "correlation"):
-        scalar = module.find_matches(
-            query, library, method=method, k=3, correlation_prefilter=3
-        )
+        scalar = module.find_matches(query, library, method=method, k=3, correlation_prefilter=3)
         vectorized = module.find_matches(
             query, library, method=method, k=3, correlation_prefilter=3, index=index
         )
