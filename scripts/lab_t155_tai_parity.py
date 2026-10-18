@@ -318,7 +318,6 @@ def run(lake: Path, owner_file: Path) -> dict[str, object]:
     actual_adx = indicators.adx(chart, PERIOD)
     actual_plus, actual_minus = directional_index(chart, PERIOD)
     ref_adx, ref_plus, ref_minus = independent_adx_di(chart, PERIOD)
-    actual_ha = [(bar.open, bar.close) for bar in indicators_heikin(chart)]
     ref_ha = independent_heikin_ashi(chart)
     references = {
         "ema200": _json_metric(

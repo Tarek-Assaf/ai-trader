@@ -2,8 +2,6 @@
 
 from datetime import UTC, datetime, timedelta
 
-from trader.data.resample import Candle
-
 from scripts.lab_t155_tai_parity import (
     independent_adx_di,
     independent_atr,
@@ -11,6 +9,8 @@ from scripts.lab_t155_tai_parity import (
     independent_heikin_ashi,
     session_vwap,
 )
+
+from trader.data.resample import Candle
 
 
 def _bars(count: int = 40) -> tuple[Candle, ...]:
