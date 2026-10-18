@@ -1,0 +1,29 @@
+{
+  "task": "T-162",
+  "generated_at": "2026-10-18T22:21:43.250890+00:00",
+  "owner_timezone": "America/New_York",
+  "owner_entries": 31,
+  "chart_timeframe_minutes": 3,
+  "signal_timeframe_minutes": 54,
+  "modes": {
+    "closed": {"entry_counts": {"0": 1, "1": 1, "2": 1}},
+    "forming": {"entry_counts": {"0": 0, "1": 0, "2": 0}}
+  },
+  "owner_exit_rows_parsed": 54,
+  "source_contract": {
+    "setup": "Open/Close",
+    "refresh_ha_gate": false,
+    "entry_bar_management": true,
+    "intrabar_order": "target-first (TP3, TP2, TP1/BE before stop)",
+    "vwap": "volume-weighted when volume is present; equal typical-price weighting for zero-volume recorder bars"
+  },
+  "safety": {
+    "broker_calls": 0,
+    "orders": 0,
+    "sealed_holdout_read": false,
+    "lake_writes": 0,
+    "production_state_writes": 0,
+    "gate_evaluated": false
+  },
+  "stop_reason": "Best registered mode reproduced 1/31 owner entries within +/-2 three-minute bars, below the 25/31 success bar; no tuning or historical rerun was performed."
+}
