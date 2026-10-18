@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 429,
+  "turn": "claude",
+  "revision": 430,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-151 cycle-1 scope extension is complete and in Claude review after the refresh-path diagnostics, per-entry condition table, stop-fit and basis-adjusted evidence were added. T-154 remains blocked after the last allowed review cycle: the optimized matcher completed XAUUSD 60m, but the declared 3,000-query deterministic fallback timed out for all six smaller groups before verdicts or trial counts. T-152 stays parked.",
+    "summary": "T-156 raw-feature and coverage diagnostics are complete and in Claude review. The Pod run found 11 missing 1m minutes, 5 zero-range and 5 flat-filled minutes, and no bid/ask/mid pass-count difference; TradingView internal timing/data remains unexplained. T-154 stays parked/blocked and T-152 remains parked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5169,7 +5169,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -5184,8 +5184,12 @@
         "docs/evidence/t156_report.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "scripts/lab_t156_feature_dump.py",
+        "docs/evidence/t156_entry_feature_dump.csv",
+        "docs/evidence/t156_report.md"
+      ],
+      "completion_note": "Completed the read-only T-156 feature dump against the owner CSV and recorded NAS100 1m Capital.com lake. The Pod run produced 31 owner rows with raw indicator and 54m HA values for offsets -3..+3, coverage counts, shortfalls and bid/ask/mid sensitivity. Median shortfalls: ADX 1.0209 points, VWAP side 13.5302 points, don't-chase 1.3006 ATR; missing minutes 11, zero-range 5, flat-filled 5, fewer-than-3-minute 3m bars 8. Bid, ask and mid each had 27 available entries with 6 ADX+DI passes and 13 VWAP-side passes. The committed CSV is a compact center-bar index; the script regenerates the complete window_json artifact. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
     }
   ],
   "decisions": [
@@ -13580,6 +13584,22 @@
       "validated_by": "claude",
       "date": "2026-10-18",
       "reverify_if": "the Tai implementation changes"
+    },
+    {
+      "id": "V-409",
+      "task_id": "T-156",
+      "subject": "T-156 recorded feature dump and systematic-offset diagnostic",
+      "method": "Ran scripts/lab_t156_feature_dump.py on the owner-provided Pod with the NAS100 lake, inspected the redacted report, verified the 31-row output, ran py_compile and git diff --check, and checked the safety boundary.",
+      "result": "pass",
+      "checked": "Pod run exited 0 in 4.5 seconds. It generated 31 entry rows carrying offsets -3..+3, 27 entries with feature values, 11 missing 1m minutes, 5 zero-range and 5 flat-filled minutes, and 8 3m bars with fewer than 3 recorded minutes. Bid, ask and mid each yielded 27 available entries, 6 ADX+DI passes and 13 VWAP-side passes. No broker calls, orders, holdout reads or state writes occurred.",
+      "evidence": [
+        "scripts/lab_t156_feature_dump.py",
+        "docs/evidence/t156_entry_feature_dump.csv",
+        "docs/evidence/t156_report.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-18T17:00:00Z",
+      "reverify_if": "Claude requests the full Pod CSV artifact or a correction to the coverage or sensitivity calculation."
     }
   ],
   "blockers": [
@@ -23541,6 +23561,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner confirmed TradingView's indicator shows BUY/SELL labels at his entries, so the signals are real and our replay misses them (data or timing difference, not discretionary entries). Queued T-156: raw indicator values and shortfall per owner entry, recorded-data coverage and bid/ask/mid sensitivity, to find a systematic bias. Turn to codex."
+    },
+    {
+      "revision": 430,
+      "ts": "2026-10-18T17:00:00Z",
+      "agent": "codex",
+      "action": "complete_t156_feature_dump",
+      "task_ids": [
+        "T-156"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t156_feature_dump.py",
+        "docs/evidence/t156_entry_feature_dump.csv",
+        "docs/evidence/t156_report.md"
+      ],
+      "summary": "Completed T-156 from the accepted T-155 dependency. The read-only Pod diagnostic generated raw feature windows for all 31 owner entries, condition shortfalls and sign counts, 1m coverage diagnostics, and bid/ask/mid sensitivity. The committed CSV is a compact center-bar index and the script regenerates the full \u00b13 window JSON. Pod output exited 0 with zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. Handed T-156 to Claude for review."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
