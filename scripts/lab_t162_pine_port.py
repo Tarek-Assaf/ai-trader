@@ -9,6 +9,7 @@ broker, reads the sealed holdout, tunes parameters, or writes the lake.
 from __future__ import annotations
 
 import argparse
+import bisect
 import csv
 import json
 import math
@@ -18,6 +19,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Sequence
+from zoneinfo import ZoneInfo
 
 try:
     from trader.data.resample import Candle, resample_ohlc
@@ -43,6 +45,7 @@ REFRESH_BARS = 12
 MAX_RISK_ATR = 2.0
 VWAP_DISTANCE_ATR = 1.5
 START_DATE = datetime(2023, 1, 1, tzinfo=UTC)
+OWNER_ZONE = ZoneInfo("America/New_York")
 
 
 @dataclass(frozen=True, slots=True)
@@ -405,6 +408,74 @@ def _match(entries: Sequence[Any], trades: Sequence[PortTrade], tolerance: int) 
     return matched, rows
 
 
+def _bar_at(bars: Sequence[Candle], stamp: datetime) -> tuple[int | None, Candle | None]:
+    """Return the recorded 3m bar containing an owner entry minute."""
+    if not bars:
+        return None, None
+    stamps = [item.ts_utc for item in bars]
+    pos = bisect.bisect_right(stamps, stamp) - 1
+    if pos < 0 or stamp >= bars[pos].ts_utc + timedelta(minutes=TIMEFRAME):
+        return None, None
+    return pos, bars[pos]
+
+
+def _comparison_rows(entries: Sequence[Any], bars: Sequence[Candle], features: Features, trades: Sequence[PortTrade]) -> list[dict[str, Any]]:
+    """Build the review artifact requested by the Pine-port specification."""
+    rows: list[dict[str, Any]] = []
+    for owner in entries:
+        index, bar = _bar_at(bars, owner.entry_time)
+        candidates = [trade for trade in trades if trade.direction == owner.direction]
+        nearest = min(candidates, key=lambda t: abs((t.entry_time - owner.entry_time).total_seconds()), default=None)
+        delta_bars = None if nearest is None else (nearest.entry_time - owner.entry_time).total_seconds() / (TIMEFRAME * 60)
+        if bar is None:
+            first_difference = "missing_bar"
+        elif nearest is None:
+            first_difference = "signal_or_refresh"
+        elif abs(delta_bars or 0.0) > 2:
+            first_difference = "signal_or_refresh"
+        else:
+            first_difference = "matched"
+        values: dict[str, Any] = {}
+        if index is not None:
+            values = {
+                "bar_ts_utc": bar.ts_utc.isoformat(),
+                "open": bar.open,
+                "high": bar.high,
+                "low": bar.low,
+                "close": bar.close,
+                "volume": bar.volume,
+                "ha_open_54m": features.ha_open[index],
+                "ha_close_54m": features.ha_close[index],
+                "ema200": features.ema[index],
+                "adx14": features.adx[index],
+                "plus_di14": features.plus_di[index],
+                "minus_di14": features.minus_di[index],
+                "vwap": features.vwap[index],
+                "atr14": features.atr[index],
+            }
+        rows.append({
+            "owner_time_ny": owner.entry_time.astimezone(OWNER_ZONE).isoformat(),
+            "owner_time_utc": owner.entry_time.isoformat(),
+            "direction": owner.direction,
+            "nearest_port_entry_time": nearest.entry_time.isoformat() if nearest else None,
+            "signed_delta_bars": delta_bars,
+            "port_direction": nearest.direction if nearest else None,
+            "first_difference": first_difference,
+            "values_at_owner_minute": values,
+        })
+    return rows
+
+
+def _daily_direction_agreement(entries: Sequence[Any], trades: Sequence[PortTrade]) -> dict[str, dict[str, int]]:
+    result: dict[str, dict[str, int]] = defaultdict(lambda: {"owner": 0, "port_same_direction": 0})
+    for owner in entries:
+        day = owner.entry_time.date().isoformat()
+        result[day]["owner"] += 1
+        if any(trade.direction == owner.direction and trade.entry_time.date() == owner.entry_time.date() for trade in trades):
+            result[day]["port_same_direction"] += 1
+    return dict(result)
+
+
 def _json_trade(trade: PortTrade) -> dict[str, Any]:
     return {"direction": trade.direction, "entry_index": trade.entry_index, "entry_time": trade.entry_time.isoformat(), "entry_price": trade.entry_price, "stop_price": trade.stop_price, "exit_index": trade.exit_index, "exit_time": trade.exit_time.isoformat() if trade.exit_time else None, "exit_reason": trade.exit_reason, "highest_target": trade.highest_target}
 
@@ -426,9 +497,19 @@ def run(lake: Path, owner_file: Path, start: datetime | None = None, end: dateti
         differences = {}
         for tolerance in (0, 1, 2):
             counts[str(tolerance)] , differences[str(tolerance)] = _match(owners, trades, tolerance)
-        modes[mode] = {"entry_counts": counts, "entry_differences": differences, "trades": [_json_trade(t) for t in trades], "bars": len(bars), "first_feature_values": [{"ts": bars[i].ts_utc.isoformat(), "ema200": features.ema[i], "atr14": features.atr[i], "adx": features.adx[i], "plus_di": features.plus_di[i], "minus_di": features.minus_di[i], "vwap": features.vwap[i]} for i in range(max(0, len(bars)-5), len(bars))]}
+        modes[mode] = {
+            "entry_counts": counts,
+            "entry_differences": differences,
+            "comparison_rows": _comparison_rows(owners, bars, features, trades),
+            "port_entry_counts": {direction: sum(1 for trade in trades if trade.direction == direction) for direction in ("long", "short")},
+            "daily_direction_agreement": _daily_direction_agreement(owners, trades),
+            "trades": [_json_trade(t) for t in trades],
+            "bars": len(bars),
+            "first_feature_values": [{"ts": bars[i].ts_utc.isoformat(), "ema200": features.ema[i], "atr14": features.atr[i], "adx": features.adx[i], "plus_di": features.plus_di[i], "minus_di": features.minus_di[i], "vwap": features.vwap[i]} for i in range(max(0, len(bars)-5), len(bars))],
+        }
     exits = read_owner_exits(owner_file)
-    return {"task":"T-162", "generated_at":datetime.now(UTC).isoformat(), "owner_timezone":"America/New_York", "owner_entries":len(owners), "chart_timeframe_minutes":TIMEFRAME, "signal_timeframe_minutes":HIGHER_MINUTES, "modes":modes, "owner_exits":[{"trade_number":e.trade_number,"direction":e.direction,"entry_time":e.entry_time.isoformat(),"exit_time":e.exit_time.isoformat(),"exit_reason":e.exit_reason} for e in exits], "source_contract":{"setup":"Open/Close","refresh_ha_gate":False,"entry_bar_management":True,"intrabar_order":"target-first (TP3, TP2, TP1/BE before stop)","vwap":"volume-weighted when volume is present; equal typical-price weighting for zero-volume recorder bars"}, "safety":{"broker_calls":0,"orders":0,"sealed_holdout_read":False,"lake_writes":0,"production_state_writes":0,"gate_evaluated":False}}
+    duplicate_entry_times = len(owners) - len({(entry.entry_time, entry.direction) for entry in owners})
+    return {"task":"T-162", "generated_at":datetime.now(UTC).isoformat(), "owner_timezone":"America/New_York", "owner_entries":len(owners), "duplicate_entry_time_units":duplicate_entry_times, "chart_timeframe_minutes":TIMEFRAME, "signal_timeframe_minutes":HIGHER_MINUTES, "signal_group_anchor":"UTC epoch-aligned 54-minute groups", "signal_bars_per_group":TF_MULT, "recorded_bars_carry_volume":any(item.volume != 0 for item in bars), "recorded_bar_gaps":[entry.entry_time.isoformat() for entry in owners if _bar_at(bars, entry.entry_time)[1] is None], "modes":modes, "owner_exits":[{"trade_number":e.trade_number,"direction":e.direction,"entry_time":e.entry_time.isoformat(),"exit_time":e.exit_time.isoformat(),"exit_reason":e.exit_reason} for e in exits], "source_contract":{"setup":"Open/Close","refresh_ha_gate":False,"entry_bar_management":True,"intrabar_order":"target-first (TP3, TP2, TP1/BE before stop)","vwap":"volume-weighted when volume is present; equal typical-price weighting for zero-volume recorder bars"}, "safety":{"broker_calls":0,"orders":0,"sealed_holdout_read":False,"lake_writes":0,"production_state_writes":0,"gate_evaluated":False}}
 
 
 def report(payload: dict[str, Any]) -> str:
@@ -438,13 +519,13 @@ def report(payload: dict[str, Any]) -> str:
     lines.append(f"**Owner verdict:** The faithful Pine port reproduces **{best}/31** entries within آ±2 three-minute bars in `{mode}` mode. {'The 25/31 success bar is met.' if best >= 25 else 'The 25/31 success bar is not met; per-entry differences are reported below and the task stops without tuning or a historical rerun.'}")
     lines += ["",f"Generated: `{payload['generated_at']}`. Owner timestamps were parsed as `America/New_York`.","","## Entry reproduction","","| HA mode | Exact | آ±1 bar | آ±2 bars |","| --- | ---: | ---: | ---: |"]
     for mode,data in payload["modes"].items(): lines.append(f"| {mode} | {data['entry_counts']['0']} | {data['entry_counts']['1']} | {data['entry_counts']['2']} |")
-    lines += ["","## Port contract","",json.dumps(payload["source_contract"],indent=2,sort_keys=True),"","## Exit comparison source","",f"Owner exit rows parsed: {len(payload['owner_exits'])}. Port trades include exit time/type where a trade completed; open trades remain explicit.","","## Safety","",json.dumps(payload["safety"],indent=2,sort_keys=True),""]
+    lines += ["","## Port contract","",json.dumps(payload["source_contract"],indent=2,sort_keys=True),"",f"Signal groups: `{payload['signal_group_anchor']}`; `{payload['signal_bars_per_group']}` chart bars per group. Recorded bars carry volume: `{payload['recorded_bars_carry_volume']}`.",f"Owner entry units sharing an entry time/direction: `{payload['duplicate_entry_time_units']}` (the comparison counts the 31 exported units, not unique signals).",f"Owner entry minutes without a containing recorded 3m bar: `{len(payload['recorded_bar_gaps'])}`.","","## Exit comparison source","",f"Owner exit rows parsed: {len(payload['owner_exits'])}. Port trades include exit time/type where a trade completed; open trades remain explicit.","","## Safety","",json.dumps(payload["safety"],indent=2,sort_keys=True),""]
     if best < 25:
         lines += ["## Per-entry differences",""]
         for mode,data in payload["modes"].items():
             lines += [f"### {mode}",""]
-            for row in data["entry_differences"]["2"]:
-                if row.get("first_difference"): lines.append(f"- `{row['owner']}` {row['direction']}: nearest port entry `{row.get('match')}` (delta {row.get('delta_minutes'):.1f} minutes).")
+            for row in data["comparison_rows"]:
+                if row["first_difference"] != "matched": lines.append(f"- `{row['owner_time_utc']}` {row['direction']}: nearest port entry `{row['nearest_port_entry_time']}` (delta {row['signed_delta_bars']} chart bars); first difference `{row['first_difference']}`; values `{json.dumps(row['values_at_owner_minute'], sort_keys=True)}`.")
     return "\n".join(lines)+"\n"
 
 
@@ -461,9 +542,11 @@ def main() -> int:
     args.output.write_text(json.dumps(payload,indent=2,sort_keys=True)+"\n",encoding="utf-8")
     args.report.write_text(report(payload),encoding="utf-8")
     with args.entries.open("w",newline="",encoding="utf-8") as handle:
-        writer=csv.writer(handle); writer.writerow(["mode","owner_entry_time","direction","matched_entry_time","delta_minutes","exit_time","exit_reason"])
+        writer=csv.writer(handle); writer.writerow(["mode","owner_time_ny","owner_time_utc","direction","nearest_port_entry_time","signed_delta_bars","port_direction","first_difference","bar_ts_utc","open","high","low","close","volume","ha_open_54m","ha_close_54m","ema200","adx14","plus_di14","minus_di14","vwap","atr14"])
         for mode,data in payload["modes"].items():
-            for row in data["entry_differences"]["2"]: writer.writerow([mode,row.get("owner"),row.get("direction"),row.get("match"),row.get("delta_minutes"),"",""])
+            for row in data["comparison_rows"]:
+                values = row["values_at_owner_minute"]
+                writer.writerow([mode,row["owner_time_ny"],row["owner_time_utc"],row["direction"],row["nearest_port_entry_time"],row["signed_delta_bars"],row["port_direction"],row["first_difference"],*[values.get(key) for key in ("bar_ts_utc","open","high","low","close","volume","ha_open_54m","ha_close_54m","ema200","adx14","plus_di14","minus_di14","vwap","atr14")]])
     print(json.dumps({"task":"T-162","modes":{m:d["entry_counts"] for m,d in payload["modes"].items()},"safety":payload["safety"]},sort_keys=True))
     return 0
 
