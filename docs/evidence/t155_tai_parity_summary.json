@@ -1,0 +1,123 @@
+{
+  "data": {
+    "chart_bars_3m": 3974,
+    "minute_rows": 11747
+  },
+  "diagnostic_only": true,
+  "generated_at": "2026-10-18T14:47:00Z",
+  "independent_references": {
+    "adx14": {
+      "compared": 3948,
+      "max_abs": 0.0,
+      "median_abs": 0.0,
+      "missing_actual": 0,
+      "missing_reference": 0
+    },
+    "atr14": {
+      "compared": 3961,
+      "max_abs": 0.0,
+      "median_abs": 0.0,
+      "missing_actual": 0,
+      "missing_reference": 0
+    },
+    "ema200": {
+      "compared": 3775,
+      "max_abs": 0.0,
+      "median_abs": 0.0,
+      "missing_actual": 0,
+      "missing_reference": 0
+    },
+    "heikin_ashi": {
+      "close": {
+        "compared": 3974,
+        "max_abs": 0.0,
+        "median_abs": 0.0,
+        "missing_actual": 0,
+        "missing_reference": 0
+      },
+      "open": {
+        "compared": 3974,
+        "max_abs": 0.0,
+        "median_abs": 0.0,
+        "missing_actual": 0,
+        "missing_reference": 0
+      }
+    },
+    "minus_di14": {
+      "compared": 3961,
+      "max_abs": 0.0,
+      "median_abs": 0.0,
+      "missing_actual": 0,
+      "missing_reference": 0
+    },
+    "plus_di14": {
+      "compared": 3961,
+      "max_abs": 0.0,
+      "median_abs": 0.0,
+      "missing_actual": 0,
+      "missing_reference": 0
+    }
+  },
+  "optional_libraries": {
+    "pandas_ta": "unavailable",
+    "talib": "unavailable"
+  },
+  "pod_evidence": {
+    "chart_bars_3m": 3974,
+    "command_exit": 0,
+    "entries": 31,
+    "run": "completed read-only on owner Pod; generated outputs redacted into repository"
+  },
+  "safety": {
+    "broker_calls": 0,
+    "cost_ledger_promotion_writes": 0,
+    "gate1_evaluated": false,
+    "lake_writes": 0,
+    "orders": 0,
+    "sealed_holdout_read": false
+  },
+  "task": "T-155",
+  "unverifiable": [
+    "TradingView VWAP session anchor and real NQ1! volume",
+    "54m session anchoring",
+    "futures-vs-CFD data"
+  ],
+  "vwap_sensitivity": {
+    "cme_equal": {
+      "all_filters_passed": 0,
+      "condition_fail_counts": {
+        "adx_di": 21,
+        "dont_chase": 23,
+        "ema_side": 12,
+        "ha_state": 20,
+        "risk_atr": 9,
+        "vwap_side": 13
+      },
+      "entries_evaluated": 31
+    },
+    "cme_tick_volume": {
+      "all_filters_passed": 0,
+      "condition_fail_counts": {
+        "adx_di": 21,
+        "dont_chase": 23,
+        "ema_side": 12,
+        "ha_state": 20,
+        "risk_atr": 9,
+        "vwap_side": 13
+      },
+      "entries_evaluated": 31
+    },
+    "utc_equal": {
+      "all_filters_passed": 0,
+      "condition_fail_counts": {
+        "adx_di": 21,
+        "dont_chase": 20,
+        "ema_side": 12,
+        "ha_state": 20,
+        "risk_atr": 9,
+        "vwap_side": 14
+      },
+      "entries_evaluated": 31
+    }
+  }
+}
