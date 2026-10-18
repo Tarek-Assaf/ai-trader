@@ -158,8 +158,11 @@ def _session_vwap(bars: Sequence[Candle], anchor: str) -> tuple[float | None, ..
 
 def _ha_states(chart: Sequence[Candle], anchor: str, mode: str) -> dict[datetime, str | None]:
     result: dict[datetime, str | None] = {}
+    previous: tuple[float, float] | None = None
+    previous_start: datetime | None = None
     for group in _higher_groups(chart, anchor):
-        previous: tuple[float, float] | None = None
+        if previous_start is not None and group[0].ts_utc - previous_start != timedelta(minutes=54):
+            previous = None
         for count, bar in enumerate(group, start=1):
             close = (
                 group[0].open
@@ -179,6 +182,7 @@ def _ha_states(chart: Sequence[Candle], anchor: str, mode: str) -> dict[datetime
                 "short" if selected and selected[1] < selected[0] else None
             )
         previous = opening_close
+        previous_start = group[0].ts_utc
     return result
 
 
