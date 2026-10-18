@@ -53,3 +53,23 @@ vanish. Our replay used finished 54m candles only.
 - Respect the Pod execution safety rules (13 GB cap, watchdog). The data is only 12 days, so the run
   is short; no 1m grid is needed.
 - PR, ONE log entry, validation entry, set to review, hand the turn to claude.
+
+## Addendum 2026-10-18 (Claude): why 3-12 signals cannot explain 31 entries
+The owner confirmed the uploaded Pine file is exactly his chart configuration. Re-reading it shows two
+signal paths and the T-151 variants A/B/C only model the first:
+1. HA crossover on the 54m Heikin-Ashi series (variants A/B/C).
+2. Refresh entries (default on, 12 bars): whenever the indicator's own trade is flat for >= 12 bars
+   and the smart filter and structure-stop risk pass, it signals WITHOUT a crossover. These fire on
+   most bars where the trend filters agree, so they are far more frequent than crosses.
+Cycle 2 must therefore add, all diagnostic only, no parameter tuning:
+- Variant D: refresh-path generator (filters + risk + flat >= 12 bars, no cross), on closed 3m bars.
+  Report hits within +/-1, +/-2, +/-5 bars and extra signals per day, with and without the virtual
+  in-trade gating (the Pine trade state machine: no new signal while its own virtual trade is open).
+- Per owner entry (31): value of each condition at the entry bar (HA state long/short, EMA200 side,
+  ADX, DI side, VWAP side, |close-vwap|/ATR, risk/ATR with the 5-bar swing +/-0.2 ATR stop). Count how
+  many entries pass ALL filters, and which single condition fails most often.
+- Stop fit: the owner's bracket stop distance per entry versus the structure-stop rule (points and in
+  ATR); report the median error. Close fit would show the owner follows the indicator's levels.
+- Basis note: filters use NAS100 CFD data while the owner trades NQ1! futures (median +209 pts);
+  side tests are unaffected, but VWAP/EMA distances should be computed on price minus the per-day
+  median basis as a second column.
