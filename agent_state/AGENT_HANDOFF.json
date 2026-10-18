@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 428,
+  "turn": "codex",
+  "revision": 429,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -128,7 +128,8 @@
         "T-152",
         "T-153",
         "T-154",
-        "T-155"
+        "T-155",
+        "T-156"
       ]
     },
     {
@@ -5161,6 +5162,30 @@
         "docs/evidence/t155_tai_parity_report.md"
       ],
       "completion_note": "Completed the Pod-only T-155 parity diagnostic. On 3,974 recorded NAS100 3m bars, hand-written independent EMA200, ATR14, ADX14, +DI14, -DI14 and Heikin Ashi references matched the production implementations exactly (max and median absolute difference 0.0, with no warmup mismatches). TA-Lib and pandas-ta were unavailable in the Pod image. The 31-entry VWAP sensitivity table found 0/31 entries passing all filters for UTC equal weighting, CME-open equal weighting, and CME-open tick-volume weighting; CME-open changed VWAP-side failures from 14 to 13 and dont-chase failures from 20 to 23. The diagnostic exited 0 with broker_calls=0, orders=0, sealed_holdout_read=false, gate1_evaluated=false and no cost/ledger/promotion or lake writes. Remaining unverifiable items are TradingView VWAP anchor/real NQ1! volume, 54m session anchoring, and futures-vs-CFD data."
+    },
+    {
+      "id": "T-156",
+      "title": "Tai mismatch: dump raw indicator values at each of the 31 owner entries and measure systematic offsets",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-155"
+      ],
+      "acceptance_criteria": [
+        "Diagnostic only, Pod data only, no broker/gate/cost/ledger edits. TradingView printed BUY/SELL labels at the owner's entries (Q-067), our replay passes 0/31, so find the systematic difference. (1) For each of the 31 entries and for the 3 bars before and after, dump raw values from our recorded NAS100 3m data: close, EMA200, ADX, +DI, -DI, VWAP, ATR14, |close-VWAP|/ATR, 54m HA open and close (closed and forming), structure stop and risk/ATR. (2) For each condition, report how far the value is from passing (for example ADX shortfall in points, VWAP distance excess in ATR), then the median shortfall and whether the sign is consistent. A consistent shortfall points to a data or aggregation bias (mid price vs last trade, bar construction, missing minutes, futures session volume). (3) Check recorded 1m coverage around every entry (missing minutes, zero-range bars, flat-filled bars) and how many of the 3m bars are built from fewer than 3 real minutes. (4) Test whether using bid-only, ask-only or mid prices changes ADX/VWAP-distance pass counts. (5) State plainly what cannot be explained from this data. No parameter tuning."
+      ],
+      "deliverables": [
+        "docs/evidence/t156_entry_feature_dump.csv",
+        "docs/evidence/t156_report.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -14580,7 +14605,7 @@
       "id": "Q-067",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "Your settings are identical to what the agent runs, so the mismatch is not a settings problem. Two free checks on your own TradingView chart decide what is left. (1) Dashboard: with the replay at 16 Oct, send one screenshot of the indicator's Dashboard (the box with its own trade counts, TP/SL results). (2) Labels: for any 5 of your 31 entries, look at the bar where you entered: was there a BUY or SELL label from the indicator on that bar or the bar before (yes/no each)? Which can you do?",
       "options": [
         "A: I will send the Dashboard screenshot and the yes/no for 5 entries (recommended)",
@@ -14588,7 +14613,7 @@
         "C: Many of my entries had no BUY/SELL label, I entered on my own reading"
       ],
       "recommendation": "A: if most entries had a label, TradingView's signals differ from ours and the cause is data or timing, which we can then chase; if not, those entries are discretionary and not indicator signals.",
-      "answer": ""
+      "answer": "Owner 2026-10-18 19:57 Riyadh: '2- yes' (item 2: the indicator DID show a BUY/SELL label at the entry bars he checked) and sent a replay screenshot of NQ1! 3m showing the indicator's SELL label with TP3 reached, and a partly hidden dashboard: Trades 115, Completed 115, SL 38, TP2 12, TP3 32, Win Rate 66.96%, Total R 115 (TP1 count hidden). So TradingView's own signals exist at his entries; the agent's replay does not reproduce them, which points to data or timing differences, not discretion."
     }
   ],
   "log": [
@@ -23503,6 +23528,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner's Inputs screenshots show every setting equals the file defaults we implemented, so a settings difference is ruled out. Asked Q-067 for the indicator's own Dashboard and a yes/no on BUY/SELL labels at 5 entry bars to separate data/timing differences from discretionary entries. Turn stays with human."
+    },
+    {
+      "revision": 429,
+      "ts": "2026-10-18T20:10:00+03:00",
+      "agent": "claude",
+      "action": "q067_answered_task_t156",
+      "task_ids": [
+        "T-156"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner confirmed TradingView's indicator shows BUY/SELL labels at his entries, so the signals are real and our replay misses them (data or timing difference, not discretionary entries). Queued T-156: raw indicator values and shortfall per owner entry, recorded-data coverage and bid/ask/mid sensitivity, to find a systematic bias. Turn to codex."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
