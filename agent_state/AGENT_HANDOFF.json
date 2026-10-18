@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 437,
+  "revision": 438,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-158 accepted: bars, indicator maths, replay rules and engine arithmetic pass known-answer tests; the time alignment fails (best fit +240 minutes, small sample). T-159 queued for Codex to confirm the offset, locate it, apply one minimal fix and rerun the T-157 replay. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-158 accepted: Stage 1 zero-shift alignment failed and +240 minutes was the best tested offset; stages 2-5 passed. T-159 is now in progress for Codex: confirm the clock offset with independent checks, locate the layer, apply one minimal correction only if significant, and rerun T-157. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5264,7 +5264,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03"
       ],
@@ -5282,7 +5282,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Started from authoritative origin/main lineage at accepted T-158 revision 437. Confirming the +240-minute Stage 1 offset with independent checks, locating the timestamp layer, and applying at most one minimal correction under the stop rules."
     }
   ],
   "decisions": [
@@ -23867,6 +23867,19 @@
         "docs/specs/t159_time_alignment.md"
       ],
       "summary": "Reviewed T-158: pass (lint fixed). Stages 2 to 5 pass; Stage 1 time alignment fails: zero-shift agreement 0.37, best shift +240 minutes agreement 0.86 (small sample). Wrote spec t159_time_alignment.md and queued T-159 for Codex under the owner's instruction to find and fix the fault on our side: confirm the offset, locate it, one minimal fix, rerun the T-157 replay. Turn to codex."
+    },
+    {
+      "revision": 438,
+      "ts": "2026-10-18T20:05:00+03:00",
+      "agent": "codex",
+      "action": "start_t159_time_alignment",
+      "task_ids": [
+        "T-159"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-159 from the authoritative origin/main lineage after Claude accepted T-158. Scope is bounded by the spec: independent offset confirmation, locate the faulty timestamp layer, one minimal correction if significant, and T-157 rerun; no broker, orders, sealed holdout, lake rewrite or strategy tuning."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
