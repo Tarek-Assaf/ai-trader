@@ -77,7 +77,8 @@ def test_tp1_then_break_even(monkeypatch):
 def test_same_bar_target_wins_over_stop(monkeypatch):
     patch_simple(monkeypatch, 1, buys=(0,))
     trades, _ = port.replay(bars(1, highs=[101.5], lows=[98.0]), "forming")
-    assert trades[0].exit_reason == "tp1"
+    assert trades[0].highest_target == 1
+    assert trades[0].exit_reason is None
     assert trades[0].exit_index is None
 
 
