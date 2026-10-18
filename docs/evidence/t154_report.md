@@ -26,3 +26,7 @@ The canonical NSXUSD lake exists and the legacy aliases are supported only when 
 ## Safety and validation
 
 The Pod process was read-only: broker calls, orders, holdout reads, gate evaluation, cost edits, ledger writes, and promotion writes were all false or zero. No broker or trading side effects occurred. The reviewer must validate this cycle; no own pass validation is claimed. Desktop checks available on this workspace are compile, diff and synthetic benchmark checks; pytest, Ruff and mypy are unavailable locally.
+
+## Deterministic sample fallback
+
+The full-query run could not finish the six smaller groups within the per-group bound, so the fallback was declared before execution. A deterministic sample request of 3,000 OOS queries per group was run for NSXUSD/XAUUSD at 5m, 3m and 1m with the same 360 trials per result. All six groups again reached the 1,200-second bound before emitting a final verdict or trial count: runner `queries_done` was 14,178 (NSXUSD 5m), 11,367 (XAUUSD 5m), 9,576 (NSXUSD 3m), 8,397 (XAUUSD 3m), 13,644 (NSXUSD 1m) and 11,994 (XAUUSD 1m). These are checkpoint counters; no final OOS count or trial result was emitted. The sample therefore does not satisfy the acceptance requirement. The redacted checkpoint record is in `t154_review_cycle2_sample.json`.
