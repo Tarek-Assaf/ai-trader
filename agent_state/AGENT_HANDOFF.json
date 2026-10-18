@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 440,
+  "revision": 441,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Owner confirmed his trade export is New York time (UTC-4); D-044. T-160 queued for Codex: read the owner list as New York time in the comparison scripts only, re-check alignment, rerun the 31-trade replay (was 0/31). Recorder, parser and bars stay UTC. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-159 accepted; owner confirmed New York export time (UTC-4) and Q-070 is answered. T-160 is in progress for Codex: use zoneinfo America/New_York only when reading owner CSV, re-check alignment and rerun T-157 once. No production UTC path changes, broker calls, orders, holdout reads or lake writes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5300,7 +5300,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03"
       ],
@@ -5319,7 +5319,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Started T-160 from accepted T-159. Scope is limited to zoneinfo America/New_York conversion in owner-CSV readers, alignment re-check, and one T-157 replay rerun; production UTC paths and safety boundaries remain unchanged."
     }
   ],
   "decisions": [
@@ -23996,6 +23996,19 @@
         "docs/specs/t160_owner_time_new_york.md"
       ],
       "summary": "Owner answered Q-070: the trade export is New York time (UTC-4). Recorded D-044, marked Q-070 answered and B-029 resolved. Wrote spec t160_owner_time_new_york.md and queued T-160 for Codex: read the owner CSV as New York time in the comparison scripts only, re-check alignment (best shift must be 0), rerun the T-157 31-trade replay. No variant rounds. Turn to codex."
+    },
+    {
+      "revision": 441,
+      "ts": "2026-10-18T21:00:00Z",
+      "agent": "codex",
+      "action": "start_t160_owner_time_ny",
+      "task_ids": [
+        "T-160"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-160 from the accepted T-159 lineage after owner Q-070 confirmed the TradingView export uses New York/exchange time. Will use zoneinfo America/New_York in owner-CSV readers only, then rerun T-159 alignment and T-157 rule-by-rule replay once; no production UTC changes or broker/holdout/lake activity."
     }
   ],
   "project_summary": "Owner confirmed his trade export is New York time (UTC-4); D-044. T-160 queued for Codex: read the owner list as New York time in the comparison scripts only, re-check alignment, rerun the 31-trade replay (was 0/31). Recorder, parser and bars stay UTC. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
