@@ -177,6 +177,24 @@ def run(lake: Path, owner_file: Path) -> dict[str, Any]:
             "owner_csv_contract": "docs/specs/t151_owner_trades_comparison.md records owner confirmation that export times are UTC",
             "recorder_contract": "src/trader/data/recorder.py normalizes aware timestamps with astimezone(UTC) and truncates to minute",
             "resample_contract": "src/trader/data/resample.py floors epoch minutes to UTC timeframe buckets",
+            "located_layers": [
+                {
+                    "file": "docs/specs/t151_owner_trades_comparison.md:3,14",
+                    "finding": "The owner confirmed that the TradingView export timestamps are UTC.",
+                },
+                {
+                    "file": "src/trader/integrations/capital_com/stream.py:243,257-273",
+                    "finding": "Capital.com stream and REST snapshot timestamps are parsed as UTC.",
+                },
+                {
+                    "file": "src/trader/data/recorder.py:60,259,289,299",
+                    "finding": "Recorder timestamps are normalized to UTC and truncated to the minute.",
+                },
+                {
+                    "file": "src/trader/data/resample.py:53-68",
+                    "finding": "Resampling floors aware timestamps into UTC bucket starts.",
+                },
+            ],
             "timezone_arithmetic": {
                 "raw_owner_naive_as_utc": "no correction",
                 "America/New_York_on_2026_10_06": "UTC-4, which would add +240 minutes, but contradicts the owner's UTC confirmation",
@@ -193,12 +211,21 @@ def report(payload: dict[str, Any]) -> str:
     s3 = payload["stage3_timestamp_convention"]
     best = s1["best_shift"]
     perm = s1["permutation"]
-    verdict = (
-        "STOP after confirmation: the +240-minute shift is not accepted as a fix because the "
-        f"permutation max-shift test is not significant (p={perm['p_value']:.4f}) or the owner export contract says UTC."
-        if perm["p_value"] >= 0.05
-        else "The +240-minute shift is statistically repeatable; correction requires a separate reviewed change after locating the layer."
-    )
+    if perm["p_value"] >= 0.05:
+        verdict = (
+            "STOP after confirmation: the +240-minute shift is not a repeatable finding "
+            f"(permutation p={perm['p_value']:.4f}). No correction or T-157 rerun was made."
+        )
+    else:
+        verdict = (
+            "STOP with no production correction: +240 minutes is statistically repeatable, "
+            f"but p={perm['p_value']:.4f} does not identify a safe faulty layer. The owner export "
+            "contract says UTC and the recorder, Capital.com parser, and resampler all explicitly "
+            "normalize to UTC. +240 minutes is America/New_York daylight time on this window, "
+            "which contradicts the owner contract. Do not apply a timezone guess; confirm the "
+            "historical source timestamp with the owner/producer before changing code. T-157 was "
+            "not rerun because no correction was justified."
+        )
     lines = ["# T-159 Time alignment", "", "## Owner verdict", "", verdict, "No lake rewrite or strategy-rule change was made.", "", "## Stage 1 — offset confirmation", "", json.dumps({"zero_shift": s1["zero_shift"], "best_shift": best, "permutation": perm}, indent=2, sort_keys=True), "", "## Stage 2 — session gaps", "", json.dumps(s2, indent=2, sort_keys=True), "", "## Stage 3 — timestamp convention and location", "", json.dumps(s3, indent=2, sort_keys=True), "", "## Safety", "", json.dumps(payload["safety"], indent=2, sort_keys=True)]
     return "\n".join(lines) + "\n"
 

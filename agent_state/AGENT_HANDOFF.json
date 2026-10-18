@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 438,
+  "turn": "claude",
+  "revision": 439,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-158 accepted: Stage 1 zero-shift alignment failed and +240 minutes was the best tested offset; stages 2-5 passed. T-159 is now in progress for Codex: confirm the clock offset with independent checks, locate the layer, apply one minimal correction only if significant, and rerun T-157. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-158 accepted: Stage 1 zero-shift alignment failed and +240 minutes was the best tested offset; stages 2-5 passed. T-159 confirms the +240-minute offset is statistically repeatable, but no safe correction layer is proven because the owner export, Capital.com parser, recorder, and resampler contracts all specify UTC. T-159 is in Claude review with blocker B-029/Q-070; no production change or T-157 rerun was made.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5264,7 +5264,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -5277,12 +5277,21 @@
       ],
       "deliverables": [
         "scripts/lab_t159_time_alignment.py",
+        "tests/unit/test_t159_time_alignment.py",
         "docs/evidence/t159_time_alignment.json",
         "docs/evidence/t159_report.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Started from authoritative origin/main lineage at accepted T-158 revision 437. Confirming the +240-minute Stage 1 offset with independent checks, locating the timestamp layer, and applying at most one minimal correction under the stop rules."
+      "evidence": [
+        "scripts/lab_t159_time_alignment.py: bounded -360..+360 minute grid, entry/exit pairing, session-gap check and source-layer evidence; no broker/holdout/lake writes.",
+        "tests/unit/test_t159_time_alignment.py: synthetic offset score and entry/exit CSV collapse checks; python -m py_compile passed.",
+        "docs/evidence/t159_time_alignment.json: Pod result, 54 tranche trades, zero shift 43 comparable/46.51%, best +240m 49/87.76%/0.7543, 2,000-permutation p=0.0004997501, gap and UTC-contract evidence.",
+        "docs/evidence/t159_report.md: owner verdict first; no safe correction because owner UTC contract conflicts with the statistical +240m result.",
+        "Pod read-only run on env@5cdff5454c57 exited 0; broker_calls=0, orders=0, sealed_holdout_read=false, lake_writes=0, production_state_writes=0.",
+        "python -m py_compile scripts/lab_t159_time_alignment.py tests/unit/test_t159_time_alignment.py passed; git diff --check passed. Full pytest/ruff unavailable on desktop."
+      ],
+      "completion_note": "T-159 diagnostic complete. Fine-grid and permutation checks confirm a repeatable +240-minute offset, but layer tracing finds no safe production correction: the owner export contract, Capital.com parser, recorder, and UTC resampler all say UTC. No timezone guess was applied and T-157 was not rerun because the one-correction prerequisite was not met. Handed to Claude with blocker B-029/Q-070.",
+      "review_notes": "Review requested: confirm whether the historical owner export was actually generated in UTC or America/New_York EDT before any correction."
     }
   ],
   "decisions": [
@@ -13758,6 +13767,22 @@
       "validated_by": "claude",
       "date": "2026-10-18T23:30:00+03:00",
       "reverify_if": "The time handling, bar-time convention or owner CSV time zone changes."
+    },
+    {
+      "id": "V-414",
+      "task_id": "T-159",
+      "subject": "T-159 time-alignment diagnostic",
+      "method": "Ran the committed diagnostic on the owner-provided Pod using the unsealed lake and owner CSV; inspected the compact JSON/report; ran py_compile and git diff --check. No broker, order, holdout, lake-write or production-state path was invoked.",
+      "result": "pass with stop: +240 minutes is repeatable (49 comparable, agreement 0.8775510204, correlation 0.7543368257, permutation p=0.0004997501), but source contracts conflict with a timezone correction. Stage 2 gaps are irregular recorder/connectivity gaps; Stage 3 locates explicit UTC handling in parser, recorder and resampler. No correction or T-157 rerun.",
+      "evidence": [
+        "scripts/lab_t159_time_alignment.py",
+        "tests/unit/test_t159_time_alignment.py",
+        "docs/evidence/t159_time_alignment.json",
+        "docs/evidence/t159_report.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-18T20:00:00Z",
+      "reverify_if": "Owner answers Q-070 or supplies a source timestamp contract that changes the UTC finding."
     }
   ],
   "blockers": [
@@ -13963,6 +13988,13 @@
       "raised_by": "codex",
       "status": "resolved",
       "resolution": "Owner parked the movement-matching work (D-043); evidence preserved."
+    },
+    {
+      "id": "B-029",
+      "task_id": "T-159",
+      "raised_by": "codex",
+      "status": "active",
+      "text": "T-159 confirms a repeatable +240-minute offset (49 comparable tranches, 87.76% agreement, permutation p=0.0005), but the owner export is documented and confirmed as UTC while Capital.com parsing, recorder normalization and resampling are explicit UTC. +240 is America/New_York EDT arithmetic, not Asia/Riyadh. No safe layer is identified; applying a timezone guess would violate the owner contract, so no correction or T-157 rerun is authorized."
     }
   ],
   "questions": [
@@ -14820,6 +14852,19 @@
       ],
       "recommendation": "A: with the source we can copy the exact rules and replay them, instead of guessing variants.",
       "answer": "Owner 2026-10-18: does not send the Pine source or a TradingView account. Says the strategy, trades and results are clear, and the fault is in how our agent operates. Instruction: find and fix the problem on our side. Claude queued T-158 (pipeline audit) instead."
+    },
+    {
+      "id": "Q-070",
+      "to": "human",
+      "from": "codex",
+      "status": "open",
+      "text": "T-159 found a repeatable +240-minute historical mismatch, but repository contracts say the owner export is UTC and production ingestion is UTC. Was the supplied historical export actually generated in America/New_York EDT (UTC-4) rather than UTC?",
+      "options": [
+        "A: Confirm the export is UTC (recommended; keep production UTC and investigate source data)",
+        "B: Confirm the export timestamps are America/New_York local time (authorize one reviewed parser correction)",
+        "C: I cannot confirm; keep the diagnostic stopped"
+      ],
+      "recommendation": "A: preserve the explicit UTC production contracts until the historical source timestamp is confirmed."
     }
   ],
   "log": [
@@ -23880,7 +23925,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-159 from the authoritative origin/main lineage after Claude accepted T-158. Scope is bounded by the spec: independent offset confirmation, locate the faulty timestamp layer, one minimal correction if significant, and T-157 rerun; no broker, orders, sealed holdout, lake rewrite or strategy tuning."
+    },
+    {
+      "revision": 439,
+      "ts": "2026-10-18T20:00:00Z",
+      "agent": "codex",
+      "action": "complete_t159_time_alignment_stop_no_safe_correction",
+      "task_ids": [
+        "T-159"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t159_time_alignment.py",
+        "tests/unit/test_t159_time_alignment.py",
+        "docs/evidence/t159_time_alignment.json",
+        "docs/evidence/t159_report.md"
+      ],
+      "summary": "Completed T-159 diagnostic-only time alignment. Fine grid and permutation confirm +240m (49/54 comparable, 87.76% agreement, p=0.0005), but owner CSV is confirmed UTC and production parser/recorder/resampler are explicit UTC. No safe correction layer is proven; no correction or T-157 rerun. Added B-029/Q-070, handed to Claude for review. Safety: broker 0, orders 0, holdout false, lake writes 0, production-state writes 0."
     }
   ],
-  "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
+  "project_summary": "T-159 is in Claude review after a diagnostic stop: the +240-minute offset is statistically repeatable, but no safe correction is justified while the owner CSV and production timestamp contracts are UTC. B-029/Q-070 require owner/source confirmation before any parser change."
 }
