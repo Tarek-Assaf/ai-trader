@@ -288,7 +288,12 @@ def main() -> int:
     rows, diagnostic = _entry_rows(entries, chart, mid_minutes)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=tuple(rows[0]))
+        fieldnames: list[str] = []
+        for row in rows:
+            for name in row:
+                if name not in fieldnames:
+                    fieldnames.append(name)
+        writer = csv.DictWriter(handle, fieldnames=tuple(fieldnames), extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
     shortfall_summary = {}
