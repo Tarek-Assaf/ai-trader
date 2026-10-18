@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import sys
 from collections.abc import Sequence
@@ -275,6 +276,10 @@ def _report(payload: dict[str, Any]) -> str:
         "The bounded lake check covers NSXUSD and XAUUSD at 1m, 3m, 5m, 54m and 60m "
         "where data is present; 1m is mandatory.",
         "",
+        f"The Pod produced {payload['full_replay_rows']} replay rows. The committed CSV is a "
+        f"compact center-bar baseline index ({payload['compact_replay_rows']} rows); the "
+        f"full artifact SHA-256 is `{payload['full_replay_sha256']}`.",
+        "",
         json.dumps(payload["safety"], indent=2, sort_keys=True),
         "",
     ]
@@ -290,16 +295,38 @@ def main() -> int:
     parser.add_argument("--report", type=Path, default=Path("docs/evidence/t161_report.md"))
     args = parser.parse_args()
     payload, rows = run(args.lake, args.owner_file)
+    payload["full_replay_rows"] = len(rows)
+    full_csv = ""
+    if rows:
+        full_fields: list[str] = []
+        for row in rows:
+            full_fields.extend(name for name in row if name not in full_fields)
+        from io import StringIO
+
+        full_buffer = StringIO()
+        full_writer = csv.DictWriter(full_buffer, fieldnames=full_fields)
+        full_writer.writeheader()
+        full_writer.writerows(rows)
+        full_csv = full_buffer.getvalue()
+    payload["full_replay_sha256"] = hashlib.sha256(full_csv.encode()).hexdigest()
+    compact_rows = [
+        row
+        for row in rows
+        if row.get("basis") == "mid"
+        and row.get("variant") == "forming_wilder_sma_ema_utc"
+        and row.get("offset") == 0
+    ]
+    payload["compact_replay_rows"] = len(compact_rows)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     args.replay.parent.mkdir(parents=True, exist_ok=True)
     fieldnames: list[str] = []
-    for row in rows:
+    for row in compact_rows:
         fieldnames.extend(name for name in row if name not in fieldnames)
     with args.replay.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
-        writer.writerows(rows)
+        writer.writerows(compact_rows)
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(_report(payload), encoding="utf-8")
     print(
