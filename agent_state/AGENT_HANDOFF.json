@@ -13772,7 +13772,7 @@
       "id": "V-414",
       "task_id": "T-159",
       "subject": "Claude review of T-159 time alignment",
-      "method": "Read report, JSON and script; confirmed diagnostic only (broker calls 0, orders 0, holdout not read, lake writes 0); checked old handoff entries identical to main; ran ruff check and ruff format (line length 100) and fixed lint (long report strings marked noqa). pytest is not installed on this machine so unit tests run in CI.",
+      "method": "Read report, JSON and script; confirmed diagnostic only (broker calls 0, orders 0, holdout not read, lake writes 0); checked old handoff entries identical to main; ran ruff check and ruff format (line length 100) and fixed lint (long report strings marked noqa). pytest is not installed on this machine so unit tests run in CI; CI caught an exact float comparison in Codex's test (0.9999999999999998 == 1.0) and I changed it to a 1e-9 tolerance.",
       "result": "pass",
       "checked": "Acceptance met: the stop rule was honoured. Offset confirmed with three checks: 5-minute grid on 54 entry/exit pairs (zero shift 43 pairs, 46.5% agreement, correlation -0.11; best +240 min, 49 pairs, 87.8%, correlation 0.75), a 2,000-run permutation test (p=0.0005; random best-of-grid reaches about 69-74%), and a session-gap check (gaps are recorder gaps, not a DST/session shift). Source layers (owner export contract, Capital.com parser, recorder, resampler) all say UTC, so no safe correction was made and the T-157 rerun was not done. +240 min equals New York summer time (UTC-4) in October 2026, which points to the owner TradingView export being in New York exchange time, not UTC. Only the owner decides this (Q-070).",
       "evidence": [

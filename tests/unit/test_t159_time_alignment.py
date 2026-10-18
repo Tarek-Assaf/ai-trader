@@ -30,7 +30,7 @@ def test_correlation_and_shift_score_use_the_expected_offset() -> None:
     result = score_shift(trades, prices, 240)
     assert result["comparable"] == 3
     assert result["agreement"] == 1.0
-    assert _correlation(((1.0, 1.0), (2.0, 2.0))) == 1.0
+    assert abs(_correlation(((1.0, 1.0), (2.0, 2.0))) - 1.0) < 1e-9
 
 
 def test_read_trades_collapses_entry_and_exit_rows(tmp_path) -> None:
