@@ -88,7 +88,7 @@ def _stage4_ha(
     lake: Path, entries: Sequence[OwnerEntry], start: datetime, end: datetime
 ) -> dict[str, Any]:
     """Return the T-158 HA categories and the requested first-five snapshots."""
-    minutes = _read_window(lake, "NSXUSD", start, end)
+    minutes = _read_instrument_minutes(lake, "NSXUSD", start, end)
     bars54 = tuple(item for item in resample_ohlc(minutes, 54) if item.complete)
     ha = heikin_ashi(bars54)
     categories = {
@@ -156,7 +156,7 @@ def _stage4_ha(
 def _coverage(lake: Path, start: datetime, end: datetime) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for instrument in INSTRUMENTS:
-        minutes = _read_window(lake, instrument, start, end)
+        minutes = _read_instrument_minutes(lake, instrument, start, end)
         result[instrument] = {
             "source_1m_rows": len(minutes),
             "timeframes": {
@@ -168,6 +168,15 @@ def _coverage(lake: Path, start: datetime, end: datetime) -> dict[str, Any]:
             },
         }
     return result
+
+
+def _read_instrument_minutes(
+    lake: Path, instrument: str, start: datetime, end: datetime
+) -> tuple[Candle, ...]:
+    """Read the canonical symbol, retaining the NAS100/NSXUSD lake alias."""
+    if instrument == "NSXUSD":
+        return read_nas100_minutes(lake, start, end)
+    return _read_window(lake, instrument, start, end)
 
 
 def run(lake: Path, owner_file: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
