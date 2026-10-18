@@ -364,18 +364,24 @@ def replay(bars: Sequence[Candle], mode: str) -> tuple[tuple[PortTrade, ...], Fe
 
 
 def read_owner_exits(path: Path) -> tuple[OwnerExit, ...]:
-    entries: dict[str, tuple[str, datetime]] = {}
-    exits: list[OwnerExit] = []
+    # The export lists each exit before its matching entry, so parse in two passes.
     with path.open(newline="", encoding="utf-8-sig") as handle:
-        for row in csv.DictReader(handle):
-            number = str(row.get("Trade number", ""))
-            kind = str(row.get("Type", "")).lower()
-            direction = "long" if "long" in kind else "short" if "short" in kind else ""
-            if kind.startswith("entry") and direction:
-                entries[number] = (direction, parse_owner_datetime(str(row["Date and time"])))
-            elif kind.startswith("exit") and number in entries:
-                d, entry_time = entries[number]
-                exits.append(OwnerExit(number, d, entry_time, parse_owner_datetime(str(row["Date and time"])), str(row.get("Signal", ""))))
+        rows = list(csv.DictReader(handle))
+    entries: dict[str, tuple[str, datetime]] = {}
+    for row in rows:
+        number = str(row.get("Trade number", ""))
+        kind = str(row.get("Type", "")).lower()
+        direction = "long" if "long" in kind else "short" if "short" in kind else ""
+        if kind.startswith("entry") and direction:
+            entries[number] = (direction, parse_owner_datetime(str(row["Date and time"])))
+    exits: list[OwnerExit] = []
+    for row in rows:
+        number = str(row.get("Trade number", ""))
+        kind = str(row.get("Type", "")).lower()
+        if not kind.startswith("exit") or number not in entries:
+            continue
+        direction, entry_time = entries[number]
+        exits.append(OwnerExit(number, direction, entry_time, parse_owner_datetime(str(row["Date and time"])), str(row.get("Signal", ""))))
     return tuple(exits)
 
 
@@ -429,8 +435,8 @@ def report(payload: dict[str, Any]) -> str:
     lines=["# T-162 faithful Pine-port diagnostic",""]
     best=max((m["entry_counts"]["2"] for m in payload["modes"].values()), default=0)
     mode=max(payload["modes"], key=lambda k: payload["modes"][k]["entry_counts"]["2"])
-    lines.append(f"**Owner verdict:** The faithful Pine port reproduces **{best}/31** entries within ±2 three-minute bars in `{mode}` mode. {'The 25/31 success bar is met.' if best >= 25 else 'The 25/31 success bar is not met; per-entry differences are reported below and the task stops without tuning or a historical rerun.'}")
-    lines += ["",f"Generated: `{payload['generated_at']}`. Owner timestamps were parsed as `America/New_York`.","","## Entry reproduction","","| HA mode | Exact | ±1 bar | ±2 bars |","| --- | ---: | ---: | ---: |"]
+    lines.append(f"**Owner verdict:** The faithful Pine port reproduces **{best}/31** entries within آ±2 three-minute bars in `{mode}` mode. {'The 25/31 success bar is met.' if best >= 25 else 'The 25/31 success bar is not met; per-entry differences are reported below and the task stops without tuning or a historical rerun.'}")
+    lines += ["",f"Generated: `{payload['generated_at']}`. Owner timestamps were parsed as `America/New_York`.","","## Entry reproduction","","| HA mode | Exact | آ±1 bar | آ±2 bars |","| --- | ---: | ---: | ---: |"]
     for mode,data in payload["modes"].items(): lines.append(f"| {mode} | {data['entry_counts']['0']} | {data['entry_counts']['1']} | {data['entry_counts']['2']} |")
     lines += ["","## Port contract","",json.dumps(payload["source_contract"],indent=2,sort_keys=True),"","## Exit comparison source","",f"Owner exit rows parsed: {len(payload['owner_exits'])}. Port trades include exit time/type where a trade completed; open trades remain explicit.","","## Safety","",json.dumps(payload["safety"],indent=2,sort_keys=True),""]
     if best < 25:
