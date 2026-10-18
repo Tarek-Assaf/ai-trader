@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 448,
+  "revision": 449,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-163 accepted as negative diagnostic: no VWAP anchor, 54m HA anchor or filter subset reproduces the owner's entries (best 9/29 all filters; EMA200 alone 24/29). T-164 queued: replay-only clock/price alignment scan. Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-163 accepted as negative diagnostic; T-164 clock/price alignment scan is in progress from the accepted Claude lineage. Diagnostic-only Pod work; no broker, order, holdout, lake or production writes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5442,7 +5442,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03"
       ],
@@ -5462,7 +5462,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Started bounded diagnostic-only clock/price alignment scan from accepted T-163 lineage."
     }
   ],
   "decisions": [
@@ -24441,6 +24441,19 @@
         "docs/specs/t164_clock_price_alignment.md"
       ],
       "summary": "Reviewed T-163: pass as negative diagnostic (no anchor or filter subset gets past 9/29 all-filters or 5 entries within +-2 bars; EMA200 side alone 24/29). Lint clean. Rebuilt on main (old entries restored, Codex's two log entries merged). Recorded D-047 and queued T-164: replay-only clock/price alignment scan, since indicator settings alone do not explain his trades. Historical Tai rerun still waits for >=25/31. Turn to codex (D-045)."
+    },
+    {
+      "revision": 449,
+      "ts": "2026-10-18T23:22:00+03:00",
+      "agent": "codex",
+      "action": "start_t164_clock_price_alignment",
+      "task_ids": [
+        "T-164"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-164 from the accepted T-163 lineage. Will run the specified bounded offline clock/price alignment scan once; no broker, orders, holdout, lake or production writes."
     }
   ],
   "project_summary": "T-163 accepted as negative diagnostic: no VWAP anchor, 54m HA anchor or filter subset reproduces the owner's entries (best 9/29 all filters; EMA200 alone 24/29). T-164 queued: replay-only clock/price alignment scan. Historical Tai rerun waits for >=25/31. Owner away (D-045): Claude decides, no turn human. Owner screenshot of Pine Inputs/Style still requested. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
