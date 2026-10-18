@@ -1,0 +1,82 @@
+{
+  "task": "T-165",
+  "owner_trade_count": 31,
+  "source_tranche_count": 54,
+  "aggregation": "Pyramided rows sharing an entry timestamp are collapsed into 31 parent trades; quantity-weighted prices, final exit timestamp, summed excursion USD and longest duration.",
+  "owner_timezone": "America/New_York",
+  "point_value_usd_inferred": 20.0,
+  "best_alignment": {
+    "shift_minutes": 3,
+    "samples": 30,
+    "sign_matches": 25,
+    "tolerance_matches": 17,
+    "median_abs_error": 9.383333333333212,
+    "permutation_p_value": 0.0004997501249375312,
+    "zero_shift": false
+  },
+  "bar_open_3m": {
+    "shift_minutes": 3,
+    "samples": 29,
+    "sign_matches": 23,
+    "tolerance_matches": 12,
+    "median_abs_error": 13.349999999998545
+  },
+  "bar_close_3m": {
+    "shift_minutes": 6,
+    "samples": 29,
+    "sign_matches": 23,
+    "tolerance_matches": 12,
+    "median_abs_error": 13.349999999998545
+  },
+  "excursions": {
+    "shift_zero": {
+      "samples": 30,
+      "favorable_reached": 21,
+      "adverse_within_tolerance": 15
+    },
+    "shift_best": {
+      "shift_minutes": 3,
+      "samples": 30,
+      "favorable_reached": 30,
+      "adverse_within_tolerance": 20
+    }
+  },
+  "duration_cross_check": {
+    "trades": 31,
+    "misfits": [
+      {
+        "trade": "1",
+        "elapsed_minutes": 120.0,
+        "duration_bars": 20,
+        "expected_minutes": 60
+      }
+    ]
+  },
+  "coverage": {
+    "NSXUSD": {
+      "1m": 12350,
+      "3m": 4013,
+      "5m": 2355,
+      "60m": 118
+    },
+    "XAUUSD": {
+      "owner_rows": 0,
+      "note": "no owner rows in this window"
+    }
+  },
+  "safety": {
+    "broker_calls": 0,
+    "orders": 0,
+    "sealed_holdout_read": false,
+    "lake_writes": 0,
+    "production_state_writes": 0,
+    "gate_evaluated": false,
+    "tuning": false
+  },
+  "pod_artifacts": {
+    "t165_shifts.json": "b35825e5a3f8b145e1b1959be6f5abd1b5fb8108f3f07cccf365fd19f9b0e767",
+    "t165_report.md": "6be61ea04cea23258387df2477261a2266e7f77ceafd8487d245414cd1a9c7b4",
+    "t165_trades.csv": "f7f42b2a5623381121f5d401d8beff1272d4337a6f6f086e1fc2dfa331618a8e"
+  },
+  "pod_command": "timeout 1200s /app/.venv/bin/python scripts/lab_t165_trade_pair_alignment.py --lake /workspace/data/lake --owner-file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv"
+}
