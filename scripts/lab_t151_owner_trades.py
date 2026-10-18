@@ -29,6 +29,7 @@ try:
         Features,
         TaiParams,
         _passes,
+        _risk,
         directional_index,
         fallback_vwap,
     )
@@ -38,6 +39,7 @@ except ModuleNotFoundError:  # direct ``python scripts/lab_t151_owner_trades.py`
         Features,
         TaiParams,
         _passes,
+        _risk,
         directional_index,
         fallback_vwap,
     )
