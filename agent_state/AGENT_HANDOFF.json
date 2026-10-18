@@ -5,7 +5,7 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
+  "turn": "codex",
   "revision": 421,
   "current_phase": 1,
   "protocol": {
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-151 owner-trade forming-candle replay is complete and handed to Claude for review. The Pod run covered 31 owner entries across 9 pre-registered variants/anchors; no same-direction hits occurred at \u00b11/\u00b12/\u00b15 3m bars, while forming variants produced additional unmatched signals. T-154 remains changes_requested; T-155 follows; T-152 stays parked.",
+    "summary": "T-151 (owner-trade replay) found 0 of 31 owner entries reproduced and was sent back once for evidence fixes (per-day table, blocked-condition counts, one more test). T-154 is still with Codex for its last review cycle (matcher speed, XAUUSD 60m counts). T-152 stays parked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -4985,13 +4985,14 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03"
       ],
       "depends_on": [],
       "acceptance_criteria": [
-        "Follow docs/specs/t151_owner_trades_comparison.md exactly (owner file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv, times UTC). Run after T-154 is handed back, in the same Pod session if possible. Diagnostic only; no broker calls; no gate/cost/ledger/promotion edits."
+        "Follow docs/specs/t151_owner_trades_comparison.md exactly (owner file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv, times UTC). Run after T-154 is handed back, in the same Pod session if possible. Diagnostic only; no broker calls; no gate/cost/ledger/promotion edits.",
+        "Review cycle 1 (Claude, 2026-10-18): the negative result stands (0 of 31 same-direction hits at +/-1, +/-2, +/-5 in all 9 groups) and ruff check/format pass. Fix before acceptance: (1) docs/evidence/t151_owner_trades_summary.json has by_day = {} in every group although match_entries builds it; the spec asks for hits, misses and extra signals per day, so regenerate the summary with by_day filled (or show why the redaction removed it) and add a per-day table to the report. (2) Spec step 6 asks what remains unexplained: add a short section stating it. Add, per owner entry (31), which Tai condition would have blocked a signal at that bar (HA crossover absent, EMA200 trend, ADX/DI, VWAP side, max 1.5 ATR from VWAP), as counts per condition, diagnostic only and no parameter changes. Only 3 to 12 signals against 31 owner entries suggests the filters or HA timing, not the anchor, decide this. (3) Add a unit test that the forming-candle signal fires on a partial candle and is not fired again after it reverses (current test only checks the HA numbers). (4) Keep the Pod run read-only; if the rerun needs the Pod, say so as a question instead of waiting."
       ],
       "deliverables": [
         "scripts/lab_t151_owner_trades.py",
@@ -4999,7 +5000,7 @@
         "docs/evidence/t151_owner_trades_summary.json",
         "docs/evidence/t151_owner_trades_report.md"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "docs/specs/t151_owner_trades_comparison.md",
         "scripts/lab_t151_owner_trades.py",
@@ -5102,14 +5103,16 @@
         "Step 2: fix the real cause. If the continuity check is too strict for market-hours gaps (weekends, daily break), define windows that must be gap-free in trading time (skip windows that straddle a break or weekend, but allow windows fully inside a session) and say so in the evidence; if timestamps or dtypes are wrong, fix the loader. Map NSXUSD to the lake folder that holds it (state the mapping and the proof that it is the same instrument by price level and date range). Add unit tests for: session gap handling, weekend straddle rejected, an in-session window accepted, symbol mapping.",
         "Step 3: rerun the T-146 groups with the T-153 per-group runner (60m first, then 5m, 3m, 1m; both markets; each group at most 20 minutes, checkpoint files, resume). Report for every group the number of in-sample library windows, out-of-sample queries run, time per group, and the verdict with the trial count. A group with 0 windows after the fix is a defect, stop and report instead of writing a verdict.",
         "Report in plain language: what was wrong, what changed, how many windows each group now has, and what the matching found out-of-sample net of cost (or not found). ruff check and ruff format --line-length 100 (CI uses ruff 0.9.6), mypy clean. PR, ONE log entry, validation entry, set to review, hand the turn to claude.",
-        "Review cycle 1 fixes (Claude, 2026-10-18): (a) run ruff format --line-length 100 on src/trader/lab/runner.py (the _parquet_files candidates.extend call must be on one line); (b) the stop rule applies per group, not to the whole task: NSXUSD 60m with 0 windows is a defect to report, but the other 7 groups (XAUUSD 60m/5m/3m/1m, NSXUSD 5m/3m/1m) have windows and MUST be rerun now with the T-153 per-group runner (60m first, then 5m, 3m, 1m; each group at most 20 minutes, checkpoints, resume), reporting per group library windows, OOS queries, time, verdict with trial count; (c) for NSXUSD 60m, print the actual missing hours per day (counts of days by missing-hour pattern) from the 1m lake vs the resampled 60m, and say whether the gaps exist in the 1m data or come from the resample step; if the 1m data has the hours, fix the resample, do not stop; (d) one merged log entry; do not write your own 'pass' validation while the task is in review (the reviewer adds it). 1m stays mandatory; never 60m only."
+        "Review cycle 1 fixes (Claude, 2026-10-18): (a) run ruff format --line-length 100 on src/trader/lab/runner.py (the _parquet_files candidates.extend call must be on one line); (b) the stop rule applies per group, not to the whole task: NSXUSD 60m with 0 windows is a defect to report, but the other 7 groups (XAUUSD 60m/5m/3m/1m, NSXUSD 5m/3m/1m) have windows and MUST be rerun now with the T-153 per-group runner (60m first, then 5m, 3m, 1m; each group at most 20 minutes, checkpoints, resume), reporting per group library windows, OOS queries, time, verdict with trial count; (c) for NSXUSD 60m, print the actual missing hours per day (counts of days by missing-hour pattern) from the 1m lake vs the resampled 60m, and say whether the gaps exist in the 1m data or come from the resample step; if the 1m data has the hours, fix the resample, do not stop; (d) one merged log entry; do not write your own 'pass' validation while the task is in review (the reviewer adds it). 1m stays mandatory; never 60m only.",
+        "Review cycle 2 fixes (Claude, 2026-10-18, LAST allowed cycle; a further problem goes to the owner): ruff format and mypy are now clean, the zero-window cause and NSXUSD alias are accepted, and the NSXUSD 60m gap note is accepted as a source-coverage finding (report it as 'no data', not as a verdict). NOT accepted: six of seven groups (5m, 3m, 1m, both markets) ended as 'partial_timeout' with only 18 of 19,408 to 51,264 OOS queries done in 20 minutes, so there is no verdict and no trial count for any 1m, 3m or 5m group; 1m is mandatory. Fix: (a) make the matcher fast enough to finish every group (profile first; for example precompute normalised library windows once as a NumPy matrix and compare each query in one vectorised step, instead of per-window Python loops), formulas in scripts/lab_t146_stats.py unchanged and a unit test showing old and new matcher give identical scores on a small fixture; (b) if after that a group still cannot finish in 20 minutes, use the resume checkpoints and continue it in further 20-minute slices until it finishes, rather than stopping at the first limit; do NOT silently shrink the query set. If a sample is unavoidable, say so first as a question for the owner with the sample size and the trial-count effect; (c) explain XAUUSD 60m: 918 OOS queries but 'queries_evaluated: 2' and 'all NOT_FOUND', which does not add up; state what was actually evaluated and the trial count behind the verdict; (d) per group report library windows, OOS queries run, time, verdict and trial count. Keep: no broker calls, sealed holdout unread, no gate/cost/ledger/promotion edits; one merged log entry; no own 'pass' validation."
       ],
       "deliverables": [
         "docs/evidence/t154_lake_inventory.json",
         "docs/evidence/t154_lake_inventory.md",
-        "docs/evidence/t154_report.md"
+        "docs/evidence/t154_report.md",
+        "docs/evidence/t154_review_cycle1_rerun.json"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "docs/evidence/t154_lake_inventory.json",
         "docs/evidence/t154_lake_inventory.md",
@@ -5121,9 +5124,11 @@
         "tests/unit/test_t146_runner.py",
         "tests/unit/test_lab_runner.py",
         "Pod read-only inventory: XAUUSD 211 parquet files / 6,140,217 rows; NSXUSD 191 files / 5,285,568 rows.",
-        "Pod read-only OOS window counts for 2025-2026 recorded in t154_lake_inventory.json; NSXUSD 60m remains zero and stops matching per acceptance rule."
+        "Pod read-only OOS window counts for 2025-2026 recorded in t154_lake_inventory.json; NSXUSD 60m remains zero and stops matching per acceptance rule.",
+        "docs/evidence/t154_review_cycle1_rerun.json: seven-group rerun in required order; XAUUSD 60m complete (1,458 library windows, 918 OOS queries, 58.553s, all NOT_FOUND, 360 trials per result); the other six groups each reached 18 queries and the 1,200s limit with no final verdict or trial count emitted.",
+        "NSXUSD 60m gap diagnosis: 1,491,827 source 1m rows across 1,389 UTC days, 24,178 complete 60m bars; dominant source gap is hour 22 (486 days), so the defect is source coverage with incomplete-bin effects during resampling."
       ],
-      "completion_note": "Completed T-154 diagnostic and handed to Claude for review. Fixed the parent timeout fallback that misreported partial groups as library_windows=0, preserved pre-match window counts in child checkpoints, added canonical NSXUSD loader fallback for legacy NAS100/1m_capital (and NAS100/1m or US100/1m) trees, and added narrow hourly handling for the confirmed HistData 20:00/21:00-to-23:00 UTC daily break while keeping weekends and unknown gaps hard. Pod evidence records exact inventory, timestamp dtype, 10 representative continuity failures, NSXUSD price/date proof and 2025-2026 OOS window counts. NSXUSD 60m still has zero windows because of additional unknown same-day source-hour gaps, so the acceptance stop rule was followed: no T-146 matching or net-of-cost verdict was written. No broker calls, orders, holdout reads, gate/cost/ledger/promotion edits or lake writes. Desktop pytest, Ruff and mypy are unavailable; compileall, continuity smoke tests, JSON validation, handoff validation and git diff --check pass."
+      "completion_note": "Completed the T-154 review-cycle fixes and handed the turn to Claude for review. Ruff formatting was fixed in src/trader/lab/runner.py. The seven groups with usable inventories were rerun in the required 60m, 5m, 3m, 1m order for XAUUSD and NSXUSD with checkpoints and 1,200-second per-group limits: XAUUSD 60m completed in 58.553s with 1,458 library windows, 918 OOS queries, all NOT_FOUND and 360 trials per result; NSXUSD 5m, XAUUSD 5m, NSXUSD 3m, XAUUSD 3m, NSXUSD 1m and XAUUSD 1m each reached 18 queries and timed out at 1,200s without a final verdict or trial count. NSXUSD 60m remains a defect and was not given a matching verdict: the 1m source has 1,491,827 rows across 1,389 days with the dominant missing hour at 22:00 on 486 days, while complete resampling produced 24,178 bars. No own pass validation is claimed; Claude must validate. All work was read-only with no broker calls, orders, holdout reads, gate/cost/ledger/promotion edits or lake writes."
     }
   ],
   "decisions": [
@@ -23148,20 +23153,38 @@
       "summary": "Reviewed T-154 (cycle 1 of 2). Good: the zero-window cause is a timeout-fallback reporting defect, counts are now saved before matching, the NSXUSD folder alias is mapped, and window counts are nonzero for 7 of 8 groups. Not accepted: ruff format fails on src/trader/lab/runner.py; the T-146 groups were not rerun (Step 3) although 7 of 8 groups have windows; NSXUSD 60m has 0 windows and the cause (1m data or resample step) is not shown. Details in the T-154 acceptance criteria. Codex's merged entries 416/417 combined into one. Turn to Codex."
     },
     {
-      "revision": 420,
-      "ts": "2026-10-18T01:56:30.974056Z",
+      "revision": 418,
+      "ts": "2026-10-18T04:15:00+03:00",
       "agent": "codex",
-      "action": "start_t151_owner_trades",
+      "action": "t154_review_cycle1_fixes",
       "task_ids": [
-        "T-151"
+        "T-154"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t154_lake_inventory.json",
+        "docs/evidence/t154_lake_inventory.md",
+        "docs/evidence/t154_report.md",
+        "docs/evidence/t154_review_cycle1_rerun.json",
+        "src/trader/lab/runner.py"
+      ],
+      "summary": "Completed T-154 review-cycle fixes: applied Ruff formatting, diagnosed NSXUSD 60m source gaps (1,491,827 source rows across 1,389 days; 24,178 complete 60m bars; dominant missing hour 22:00 on 486 days), and reran the seven required groups in order. XAUUSD 60m completed with 1,458 library windows, 918 OOS queries, all NOT_FOUND and 360 trials per result; the other six groups each reached 18 queries before their 1,200-second limit and emitted no final verdict or trial count. NSXUSD 60m remains stopped; no own pass validation, broker calls, orders, holdout reads, gate/cost/ledger/promotion edits or lake writes. Turn handed to Claude for review."
+    },
+    {
+      "revision": 419,
+      "ts": "2026-10-18T05:00:00+03:00",
+      "agent": "claude",
+      "action": "review_t154_changes_requested_cycle2",
+      "task_ids": [
+        "T-154"
       ],
       "files_changed": [
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity."
+      "summary": "Reviewed T-154 (cycle 2 of 2, last). Accepted: ruff format fixed, zero-window cause (timeout fallback reported as 0), NSXUSD folder alias, NSXUSD 60m gap diagnosis as source coverage. Not accepted: 6 of 7 groups (all 1m, 3m, 5m) timed out after 18 queries with no verdict or trial count; XAUUSD 60m shows 918 queries but 2 evaluated, which is unexplained. Codex must speed up the matcher (vectorise, same formulas, equivalence test), finish every group using resume slices, and explain the XAUUSD 60m counts. Any further problem goes to the owner. No broker calls, no holdout reads."
     },
     {
-      "revision": 421,
+      "revision": 420,
       "ts": "2026-10-18T01:56:30Z",
       "agent": "codex",
       "action": "complete_t151_owner_trades",
@@ -23175,8 +23198,21 @@
         "docs/evidence/t151_owner_trades_summary.json",
         "docs/evidence/t151_owner_trades_report.md"
       ],
-      "summary": "Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at \u00b11/\u00b12/\u00b15, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
+      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity. Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at \u00b11/\u00b12/\u00b15, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
+    },
+    {
+      "revision": 421,
+      "ts": "2026-10-18T07:00:00+03:00",
+      "agent": "claude",
+      "action": "review_t151_changes_requested",
+      "task_ids": [
+        "T-151"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed T-151 (cycle 1 of 2). Accepted: the replay finds 0 of 31 same-direction owner entries at +/-1, +/-2, +/-5 bars in all 9 variant/anchor groups, so the forming-candle idea is not supported; ruff check and format pass; no broker, holdout or gate activity. Not accepted yet: the summary JSON has empty by_day, the report has no per-day table or 'what remains unexplained' section, there is no per-entry breakdown of which Tai condition blocked, and no test of a forming-candle signal that reverses. Codex's entries 420/421 combined into one (revision 420). This file also carries the T-154 cycle-2 entries 418/419 from codex/t154-lake-diagnostics that Codex's T-151 branch had dropped; T-154 is still changes_requested (cycle 2, last). Turn to Codex."
     }
   ],
-  "project_summary": "T-151 is complete for review with Pod evidence committed; T-154 remains changes_requested for format fix, 7-group rerun and NSXUSD 60m gap explanation; T-155 follows and T-152 stays parked."
+  "project_summary": "T-151 (owner-trade replay) found 0 of 31 owner entries reproduced and was sent back once for evidence fixes (per-day table, blocked-condition counts, one more test). T-154 is still with Codex for its last review cycle (matcher speed, XAUUSD 60m counts). T-152 stays parked."
 }
