@@ -21,6 +21,12 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+try:
+    from scripts.lab_t160_owner_time_ny import parse_owner_datetime
+except ModuleNotFoundError:  # direct ``python scripts/lab_t151_owner_trades.py`` execution
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from lab_t160_owner_time_ny import parse_owner_datetime
+
 from trader.analysis import indicators
 from trader.data.resample import Candle
 
@@ -124,9 +130,7 @@ def read_owner_entries(path: Path) -> tuple[OwnerEntry, ...]:
             direction = "long" if "long" in kind else "short" if "short" in kind else ""
             if not direction:
                 continue
-            stamp = datetime.strptime(str(row["Date and time"]), "%Y-%m-%d %H:%M").replace(
-                tzinfo=UTC
-            )
+            stamp = parse_owner_datetime(str(row["Date and time"]))
             price = float(row["Price USD"])
             quantity = abs(float(row.get("Size (qty)") or 0.0))
             grouped[(stamp, direction)].append((price, quantity, trade_number))

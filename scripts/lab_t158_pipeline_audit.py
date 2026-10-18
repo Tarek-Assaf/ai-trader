@@ -33,6 +33,12 @@ from trader.lab.runner import _parquet_files
 from trader.lab.spec import IndicatorCondition, StopExit, StrategySpec, TargetExit, TimeStopExit
 
 try:
+    from scripts.lab_t160_owner_time_ny import parse_owner_datetime
+except ModuleNotFoundError:  # direct execution from a checkout
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from lab_t160_owner_time_ny import parse_owner_datetime
+
+try:
     from scripts.lab_t151_owner_trades import read_nas100_minutes
     from scripts.lab_tai_smart_filter import heikin_ashi
 except ModuleNotFoundError:  # direct execution from a checkout
@@ -78,9 +84,7 @@ def _read_owner_rows(path: Path) -> tuple[TradeRow, ...]:
                 TradeRow(
                     str(row.get("Trade number", "")),
                     kind.lower(),
-                    datetime.strptime(str(row["Date and time"]), "%Y-%m-%d %H:%M").replace(
-                        tzinfo=UTC
-                    ),
+                    parse_owner_datetime(str(row["Date and time"])),
                     direction,
                     float(row["Price USD"]),
                 )
