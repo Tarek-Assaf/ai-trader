@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 422,
+  "turn": "codex",
+  "revision": 423,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -4992,7 +4992,8 @@
       "depends_on": [],
       "acceptance_criteria": [
         "Follow docs/specs/t151_owner_trades_comparison.md exactly (owner file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv, times UTC). Run after T-154 is handed back, in the same Pod session if possible. Diagnostic only; no broker calls; no gate/cost/ledger/promotion edits.",
-        "Review cycle 1 (Claude, 2026-10-18): the negative result stands (0 of 31 same-direction hits at +/-1, +/-2, +/-5 in all 9 groups) and ruff check/format pass. Fix before acceptance: (1) docs/evidence/t151_owner_trades_summary.json has by_day = {} in every group although match_entries builds it; the spec asks for hits, misses and extra signals per day, so regenerate the summary with by_day filled (or show why the redaction removed it) and add a per-day table to the report. (2) Spec step 6 asks what remains unexplained: add a short section stating it. Add, per owner entry (31), which Tai condition would have blocked a signal at that bar (HA crossover absent, EMA200 trend, ADX/DI, VWAP side, max 1.5 ATR from VWAP), as counts per condition, diagnostic only and no parameter changes. Only 3 to 12 signals against 31 owner entries suggests the filters or HA timing, not the anchor, decide this. (3) Add a unit test that the forming-candle signal fires on a partial candle and is not fired again after it reverses (current test only checks the HA numbers). (4) Keep the Pod run read-only; if the rerun needs the Pod, say so as a question instead of waiting."
+        "Review cycle 1 (Claude, 2026-10-18): the negative result stands (0 of 31 same-direction hits at +/-1, +/-2, +/-5 in all 9 groups) and ruff check/format pass. Fix before acceptance: (1) docs/evidence/t151_owner_trades_summary.json has by_day = {} in every group although match_entries builds it; the spec asks for hits, misses and extra signals per day, so regenerate the summary with by_day filled (or show why the redaction removed it) and add a per-day table to the report. (2) Spec step 6 asks what remains unexplained: add a short section stating it. Add, per owner entry (31), which Tai condition would have blocked a signal at that bar (HA crossover absent, EMA200 trend, ADX/DI, VWAP side, max 1.5 ATR from VWAP), as counts per condition, diagnostic only and no parameter changes. Only 3 to 12 signals against 31 owner entries suggests the filters or HA timing, not the anchor, decide this. (3) Add a unit test that the forming-candle signal fires on a partial candle and is not fired again after it reverses (current test only checks the HA numbers). (4) Keep the Pod run read-only; if the rerun needs the Pod, say so as a question instead of waiting.",
+        "Scope extension (Claude, 2026-10-18, same cycle 1 hand-back, not a new cycle): follow the Addendum 2026-10-18 in docs/specs/t151_owner_trades_comparison.md: add variant D (refresh entries without a cross, with and without in-trade gating), per-entry condition table for all 31 entries, stop-distance fit, basis-adjusted second column. Diagnostic only."
       ],
       "deliverables": [
         "scripts/lab_t151_owner_trades.py",
@@ -23267,6 +23268,20 @@
         "docs/evidence/t154_report.md"
       ],
       "summary": "The declared 3,000-query deterministic fallback was run for all six smaller groups. Every group hit the 1,200-second bound before a verdict or trial count; exact redacted counters are recorded in the sample evidence. Acceptance remains unmet after the last allowed review cycle. Added B-028/Q-064/V-404, preserved safety boundaries, and handed the turn to Claude for owner direction."
+    },
+    {
+      "revision": 423,
+      "ts": "2026-10-18T16:40:00+03:00",
+      "agent": "claude",
+      "action": "t151_scope_extended_refresh_path",
+      "task_ids": [
+        "T-151"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t151_owner_trades_comparison.md"
+      ],
+      "summary": "Owner confirmed the Pine file is his exact chart setup and asked why none of his 31 entries match. Audit: lab_tai_smart_filter.simulate does implement refresh entries (flat >= 12 bars, filters, no cross) but the T-151 variants A/B/C only test HA crosses (3-12 signals). Added variant D (refresh path), per-entry condition table, stop-distance fit and basis-adjusted columns to T-151 as a spec addendum. Diagnostic only."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
