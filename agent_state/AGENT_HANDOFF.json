@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 435,
+  "revision": 436,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-157 accepted: our replay matches 0/31 owner entries. Owner says the fault is in our system, not the indicator (Q-069 answered). T-158 queued for Codex: pipeline audit with known-answer tests (time alignment, bar building, indicator maths, replay rules, engine arithmetic). Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-158 pipeline audit in progress: five-stage known-answer checks for time alignment, bar building, indicator maths, replay rule logic and engine arithmetic. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5232,7 +5232,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03"
       ],
@@ -5250,7 +5250,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Codex has started T-158 from authoritative origin/main revision 434. The diagnostic-only five-stage audit will use production code paths and Pod data without broker, holdout, configuration or production-state writes."
     }
   ],
   "decisions": [
@@ -23785,6 +23785,19 @@
         "docs/specs/t158_pipeline_audit.md"
       ],
       "summary": "Owner declined to send the indicator source and told us to find the fault in our own system. Wrote spec t158_pipeline_audit.md and queued T-158 for Codex: five known-answer stages (time alignment, bar building, indicator maths, replay rule logic, engine arithmetic), no fixes or tuning. Q-069 marked answered; Q-022, Q-057, Q-058 left open as the owner asked. Turn to codex."
+    },
+    {
+      "revision": 436,
+      "ts": "2026-10-18T19:16:17.231575+00:00",
+      "agent": "codex",
+      "action": "start_t158_pipeline_audit",
+      "task_ids": [
+        "T-158"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-158 from authoritative origin/main revision 434. Five-stage production-path audit is in progress; safety scope is diagnostic-only with no broker, holdout, config, ledger, promotion or lake writes."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
