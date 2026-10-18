@@ -1,0 +1,21 @@
+{
+  "task": "T-154",
+  "source": "RunPod read-only per-group T-146 runner",
+  "captured_at": "2026-10-18",
+  "holdout_end": "2026-07-01T00:00:00+00:00",
+  "order": ["XAUUSD/60m", "NSXUSD/5m", "XAUUSD/5m", "NSXUSD/3m", "XAUUSD/3m", "NSXUSD/1m", "XAUUSD/1m"],
+  "runner_limits": {"max_queries": 20000, "group_time_limit_seconds": 1200},
+  "groups": {
+    "NSXUSD/60m": {"library_windows": 0, "oos_queries": 0, "queries_evaluated": 0, "elapsed_seconds": 1200.3, "status": "partial_source_coverage", "verdict": "not run: zero library windows from same-day source gaps", "trial_count_per_result": null, "trial_count_total": 0},
+    "XAUUSD/60m": {"library_windows": 1458, "oos_queries": 918, "queries_evaluated": 918, "elapsed_seconds": 226.409, "status": "complete", "verdict": "all NOT_FOUND", "result_rows": 18, "trial_count_per_result": 360, "trial_count_total": 6480},
+    "NSXUSD/5m": {"library_windows": 19408, "oos_queries": 19408, "queries_evaluated": 5171, "elapsed_seconds": 1200.1, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count_per_result": null, "trial_count_total": 0},
+    "XAUUSD/5m": {"library_windows": 20877, "oos_queries": 20877, "queries_evaluated": 4141, "elapsed_seconds": 1200.1, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count_per_result": null, "trial_count_total": 0},
+    "NSXUSD/3m": {"library_windows": 24617, "oos_queries": 24617, "queries_evaluated": 2871, "elapsed_seconds": 1200.1, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count_per_result": null, "trial_count_total": 0},
+    "XAUUSD/3m": {"library_windows": 26207, "oos_queries": 26207, "queries_evaluated": 2445, "elapsed_seconds": 1200.1, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count_per_result": null, "trial_count_total": 0},
+    "NSXUSD/1m": {"library_windows": 48906, "oos_queries": 48906, "queries_evaluated": 4795, "elapsed_seconds": 1200.1, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count_per_result": null, "trial_count_total": 0},
+    "XAUUSD/1m": {"library_windows": 51264, "oos_queries": 51264, "queries_evaluated": 4289, "elapsed_seconds": 1200.1, "status": "partial_timeout", "verdict": "not emitted before group time limit", "trial_count_per_result": null, "trial_count_total": 0}
+  },
+  "xauusd_60m_explanation": "The old 918 OOS / 2 evaluated-query discrepancy came from the prior bounded rerun using max_queries=2. This cycle used max_queries=20000 and evaluated all 918 OOS queries; all 18 result rows were NOT_FOUND.",
+  "nsxusd_60m_explanation": "The group still has zero windows because the source contains additional same-day gaps such as 11:00-13:00 and 20:00-23:00 UTC. The run stopped before matching and claims no verdict.",
+  "safety": {"broker_calls": false, "orders": false, "holdout_read": false, "gate1_evaluated": false, "cost_edits": false, "ledger_writes": false, "promotion_writes": false}
+}

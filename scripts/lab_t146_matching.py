@@ -754,19 +754,31 @@ def run_group(
         queries, stride = _sample_queries(out_of_sample.get(length, ()), max_queries)
         query_stride = max(query_stride, stride)
         for method in ("dtw", "correlation"):
-            for horizon in HORIZONS:
-                records: list[QueryRecord] = []
-                for query_number, query in enumerate(queries):
-                    matches = find_matches(
+            records_by_horizon: dict[int, list[QueryRecord]] = {
+                horizon: [] for horizon in HORIZONS
+            }
+            for query_number, query in enumerate(queries):
+                # Matching and control selection do not depend on the forward horizon.
+                # Compute them once and reuse them for all three horizons.
+                matches = find_matches(
+                    query,
+                    library,
+                    method=method,
+                    k=20,
+                    index=match_index,
+                )
+                controls = random_control(
+                    query, library, count=len(matches), seed=seed + query_number
+                )
+                if query_number < 6 and method == "dtw":
+                    _save_shape_card(
+                        candles,
                         query,
-                        library,
-                        method=method,
-                        k=20,
-                        index=match_index,
+                        matches,
+                        controls,
+                        chart_dir / f"query_{length}_{query_number:02d}.png",
                     )
-                    controls = random_control(
-                        query, library, count=len(matches), seed=seed + query_number
-                    )
+                for horizon in HORIZONS:
                     matched_rows = [
                         forward_move(
                             candles,
@@ -788,33 +800,29 @@ def run_group(
                     query_row = forward_move(
                         candles, query, candle_index=candle_index, horizon=horizon
                     )
-                    records.append(
+                    records_by_horizon[horizon].append(
                         QueryRecord(
                             match_moves=tuple(row.get("move_points") for row in matched_rows),
                             control_moves=tuple(row.get("move_points") for row in control_rows),
                             realized=query_row.get("move_points"),
                         )
                     )
-                    queries_done += 1
-                    if progress_path is not None:
-                        _write_json(
-                            progress_path,
-                            {
-                                "status": "running",
-                                "instrument": instrument,
-                                "timeframe": timeframe,
-                                "queries_done": queries_done,
-                                "elapsed_seconds": round(time.perf_counter() - started, 3),
-                            },
-                        )
-                    if query_number < 6 and method == "dtw" and horizon == HORIZONS[0]:
-                        _save_shape_card(
-                            candles,
-                            query,
-                            matches,
-                            controls,
-                            chart_dir / f"query_{length}_{query_number:02d}.png",
-                        )
+                # Keep the historical heartbeat unit: one query contributes one count
+                # per evaluated horizon, so a complete group still reports 6x queries.
+                queries_done += len(HORIZONS)
+                if progress_path is not None:
+                    _write_json(
+                        progress_path,
+                        {
+                            "status": "running",
+                            "instrument": instrument,
+                            "timeframe": timeframe,
+                            "queries_done": queries_done,
+                            "elapsed_seconds": round(time.perf_counter() - started, 3),
+                        },
+                    )
+            for horizon in HORIZONS:
+                records = records_by_horizon[horizon]
                 results.append(
                     {
                         "length": length,
