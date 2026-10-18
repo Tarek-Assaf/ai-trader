@@ -1,0 +1,1591 @@
+// This Pine Script™ code is subject to the terms of the Mozilla Public License 2.0
+// © elioemilbasile
+// Tai Trading - Smart Filter
+//@version=5
+
+indicator(
+     "Tai Trading - Smart Filter",
+     overlay=true,
+     max_lines_count=100,
+     max_labels_count=500,
+     dynamic_requests=true)
+
+//====================================================
+// FUNCTIONS
+//====================================================
+
+truncate(number, decimals) =>
+    factor = math.pow(10, decimals)
+    int(number * factor) / factor
+
+f_tfInMinutes() =>
+    _tf = timeframe.period == "1" ? "3" :
+         timeframe.period == "3" ? "5" :
+         timeframe.period == "5" ? "15" :
+         timeframe.period == "15" ? "30" :
+         timeframe.period == "30" ? "60" :
+         timeframe.period == "60" ? "240" : "D"
+    _tf
+
+f_resInMinutes() =>
+    timeframe.multiplier * (
+         timeframe.isseconds ? 1.0 / 60.0 :
+         timeframe.isminutes ? 1.0 :
+         timeframe.isdaily ? 1440.0 :
+         timeframe.isweekly ? 10080.0 :
+         timeframe.ismonthly ? 43800.0 : na)
+
+f_deleteLine(_line) =>
+    if not na(_line)
+        line.delete(_line)
+
+//====================================================
+// SIGNAL SETTINGS
+//====================================================
+
+setupType = input.string(
+     "Open/Close",
+     "Trading Setup",
+     options=["Open/Close", "Renko"],
+     group="SIGNAL SETTINGS")
+
+showBars = input.bool(
+     true,
+     "Show Trend Bars",
+     group="SIGNAL SETTINGS")
+
+showRibbon = input.bool(
+     false,
+     "Show Ribbon",
+     group="SIGNAL SETTINGS")
+
+tfmult = input.int(
+     18,
+     "Timeframe Multiplier",
+     minval=1,
+     group="SIGNAL SETTINGS")
+
+//====================================================
+// DATE FILTER
+//====================================================
+
+useDateFilter = input.bool(
+     true,
+     "Use Date Filter",
+     group="SIGNAL SETTINGS")
+
+fromDate = input.time(
+     timestamp("01 Jan 2023 00:00 +0300"),
+     "Start Date",
+     group="SIGNAL SETTINGS")
+
+toDate = input.time(
+     timestamp("31 Dec 2099 00:00 +0300"),
+     "End Date",
+     group="SIGNAL SETTINGS")
+
+dateAllowed =
+     not useDateFilter or
+     (time >= fromDate and time <= toDate)
+
+//====================================================
+// ORIGINAL RSI FILTER
+//====================================================
+
+rsiLength = input.int(
+     7,
+     "RSI Length",
+     minval=1,
+     group="ORIGINAL FILTER")
+
+topRSI = input.int(
+     45,
+     "RSI Top",
+     group="ORIGINAL FILTER")
+
+bottomRSI = input.int(
+     10,
+     "RSI Bottom",
+     group="ORIGINAL FILTER")
+
+RSI = truncate(
+     ta.rsi(close, rsiLength),
+     2)
+
+//====================================================
+// ORIGINAL SIDEWAYS FILTER
+//====================================================
+
+filter1 = "Filter with Atr"
+filter2 = "Filter with RSI"
+filter3 = "Atr or RSI"
+filter4 = "Atr and RSI"
+filter5 = "No Filtering"
+filter6 = "Entry Only in sideways market(By ATR or RSI)"
+filter7 = "Entry Only in sideways market(By ATR and RSI)"
+
+typeFilter = input.string(
+     filter5,
+     "Sideways Filter",
+     options=[
+         filter1,
+         filter2,
+         filter3,
+         filter4,
+         filter5,
+         filter6,
+         filter7
+     ],
+     group="ORIGINAL FILTER")
+
+originalATRLength = 5
+originalMALength = 5
+
+originalATR = request.security(
+     syminfo.tickerid,
+     "",
+     ta.atr(originalATRLength))
+
+originalATRMA = ta.ema(
+     originalATR,
+     originalMALength)
+
+atrCondition =
+     originalATR >= originalATRMA
+
+rsiCondition =
+     RSI > topRSI or RSI < bottomRSI
+
+atrOrRSI =
+     atrCondition or rsiCondition
+
+atrAndRSI =
+     atrCondition and rsiCondition
+
+sidewaysATR =
+     originalATR <= originalATRMA
+
+sidewaysRSI =
+     RSI < topRSI and RSI > bottomRSI
+
+sidewaysOR =
+     sidewaysATR or sidewaysRSI
+
+sidewaysAND =
+     sidewaysATR and sidewaysRSI
+
+originalFilter =
+     typeFilter == filter1 ? atrCondition :
+     typeFilter == filter2 ? rsiCondition :
+     typeFilter == filter3 ? atrOrRSI :
+     typeFilter == filter4 ? atrAndRSI :
+     typeFilter == filter5 ? true :
+     typeFilter == filter6 ? sidewaysOR :
+     typeFilter == filter7 ? sidewaysAND :
+     true
+
+originalFilterOK =
+     not na(originalFilter) and originalFilter
+
+//====================================================
+// TIMEFRAME
+//====================================================
+
+resolutionMinutes = f_resInMinutes()
+
+calculatedMinutes =
+     math.max(
+         1,
+         math.round(resolutionMinutes * tfmult))
+
+// Convert calculated minutes into a valid TradingView
+// timeframe string.
+//
+// Examples:
+// 54     -> "54"
+// 240    -> "240"
+// 1440   -> "1D"
+// 25920  -> "18D"
+
+myTime =
+     calculatedMinutes >= 1440 ?
+     str.tostring(
+         math.round(calculatedMinutes / 1440)) + "D" :
+     str.tostring(calculatedMinutes)
+
+//====================================================
+// HEIKIN ASHI
+//====================================================
+
+haTicker =
+     ticker.heikinashi(
+         syminfo.tickerid)
+
+haOpen = request.security(
+     haTicker,
+     myTime,
+     open,
+     lookahead=barmerge.lookahead_off)
+
+haClose = request.security(
+     haTicker,
+     myTime,
+     close,
+     lookahead=barmerge.lookahead_off)
+
+buyOC =
+     ta.crossover(
+         haClose,
+         haOpen) and
+     setupType == "Open/Close" and
+     originalFilterOK
+
+sellOC =
+     ta.crossunder(
+         haClose,
+         haOpen) and
+     setupType == "Open/Close" and
+     originalFilterOK
+
+//====================================================
+// RENKO
+//====================================================
+
+renkoATRLength = 3
+
+renkoTicker =
+     ticker.renko(
+         syminfo.tickerid,
+         "ATR",
+         renkoATRLength)
+
+renkoClose = request.security(
+     renkoTicker,
+     myTime,
+     close,
+     lookahead=barmerge.lookahead_off)
+
+renkoOpen = request.security(
+     renkoTicker,
+     myTime,
+     open,
+     lookahead=barmerge.lookahead_off)
+
+//====================================================
+// RENKO EMA
+//====================================================
+
+renkoEMA1Length = input.int(
+     2,
+     "Renko EMA 1",
+     minval=1,
+     group="RENKO SETTINGS")
+
+renkoEMA2Length = input.int(
+     10,
+     "Renko EMA 2",
+     minval=1,
+     group="RENKO SETTINGS")
+
+renkoEMA1 =
+     ta.ema(
+         renkoClose,
+         renkoEMA1Length)
+
+renkoEMA2 =
+     ta.ema(
+         renkoClose,
+         renkoEMA2Length)
+
+buyRenko =
+     ta.crossover(
+         renkoEMA1,
+         renkoEMA2) and
+     setupType == "Renko" and
+     originalFilterOK
+
+sellRenko =
+     ta.crossunder(
+         renkoEMA1,
+         renkoEMA2) and
+     setupType == "Renko" and
+     originalFilterOK
+
+//====================================================
+// ORIGINAL SIGNAL
+//====================================================
+
+originalBuy =
+     setupType == "Open/Close" ?
+     buyOC :
+     setupType == "Renko" ?
+     buyRenko :
+     false
+
+originalSell =
+     setupType == "Open/Close" ?
+     sellOC :
+     setupType == "Renko" ?
+     sellRenko :
+     false
+
+//====================================================
+// SMART ENTRY FILTERS
+//====================================================
+
+smartGroup = "SMART ENTRY FILTERS"
+
+//----------------------------------------------------
+// EMA 200
+//----------------------------------------------------
+
+useEMA200 = input.bool(
+     true,
+     "EMA 200 Trend",
+     group=smartGroup)
+
+ema200 =
+     ta.ema(
+         close,
+         200)
+
+trendBuy =
+     close > ema200
+
+trendSell =
+     close < ema200
+
+//----------------------------------------------------
+// ADX
+//----------------------------------------------------
+
+useADX = input.bool(
+     true,
+     "ADX Strength",
+     group=smartGroup)
+
+adxLength = input.int(
+     14,
+     "ADX Length",
+     minval=1,
+     group=smartGroup)
+
+adxSmoothing = input.int(
+     14,
+     "ADX Smoothing",
+     minval=1,
+     group=smartGroup)
+
+minimumADX = input.float(
+     20.0,
+     "Minimum ADX",
+     minval=1,
+     step=0.5,
+     group=smartGroup)
+
+[diPlus, diMinus, adx] =
+     ta.dmi(
+         adxLength,
+         adxSmoothing)
+
+adxBuy =
+     adx >= minimumADX and
+     diPlus > diMinus
+
+adxSell =
+     adx >= minimumADX and
+     diMinus > diPlus
+
+//----------------------------------------------------
+// VWAP
+//----------------------------------------------------
+
+useVWAPDirection = input.bool(
+     true,
+     "VWAP Direction",
+     group=smartGroup)
+
+vwap =
+     ta.vwap(hlc3)
+
+vwapBuy =
+     close > vwap
+
+vwapSell =
+     close < vwap
+
+//----------------------------------------------------
+// ENTRY LOCATION
+//----------------------------------------------------
+
+useLocationFilter = input.bool(
+     true,
+     "Don't Chase Price",
+     group=smartGroup)
+
+locationATR =
+     ta.atr(14)
+
+vwapDistance =
+     locationATR > 0 ?
+     math.abs(close - vwap) / locationATR :
+     999.0
+
+maxVWAPDistance = input.float(
+     1.5,
+     "Max Distance From VWAP (ATR)",
+     minval=0.1,
+     step=0.1,
+     group=smartGroup)
+
+locationOK =
+     vwapDistance <= maxVWAPDistance
+
+//====================================================
+// FINAL SMART FILTER
+//====================================================
+
+buySmartFilter =
+     (not useEMA200 or trendBuy) and
+     (not useADX or adxBuy) and
+     (not useVWAPDirection or vwapBuy) and
+     (not useLocationFilter or locationOK)
+
+sellSmartFilter =
+     (not useEMA200 or trendSell) and
+     (not useADX or adxSell) and
+     (not useVWAPDirection or vwapSell) and
+     (not useLocationFilter or locationOK)
+
+//====================================================
+// STRUCTURE RISK
+//====================================================
+
+riskGroup = "STRUCTURE RISK"
+
+useStructureSL = input.bool(
+     true,
+     "Use Swing Structure SL",
+     group=riskGroup)
+
+swingLookback = input.int(
+     5,
+     "Swing Lookback",
+     minval=2,
+     group=riskGroup)
+
+structureBufferATR = input.float(
+     0.20,
+     "Structure Buffer ATR",
+     minval=0,
+     step=0.05,
+     group=riskGroup)
+
+atrStopMultiplier = input.float(
+     1.0,
+     "ATR Stop Multiplier",
+     minval=0.1,
+     step=0.1,
+     group=riskGroup)
+
+maxRiskATR = input.float(
+     2.0,
+     "Maximum Risk (ATR)",
+     minval=0.5,
+     step=0.1,
+     group=riskGroup)
+
+tradeATR =
+     ta.atr(14)
+
+atrRisk =
+     tradeATR * atrStopMultiplier
+
+previousSwingLow =
+     ta.lowest(
+         low[1],
+         swingLookback)
+
+previousSwingHigh =
+     ta.highest(
+         high[1],
+         swingLookback)
+
+structureBuySL =
+     previousSwingLow -
+     tradeATR * structureBufferATR
+
+structureSellSL =
+     previousSwingHigh +
+     tradeATR * structureBufferATR
+
+proposedBuySL =
+     useStructureSL ?
+     structureBuySL :
+     close - atrRisk
+
+proposedSellSL =
+     useStructureSL ?
+     structureSellSL :
+     close + atrRisk
+
+buyRisk =
+     close - proposedBuySL
+
+sellRisk =
+     proposedSellSL - close
+
+buyRiskATR =
+     tradeATR > 0 ?
+     buyRisk / tradeATR :
+     999.0
+
+sellRiskATR =
+     tradeATR > 0 ?
+     sellRisk / tradeATR :
+     999.0
+
+buyRiskOK =
+     buyRisk > 0 and
+     buyRiskATR <= maxRiskATR
+
+sellRiskOK =
+     sellRisk > 0 and
+     sellRiskATR <= maxRiskATR
+
+//====================================================
+// SMART REFRESH / RE-ENTRY
+//====================================================
+
+refreshGroup = "SMART REFRESH"
+
+useRefreshEntries = input.bool(
+     true,
+     "Allow Refresh Entries",
+     group=refreshGroup)
+
+refreshBars = input.int(
+     12,
+     "Refresh Every N Bars",
+     minval=1,
+     group=refreshGroup)
+
+var int lastExitBar = na
+
+barsSinceExit =
+     na(lastExitBar) ?
+     999999 :
+     bar_index - lastExitBar
+
+refreshReady =
+     not na(lastExitBar) and
+     barsSinceExit >= refreshBars
+
+refreshBuy =
+     useRefreshEntries and
+     refreshReady and
+     buySmartFilter and
+     buyRiskOK and
+     dateAllowed
+
+refreshSell =
+     useRefreshEntries and
+     refreshReady and
+     sellSmartFilter and
+     sellRiskOK and
+     dateAllowed
+
+//====================================================
+// FINAL SIGNAL
+//====================================================
+
+buySignal =
+     (
+         originalBuy and
+         buySmartFilter and
+         buyRiskOK and
+         dateAllowed
+     ) or refreshBuy
+
+sellSignal =
+     (
+         originalSell and
+         sellSmartFilter and
+         sellRiskOK and
+         dateAllowed
+     ) or refreshSell
+
+//====================================================
+// VISUALS
+//====================================================
+
+showEMA200 =
+     input.bool(
+         false,
+         "Show EMA 200",
+         group="VISUALS")
+
+showVWAP =
+     input.bool(
+         false,
+         "Show VWAP",
+         group="VISUALS")
+
+trendUp =
+     setupType == "Open/Close" ?
+     haClose > haOpen :
+     renkoClose > renkoOpen
+
+trendDown =
+     setupType == "Open/Close" ?
+     haClose < haOpen :
+     renkoClose < renkoOpen
+
+barcolor(
+     showBars ?
+     trendUp ? color.lime :
+     trendDown ? color.red :
+     na :
+     na)
+
+plot(
+     showEMA200 ? ema200 : na,
+     title="EMA 200",
+     color=color.orange,
+     linewidth=2)
+
+plot(
+     showVWAP ? vwap : na,
+     title="VWAP",
+     color=color.purple,
+     linewidth=2)
+
+//====================================================
+// TRADE SETTINGS
+//====================================================
+
+tradeGroup = "TRADE MANAGEMENT"
+
+showLevels = input.bool(
+     true,
+     "Show Current Trade Levels",
+     group=tradeGroup)
+
+showEntryLabels = input.bool(
+     true,
+     "Show BUY / SELL",
+     group=tradeGroup)
+
+showResultLabels = input.bool(
+     true,
+     "Show Results",
+     group=tradeGroup)
+
+//====================================================
+// TRADE VARIABLES
+//====================================================
+
+var bool inTrade = false
+
+var int direction = 0
+
+var float entry = na
+var float originalSL = na
+var float activeSL = na
+
+var float tp1 = na
+var float tp2 = na
+var float tp3 = na
+
+var float risk = na
+
+// 0 = no target
+// 1 = TP1
+// 2 = TP2
+// 3 = TP3
+
+var int highestTarget = 0
+
+var bool protectionActive = false
+
+//====================================================
+// CURRENT LINES
+//====================================================
+
+var line entryLine = na
+var line slLine = na
+var line tp1Line = na
+var line tp2Line = na
+var line tp3Line = na
+
+//====================================================
+// STATISTICS
+//====================================================
+
+var int totalTrades = 0
+var int completedTrades = 0
+
+var int slCount = 0
+var int tp1Count = 0
+var int tp2Count = 0
+var int tp3Count = 0
+
+var float totalR = 0.0
+
+//====================================================
+// EVENTS
+//====================================================
+
+bool buyEvent = false
+bool sellEvent = false
+
+bool tp1Event = false
+bool tp2Event = false
+bool tp3Event = false
+
+bool slEvent = false
+bool beEvent = false
+
+//====================================================
+// BUY ENTRY
+//====================================================
+
+if not inTrade and buySignal
+
+    f_deleteLine(entryLine)
+    f_deleteLine(slLine)
+    f_deleteLine(tp1Line)
+    f_deleteLine(tp2Line)
+    f_deleteLine(tp3Line)
+
+    inTrade := true
+    direction := 1
+
+    entry := close
+    risk := buyRisk
+
+    originalSL := proposedBuySL
+    activeSL := originalSL
+
+    tp1 := entry + risk
+    tp2 := entry + risk * 2.0
+    tp3 := entry + risk * 3.0
+
+    highestTarget := 0
+    protectionActive := false
+
+    totalTrades += 1
+    buyEvent := true
+
+    if showLevels
+
+        entryLine := line.new(
+             bar_index,
+             entry,
+             bar_index + 1,
+             entry,
+             extend=extend.right,
+             color=color.blue,
+             width=2)
+
+        slLine := line.new(
+             bar_index,
+             originalSL,
+             bar_index + 1,
+             originalSL,
+             extend=extend.right,
+             color=color.red,
+             width=2)
+
+        tp1Line := line.new(
+             bar_index,
+             tp1,
+             bar_index + 1,
+             tp1,
+             extend=extend.right,
+             color=color.green,
+             style=line.style_dashed)
+
+        tp2Line := line.new(
+             bar_index,
+             tp2,
+             bar_index + 1,
+             tp2,
+             extend=extend.right,
+             color=color.green,
+             style=line.style_dashed)
+
+        tp3Line := line.new(
+             bar_index,
+             tp3,
+             bar_index + 1,
+             tp3,
+             extend=extend.right,
+             color=color.green,
+             style=line.style_dashed)
+
+    if showEntryLabels
+
+        label.new(
+             bar_index,
+             low,
+             "BUY",
+             style=label.style_label_up,
+             color=color.green,
+             textcolor=color.white,
+             size=size.small)
+
+//====================================================
+// SELL ENTRY
+//====================================================
+
+if not inTrade and sellSignal
+
+    f_deleteLine(entryLine)
+    f_deleteLine(slLine)
+    f_deleteLine(tp1Line)
+    f_deleteLine(tp2Line)
+    f_deleteLine(tp3Line)
+
+    inTrade := true
+    direction := -1
+
+    entry := close
+    risk := sellRisk
+
+    originalSL := proposedSellSL
+    activeSL := originalSL
+
+    tp1 := entry - risk
+    tp2 := entry - risk * 2.0
+    tp3 := entry - risk * 3.0
+
+    highestTarget := 0
+    protectionActive := false
+
+    totalTrades += 1
+    sellEvent := true
+
+    if showLevels
+
+        entryLine := line.new(
+             bar_index,
+             entry,
+             bar_index + 1,
+             entry,
+             extend=extend.right,
+             color=color.blue,
+             width=2)
+
+        slLine := line.new(
+             bar_index,
+             originalSL,
+             bar_index + 1,
+             originalSL,
+             extend=extend.right,
+             color=color.red,
+             width=2)
+
+        tp1Line := line.new(
+             bar_index,
+             tp1,
+             bar_index + 1,
+             tp1,
+             extend=extend.right,
+             color=color.green,
+             style=line.style_dashed)
+
+        tp2Line := line.new(
+             bar_index,
+             tp2,
+             bar_index + 1,
+             tp2,
+             extend=extend.right,
+             color=color.green,
+             style=line.style_dashed)
+
+        tp3Line := line.new(
+             bar_index,
+             tp3,
+             bar_index + 1,
+             tp3,
+             extend=extend.right,
+             color=color.green,
+             style=line.style_dashed)
+
+    if showEntryLabels
+
+        label.new(
+             bar_index,
+             high,
+             "SELL",
+             style=label.style_label_down,
+             color=color.red,
+             textcolor=color.white,
+             size=size.small)
+
+//====================================================
+// BUY MANAGEMENT
+//====================================================
+
+if inTrade and direction == 1
+
+    hitSL = low <= activeSL
+    hitTP1 = high >= tp1
+    hitTP2 = high >= tp2
+    hitTP3 = high >= tp3
+
+    // BEFORE TP1
+    if highestTarget == 0
+
+        if hitTP3
+
+            highestTarget := 3
+            completedTrades += 1
+            tp3Count += 1
+            totalR += 3.0
+            tp3Event := true
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     high,
+                     "TP3 ✅  +3R",
+                     style=label.style_label_down,
+                     color=color.green,
+                     textcolor=color.white)
+
+            f_deleteLine(entryLine)
+            f_deleteLine(slLine)
+            f_deleteLine(tp1Line)
+            f_deleteLine(tp2Line)
+            f_deleteLine(tp3Line)
+
+            inTrade := false
+            direction := 0
+
+        else if hitTP2
+
+            highestTarget := 2
+            protectionActive := true
+            activeSL := entry
+            tp2Event := true
+
+            if not na(slLine)
+                line.set_y1(slLine, entry)
+                line.set_y2(slLine, entry)
+                line.set_color(slLine, color.orange)
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     high,
+                     "TP2 ✅\nBE 🛡️",
+                     style=label.style_label_down,
+                     color=color.green,
+                     textcolor=color.white)
+
+        else if hitTP1
+
+            highestTarget := 1
+            protectionActive := true
+            activeSL := entry
+            tp1Event := true
+
+            if not na(slLine)
+                line.set_y1(slLine, entry)
+                line.set_y2(slLine, entry)
+                line.set_color(slLine, color.orange)
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     high,
+                     "TP1 ✅\nBE 🛡️",
+                     style=label.style_label_down,
+                     color=color.green,
+                     textcolor=color.white)
+
+        else if hitSL
+
+            completedTrades += 1
+            slCount += 1
+            totalR -= 1.0
+            slEvent := true
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     low,
+                     "SL ❌  -1R",
+                     style=label.style_label_up,
+                     color=color.red,
+                     textcolor=color.white)
+
+            f_deleteLine(entryLine)
+            f_deleteLine(slLine)
+            f_deleteLine(tp1Line)
+            f_deleteLine(tp2Line)
+            f_deleteLine(tp3Line)
+
+            inTrade := false
+            direction := 0
+
+    // AFTER TP1 / TP2
+    else
+
+        if hitTP3
+
+            highestTarget := 3
+            completedTrades += 1
+            tp3Count += 1
+            totalR += 3.0
+            tp3Event := true
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     high,
+                     "TP3 ✅  +3R",
+                     style=label.style_label_down,
+                     color=color.green,
+                     textcolor=color.white)
+
+            f_deleteLine(entryLine)
+            f_deleteLine(slLine)
+            f_deleteLine(tp1Line)
+            f_deleteLine(tp2Line)
+            f_deleteLine(tp3Line)
+
+            inTrade := false
+            direction := 0
+
+        else if hitTP2 and highestTarget < 2
+
+            highestTarget := 2
+            protectionActive := true
+            activeSL := entry
+            tp2Event := true
+
+            if not na(slLine)
+                line.set_y1(slLine, entry)
+                line.set_y2(slLine, entry)
+                line.set_color(slLine, color.orange)
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     high,
+                     "TP2 ✅\nBE 🛡️",
+                     style=label.style_label_down,
+                     color=color.green,
+                     textcolor=color.white)
+
+        else if protectionActive and low <= entry
+
+            completedTrades += 1
+
+            if highestTarget == 1
+                tp1Count += 1
+                totalR += 1.0
+            else
+                tp2Count += 1
+                totalR += 2.0
+
+            beEvent := true
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     entry,
+                     "BE 🛡️\n+" +
+                     str.tostring(highestTarget) +
+                     "R",
+                     style=label.style_label_left,
+                     color=color.orange,
+                     textcolor=color.white)
+
+            f_deleteLine(entryLine)
+            f_deleteLine(slLine)
+            f_deleteLine(tp1Line)
+            f_deleteLine(tp2Line)
+            f_deleteLine(tp3Line)
+
+            inTrade := false
+            direction := 0
+
+//====================================================
+// SELL MANAGEMENT
+//====================================================
+
+if inTrade and direction == -1
+
+    hitSL = high >= activeSL
+    hitTP1 = low <= tp1
+    hitTP2 = low <= tp2
+    hitTP3 = low <= tp3
+
+    // BEFORE TP1
+    if highestTarget == 0
+
+        if hitTP3
+
+            highestTarget := 3
+            completedTrades += 1
+            tp3Count += 1
+            totalR += 3.0
+            tp3Event := true
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     low,
+                     "TP3 ✅  +3R",
+                     style=label.style_label_up,
+                     color=color.green,
+                     textcolor=color.white)
+
+            f_deleteLine(entryLine)
+            f_deleteLine(slLine)
+            f_deleteLine(tp1Line)
+            f_deleteLine(tp2Line)
+            f_deleteLine(tp3Line)
+
+            inTrade := false
+            direction := 0
+
+        else if hitTP2
+
+            highestTarget := 2
+            protectionActive := true
+            activeSL := entry
+            tp2Event := true
+
+            if not na(slLine)
+                line.set_y1(slLine, entry)
+                line.set_y2(slLine, entry)
+                line.set_color(slLine, color.orange)
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     low,
+                     "TP2 ✅\nBE 🛡️",
+                     style=label.style_label_up,
+                     color=color.green,
+                     textcolor=color.white)
+
+        else if hitTP1
+
+            highestTarget := 1
+            protectionActive := true
+            activeSL := entry
+            tp1Event := true
+
+            if not na(slLine)
+                line.set_y1(slLine, entry)
+                line.set_y2(slLine, entry)
+                line.set_color(slLine, color.orange)
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     low,
+                     "TP1 ✅\nBE 🛡️",
+                     style=label.style_label_up,
+                     color=color.green,
+                     textcolor=color.white)
+
+        else if hitSL
+
+            completedTrades += 1
+            slCount += 1
+            totalR -= 1.0
+            slEvent := true
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     high,
+                     "SL ❌  -1R",
+                     style=label.style_label_down,
+                     color=color.red,
+                     textcolor=color.white)
+
+            f_deleteLine(entryLine)
+            f_deleteLine(slLine)
+            f_deleteLine(tp1Line)
+            f_deleteLine(tp2Line)
+            f_deleteLine(tp3Line)
+
+            inTrade := false
+            direction := 0
+
+    // AFTER TP1 / TP2
+    else
+
+        if hitTP3
+
+            highestTarget := 3
+            completedTrades += 1
+            tp3Count += 1
+            totalR += 3.0
+            tp3Event := true
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     low,
+                     "TP3 ✅  +3R",
+                     style=label.style_label_up,
+                     color=color.green,
+                     textcolor=color.white)
+
+            f_deleteLine(entryLine)
+            f_deleteLine(slLine)
+            f_deleteLine(tp1Line)
+            f_deleteLine(tp2Line)
+            f_deleteLine(tp3Line)
+
+            inTrade := false
+            direction := 0
+
+        else if hitTP2 and highestTarget < 2
+
+            highestTarget := 2
+            protectionActive := true
+            activeSL := entry
+            tp2Event := true
+
+            if not na(slLine)
+                line.set_y1(slLine, entry)
+                line.set_y2(slLine, entry)
+                line.set_color(slLine, color.orange)
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     low,
+                     "TP2 ✅\nBE 🛡️",
+                     style=label.style_label_up,
+                     color=color.green,
+                     textcolor=color.white)
+
+        else if protectionActive and high >= entry
+
+            completedTrades += 1
+
+            if highestTarget == 1
+                tp1Count += 1
+                totalR += 1.0
+            else
+                tp2Count += 1
+                totalR += 2.0
+
+            beEvent := true
+
+            if showResultLabels
+                label.new(
+                     bar_index,
+                     entry,
+                     "BE 🛡️\n+" +
+                     str.tostring(highestTarget) +
+                     "R",
+                     style=label.style_label_right,
+                     color=color.orange,
+                     textcolor=color.white)
+
+            f_deleteLine(entryLine)
+            f_deleteLine(slLine)
+            f_deleteLine(tp1Line)
+            f_deleteLine(tp2Line)
+            f_deleteLine(tp3Line)
+
+            inTrade := false
+            direction := 0
+
+//====================================================
+// EXIT TRACKING
+//====================================================
+
+// Remember the bar where the previous trade ended.
+// This is used by the Refresh Entry system.
+
+if inTrade[1] and not inTrade
+    lastExitBar := bar_index
+
+//====================================================
+// CURRENT TRADE LEVELS
+//====================================================
+
+plot(
+     showLevels and inTrade ? entry : na,
+     title="ENTRY",
+     color=color.blue,
+     linewidth=2,
+     style=plot.style_linebr)
+
+plot(
+     showLevels and inTrade ? activeSL : na,
+     title="ACTIVE SL / BE",
+     color=protectionActive ? color.orange : color.red,
+     linewidth=2,
+     style=plot.style_linebr)
+
+plot(
+     showLevels and inTrade ? tp1 : na,
+     title="TP1 1:1",
+     color=color.green,
+     linewidth=1,
+     style=plot.style_linebr)
+
+plot(
+     showLevels and inTrade ? tp2 : na,
+     title="TP2 1:2",
+     color=color.green,
+     linewidth=1,
+     style=plot.style_linebr)
+
+plot(
+     showLevels and inTrade ? tp3 : na,
+     title="TP3 1:3",
+     color=color.green,
+     linewidth=1,
+     style=plot.style_linebr)
+
+//====================================================
+// BUY / SELL MARKERS
+//====================================================
+
+plotshape(
+     buyEvent,
+     title="BUY",
+     text="BUY",
+     style=shape.labelup,
+     location=location.belowbar,
+     color=color.green,
+     textcolor=color.white,
+     size=size.small)
+
+plotshape(
+     sellEvent,
+     title="SELL",
+     text="SELL",
+     style=shape.labeldown,
+     location=location.abovebar,
+     color=color.red,
+     textcolor=color.white,
+     size=size.small)
+
+//====================================================
+// DASHBOARD
+//====================================================
+
+showDashboard = input.bool(
+     true,
+     "Show Dashboard",
+     group="DASHBOARD")
+
+var table dashboard =
+     table.new(
+         position.top_right,
+         2,
+         11,
+         border_width=1)
+
+if barstate.islast and showDashboard
+
+    winningTrades =
+         tp1Count +
+         tp2Count +
+         tp3Count
+
+    winRate =
+         completedTrades > 0 ?
+         winningTrades / completedTrades * 100.0 :
+         0.0
+
+    table.cell(
+         dashboard,
+         0,
+         0,
+         "TAI TRADING",
+         bgcolor=color.black,
+         text_color=color.white)
+
+    table.cell(
+         dashboard,
+         1,
+         0,
+         "RESULT",
+         bgcolor=color.black,
+         text_color=color.white)
+
+    table.cell(
+         dashboard,
+         0,
+         1,
+         "Trades")
+
+    table.cell(
+         dashboard,
+         1,
+         1,
+         str.tostring(totalTrades))
+
+    table.cell(
+         dashboard,
+         0,
+         2,
+         "Completed")
+
+    table.cell(
+         dashboard,
+         1,
+         2,
+         str.tostring(completedTrades))
+
+    table.cell(
+         dashboard,
+         0,
+         3,
+         "SL")
+
+    table.cell(
+         dashboard,
+         1,
+         3,
+         str.tostring(slCount))
+
+    table.cell(
+         dashboard,
+         0,
+         4,
+         "TP1")
+
+    table.cell(
+         dashboard,
+         1,
+         4,
+         str.tostring(tp1Count))
+
+    table.cell(
+         dashboard,
+         0,
+         5,
+         "TP2")
+
+    table.cell(
+         dashboard,
+         1,
+         5,
+         str.tostring(tp2Count))
+
+    table.cell(
+         dashboard,
+         0,
+         6,
+         "TP3")
+
+    table.cell(
+         dashboard,
+         1,
+         6,
+         str.tostring(tp3Count))
+
+    table.cell(
+         dashboard,
+         0,
+         7,
+         "Win Rate")
+
+    table.cell(
+         dashboard,
+         1,
+         7,
+         str.tostring(
+             winRate,
+             "#.##") + "%")
+
+    table.cell(
+         dashboard,
+         0,
+         8,
+         "Total R")
+
+    table.cell(
+         dashboard,
+         1,
+         8,
+         str.tostring(
+             totalR,
+             "#.##"))
+
+    table.cell(
+         dashboard,
+         0,
+         9,
+         "ADX")
+
+    table.cell(
+         dashboard,
+         1,
+         9,
+         str.tostring(
+             adx,
+             "#.##"))
+
+    table.cell(
+         dashboard,
+         0,
+         10,
+         "Risk ATR")
+
+    table.cell(
+         dashboard,
+         1,
+         10,
+         inTrade and tradeATR > 0 ?
+         str.tostring(
+             risk / tradeATR,
+             "#.##") :
+         "-")
+
+//====================================================
+// ALERTS
+//====================================================
+
+alertcondition(
+     buyEvent,
+     title="BUY Entry",
+     message="TAI TRADING BUY")
+
+alertcondition(
+     sellEvent,
+     title="SELL Entry",
+     message="TAI TRADING SELL")
+
+alertcondition(
+     tp1Event,
+     title="TP1 1:1",
+     message="TAI TRADING TP1")
+
+alertcondition(
+     tp2Event,
+     title="TP2 1:2",
+     message="TAI TRADING TP2")
+
+alertcondition(
+     tp3Event,
+     title="TP3 1:3",
+     message="TAI TRADING TP3")
+
+alertcondition(
+     beEvent,
+     title="Break Even",
+     message="TAI TRADING BREAK EVEN")
+
+alertcondition(
+     slEvent,
+     title="Stop Loss",
+     message="TAI TRADING STOP LOSS")
