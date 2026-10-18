@@ -5090,7 +5090,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "blocked",
       "requirements": [
         "R-03",
         "R-04"
@@ -5469,6 +5469,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-17T17:37:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-043",
+      "statement": "Owner 2026-10-18 16:22 Riyadh answered Q-064 (option A in effect): T-154 movement-matching is parked as inconclusive partial diagnostics, together with the other side items (T-152, Q-022, Q-057), until the Tai indicator mismatch (T-151) is explained. Priority is T-151.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-18T13:22:00Z",
       "do_not_reopen": false
     }
   ],
@@ -13655,8 +13663,8 @@
       "id": "B-028",
       "text": "T-154 deterministic fallback sample was requested at 3,000 OOS queries per group for NSXUSD/XAUUSD 5m, 3m and 1m. All six groups hit the enforced 1,200-second bound before emitting a final verdict or trial count (runner queries_done: 14,178; 11,367; 9,576; 8,397; 13,644; 11,994 respectively). The acceptance requirement remains unmet after the last allowed review cycle.",
       "raised_by": "codex",
-      "status": "open",
-      "resolution": ""
+      "status": "resolved",
+      "resolution": "Owner parked the movement-matching work (D-043); evidence preserved."
     }
   ],
   "questions": [
@@ -14435,7 +14443,7 @@
       "id": "Q-064",
       "to": "human",
       "from": "codex",
-      "status": "open",
+      "status": "answered",
       "text": "T-154 remains incomplete after the last allowed review cycle: the vectorized full run completed only XAUUSD 60m, and the declared 3,000-query deterministic sample timed out for all six smaller groups before any verdict or trial count. How should this diagnostic be closed?",
       "options": [
         "A: Accept the six groups as inconclusive partial diagnostics and park T-154 (recommended)",
@@ -14443,7 +14451,7 @@
         "C: Keep T-154 changes_requested and defer the study without additional execution"
       ],
       "recommendation": "A: the last allowed review cycle is exhausted and no sample group produced a valid verdict; preserve the evidence and move on unless the owner explicitly authorizes a new task.",
-      "answer": ""
+      "answer": "Owner 2026-10-18 16:22 Riyadh: 'Keep the movement on the side along the other things on the side till we identify why the agent is not working as expected' (equals option A: park T-154 as inconclusive, no further execution until the Tai mismatch is explained)."
     }
   ],
   "log": [
@@ -23275,13 +23283,14 @@
       "agent": "claude",
       "action": "t151_scope_extended_refresh_path",
       "task_ids": [
-        "T-151"
+        "T-151",
+        "T-154"
       ],
       "files_changed": [
         "agent_state/AGENT_HANDOFF.json",
         "docs/specs/t151_owner_trades_comparison.md"
       ],
-      "summary": "Owner confirmed the Pine file is his exact chart setup and asked why none of his 31 entries match. Audit: lab_tai_smart_filter.simulate does implement refresh entries (flat >= 12 bars, filters, no cross) but the T-151 variants A/B/C only test HA crosses (3-12 signals). Added variant D (refresh path), per-entry condition table, stop-distance fit and basis-adjusted columns to T-151 as a spec addendum. Diagnostic only."
+      "summary": "Owner confirmed the Pine file is his exact chart setup and asked why none of his 31 entries match. Audit: lab_tai_smart_filter.simulate does implement refresh entries (flat >= 12 bars, filters, no cross) but the T-151 variants A/B/C only test HA crosses (3-12 signals). Added variant D (refresh path), per-entry condition table, stop-distance fit and basis-adjusted columns to T-151 as a spec addendum. Diagnostic only. Also: owner answered Q-064 ('Keep the movement on the side along the other things on the side till we identify why the agent is not working as expected', option A in effect): recorded D-043, Q-064 answered, T-154 set blocked (parked, evidence preserved), B-028 resolved as parked. T-151 is the priority."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
