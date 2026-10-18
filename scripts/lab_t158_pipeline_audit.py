@@ -30,7 +30,7 @@ from trader.data.resample import Candle, resample_ohlc
 from trader.lab.backtest import CostModel, EntrySignal, run_backtest
 from trader.lab.engine import evaluate_entries
 from trader.lab.runner import _parquet_files
-from trader.lab.spec import IndicatorCondition, StopExit, StrategySpec, TargetExit
+from trader.lab.spec import IndicatorCondition, StopExit, StrategySpec, TargetExit, TimeStopExit
 
 try:
     from scripts.lab_t151_owner_trades import read_nas100_minutes
@@ -82,6 +82,32 @@ def _read_owner_rows(path: Path) -> tuple[TradeRow, ...]:
                 )
             )
     return tuple(rows)
+
+
+def _collapsed_pairs(rows: Sequence[TradeRow]) -> tuple[tuple[TradeRow, TradeRow], ...]:
+    """Collapse tranche rows to one owner entry and one representative exit."""
+    entries: dict[tuple[datetime, str], list[TradeRow]] = defaultdict(list)
+    exits: dict[str, TradeRow] = {}
+    for row in rows:
+        if row.kind.startswith("entry"):
+            entries[(row.stamp, row.direction)].append(row)
+        elif row.kind.startswith("exit"):
+            exits[row.number] = row
+    result: list[tuple[TradeRow, TradeRow]] = []
+    for (stamp, direction), values in entries.items():
+        linked = [exits[item.number] for item in values if item.number in exits]
+        if not linked:
+            continue
+        entry = TradeRow(
+            ",".join(item.number for item in values),
+            "entry " + direction,
+            stamp,
+            direction,
+            statistics.mean(item.price for item in values),
+        )
+        exit_row = max(linked, key=lambda item: item.stamp)
+        result.append((entry, exit_row))
+    return tuple(sorted(result, key=lambda pair: pair[0].stamp))
 
 
 def _pair_trades(rows: Sequence[TradeRow]) -> tuple[tuple[TradeRow, TradeRow], ...]:
@@ -286,7 +312,7 @@ def _side_sanity(lake: Path, start: datetime, end: datetime) -> dict[str, Any]:
 
 def stage1(lake: Path, owner_file: Path) -> dict[str, Any]:
     rows = _read_owner_rows(owner_file)
-    pairs = _pair_trades(rows)
+    pairs = _collapsed_pairs(rows)
     if not pairs:
         return {"status": "NOT RUN", "reason": "owner CSV has no entry/exit pairs"}
     start = min(pair[0].stamp for pair in pairs) - timedelta(days=1)
@@ -387,7 +413,7 @@ def _directional_index(bars: Sequence[Candle], period: int) -> tuple[tuple[float
 
 
 def _owner_entry_classification(rows: Sequence[TradeRow]) -> list[dict[str, Any]]:
-    pairs = _pair_trades(rows)
+    pairs = _collapsed_pairs(rows)
     previous_exit: datetime | None = None
     result: list[dict[str, Any]] = []
     for entry, exit_row in pairs:
@@ -406,7 +432,9 @@ def stage4(lake: Path, owner_rows: Sequence[TradeRow]) -> dict[str, Any]:
     ha = heikin_ashi(bars54)
     by_time = {item.ts_utc: item for item in ha}
     categories = {"flip_current_bar": 0, "same_colour_no_flip": 0, "opposite_colour": 0, "missing": 0}
-    for row in owner_rows:
+    collapsed = _collapsed_pairs(owner_rows)
+    for entry, _exit_row in collapsed:
+        row = entry
         current = max((item for item in ha if item.ts_utc <= row.stamp), key=lambda item: item.ts_utc, default=None)
         if current is None:
             categories["missing"] += 1
@@ -421,7 +449,7 @@ def stage4(lake: Path, owner_rows: Sequence[TradeRow]) -> dict[str, Any]:
         else:
             categories["opposite_colour"] += 1
     # Production replay's T-157 evaluator only checks current HA state, with no refresh exception.
-    return {"entries": len(owner_rows), "classification": classification, "classification_counts": {kind: sum(item["kind"] == kind for item in classification) for kind in ("new_signal", "refresh")}, "ha_state_categories": categories, "t157_refresh_handling": "T-157 evaluates ha_state == direction for every owner entry; it does not make the refresh path exempt from the HA-state condition.", "positive_control": _positive_control()}
+    return {"entries": len(collapsed), "classification": classification, "classification_counts": {kind: sum(item["kind"] == kind for item in classification) for kind in ("new_signal", "refresh")}, "ha_state_categories": categories, "t157_refresh_handling": "T-157 evaluates ha_state == direction for every owner entry; it does not make the refresh path exempt from the HA-state condition.", "positive_control": _positive_control()}
 
 
 def _base_spec(condition: dict[str, Any], *, direction: str = "long") -> StrategySpec:
@@ -432,12 +460,15 @@ def _positive_control() -> dict[str, Any]:
     start = datetime(2026, 1, 1, tzinfo=UTC)
     good = [Candle(start + timedelta(minutes=index), 100.0, 101.0, 99.0, 100.0, 1.0, ("T158",), True, 1) for index in range(3)]
     good.append(Candle(start + timedelta(minutes=3), 100.0, 103.0, 99.0, 102.0, 1.0, ("T158",), True, 1))
-    spec = _base_spec({"indicator": "close", "operator": "gt", "threshold": 101.0})
+    spec = StrategySpec(schema_version=1, instrument="T158", direction="long", timeframe_minutes=1, entry_conditions=(IndicatorCondition(indicator="close", operator="gt", threshold=101.0), IndicatorCondition(indicator="open", operator="gt", threshold=99.0)), exit_rules=(StopExit(kind="stop", distance=1000.0),))
     signals = evaluate_entries(spec, good)
-    broken = list(good)
-    broken[3] = Candle(broken[3].ts_utc, 100.0, 101.0, 99.0, 100.5, 1.0, ("T158",), True, 1)
-    broken_signals = evaluate_entries(spec, broken)
-    return {"known_signal": len(signals) == 1, "break_close_rule": not broken_signals, "signals": len(signals), "broken_signals": len(broken_signals), "production_path": "trader.lab.engine.evaluate_entries"}
+    broken_close = list(good)
+    broken_close[3] = Candle(broken_close[3].ts_utc, 100.0, 101.0, 99.0, 100.5, 1.0, ("T158",), True, 1)
+    broken_open = list(good)
+    broken_open[3] = Candle(broken_open[3].ts_utc, 98.0, 103.0, 97.0, 102.0, 1.0, ("T158",), True, 1)
+    close_signals = evaluate_entries(spec, broken_close)
+    open_signals = evaluate_entries(spec, broken_open)
+    return {"known_signal": len(signals) == 1, "break_close_rule": not close_signals, "break_open_rule": not open_signals, "signals": len(signals), "broken_signals": {"close": len(close_signals), "open": len(open_signals)}, "production_path": "trader.lab.engine.evaluate_entries"}
 
 
 def _ten_trade_bars() -> tuple[list[Candle], list[EntrySignal]]:
@@ -462,8 +493,10 @@ def stage5() -> dict[str, Any]:
     trend = [Candle(datetime(2026, 2, 1, tzinfo=UTC) + timedelta(minutes=index), 100 + index, 101 + index, 99 + index, 100.5 + index, 1.0, ("T158",), True, 1) for index in range(30)]
     cheat_signals = [EntrySignal("T158", 1, bar.ts_utc, bar.close) for bar, nxt in zip(trend[:-1], trend[1:], strict=False) if nxt.close > bar.close]
     cheat = run_backtest(spec, trend, cost_model=cost, entry_signals=cheat_signals)
-    flip_signals = [EntrySignal("T158", 1, trend[index].ts_utc, trend[index].close) for index in range(0, 20, 2)]
-    coin = run_backtest(spec, trend, cost_model=cost, entry_signals=flip_signals)
+    coin_bars = [Candle(datetime(2026, 3, 1, tzinfo=UTC) + timedelta(minutes=index), 100.0, 100.1, 99.9, 100.0, 1.0, ("T158",), True, 1) for index in range(30)]
+    coin_spec = StrategySpec(schema_version=1, instrument="T158", direction="long", timeframe_minutes=1, entry_conditions=(IndicatorCondition(indicator="close", operator="gt", threshold=0.0),), exit_rules=(StopExit(kind="stop", distance=10.0), TimeStopExit(kind="time_stop", bars=1)))
+    flip_signals = [EntrySignal("T158", 1, coin_bars[index].ts_utc, coin_bars[index].close) for index in range(0, 20, 2)]
+    coin = run_backtest(coin_spec, coin_bars, cost_model=cost, entry_signals=flip_signals)
     hold_spec = StrategySpec(schema_version=1, instrument="T158", direction="long", timeframe_minutes=1, entry_conditions=(IndicatorCondition(indicator="close", operator="gt", threshold=0.0),), exit_rules=(StopExit(kind="stop", distance=1_000_000.0),))
     hold = run_backtest(hold_spec, trend, cost_model=cost, entry_signals=[EntrySignal("T158", 1, trend[0].ts_utc, trend[0].close)])
     return {"hand_ledger": {"production_trades": len(result.trades), "hand_trades": 10, "production_gross": result.gross_pnl, "hand_gross": hand_gross, "production_cost": result.total_costs, "hand_cost": hand_cost, "pass": len(result.trades) == 10 and abs(result.gross_pnl - hand_gross) < 1e-9 and abs(result.total_costs - hand_cost) < 1e-9}, "lookahead_cheat": {"win_rate": sum(trade.gross_pnl > 0 for trade in cheat.trades) / len(cheat.trades) if cheat.trades else None, "trades": len(cheat.trades)}, "coin_flip_control": {"net_pnl": coin.net_pnl, "trades": len(coin.trades)}, "buy_and_hold": {"engine_net_pnl": hold.net_pnl, "expected_before_cost": trend[-1].close - trend[1].open, "cost": hold.total_costs, "difference": hold.net_pnl - ((trend[-1].close - trend[1].open) - hold.total_costs)}, "positive_control_coverage": _positive_control_coverage()}
@@ -514,7 +547,7 @@ def main() -> int:
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     args.report.parent.mkdir(parents=True, exist_ok=True)
     args.report.write_text(report(payload), encoding="utf-8")
-    print(json.dumps({"task": "T-158", "owner_entries": len(_read_owner_rows(args.owner_file)), "safety": payload["safety"]}, sort_keys=True))
+    print(json.dumps({"task": "T-158", "owner_entries": len(_collapsed_pairs(_read_owner_rows(args.owner_file))), "safety": payload["safety"]}, sort_keys=True))
     return 0
 
 
