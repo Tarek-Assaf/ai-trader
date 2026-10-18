@@ -27,7 +27,7 @@ def test_forming_heikin_ashi_matches_hand_calculation() -> None:
     bars = (_bar(0, 100.0, 110.0, 90.0, 104.0), _bar(1, 104.0, 112.0, 101.0, 108.0))
     open_price, close = forming_heikin_ashi(bars)
     assert open_price == 102.0
-    assert close == 103.5
+    assert close == 102.5
 
 
 def test_forming_partial_can_cross_then_reverse() -> None:

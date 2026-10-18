@@ -4,6 +4,33 @@
     "utc_midnight",
     "riyadh_midnight"
   ],
+  "condition_table": {
+    "all_filters_passed": 0,
+    "anchor": "utc_midnight",
+    "condition_fail_counts": {
+      "adx_di": 21,
+      "dont_chase": 20,
+      "ema_side": 12,
+      "ha_state": 20,
+      "risk_atr": 9,
+      "vwap_side": 14
+    },
+    "condition_pass_counts": {
+      "adx_di": 6,
+      "dont_chase": 7,
+      "ema_side": 15,
+      "ha_state": 7,
+      "risk_atr": 18,
+      "vwap_side": 13
+    },
+    "entries_evaluated": 31,
+    "entries_reported_in_markdown": 31,
+    "stop_fit": {
+      "entries_with_owner_stop": 11,
+      "median_basis_adjusted_error_points": 24.100388385533734,
+      "median_raw_error_points": 19.084480038061884
+    }
+  },
   "data": {
     "bar_policy": "UTC clock 3m buckets; incomplete buckets are retained but never used in a valid 54m group.",
     "chart_bars_3m": 3974,
@@ -256,6 +283,168 @@
       "signals": 5,
       "variant": "forming_carried",
       "warmup_excluded": 2
+    },
+    {
+      "anchor": "cme_open",
+      "candidate_signals": 31,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 30,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 0,
+      "variant": "refresh",
+      "warmup_excluded": 0
+    },
+    {
+      "anchor": "utc_midnight",
+      "candidate_signals": 31,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 30,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 0,
+      "variant": "refresh",
+      "warmup_excluded": 0
+    },
+    {
+      "anchor": "riyadh_midnight",
+      "candidate_signals": 31,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 30,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 0,
+      "variant": "refresh",
+      "warmup_excluded": 0
+    },
+    {
+      "anchor": "cme_open",
+      "candidate_signals": 29,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 28,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 0,
+      "variant": "refresh_gated",
+      "warmup_excluded": 0
+    },
+    {
+      "anchor": "utc_midnight",
+      "candidate_signals": 29,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 28,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 0,
+      "variant": "refresh_gated",
+      "warmup_excluded": 0
+    },
+    {
+      "anchor": "riyadh_midnight",
+      "candidate_signals": 29,
+      "matches": {
+        "1": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "2": {
+          "by_day": {},
+          "extra_signals": 0,
+          "hits": 0,
+          "misses": 31
+        },
+        "5": {
+          "by_day": {},
+          "extra_signals": 28,
+          "hits": 0,
+          "misses": 31
+        }
+      },
+      "signals": 0,
+      "variant": "refresh_gated",
+      "warmup_excluded": 0
     }
   ],
   "owner_entry_count": 31,
@@ -263,8 +452,8 @@
   "owner_short_entries": 21,
   "pod_evidence": {
     "endpoint": "alternate owner-provided RunPod terminal",
-    "owner_file": "/workspace/owner_trades.csv",
-    "run": "completed read-only at 2026-10-18T01:56Z",
+    "owner_file": "/workspace/t151_cycle2/docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv",
+    "run": "completed read-only at 2026-10-18T13:34Z",
     "source_lake": "/workspace/data/lake/NAS100/1m_capital/2026/10.parquet"
   },
   "price_basis": {
@@ -284,10 +473,12 @@
     "sealed_holdout_read": false
   },
   "task": "T-151",
-  "trial_count": 9,
+  "trial_count": 15,
   "variants": [
     "closed",
     "forming_reset",
-    "forming_carried"
+    "forming_carried",
+    "refresh",
+    "refresh_gated"
   ]
 }
