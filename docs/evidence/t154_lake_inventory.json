@@ -63,6 +63,25 @@
     "other_groups_have_windows": true,
     "matching_results_written": false
   },
+  "nsxusd_60m_gap_diagnosis": {
+    "source_rows": 1491827,
+    "resampled_complete_rows": 24178,
+    "days": 1389,
+    "method": "For each UTC day, compare the hours represented by the 1m lake with the hours represented by complete 60m resampled bars.",
+    "missing_hour_patterns_top": [
+      {"missing_1m": [22], "missing_60m": [21, 22], "days": 486},
+      {"missing_1m": [22], "missing_60m": [21, 22, 23], "days": 184},
+      {"missing_1m": [22, 23], "missing_60m": [21, 22, 23], "days": 176},
+      {"missing_1m": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22], "missing_60m": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22], "days": 160},
+      {"missing_1m": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22], "missing_60m": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23], "days": 55},
+      {"missing_1m": [21], "missing_60m": [20, 21, 22], "days": 24},
+      {"missing_1m": [21], "missing_60m": [20, 21], "days": 21},
+      {"missing_1m": [18, 19, 20, 21, 22], "missing_60m": [17, 18, 19, 20, 21, 22], "days": 16},
+      {"missing_1m": [21, 22, 23], "missing_60m": [20, 21, 22, 23], "days": 11},
+      {"missing_1m": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], "missing_60m": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], "days": 8}
+    ],
+    "conclusion": "The dominant missing hour is 22:00 in the 1m source, so the NSXUSD 60m zero-window result is primarily a source-coverage defect. Resampling also omits some adjacent hours when their 60 minute bin is incomplete (for example source missing [22] versus complete-bar missing [21,22]); no evidence supports filling those bins, so the 60m group remains stopped."
+  },
   "inventory": {
     "XAUUSD": {
       "directory": "/workspace/data/lake/XAUUSD/1m",

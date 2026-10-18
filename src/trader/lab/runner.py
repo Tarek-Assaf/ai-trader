@@ -507,8 +507,7 @@ _LAKE_PATH_ALIASES: dict[str, tuple[tuple[str, str], ...]] = {
 def _parquet_files(root: Path, instrument: str) -> tuple[Path, ...]:
     candidates = [root / instrument / "1m"]
     candidates.extend(
-        root / symbol / timeframe
-        for symbol, timeframe in _LAKE_PATH_ALIASES.get(instrument, ())
+        root / symbol / timeframe for symbol, timeframe in _LAKE_PATH_ALIASES.get(instrument, ())
     )
     for directory in candidates:
         files = tuple(sorted(directory.glob("**/*.parquet")))
