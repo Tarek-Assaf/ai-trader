@@ -178,8 +178,11 @@ def _ha_states(chart: Sequence[Candle], anchor: str, mode: str) -> dict[datetime
             opening_close = (opening, close)
             selected = opening_close if mode == "forming" else previous
             result[bar.ts_utc] = (
-                "long" if selected and selected[1] > selected[0] else
-                "short" if selected and selected[1] < selected[0] else None
+                "long"
+                if selected and selected[1] > selected[0]
+                else "short"
+                if selected and selected[1] < selected[0]
+                else "neutral"
             )
         previous = opening_close
         previous_start = group[0].ts_utc
@@ -321,6 +324,7 @@ def _report(
     mid = basis_summaries.get("mid", {})
     variants = mid.get("variants", {})
     best = max(variants.items(), key=lambda item: item[1]["window_pass"], default=("none", {"window_pass": 0}))
+    baseline_name = "forming_wilder_sma_ema_utc"
     lines = [
         "# T-157 Tai rule-by-rule replay diagnostic",
         "",
@@ -330,8 +334,8 @@ def _report(
         "",
         "## Baseline and timing result",
         "",
-        f"Mid-price baseline center-bar passes: **{variants.get('closed_wilder_sma_ema_utc', {}).get('center_pass', 0)}/31**.",
-        f"Mid-price baseline passes somewhere in ±3 bars: **{variants.get('closed_wilder_sma_ema_utc', {}).get('window_pass', 0)}/31**.",
+        f"Mid-price baseline (`{baseline_name}`) center-bar passes: **{variants.get(baseline_name, {}).get('center_pass', 0)}/31**.",
+        f"Mid-price baseline passes somewhere in ±3 bars: **{variants.get(baseline_name, {}).get('window_pass', 0)}/31**.",
         f"Best registered switch: `{best[0]}` with **{best[1]['window_pass']}/31** entries passing somewhere in ±3 bars.",
         "",
         "The first failed rule is evaluated in this order: `ha_state`, `ema_side`, `adx_di`, `vwap_side`, `dont_chase`, `risk_atr`.",
@@ -345,7 +349,7 @@ def _report(
         lines.append(f"| `{name}` | {summary['center_pass']} | {summary['window_pass']} |")
     lines += ["", "## Price-basis baseline counts", "", "| Basis | Center all-pass | Any pass in ±3 bars |", "| --- | ---: | ---: |"]
     for basis, payload in basis_summaries.items():
-        baseline = payload["variants"].get("closed_wilder_sma_ema_utc", {})
+        baseline = payload["variants"].get(baseline_name, {})
         lines.append(f"| {basis} | {baseline.get('center_pass', 0)} | {baseline.get('window_pass', 0)} |")
     lines += [
         "",
