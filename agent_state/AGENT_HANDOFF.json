@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 429,
+  "turn": "human",
+  "revision": 431,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-151 cycle-1 scope extension is complete and in Claude review after the refresh-path diagnostics, per-entry condition table, stop-fit and basis-adjusted evidence were added. T-154 remains blocked after the last allowed review cycle: the optimized matcher completed XAUUSD 60m, but the declared 3,000-query deterministic fallback timed out for all six smaller groups before verdicts or trial counts. T-152 stays parked.",
+    "summary": "T-156 accepted: entry prices on the owner's NQ1! chart are a median 194 points above our recorded NAS100 CFD prices, a likely cause of the 0/31 replay mismatch; bid/ask choice does not matter. Q-068 asks the owner to test the indicator on a Capital.com US100 chart. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -1118,7 +1118,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b4\u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00b4\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00a3\u0622\u00b9\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0637\u0152\u0623\u00a2\u00e2\u20ac\u200c\u0639\u00a9\u0637\u00b8\u00e2\u20ac\u21221 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط·آ´أ¢â€¢ع¾ط·آ´ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¢آ¤ط·آ¬ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط¢آ£ط·آ¸ط¸â‚¬ط£آ¹ط·آ¸ط¢آ¤ط·طŒأ¢â€‌ع©ط¸â€™1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -5169,7 +5169,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5184,8 +5184,12 @@
         "docs/evidence/t156_report.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "scripts/lab_t156_feature_dump.py",
+        "docs/evidence/t156_entry_feature_dump.csv",
+        "docs/evidence/t156_report.md"
+      ],
+      "completion_note": "Completed the read-only T-156 feature dump against the owner CSV and recorded NAS100 1m Capital.com lake. The Pod run produced 31 owner rows with raw indicator and 54m HA values for offsets -3..+3, coverage counts, shortfalls and bid/ask/mid sensitivity. Median shortfalls: ADX 1.0209 points, VWAP side 13.5302 points, don't-chase 1.3006 ATR; missing minutes 11, zero-range 5, flat-filled 5, fewer-than-3-minute 3m bars 8. Bid, ask and mid each had 27 available entries with 6 ADX+DI passes and 13 VWAP-side passes. The committed CSV is a compact center-bar index; the script regenerates the complete window_json artifact. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
     }
   ],
   "decisions": [
@@ -6330,7 +6334,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00ab\u0637\u00b7\u0622\u00b8\u0637\u00a2\u00e2\u201a\u00ac\u0637\u00a2\u0622\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ¢â€¢ع¾ط·آ«ط·آ¸ط¢â‚¬ط¢آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -13488,7 +13492,7 @@
       "subject": "T-151 owner-trade forming-candle replay and Pod evidence",
       "method": "Read docs/specs/t151_owner_trades_comparison.md, reviewed the script and CI-importable unit tests, ran ruff format/check, py_compile and git diff --check locally, then ran the script read-only in the reachable owner-provided Pod against the NAS100 Capital.com 1m lake and owner CSV.",
       "result": "pass",
-      "checked": "Pod run completed with 31 owner entries, 9 groups, 0 same-direction hits at \u00b11/\u00b12/\u00b15 for every group, forming variant extra-signal counts of 5\u201312, price basis matched_entries=27/missing_entry_minutes=4, and safety flags showing zero broker calls/orders and no holdout/gate/cost/ledger writes. Primary owner endpoint remained ERR_BLOCKED_BY_CLIENT; alternate owner endpoint supplied in the task was used.",
+      "checked": "Pod run completed with 31 owner entries, 9 groups, 0 same-direction hits at ±1/±2/±5 for every group, forming variant extra-signal counts of 5–12, price basis matched_entries=27/missing_entry_minutes=4, and safety flags showing zero broker calls/orders and no holdout/gate/cost/ledger writes. Primary owner endpoint remained ERR_BLOCKED_BY_CLIENT; alternate owner endpoint supplied in the task was used.",
       "evidence": [
         "scripts/lab_t151_owner_trades.py",
         "tests/unit/test_t151_owner_trades.py",
@@ -13580,6 +13584,38 @@
       "validated_by": "claude",
       "date": "2026-10-18",
       "reverify_if": "the Tai implementation changes"
+    },
+    {
+      "id": "V-409",
+      "task_id": "T-156",
+      "subject": "T-156 recorded feature dump and systematic-offset diagnostic",
+      "method": "Ran scripts/lab_t156_feature_dump.py on the owner-provided Pod with the NAS100 lake, inspected the redacted report, verified the 31-row output, ran py_compile and git diff --check, and checked the safety boundary.",
+      "result": "pass",
+      "checked": "Pod run exited 0 in 4.5 seconds. It generated 31 entry rows carrying offsets -3..+3, 27 entries with feature values, 11 missing 1m minutes, 5 zero-range and 5 flat-filled minutes, and 8 3m bars with fewer than 3 recorded minutes. Bid, ask and mid each yielded 27 available entries, 6 ADX+DI passes and 13 VWAP-side passes. No broker calls, orders, holdout reads or state writes occurred.",
+      "evidence": [
+        "scripts/lab_t156_feature_dump.py",
+        "docs/evidence/t156_entry_feature_dump.csv",
+        "docs/evidence/t156_report.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-18T17:00:00Z",
+      "reverify_if": "Claude requests the full Pod CSV artifact or a correction to the coverage or sensitivity calculation."
+    },
+    {
+      "id": "V-410",
+      "task_id": "T-156",
+      "subject": "Claude review of T-156 feature dump",
+      "method": "Read report, CSV and script; recomputed entry price minus 3m close for the 27 rows with data; checked no broker/holdout/gate/cost/ledger writes in the script; ran ruff check and ruff format (line length 100) and fixed lint (unused imports, one unused loop variable, long report strings marked noqa) on a main-based branch.",
+      "result": "pass",
+      "checked": "Acceptance met: coverage, shortfalls with signs, bid/ask/mid sensitivity and the unexplained section are present; the full +-3 bar window is regenerated by the script (CSV holds the center bar). Added finding Codex's report did not state: the owner's entry prices (NQ1! futures chart) sit above our recorded NAS100 CFD close by a median of 194 points (range -14 to +391, 26 of 27 positive), so absolute levels differ, which alone can shift EMA200 and VWAP side tests.",
+      "evidence": [
+        "docs/evidence/t156_report.md",
+        "docs/evidence/t156_entry_feature_dump.csv",
+        "scripts/lab_t156_feature_dump.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-18T21:00:00+03:00",
+      "reverify_if": "The owner supplies a TradingView run on the Capital.com US100 symbol, or a futures data source is added."
     }
   ],
   "blockers": [
@@ -14614,6 +14650,20 @@
       ],
       "recommendation": "A: if most entries had a label, TradingView's signals differ from ours and the cause is data or timing, which we can then chase; if not, those entries are discretionary and not indicator signals.",
       "answer": "Owner 2026-10-18 19:57 Riyadh: '2- yes' (item 2: the indicator DID show a BUY/SELL label at the entry bars he checked) and sent a replay screenshot of NQ1! 3m showing the indicator's SELL label with TP3 reached, and a partly hidden dashboard: Trades 115, Completed 115, SL 38, TP2 12, TP3 32, Win Rate 66.96%, Total R 115 (TP1 count hidden). So TradingView's own signals exist at his entries; the agent's replay does not reproduce them, which points to data or timing differences, not discretion."
+    },
+    {
+      "id": "Q-068",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "T-156 found a likely cause. Your entry prices (NQ1! futures) are about 194 points above our recorded NAS100 prices at the same times (range -14 to +391), so EMA200, VWAP and the distance checks are computed on a different price level and volume. Bid/ask choice makes no difference. One free test settles it: put the same Tai indicator on a Capital.com US100 chart in TradingView (same 3m, same replay days) and look at 5 of your 31 entry bars: does it still print BUY/SELL there?",
+      "options": [
+        "A: I will test the indicator on the Capital.com US100 chart and report yes/no for 5 entries (recommended)",
+        "B: I cannot, skip it",
+        "C: Stop chasing the mismatch, our data is the data we trade on"
+      ],
+      "recommendation": "A: if the labels vanish on US100, the signals depend on futures price and volume and cannot be reproduced on our CFD data; if they stay, we chase a timing difference.",
+      "answer": ""
     }
   ],
   "log": [
@@ -15737,7 +15787,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -23408,7 +23458,7 @@
         "docs/evidence/t151_owner_trades_summary.json",
         "docs/evidence/t151_owner_trades_report.md"
       ],
-      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity. Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at \u00b11/\u00b12/\u00b15, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
+      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity. Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at ±1/±2/±5, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
     },
     {
       "revision": 421,
@@ -23541,6 +23591,36 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner confirmed TradingView's indicator shows BUY/SELL labels at his entries, so the signals are real and our replay misses them (data or timing difference, not discretionary entries). Queued T-156: raw indicator values and shortfall per owner entry, recorded-data coverage and bid/ask/mid sensitivity, to find a systematic bias. Turn to codex."
+    },
+    {
+      "revision": 430,
+      "ts": "2026-10-18T17:00:00Z",
+      "agent": "codex",
+      "action": "complete_t156_feature_dump",
+      "task_ids": [
+        "T-156"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t156_feature_dump.py",
+        "docs/evidence/t156_entry_feature_dump.csv",
+        "docs/evidence/t156_report.md"
+      ],
+      "summary": "Completed T-156 from the accepted T-155 dependency. The read-only Pod diagnostic generated raw feature windows for all 31 owner entries, condition shortfalls and sign counts, 1m coverage diagnostics, and bid/ask/mid sensitivity. The committed CSV is a compact center-bar index and the script regenerates the full ±3 window JSON. Pod output exited 0 with zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. Handed T-156 to Claude for review."
+    },
+    {
+      "revision": 431,
+      "ts": "2026-10-18T21:00:00+03:00",
+      "agent": "claude",
+      "action": "accept_t156_ask_q068",
+      "task_ids": [
+        "T-156"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t156_feature_dump.py"
+      ],
+      "summary": "Reviewed T-156: pass. Fixed lint/format on the script (Codex's version failed ruff). Added finding: owner NQ1! entries sit a median 194 points above recorded NAS100 closes. Asked owner Q-068 (test indicator on Capital.com US100). No further task queued; turn to human."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
