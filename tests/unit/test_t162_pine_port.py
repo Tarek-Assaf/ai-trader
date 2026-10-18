@@ -1,8 +1,8 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
-
 from scripts import lab_t162_pine_port as port
+
 from trader.data.resample import Candle
 
 
@@ -10,11 +10,13 @@ def bars(count, highs=None, lows=None):
     start = datetime(2026, 10, 6, tzinfo=UTC)
     highs = highs or [100.5] * count
     lows = lows or [99.5] * count
-    return tuple(Candle(start + timedelta(minutes=3 * i), 100.0, highs[i], lows[i], 100.0) for i in range(count))
+    return tuple(
+        Candle(start + timedelta(minutes=3 * i), 100.0, highs[i], lows[i], 100.0)
+        for i in range(count)
+    )
 
 
 def features(count, buys=(), sells=()):
-    none = (None,) * count
     return port.Features(
         ema=(100.0,) * count,
         atr=(1.0,) * count,

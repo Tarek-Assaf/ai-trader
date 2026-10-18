@@ -6,6 +6,8 @@ closed 54-minute Heikin-Ashi signals, refresh entries without an HA gate, chart-
 indicators, entry-bar management, and target-first intrabar ordering. It never calls a
 broker, reads the sealed holdout, tunes parameters, or writes the lake.
 """
+# ruff: noqa: E501  (report-text strings only; diagnostic script)
+
 from __future__ import annotations
 
 import argparse
@@ -15,10 +17,11 @@ import json
 import math
 import sys
 from collections import defaultdict
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 from zoneinfo import ZoneInfo
 
 try:
@@ -94,9 +97,9 @@ def _rma(values: Sequence[float | None], period: int) -> tuple[float | None, ...
         return tuple(out)
     window = [float(values[i]) for i in range(first, first + period)]
     current = math.fsum(window) / period
-    index = first + period - 1
-    out[index] = current
-    for index in range(index + 1, len(values)):
+    seed = first + period - 1
+    out[seed] = current
+    for index in range(seed + 1, len(values)):
         value = values[index]
         if value is not None:
             current = (current * (period - 1) + float(value)) / period
@@ -181,7 +184,11 @@ def _vwap(bars: Sequence[Candle]) -> tuple[float | None, ...]:
         else:
             equal_sum += typical
             equal_count += 1
-        result.append((weighted / volume) if volume > 0 else (equal_sum / equal_count if equal_count else None))
+        result.append(
+            (weighted / volume)
+            if volume > 0
+            else (equal_sum / equal_count if equal_count else None)
+        )
     return tuple(result)
 
 
@@ -197,19 +204,31 @@ def _ha_complete(bars: Sequence[Candle]) -> tuple[dict[int, tuple[float, float]]
         if len(indices) != HIGHER_MINUTES // TIMEFRAME:
             continue
         first, last = indices[0], indices[-1]
-        if any(bars[a].ts_utc + timedelta(minutes=TIMEFRAME) != bars[b].ts_utc for a, b in zip(indices[:-1], indices[1:], strict=True)):
+        if any(
+            bars[a].ts_utc + timedelta(minutes=TIMEFRAME) != bars[b].ts_utc
+            for a, b in zip(indices[:-1], indices[1:], strict=True)
+        ):
             continue
         raw_open = bars[first].open
         raw_close = bars[last].close
-        close = (raw_open + max(bars[i].high for i in indices) + min(bars[i].low for i in indices) + raw_close) / 4.0
-        open_price = (raw_open + raw_close) / 2.0 if previous is None else (previous[0] + previous[1]) / 2.0
+        close = (
+            raw_open
+            + max(bars[i].high for i in indices)
+            + min(bars[i].low for i in indices)
+            + raw_close
+        ) / 4.0
+        open_price = (
+            (raw_open + raw_close) / 2.0 if previous is None else (previous[0] + previous[1]) / 2.0
+        )
         previous = (open_price, close)
         for i in indices:
             result[i][0] = (open_price, close)
     return tuple(result)
 
 
-def _ha_series(bars: Sequence[Candle], mode: str) -> tuple[tuple[float | None, ...], tuple[float | None, ...]]:
+def _ha_series(
+    bars: Sequence[Candle], mode: str
+) -> tuple[tuple[float | None, ...], tuple[float | None, ...]]:
     if mode not in {"closed", "forming"}:
         raise ValueError("mode must be closed or forming")
     groups: dict[int, list[int]] = defaultdict(list)
@@ -222,12 +241,22 @@ def _ha_series(bars: Sequence[Candle], mode: str) -> tuple[tuple[float | None, .
     for bucket, indices in ordered:
         if len(indices) != HIGHER_MINUTES // TIMEFRAME:
             continue
-        if any(bars[a].ts_utc + timedelta(minutes=TIMEFRAME) != bars[b].ts_utc for a, b in zip(indices[:-1], indices[1:], strict=True)):
+        if any(
+            bars[a].ts_utc + timedelta(minutes=TIMEFRAME) != bars[b].ts_utc
+            for a, b in zip(indices[:-1], indices[1:], strict=True)
+        ):
             continue
         raw_open = bars[indices[0]].open
         raw_close = bars[indices[-1]].close
-        close = (raw_open + max(bars[i].high for i in indices) + min(bars[i].low for i in indices) + raw_close) / 4.0
-        open_price = (raw_open + raw_close) / 2.0 if previous is None else (previous[0] + previous[1]) / 2.0
+        close = (
+            raw_open
+            + max(bars[i].high for i in indices)
+            + min(bars[i].low for i in indices)
+            + raw_close
+        ) / 4.0
+        open_price = (
+            (raw_open + raw_close) / 2.0 if previous is None else (previous[0] + previous[1]) / 2.0
+        )
         previous = (open_price, close)
         complete.append((bucket, indices, (open_price, close)))
     opens: list[float | None] = [None] * len(bars)
@@ -248,8 +277,17 @@ def _ha_series(bars: Sequence[Candle], mode: str) -> tuple[tuple[float | None, .
                     prefix = [j for j in indices if j <= i]
                     raw_open = bars[prefix[0]].open
                     raw_close = bars[prefix[-1]].close
-                    close = (raw_open + max(bars[j].high for j in prefix) + min(bars[j].low for j in prefix) + raw_close) / 4.0
-                    open_price = (raw_open + raw_close) / 2.0 if previous_complete is None else (previous_complete[0] + previous_complete[1]) / 2.0
+                    close = (
+                        raw_open
+                        + max(bars[j].high for j in prefix)
+                        + min(bars[j].low for j in prefix)
+                        + raw_close
+                    ) / 4.0
+                    open_price = (
+                        (raw_open + raw_close) / 2.0
+                        if previous_complete is None
+                        else (previous_complete[0] + previous_complete[1]) / 2.0
+                    )
                     opens[i], closes[i] = open_price, close
                 previous_complete = value
         elif mode == "forming":
@@ -259,13 +297,24 @@ def _ha_series(bars: Sequence[Candle], mode: str) -> tuple[tuple[float | None, .
                 prefix = [j for j in indices if j <= i]
                 raw_open = bars[prefix[0]].open
                 raw_close = bars[prefix[-1]].close
-                close = (raw_open + max(bars[j].high for j in prefix) + min(bars[j].low for j in prefix) + raw_close) / 4.0
-                open_price = (raw_open + raw_close) / 2.0 if previous_complete is None else (previous_complete[0] + previous_complete[1]) / 2.0
+                close = (
+                    raw_open
+                    + max(bars[j].high for j in prefix)
+                    + min(bars[j].low for j in prefix)
+                    + raw_close
+                ) / 4.0
+                open_price = (
+                    (raw_open + raw_close) / 2.0
+                    if previous_complete is None
+                    else (previous_complete[0] + previous_complete[1]) / 2.0
+                )
                 opens[i], closes[i] = open_price, close
     return tuple(opens), tuple(closes)
 
 
-def _crosses(opens: Sequence[float | None], closes: Sequence[float | None]) -> tuple[tuple[bool, ...], tuple[bool, ...]]:
+def _crosses(
+    opens: Sequence[float | None], closes: Sequence[float | None]
+) -> tuple[tuple[bool, ...], tuple[bool, ...]]:
     buy: list[bool] = [False] * len(opens)
     sell: list[bool] = [False] * len(opens)
     for i in range(1, len(opens)):
@@ -292,13 +341,24 @@ def _risk(bars: Sequence[Candle], features: Features, i: int, direction: str) ->
     if atr is None or atr <= 0 or i < SWING_LOOKBACK:
         return False, 0.0
     previous = bars[i - SWING_LOOKBACK : i]
-    stop = min(b.low for b in previous) - float(atr) * 0.20 if direction == "long" else max(b.high for b in previous) + float(atr) * 0.20
+    stop = (
+        min(b.low for b in previous) - float(atr) * 0.20
+        if direction == "long"
+        else max(b.high for b in previous) + float(atr) * 0.20
+    )
     risk = bars[i].close - stop if direction == "long" else stop - bars[i].close
     return risk > 0 and risk / float(atr) <= MAX_RISK_ATR, risk
 
 
 def _smart_ok(bars: Sequence[Candle], features: Features, i: int, direction: str) -> bool:
-    ema, atr, adx, plus, minus, vwap = (features.ema[i], features.atr[i], features.adx[i], features.plus_di[i], features.minus_di[i], features.vwap[i])
+    ema, atr, adx, plus, minus, vwap = (
+        features.ema[i],
+        features.atr[i],
+        features.adx[i],
+        features.plus_di[i],
+        features.minus_di[i],
+        features.vwap[i],
+    )
     if None in (ema, atr, adx, plus, minus, vwap):
         return False
     close = bars[i].close
@@ -322,7 +382,10 @@ def replay(bars: Sequence[Candle], mode: str) -> tuple[tuple[PortTrade, ...], Fe
     for i, bar in enumerate(bars):
         prev_in_trade = active is not None
         signals: list[str] = []
-        for direction, cross in (("long", features.buy_cross[i]), ("short", features.sell_cross[i])):
+        for direction, cross in (
+            ("long", features.buy_cross[i]),
+            ("short", features.sell_cross[i]),
+        ):
             if not cross or not _smart_ok(bars, features, i, direction):
                 continue
             risk_ok, _ = _risk(bars, features, i, direction)
@@ -338,31 +401,85 @@ def replay(bars: Sequence[Candle], mode: str) -> tuple[tuple[PortTrade, ...], Fe
             direction = signals[0]
             _, risk = _risk(bars, features, i, direction)
             stop = bar.close - risk if direction == "long" else bar.close + risk
-            active = {"direction": direction, "entry_index": i, "entry_time": bar.ts_utc, "entry_price": bar.close, "stop_price": stop, "risk": risk, "highest": 0, "active_stop": stop}
+            active = {
+                "direction": direction,
+                "entry_index": i,
+                "entry_time": bar.ts_utc,
+                "entry_price": bar.close,
+                "stop_price": stop,
+                "risk": risk,
+                "highest": 0,
+                "active_stop": stop,
+            }
         if active is not None:
             direction = active["direction"]
             long = direction == "long"
-            hit_stop = bar.low <= active["active_stop"] if long else bar.high >= active["active_stop"]
-            hit1 = bar.high >= active["entry_price"] + active["risk"] if long else bar.low <= active["entry_price"] - active["risk"]
-            hit2 = bar.high >= active["entry_price"] + active["risk"] * 2 if long else bar.low <= active["entry_price"] - active["risk"] * 2
-            hit3 = bar.high >= active["entry_price"] + active["risk"] * 3 if long else bar.low <= active["entry_price"] - active["risk"] * 3
+            hit_stop = (
+                bar.low <= active["active_stop"] if long else bar.high >= active["active_stop"]
+            )
+            hit1 = (
+                bar.high >= active["entry_price"] + active["risk"]
+                if long
+                else bar.low <= active["entry_price"] - active["risk"]
+            )
+            hit2 = (
+                bar.high >= active["entry_price"] + active["risk"] * 2
+                if long
+                else bar.low <= active["entry_price"] - active["risk"] * 2
+            )
+            hit3 = (
+                bar.high >= active["entry_price"] + active["risk"] * 3
+                if long
+                else bar.low <= active["entry_price"] - active["risk"] * 3
+            )
             reason: str | None = None
             if active["highest"] == 0:
-                if hit3: active["highest"], reason = 3, "tp3"
-                elif hit2: active["highest"], active["active_stop"] = 2, active["entry_price"]
-                elif hit1: active["highest"], active["active_stop"] = 1, active["entry_price"]
-                elif hit_stop: reason = "stop"
+                if hit3:
+                    active["highest"], reason = 3, "tp3"
+                elif hit2:
+                    active["highest"], active["active_stop"] = 2, active["entry_price"]
+                elif hit1:
+                    active["highest"], active["active_stop"] = 1, active["entry_price"]
+                elif hit_stop:
+                    reason = "stop"
             else:
-                if hit3: active["highest"], reason = 3, "tp3"
-                elif hit2: active["highest"], active["active_stop"] = 2, active["entry_price"]
-                elif hit_stop: reason = "be"
+                if hit3:
+                    active["highest"], reason = 3, "tp3"
+                elif hit2:
+                    active["highest"], active["active_stop"] = 2, active["entry_price"]
+                elif hit_stop:
+                    reason = "be"
             if reason is not None:
-                trades.append(PortTrade(direction, active["entry_index"], active["entry_time"], active["entry_price"], active["stop_price"], i, bar.ts_utc, reason, active["highest"]))
+                trades.append(
+                    PortTrade(
+                        direction,
+                        active["entry_index"],
+                        active["entry_time"],
+                        active["entry_price"],
+                        active["stop_price"],
+                        i,
+                        bar.ts_utc,
+                        reason,
+                        active["highest"],
+                    )
+                )
                 active = None
         if prev_in_trade and active is None:
             last_exit = i
     if active is not None:
-        trades.append(PortTrade(active["direction"], active["entry_index"], active["entry_time"], active["entry_price"], active["stop_price"], None, None, None, active["highest"]))
+        trades.append(
+            PortTrade(
+                active["direction"],
+                active["entry_index"],
+                active["entry_time"],
+                active["entry_price"],
+                active["stop_price"],
+                None,
+                None,
+                None,
+                active["highest"],
+            )
+        )
     return tuple(trades), features
 
 
@@ -384,27 +501,54 @@ def read_owner_exits(path: Path) -> tuple[OwnerExit, ...]:
         if not kind.startswith("exit") or number not in entries:
             continue
         direction, entry_time = entries[number]
-        exits.append(OwnerExit(number, direction, entry_time, parse_owner_datetime(str(row["Date and time"])), str(row.get("Signal", ""))))
+        exits.append(
+            OwnerExit(
+                number,
+                direction,
+                entry_time,
+                parse_owner_datetime(str(row["Date and time"])),
+                str(row.get("Signal", "")),
+            )
+        )
     return tuple(exits)
 
 
-def _match(entries: Sequence[Any], trades: Sequence[PortTrade], tolerance: int) -> tuple[int, list[dict[str, Any]]]:
+def _match(
+    entries: Sequence[Any], trades: Sequence[PortTrade], tolerance: int
+) -> tuple[int, list[dict[str, Any]]]:
     remaining = list(trades)
     matched = 0
     rows: list[dict[str, Any]] = []
     for owner in entries:
         candidates = [t for t in remaining if t.direction == owner.direction]
         if not candidates:
-            rows.append({"owner": owner.entry_time.isoformat(), "direction": owner.direction, "match": None})
+            rows.append(
+                {"owner": owner.entry_time.isoformat(), "direction": owner.direction, "match": None}
+            )
             continue
         best = min(candidates, key=lambda t: abs((t.entry_time - owner.entry_time).total_seconds()))
         delta = (best.entry_time - owner.entry_time).total_seconds() / 60.0
         if abs(delta) <= tolerance:
             matched += 1
             remaining.remove(best)
-            rows.append({"owner": owner.entry_time.isoformat(), "direction": owner.direction, "match": best.entry_time.isoformat(), "delta_minutes": delta})
+            rows.append(
+                {
+                    "owner": owner.entry_time.isoformat(),
+                    "direction": owner.direction,
+                    "match": best.entry_time.isoformat(),
+                    "delta_minutes": delta,
+                }
+            )
         else:
-            rows.append({"owner": owner.entry_time.isoformat(), "direction": owner.direction, "match": best.entry_time.isoformat(), "delta_minutes": delta, "first_difference": "entry_time_or_signal"})
+            rows.append(
+                {
+                    "owner": owner.entry_time.isoformat(),
+                    "direction": owner.direction,
+                    "match": best.entry_time.isoformat(),
+                    "delta_minutes": delta,
+                    "first_difference": "entry_time_or_signal",
+                }
+            )
     return matched, rows
 
 
@@ -419,14 +563,24 @@ def _bar_at(bars: Sequence[Candle], stamp: datetime) -> tuple[int | None, Candle
     return pos, bars[pos]
 
 
-def _comparison_rows(entries: Sequence[Any], bars: Sequence[Candle], features: Features, trades: Sequence[PortTrade]) -> list[dict[str, Any]]:
+def _comparison_rows(
+    entries: Sequence[Any], bars: Sequence[Candle], features: Features, trades: Sequence[PortTrade]
+) -> list[dict[str, Any]]:
     """Build the review artifact requested by the Pine-port specification."""
     rows: list[dict[str, Any]] = []
     for owner in entries:
         index, bar = _bar_at(bars, owner.entry_time)
         candidates = [trade for trade in trades if trade.direction == owner.direction]
-        nearest = min(candidates, key=lambda t: abs((t.entry_time - owner.entry_time).total_seconds()), default=None)
-        delta_bars = None if nearest is None else (nearest.entry_time - owner.entry_time).total_seconds() / (TIMEFRAME * 60)
+        nearest = min(
+            candidates,
+            key=lambda t: abs((t.entry_time - owner.entry_time).total_seconds()),
+            default=None,
+        )
+        delta_bars = (
+            None
+            if nearest is None
+            else (nearest.entry_time - owner.entry_time).total_seconds() / (TIMEFRAME * 60)
+        )
         if bar is None:
             first_difference = "missing_bar"
         elif nearest is None:
@@ -453,34 +607,54 @@ def _comparison_rows(entries: Sequence[Any], bars: Sequence[Candle], features: F
                 "vwap": features.vwap[index],
                 "atr14": features.atr[index],
             }
-        rows.append({
-            "owner_time_ny": owner.entry_time.astimezone(OWNER_ZONE).isoformat(),
-            "owner_time_utc": owner.entry_time.isoformat(),
-            "direction": owner.direction,
-            "nearest_port_entry_time": nearest.entry_time.isoformat() if nearest else None,
-            "signed_delta_bars": delta_bars,
-            "port_direction": nearest.direction if nearest else None,
-            "first_difference": first_difference,
-            "values_at_owner_minute": values,
-        })
+        rows.append(
+            {
+                "owner_time_ny": owner.entry_time.astimezone(OWNER_ZONE).isoformat(),
+                "owner_time_utc": owner.entry_time.isoformat(),
+                "direction": owner.direction,
+                "nearest_port_entry_time": nearest.entry_time.isoformat() if nearest else None,
+                "signed_delta_bars": delta_bars,
+                "port_direction": nearest.direction if nearest else None,
+                "first_difference": first_difference,
+                "values_at_owner_minute": values,
+            }
+        )
     return rows
 
 
-def _daily_direction_agreement(entries: Sequence[Any], trades: Sequence[PortTrade]) -> dict[str, dict[str, int]]:
+def _daily_direction_agreement(
+    entries: Sequence[Any], trades: Sequence[PortTrade]
+) -> dict[str, dict[str, int]]:
     result: dict[str, dict[str, int]] = defaultdict(lambda: {"owner": 0, "port_same_direction": 0})
     for owner in entries:
         day = owner.entry_time.date().isoformat()
         result[day]["owner"] += 1
-        if any(trade.direction == owner.direction and trade.entry_time.date() == owner.entry_time.date() for trade in trades):
+        if any(
+            trade.direction == owner.direction
+            and trade.entry_time.date() == owner.entry_time.date()
+            for trade in trades
+        ):
             result[day]["port_same_direction"] += 1
     return dict(result)
 
 
 def _json_trade(trade: PortTrade) -> dict[str, Any]:
-    return {"direction": trade.direction, "entry_index": trade.entry_index, "entry_time": trade.entry_time.isoformat(), "entry_price": trade.entry_price, "stop_price": trade.stop_price, "exit_index": trade.exit_index, "exit_time": trade.exit_time.isoformat() if trade.exit_time else None, "exit_reason": trade.exit_reason, "highest_target": trade.highest_target}
+    return {
+        "direction": trade.direction,
+        "entry_index": trade.entry_index,
+        "entry_time": trade.entry_time.isoformat(),
+        "entry_price": trade.entry_price,
+        "stop_price": trade.stop_price,
+        "exit_index": trade.exit_index,
+        "exit_time": trade.exit_time.isoformat() if trade.exit_time else None,
+        "exit_reason": trade.exit_reason,
+        "highest_target": trade.highest_target,
+    }
 
 
-def run(lake: Path, owner_file: Path, start: datetime | None = None, end: datetime | None = None) -> dict[str, Any]:
+def run(
+    lake: Path, owner_file: Path, start: datetime | None = None, end: datetime | None = None
+) -> dict[str, Any]:
     owners = read_owner_entries(owner_file)
     if len(owners) != 31:
         raise RuntimeError(f"expected 31 owner entries, found {len(owners)}")
@@ -496,58 +670,217 @@ def run(lake: Path, owner_file: Path, start: datetime | None = None, end: dateti
         counts = {}
         differences = {}
         for tolerance in (0, 1, 2):
-            counts[str(tolerance)] , differences[str(tolerance)] = _match(owners, trades, tolerance)
+            counts[str(tolerance)], differences[str(tolerance)] = _match(owners, trades, tolerance)
         modes[mode] = {
             "entry_counts": counts,
             "entry_differences": differences,
             "comparison_rows": _comparison_rows(owners, bars, features, trades),
-            "port_entry_counts": {direction: sum(1 for trade in trades if trade.direction == direction) for direction in ("long", "short")},
+            "port_entry_counts": {
+                direction: sum(1 for trade in trades if trade.direction == direction)
+                for direction in ("long", "short")
+            },
             "daily_direction_agreement": _daily_direction_agreement(owners, trades),
             "trades": [_json_trade(t) for t in trades],
             "bars": len(bars),
-            "first_feature_values": [{"ts": bars[i].ts_utc.isoformat(), "ema200": features.ema[i], "atr14": features.atr[i], "adx": features.adx[i], "plus_di": features.plus_di[i], "minus_di": features.minus_di[i], "vwap": features.vwap[i]} for i in range(max(0, len(bars)-5), len(bars))],
+            "first_feature_values": [
+                {
+                    "ts": bars[i].ts_utc.isoformat(),
+                    "ema200": features.ema[i],
+                    "atr14": features.atr[i],
+                    "adx": features.adx[i],
+                    "plus_di": features.plus_di[i],
+                    "minus_di": features.minus_di[i],
+                    "vwap": features.vwap[i],
+                }
+                for i in range(max(0, len(bars) - 5), len(bars))
+            ],
         }
     exits = read_owner_exits(owner_file)
-    duplicate_entry_times = len(owners) - len({(entry.entry_time, entry.direction) for entry in owners})
-    return {"task":"T-162", "generated_at":datetime.now(UTC).isoformat(), "owner_timezone":"America/New_York", "owner_entries":len(owners), "duplicate_entry_time_units":duplicate_entry_times, "chart_timeframe_minutes":TIMEFRAME, "signal_timeframe_minutes":HIGHER_MINUTES, "signal_group_anchor":"UTC epoch-aligned 54-minute groups", "signal_bars_per_group":TF_MULT, "recorded_bars_carry_volume":any(item.volume != 0 for item in bars), "recorded_bar_gaps":[entry.entry_time.isoformat() for entry in owners if _bar_at(bars, entry.entry_time)[1] is None], "modes":modes, "owner_exits":[{"trade_number":e.trade_number,"direction":e.direction,"entry_time":e.entry_time.isoformat(),"exit_time":e.exit_time.isoformat(),"exit_reason":e.exit_reason} for e in exits], "source_contract":{"setup":"Open/Close","refresh_ha_gate":False,"entry_bar_management":True,"intrabar_order":"target-first (TP3, TP2, TP1/BE before stop)","vwap":"volume-weighted when volume is present; equal typical-price weighting for zero-volume recorder bars"}, "safety":{"broker_calls":0,"orders":0,"sealed_holdout_read":False,"lake_writes":0,"production_state_writes":0,"gate_evaluated":False}}
+    duplicate_entry_times = len(owners) - len(
+        {(entry.entry_time, entry.direction) for entry in owners}
+    )
+    return {
+        "task": "T-162",
+        "generated_at": datetime.now(UTC).isoformat(),
+        "owner_timezone": "America/New_York",
+        "owner_entries": len(owners),
+        "duplicate_entry_time_units": duplicate_entry_times,
+        "chart_timeframe_minutes": TIMEFRAME,
+        "signal_timeframe_minutes": HIGHER_MINUTES,
+        "signal_group_anchor": "UTC epoch-aligned 54-minute groups",
+        "signal_bars_per_group": TF_MULT,
+        "recorded_bars_carry_volume": any(item.volume != 0 for item in bars),
+        "recorded_bar_gaps": [
+            entry.entry_time.isoformat()
+            for entry in owners
+            if _bar_at(bars, entry.entry_time)[1] is None
+        ],
+        "modes": modes,
+        "owner_exits": [
+            {
+                "trade_number": e.trade_number,
+                "direction": e.direction,
+                "entry_time": e.entry_time.isoformat(),
+                "exit_time": e.exit_time.isoformat(),
+                "exit_reason": e.exit_reason,
+            }
+            for e in exits
+        ],
+        "source_contract": {
+            "setup": "Open/Close",
+            "refresh_ha_gate": False,
+            "entry_bar_management": True,
+            "intrabar_order": "target-first (TP3, TP2, TP1/BE before stop)",
+            "vwap": "volume-weighted when volume is present; equal typical-price weighting for zero-volume recorder bars",
+        },
+        "safety": {
+            "broker_calls": 0,
+            "orders": 0,
+            "sealed_holdout_read": False,
+            "lake_writes": 0,
+            "production_state_writes": 0,
+            "gate_evaluated": False,
+        },
+    }
 
 
 def report(payload: dict[str, Any]) -> str:
-    lines=["# T-162 faithful Pine-port diagnostic",""]
-    best=max((m["entry_counts"]["2"] for m in payload["modes"].values()), default=0)
-    mode=max(payload["modes"], key=lambda k: payload["modes"][k]["entry_counts"]["2"])
-    lines.append(f"**Owner verdict:** The faithful Pine port reproduces **{best}/31** entries within آ±2 three-minute bars in `{mode}` mode. {'The 25/31 success bar is met.' if best >= 25 else 'The 25/31 success bar is not met; per-entry differences are reported below and the task stops without tuning or a historical rerun.'}")
-    lines += ["",f"Generated: `{payload['generated_at']}`. Owner timestamps were parsed as `America/New_York`.","","## Entry reproduction","","| HA mode | Exact | آ±1 bar | آ±2 bars |","| --- | ---: | ---: | ---: |"]
-    for mode,data in payload["modes"].items(): lines.append(f"| {mode} | {data['entry_counts']['0']} | {data['entry_counts']['1']} | {data['entry_counts']['2']} |")
-    lines += ["","## Port contract","",json.dumps(payload["source_contract"],indent=2,sort_keys=True),"",f"Signal groups: `{payload['signal_group_anchor']}`; `{payload['signal_bars_per_group']}` chart bars per group. Recorded bars carry volume: `{payload['recorded_bars_carry_volume']}`.",f"Owner entry units sharing an entry time/direction: `{payload['duplicate_entry_time_units']}` (the comparison counts the 31 exported units, not unique signals).",f"Owner entry minutes without a containing recorded 3m bar: `{len(payload['recorded_bar_gaps'])}`.","","## Exit comparison source","",f"Owner exit rows parsed: {len(payload['owner_exits'])}. Port trades include exit time/type where a trade completed; open trades remain explicit.","","## Safety","",json.dumps(payload["safety"],indent=2,sort_keys=True),""]
+    lines = ["# T-162 faithful Pine-port diagnostic", ""]
+    best = max((m["entry_counts"]["2"] for m in payload["modes"].values()), default=0)
+    mode = max(payload["modes"], key=lambda k: payload["modes"][k]["entry_counts"]["2"])
+    lines.append(
+        f"**Owner verdict:** The faithful Pine port reproduces **{best}/31** entries within ±2 three-minute bars in `{mode}` mode. {'The 25/31 success bar is met.' if best >= 25 else 'The 25/31 success bar is not met; per-entry differences are reported below and the task stops without tuning or a historical rerun.'}"
+    )
+    lines += [
+        "",
+        f"Generated: `{payload['generated_at']}`. Owner timestamps were parsed as `America/New_York`.",
+        "",
+        "## Entry reproduction",
+        "",
+        "| HA mode | Exact | ±1 bar | ±2 bars |",
+        "| --- | ---: | ---: | ---: |",
+    ]
+    for mode, data in payload["modes"].items():
+        lines.append(
+            f"| {mode} | {data['entry_counts']['0']} | {data['entry_counts']['1']} | {data['entry_counts']['2']} |"
+        )
+    lines += [
+        "",
+        "## Port contract",
+        "",
+        json.dumps(payload["source_contract"], indent=2, sort_keys=True),
+        "",
+        f"Signal groups: `{payload['signal_group_anchor']}`; `{payload['signal_bars_per_group']}` chart bars per group. Recorded bars carry volume: `{payload['recorded_bars_carry_volume']}`.",
+        f"Owner entry units sharing an entry time/direction: `{payload['duplicate_entry_time_units']}` (the comparison counts the 31 exported units, not unique signals).",
+        f"Owner entry minutes without a containing recorded 3m bar: `{len(payload['recorded_bar_gaps'])}`.",
+        "",
+        "## Exit comparison source",
+        "",
+        f"Owner exit rows parsed: {len(payload['owner_exits'])}. Port trades include exit time/type where a trade completed; open trades remain explicit.",
+        "",
+        "## Safety",
+        "",
+        json.dumps(payload["safety"], indent=2, sort_keys=True),
+        "",
+    ]
     if best < 25:
-        lines += ["## Per-entry differences",""]
-        for mode,data in payload["modes"].items():
-            lines += [f"### {mode}",""]
+        lines += ["## Per-entry differences", ""]
+        for mode, data in payload["modes"].items():
+            lines += [f"### {mode}", ""]
             for row in data["comparison_rows"]:
-                if row["first_difference"] != "matched": lines.append(f"- `{row['owner_time_utc']}` {row['direction']}: nearest port entry `{row['nearest_port_entry_time']}` (delta {row['signed_delta_bars']} chart bars); first difference `{row['first_difference']}`; values `{json.dumps(row['values_at_owner_minute'], sort_keys=True)}`.")
-    return "\n".join(lines)+"\n"
+                if row["first_difference"] != "matched":
+                    lines.append(
+                        f"- `{row['owner_time_utc']}` {row['direction']}: nearest port entry `{row['nearest_port_entry_time']}` (delta {row['signed_delta_bars']} chart bars); first difference `{row['first_difference']}`; values `{json.dumps(row['values_at_owner_minute'], sort_keys=True)}`."
+                    )
+    return "\n".join(lines) + "\n"
 
 
 def main() -> int:
-    parser=argparse.ArgumentParser()
-    parser.add_argument("--lake",type=Path,required=True)
-    parser.add_argument("--owner-file",type=Path,required=True)
-    parser.add_argument("--output",type=Path,default=Path("docs/evidence/t162_port.json"))
-    parser.add_argument("--report",type=Path,default=Path("docs/evidence/t162_report.md"))
-    parser.add_argument("--entries",type=Path,default=Path("docs/evidence/t162_entries.csv"))
-    args=parser.parse_args()
-    payload=run(args.lake,args.owner_file)
-    args.output.parent.mkdir(parents=True,exist_ok=True)
-    args.output.write_text(json.dumps(payload,indent=2,sort_keys=True)+"\n",encoding="utf-8")
-    args.report.write_text(report(payload),encoding="utf-8")
-    with args.entries.open("w",newline="",encoding="utf-8") as handle:
-        writer=csv.writer(handle); writer.writerow(["mode","owner_time_ny","owner_time_utc","direction","nearest_port_entry_time","signed_delta_bars","port_direction","first_difference","bar_ts_utc","open","high","low","close","volume","ha_open_54m","ha_close_54m","ema200","adx14","plus_di14","minus_di14","vwap","atr14"])
-        for mode,data in payload["modes"].items():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--lake", type=Path, required=True)
+    parser.add_argument("--owner-file", type=Path, required=True)
+    parser.add_argument("--output", type=Path, default=Path("docs/evidence/t162_port.json"))
+    parser.add_argument("--report", type=Path, default=Path("docs/evidence/t162_report.md"))
+    parser.add_argument("--entries", type=Path, default=Path("docs/evidence/t162_entries.csv"))
+    args = parser.parse_args()
+    payload = run(args.lake, args.owner_file)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    args.report.write_text(report(payload), encoding="utf-8")
+    with args.entries.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(
+            [
+                "mode",
+                "owner_time_ny",
+                "owner_time_utc",
+                "direction",
+                "nearest_port_entry_time",
+                "signed_delta_bars",
+                "port_direction",
+                "first_difference",
+                "bar_ts_utc",
+                "open",
+                "high",
+                "low",
+                "close",
+                "volume",
+                "ha_open_54m",
+                "ha_close_54m",
+                "ema200",
+                "adx14",
+                "plus_di14",
+                "minus_di14",
+                "vwap",
+                "atr14",
+            ]
+        )
+        for mode, data in payload["modes"].items():
             for row in data["comparison_rows"]:
                 values = row["values_at_owner_minute"]
-                writer.writerow([mode,row["owner_time_ny"],row["owner_time_utc"],row["direction"],row["nearest_port_entry_time"],row["signed_delta_bars"],row["port_direction"],row["first_difference"],*[values.get(key) for key in ("bar_ts_utc","open","high","low","close","volume","ha_open_54m","ha_close_54m","ema200","adx14","plus_di14","minus_di14","vwap","atr14")]])
-    print(json.dumps({"task":"T-162","modes":{m:d["entry_counts"] for m,d in payload["modes"].items()},"safety":payload["safety"]},sort_keys=True))
+                writer.writerow(
+                    [
+                        mode,
+                        row["owner_time_ny"],
+                        row["owner_time_utc"],
+                        row["direction"],
+                        row["nearest_port_entry_time"],
+                        row["signed_delta_bars"],
+                        row["port_direction"],
+                        row["first_difference"],
+                        *[
+                            values.get(key)
+                            for key in (
+                                "bar_ts_utc",
+                                "open",
+                                "high",
+                                "low",
+                                "close",
+                                "volume",
+                                "ha_open_54m",
+                                "ha_close_54m",
+                                "ema200",
+                                "adx14",
+                                "plus_di14",
+                                "minus_di14",
+                                "vwap",
+                                "atr14",
+                            )
+                        ],
+                    ]
+                )
+    print(
+        json.dumps(
+            {
+                "task": "T-162",
+                "modes": {m: d["entry_counts"] for m, d in payload["modes"].items()},
+                "safety": payload["safety"],
+            },
+            sort_keys=True,
+        )
+    )
     return 0
 
-if __name__ == "__main__": raise SystemExit(main())
+
+if __name__ == "__main__":
+    raise SystemExit(main())
