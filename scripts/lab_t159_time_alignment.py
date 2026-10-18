@@ -21,6 +21,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from scripts.lab_t160_owner_time_ny import parse_owner_datetime
+
 try:
     from scripts.lab_t151_owner_trades import read_nas100_minutes
 except ModuleNotFoundError:
@@ -48,9 +50,7 @@ def read_trades(path: Path) -> tuple[Trade, ...]:
             if not number or not (kind.startswith("entry") or kind.startswith("exit")):
                 continue
             try:
-                stamp = datetime.strptime(str(row["Date and time"]), "%Y-%m-%d %H:%M").replace(
-                    tzinfo=UTC
-                )
+                stamp = parse_owner_datetime(str(row["Date and time"]))
                 price = float(row["Price USD"])
             except (KeyError, TypeError, ValueError):
                 continue
