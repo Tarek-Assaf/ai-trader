@@ -1,0 +1,800 @@
+{
+  "bases": {
+    "ask": {
+      "chart_bars": 4058,
+      "source_minutes": 11993,
+      "variants": {
+        "closed_simple_sma_ema_utc": {
+          "center_pass": 0,
+          "first_failed_rule": {
+            "adx_di": 2,
+            "dont_chase": 1,
+            "ema_side": 0,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 0,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 0
+        },
+        "closed_wilder_firstclose_ema_utc": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 1,
+            "ema_side": 0,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "closed_wilder_sma_ema_cme": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 0,
+            "ema_side": 0,
+            "ha_state": 28,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 2
+        },
+        "closed_wilder_sma_ema_riyadh": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 0,
+            "ema_side": 1,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 3
+        },
+        "closed_wilder_sma_ema_utc": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 1,
+            "ema_side": 0,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "closed_wilder_sma_ema_utc_shift_minus1": {
+          "center_pass": 0,
+          "first_failed_rule": {
+            "adx_di": 0,
+            "dont_chase": 2,
+            "ema_side": 0,
+            "ha_state": 28,
+            "missing_bar": 1,
+            "pass": 0,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "closed_wilder_sma_ema_utc_shift_plus1": {
+          "center_pass": 0,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 2,
+            "ema_side": 0,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 0,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "forming_wilder_sma_ema_cme": {
+          "center_pass": 3,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 1,
+            "ema_side": 2,
+            "ha_state": 20,
+            "missing_bar": 1,
+            "pass": 3,
+            "risk_atr": 1,
+            "vwap_side": 2
+          },
+          "window_pass": 9
+        },
+        "forming_wilder_sma_ema_utc": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 2,
+            "dont_chase": 4,
+            "ema_side": 3,
+            "ha_state": 19,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 1
+          },
+          "window_pass": 2
+        }
+      }
+    },
+    "bid": {
+      "chart_bars": 4059,
+      "source_minutes": 12050,
+      "variants": {
+        "closed_simple_sma_ema_utc": {
+          "center_pass": 0,
+          "first_failed_rule": {
+            "adx_di": 2,
+            "dont_chase": 2,
+            "ema_side": 0,
+            "ha_state": 26,
+            "missing_bar": 1,
+            "pass": 0,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 0
+        },
+        "closed_wilder_firstclose_ema_utc": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 2,
+            "ema_side": 0,
+            "ha_state": 26,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "closed_wilder_sma_ema_cme": {
+          "center_pass": 2,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 1,
+            "ema_side": 0,
+            "ha_state": 26,
+            "missing_bar": 1,
+            "pass": 2,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 2
+        },
+        "closed_wilder_sma_ema_riyadh": {
+          "center_pass": 2,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 1,
+            "ema_side": 1,
+            "ha_state": 25,
+            "missing_bar": 1,
+            "pass": 2,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 3
+        },
+        "closed_wilder_sma_ema_utc": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 2,
+            "ema_side": 0,
+            "ha_state": 26,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "closed_wilder_sma_ema_utc_shift_minus1": {
+          "center_pass": 0,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 2,
+            "ema_side": 0,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 0,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "closed_wilder_sma_ema_utc_shift_plus1": {
+          "center_pass": 0,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 3,
+            "ema_side": 0,
+            "ha_state": 26,
+            "missing_bar": 1,
+            "pass": 0,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "forming_wilder_sma_ema_cme": {
+          "center_pass": 4,
+          "first_failed_rule": {
+            "adx_di": 2,
+            "dont_chase": 2,
+            "ema_side": 2,
+            "ha_state": 17,
+            "missing_bar": 1,
+            "pass": 4,
+            "risk_atr": 1,
+            "vwap_side": 2
+          },
+          "window_pass": 8
+        },
+        "forming_wilder_sma_ema_utc": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 2,
+            "dont_chase": 4,
+            "ema_side": 4,
+            "ha_state": 18,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 1
+          },
+          "window_pass": 2
+        }
+      }
+    },
+    "mid": {
+      "chart_bars": 4057,
+      "source_minutes": 11990,
+      "variants": {
+        "closed_simple_sma_ema_utc": {
+          "center_pass": 0,
+          "first_failed_rule": {
+            "adx_di": 2,
+            "dont_chase": 1,
+            "ema_side": 0,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 0,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 0
+        },
+        "closed_wilder_firstclose_ema_utc": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 1,
+            "ema_side": 0,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "closed_wilder_sma_ema_cme": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 0,
+            "ema_side": 0,
+            "ha_state": 28,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 2
+        },
+        "closed_wilder_sma_ema_riyadh": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 0,
+            "ema_side": 1,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 3
+        },
+        "closed_wilder_sma_ema_utc": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 1,
+            "ema_side": 0,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "closed_wilder_sma_ema_utc_shift_minus1": {
+          "center_pass": 0,
+          "first_failed_rule": {
+            "adx_di": 0,
+            "dont_chase": 2,
+            "ema_side": 0,
+            "ha_state": 28,
+            "missing_bar": 1,
+            "pass": 0,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "closed_wilder_sma_ema_utc_shift_plus1": {
+          "center_pass": 0,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 2,
+            "ema_side": 0,
+            "ha_state": 27,
+            "missing_bar": 1,
+            "pass": 0,
+            "risk_atr": 0,
+            "vwap_side": 0
+          },
+          "window_pass": 1
+        },
+        "forming_wilder_sma_ema_cme": {
+          "center_pass": 3,
+          "first_failed_rule": {
+            "adx_di": 1,
+            "dont_chase": 1,
+            "ema_side": 2,
+            "ha_state": 20,
+            "missing_bar": 1,
+            "pass": 3,
+            "risk_atr": 1,
+            "vwap_side": 2
+          },
+          "window_pass": 9
+        },
+        "forming_wilder_sma_ema_utc": {
+          "center_pass": 1,
+          "first_failed_rule": {
+            "adx_di": 2,
+            "dont_chase": 4,
+            "ema_side": 3,
+            "ha_state": 19,
+            "missing_bar": 1,
+            "pass": 1,
+            "risk_atr": 0,
+            "vwap_side": 1
+          },
+          "window_pass": 2
+        }
+      }
+    }
+  },
+  "compact_replay_rows": 30,
+  "coverage": {
+    "NSXUSD": {
+      "source_1m_rows": 11990,
+      "timeframes": {
+        "1": {
+          "bars": 11990,
+          "complete": 11990
+        },
+        "3": {
+          "bars": 3895,
+          "complete": 3895
+        },
+        "5": {
+          "bars": 2285,
+          "complete": 2285
+        },
+        "54": {
+          "bars": 129,
+          "complete": 129
+        },
+        "60": {
+          "bars": 114,
+          "complete": 114
+        }
+      }
+    },
+    "XAUUSD": {
+      "source_1m_rows": 0,
+      "timeframes": {
+        "1": {
+          "bars": 0,
+          "complete": 0
+        },
+        "3": {
+          "bars": 0,
+          "complete": 0
+        },
+        "5": {
+          "bars": 0,
+          "complete": 0
+        },
+        "54": {
+          "bars": 0,
+          "complete": 0
+        },
+        "60": {
+          "bars": 0,
+          "complete": 0
+        }
+      }
+    }
+  },
+  "full_replay_rows": 5670,
+  "full_replay_sha256": "635db718e01bbf79c4dc06789462c74e6b6b890cff054394430001ae77a755c7",
+  "generated_at": "2026-10-18T22:02:14.035171+00:00",
+  "offsets_bars": [
+    -3,
+    -2,
+    -1,
+    0,
+    1,
+    2,
+    3
+  ],
+  "owner_entries": 31,
+  "owner_timezone": "America/New_York",
+  "owner_verdict": {
+    "best_center_pass": 3,
+    "best_switch": "forming_wilder_sma_ema_cme",
+    "best_window_pass": 9,
+    "entries": 31,
+    "reaches_twenty": false
+  },
+  "registered_variants": [
+    "closed_wilder_sma_ema_utc",
+    "forming_wilder_sma_ema_utc",
+    "closed_wilder_sma_ema_riyadh",
+    "closed_wilder_sma_ema_cme",
+    "forming_wilder_sma_ema_cme",
+    "closed_simple_sma_ema_utc",
+    "closed_wilder_firstclose_ema_utc",
+    "closed_wilder_sma_ema_utc_shift_minus1",
+    "closed_wilder_sma_ema_utc_shift_plus1"
+  ],
+  "rule_order": [
+    "ha_state",
+    "ema_side",
+    "adx_di",
+    "vwap_side",
+    "dont_chase",
+    "risk_atr"
+  ],
+  "safety": {
+    "broker_calls": 0,
+    "cost_ledger_promotion_writes": 0,
+    "gate_evaluated": false,
+    "lake_writes": 0,
+    "orders": 0,
+    "production_state_writes": 0,
+    "sealed_holdout_read": false
+  },
+  "stage4_ha": {
+    "categories": {
+      "flip_current_bar": 7,
+      "missing": 0,
+      "opposite_colour": 9,
+      "same_colour_no_flip": 15
+    },
+    "entries": 31,
+    "first_five_entry_snapshots": [
+      {
+        "direction": "short",
+        "entry": "2026-10-06T20:03:00+00:00",
+        "ha_candles_before_entry": [
+          {
+            "close": 31128.575,
+            "colour": "long",
+            "open": 31124.45921783447,
+            "ts": "2026-10-06T06:54:00+00:00"
+          },
+          {
+            "close": 31132.6,
+            "colour": "long",
+            "open": 31126.517108917236,
+            "ts": "2026-10-06T07:48:00+00:00"
+          },
+          {
+            "close": 31145.975,
+            "colour": "long",
+            "open": 31129.558554458617,
+            "ts": "2026-10-06T08:42:00+00:00"
+          },
+          {
+            "close": 31176.975,
+            "colour": "long",
+            "open": 31137.766777229306,
+            "ts": "2026-10-06T09:36:00+00:00"
+          },
+          {
+            "close": 31235.375,
+            "colour": "long",
+            "open": 31157.370888614652,
+            "ts": "2026-10-06T10:30:00+00:00"
+          },
+          {
+            "close": 31274.675000000003,
+            "colour": "long",
+            "open": 31196.372944307324,
+            "ts": "2026-10-06T11:24:00+00:00"
+          },
+          {
+            "close": 31259.85,
+            "colour": "long",
+            "open": 31235.523972153664,
+            "ts": "2026-10-06T12:18:00+00:00"
+          },
+          {
+            "close": 31274.525,
+            "colour": "long",
+            "open": 31247.68698607683,
+            "ts": "2026-10-06T18:36:00+00:00"
+          }
+        ],
+        "owner_entry_price": 31495.75,
+        "price_difference_owner_minus_recorded": 256.0500000000029,
+        "recorded_nas100_mid_close": 31239.699999999997
+      },
+      {
+        "direction": "short",
+        "entry": "2026-10-06T22:45:00+00:00",
+        "ha_candles_before_entry": [
+          {
+            "close": 31132.6,
+            "colour": "long",
+            "open": 31126.517108917236,
+            "ts": "2026-10-06T07:48:00+00:00"
+          },
+          {
+            "close": 31145.975,
+            "colour": "long",
+            "open": 31129.558554458617,
+            "ts": "2026-10-06T08:42:00+00:00"
+          },
+          {
+            "close": 31176.975,
+            "colour": "long",
+            "open": 31137.766777229306,
+            "ts": "2026-10-06T09:36:00+00:00"
+          },
+          {
+            "close": 31235.375,
+            "colour": "long",
+            "open": 31157.370888614652,
+            "ts": "2026-10-06T10:30:00+00:00"
+          },
+          {
+            "close": 31274.675000000003,
+            "colour": "long",
+            "open": 31196.372944307324,
+            "ts": "2026-10-06T11:24:00+00:00"
+          },
+          {
+            "close": 31259.85,
+            "colour": "long",
+            "open": 31235.523972153664,
+            "ts": "2026-10-06T12:18:00+00:00"
+          },
+          {
+            "close": 31274.525,
+            "colour": "long",
+            "open": 31247.68698607683,
+            "ts": "2026-10-06T18:36:00+00:00"
+          },
+          {
+            "close": 31258.725,
+            "colour": "short",
+            "open": 31261.105993038414,
+            "ts": "2026-10-06T22:12:00+00:00"
+          }
+        ],
+        "owner_entry_price": 31496.5,
+        "price_difference_owner_minus_recorded": 247.40000000000146,
+        "recorded_nas100_mid_close": 31249.1
+      },
+      {
+        "direction": "short",
+        "entry": "2026-10-07T01:18:00+00:00",
+        "ha_candles_before_entry": [
+          {
+            "close": 31235.375,
+            "colour": "long",
+            "open": 31157.370888614652,
+            "ts": "2026-10-06T10:30:00+00:00"
+          },
+          {
+            "close": 31274.675000000003,
+            "colour": "long",
+            "open": 31196.372944307324,
+            "ts": "2026-10-06T11:24:00+00:00"
+          },
+          {
+            "close": 31259.85,
+            "colour": "long",
+            "open": 31235.523972153664,
+            "ts": "2026-10-06T12:18:00+00:00"
+          },
+          {
+            "close": 31274.525,
+            "colour": "long",
+            "open": 31247.68698607683,
+            "ts": "2026-10-06T18:36:00+00:00"
+          },
+          {
+            "close": 31258.725,
+            "colour": "short",
+            "open": 31261.105993038414,
+            "ts": "2026-10-06T22:12:00+00:00"
+          },
+          {
+            "close": 31249.25,
+            "colour": "short",
+            "open": 31259.915496519206,
+            "ts": "2026-10-06T23:06:00+00:00"
+          },
+          {
+            "close": 31246.1875,
+            "colour": "short",
+            "open": 31254.582748259603,
+            "ts": "2026-10-07T00:00:00+00:00"
+          },
+          {
+            "close": 31244.699999999997,
+            "colour": "short",
+            "open": 31250.385124129803,
+            "ts": "2026-10-07T00:54:00+00:00"
+          }
+        ],
+        "owner_entry_price": 31498.25,
+        "price_difference_owner_minus_recorded": 252.75,
+        "recorded_nas100_mid_close": 31245.5
+      },
+      {
+        "direction": "long",
+        "entry": "2026-10-07T22:21:00+00:00",
+        "ha_candles_before_entry": [
+          {
+            "close": 31258.725,
+            "colour": "short",
+            "open": 31261.105993038414,
+            "ts": "2026-10-06T22:12:00+00:00"
+          },
+          {
+            "close": 31249.25,
+            "colour": "short",
+            "open": 31259.915496519206,
+            "ts": "2026-10-06T23:06:00+00:00"
+          },
+          {
+            "close": 31246.1875,
+            "colour": "short",
+            "open": 31254.582748259603,
+            "ts": "2026-10-07T00:00:00+00:00"
+          },
+          {
+            "close": 31244.699999999997,
+            "colour": "short",
+            "open": 31250.385124129803,
+            "ts": "2026-10-07T00:54:00+00:00"
+          },
+          {
+            "close": 31218.8,
+            "colour": "short",
+            "open": 31247.5425620649,
+            "ts": "2026-10-07T01:48:00+00:00"
+          },
+          {
+            "close": 31212.774999999998,
+            "colour": "short",
+            "open": 31233.17128103245,
+            "ts": "2026-10-07T02:42:00+00:00"
+          },
+          {
+            "close": 31128.475,
+            "colour": "short",
+            "open": 31222.973140516224,
+            "ts": "2026-10-07T18:54:00+00:00"
+          },
+          {
+            "close": 31141.324999999997,
+            "colour": "short",
+            "open": 31175.72407025811,
+            "ts": "2026-10-07T19:48:00+00:00"
+          }
+        ],
+        "owner_entry_price": 31431.0,
+        "price_difference_owner_minus_recorded": 248.40000000000146,
+        "recorded_nas100_mid_close": 31182.6
+      },
+      {
+        "direction": "long",
+        "entry": "2026-10-08T01:51:00+00:00",
+        "ha_candles_before_entry": [
+          {
+            "close": 31218.8,
+            "colour": "short",
+            "open": 31247.5425620649,
+            "ts": "2026-10-07T01:48:00+00:00"
+          },
+          {
+            "close": 31212.774999999998,
+            "colour": "short",
+            "open": 31233.17128103245,
+            "ts": "2026-10-07T02:42:00+00:00"
+          },
+          {
+            "close": 31128.475,
+            "colour": "short",
+            "open": 31222.973140516224,
+            "ts": "2026-10-07T18:54:00+00:00"
+          },
+          {
+            "close": 31141.324999999997,
+            "colour": "short",
+            "open": 31175.72407025811,
+            "ts": "2026-10-07T19:48:00+00:00"
+          },
+          {
+            "close": 31196.0,
+            "colour": "long",
+            "open": 31158.524535129054,
+            "ts": "2026-10-07T22:30:00+00:00"
+          },
+          {
+            "close": 31185.65,
+            "colour": "long",
+            "open": 31177.262267564525,
+            "ts": "2026-10-07T23:24:00+00:00"
+          },
+          {
+            "close": 31157.175000000003,
+            "colour": "short",
+            "open": 31181.456133782263,
+            "ts": "2026-10-08T00:18:00+00:00"
+          },
+          {
+            "close": 31172.4,
+            "colour": "long",
+            "open": 31169.315566891135,
+            "ts": "2026-10-08T01:12:00+00:00"
+          }
+        ],
+        "owner_entry_price": 31433.75,
+        "price_difference_owner_minus_recorded": 243.84999999999854,
+        "recorded_nas100_mid_close": 31189.9
+      }
+    ],
+    "source": "NSXUSD 1m lake, resampled to complete 54m bars; owner times parsed as America/New_York"
+  },
+  "task": "T-161"
+}
