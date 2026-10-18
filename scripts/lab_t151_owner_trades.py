@@ -21,7 +21,11 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from scripts.lab_t160_owner_time_ny import parse_owner_datetime
+try:
+    from scripts.lab_t160_owner_time_ny import parse_owner_datetime
+except ModuleNotFoundError:  # direct ``python scripts/lab_t151_owner_trades.py`` execution
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from lab_t160_owner_time_ny import parse_owner_datetime
 
 from trader.analysis import indicators
 from trader.data.resample import Candle

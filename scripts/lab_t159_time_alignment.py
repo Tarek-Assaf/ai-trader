@@ -14,6 +14,7 @@ import json
 import math
 import random
 import statistics
+import sys
 from collections import Counter, defaultdict
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -21,13 +22,15 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from scripts.lab_t160_owner_time_ny import parse_owner_datetime
+try:
+    from scripts.lab_t160_owner_time_ny import parse_owner_datetime
+except ModuleNotFoundError:
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from lab_t160_owner_time_ny import parse_owner_datetime
 
 try:
     from scripts.lab_t151_owner_trades import read_nas100_minutes
 except ModuleNotFoundError:
-    import sys
-
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from scripts.lab_t151_owner_trades import read_nas100_minutes
 
