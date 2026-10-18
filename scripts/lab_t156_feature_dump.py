@@ -117,7 +117,24 @@ def _read_side_minutes(lake: Path, start: datetime, end: datetime, side: str) ->
         raise RuntimeError("pyarrow is required for T-156") from exc
     paired: dict[datetime, dict[str, Candle]] = defaultdict(dict)
     singles: dict[datetime, Candle] = {}
+    allowed_months = set()
+    cursor = start.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    while cursor < end:
+        allowed_months.add((cursor.year, cursor.month))
+        cursor = (cursor + timedelta(days=32)).replace(day=1)
     for path in _candidate_paths(lake):
+        path_month = None
+        for part in path.parts:
+            if part.isdigit() and len(part) == 4:
+                try:
+                    year = int(part)
+                    month = int(path.stem)
+                    if (year, month) in allowed_months:
+                        path_month = (year, month)
+                except ValueError:
+                    pass
+        if path_month is None:
+            continue
         try:
             schema = set(pq.ParquetFile(path).schema.names)
             required = {"ts_utc", "open", "high", "low", "close"}
