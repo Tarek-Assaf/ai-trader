@@ -1,0 +1,194 @@
+{
+  "task": "T-164",
+  "artifact_source": "bounded Pod run on owner-provided lake and owner CSV; compact local evidence preserves the scan verdict and per-entry best-shift distribution",
+  "pod_artifact_sha256": {
+    "t164_shifts.json": "742695b5ed681bbe133846045670ffe9652460e075df02086b50e52495ad5780",
+    "t164_report.md": "141c93c746cdbbce9e4dbe13a7dfbbe46951dba91876229136ab085b0a1393f2",
+    "t164_entries.csv": "66663bf8e20b22011ee33c836e7497c7a7b53e164478e3bfe318ec1ff6873fc5"
+  },
+  "owner_entries": 31,
+  "owner_timezone": "America/New_York",
+  "scan": {
+    "minimum_shift_minutes": -360,
+    "maximum_shift_minutes": 360,
+    "step_minutes": 1,
+    "basis_names": [
+      "open",
+      "close",
+      "hlc3"
+    ],
+    "permutation_count": 2000,
+    "permutation_seed": 164
+  },
+  "best_constant_alignment": {
+    "shift_minutes": 3,
+    "basis": "open",
+    "basis_offset": 221.0500000000029,
+    "median_abs_residual": 6.299999999995634,
+    "samples": 30,
+    "permutation_p_value": 0.0004997501249375312,
+    "clock_correct_at_zero": false
+  },
+  "top_alignments": [
+    {
+      "shift_minutes": 3,
+      "basis": "open",
+      "basis_offset": 221.0500000000029,
+      "median_abs_residual": 6.299999999995634,
+      "samples": 30
+    },
+    {
+      "shift_minutes": 2,
+      "basis": "close",
+      "basis_offset": 221.32500000000073,
+      "median_abs_residual": 6.475000000002183,
+      "samples": 30
+    },
+    {
+      "shift_minutes": 2,
+      "basis": "hlc3",
+      "basis_offset": 223.15000000000146,
+      "median_abs_residual": 7.983333333333576,
+      "samples": 30
+    },
+    {
+      "shift_minutes": 3,
+      "basis": "hlc3",
+      "basis_offset": 225.81666666666752,
+      "median_abs_residual": 8.56666666665697,
+      "samples": 30
+    },
+    {
+      "shift_minutes": 4,
+      "basis": "open",
+      "basis_offset": 229.10000000000218,
+      "median_abs_residual": 9.225000000002183,
+      "samples": 30
+    },
+    {
+      "shift_minutes": -2,
+      "basis": "hlc3",
+      "basis_offset": 226.6166666666686,
+      "median_abs_residual": 9.39999999999418,
+      "samples": 29
+    }
+  ],
+  "per_entry_best_shifts": {
+    "basis": "open",
+    "shifts": [
+      -41,
+      -206,
+      -199,
+      74,
+      45,
+      -1,
+      -15,
+      -16,
+      75,
+      121,
+      26,
+      2,
+      -121,
+      -330,
+      24,
+      -180,
+      -280,
+      -304,
+      -123,
+      6,
+      -113,
+      -12,
+      -282,
+      -4,
+      -75,
+      -57,
+      -89,
+      161,
+      -58,
+      13,
+      -64
+    ],
+    "distribution": {
+      "-330": 1,
+      "-304": 1,
+      "-282": 1,
+      "-280": 1,
+      "-206": 1,
+      "-199": 1,
+      "-180": 1,
+      "-123": 1,
+      "-121": 1,
+      "-113": 1,
+      "-89": 1,
+      "-75": 1,
+      "-64": 1,
+      "-58": 1,
+      "-57": 1,
+      "-41": 1,
+      "-16": 1,
+      "-15": 1,
+      "-12": 1,
+      "-4": 1,
+      "-1": 1,
+      "2": 1,
+      "6": 1,
+      "13": 1,
+      "24": 1,
+      "26": 1,
+      "45": 1,
+      "74": 1,
+      "75": 1,
+      "121": 1,
+      "161": 1
+    }
+  },
+  "filter_shift_used": 3,
+  "filter_counts_at_best_shift": {
+    "ema": 26,
+    "adx_di": 22,
+    "vwap_side": 24,
+    "vwap_distance": 13,
+    "all_four": 7,
+    "rows_with_bar": 30
+  },
+  "port_match_within_plus_minus_2_bars": 4,
+  "bar_label_convention": {
+    "owner_time_is_bar_open": {
+      "ema": 26,
+      "adx_di": 22,
+      "vwap_side": 24,
+      "vwap_distance": 13,
+      "all_four": 7,
+      "rows_with_bar": 30
+    },
+    "owner_time_is_bar_close": {
+      "ema": 24,
+      "adx_di": 19,
+      "vwap_side": 23,
+      "vwap_distance": 21,
+      "all_four": 9,
+      "rows_with_bar": 29
+    }
+  },
+  "coverage": {
+    "NSXUSD": {
+      "1m": 12350,
+      "3m": 4013,
+      "5m": 2355,
+      "60m": 118
+    },
+    "XAUUSD": {
+      "owner_rows": 0,
+      "note": "no owner rows in this window"
+    }
+  },
+  "safety": {
+    "broker_calls": 0,
+    "orders": 0,
+    "sealed_holdout_read": false,
+    "lake_writes": 0,
+    "production_state_writes": 0,
+    "gate_evaluated": false,
+    "tuning": false
+  }
+}
