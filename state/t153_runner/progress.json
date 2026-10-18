@@ -1,0 +1,103 @@
+{
+  "groups": {
+    "NSXUSD/1": {
+      "elapsed_seconds": 1200.12,
+      "exit_code": -15,
+      "instrument": "NSXUSD",
+      "key": "NSXUSD/1",
+      "output_dir": "/workspace/state/t153_runner/groups/nsxusd_1m",
+      "queries_done": 36,
+      "rss_peak_bytes": 2318458880,
+      "started_at": 1792241710.9030843,
+      "status": "partial",
+      "timeframe": 1
+    },
+    "NSXUSD/3": {
+      "elapsed_seconds": 1200.116,
+      "exit_code": -15,
+      "instrument": "NSXUSD",
+      "key": "NSXUSD/3",
+      "output_dir": "/workspace/state/t153_runner/groups/nsxusd_3m",
+      "queries_done": 36,
+      "rss_peak_bytes": 6256623616,
+      "started_at": 1792238733.551957,
+      "status": "partial",
+      "timeframe": 3
+    },
+    "NSXUSD/5": {
+      "elapsed_seconds": 1200.115,
+      "exit_code": -15,
+      "instrument": "NSXUSD",
+      "key": "NSXUSD/5",
+      "output_dir": "/workspace/state/t153_runner/groups/nsxusd_5m",
+      "queries_done": 36,
+      "rss_peak_bytes": 5924884480,
+      "started_at": 1792235730.4756992,
+      "status": "partial",
+      "timeframe": 5
+    },
+    "NSXUSD/60": {
+      "elapsed_seconds": 416.147,
+      "evidence_file": "/workspace/state/t153_runner/groups/nsxusd_60m/t146_group_nsxusd_60m.json",
+      "exit_code": 0,
+      "instrument": "NSXUSD",
+      "key": "NSXUSD/60",
+      "output_dir": "/workspace/state/t153_runner/groups/nsxusd_60m",
+      "queries_done": 0,
+      "rss_peak_bytes": 5494038528,
+      "started_at": 1792234551.7902257,
+      "status": "complete",
+      "timeframe": 60
+    },
+    "XAUUSD/1": {
+      "elapsed_seconds": 1200.115,
+      "exit_code": -15,
+      "instrument": "XAUUSD",
+      "key": "XAUUSD/1",
+      "output_dir": "/workspace/state/t153_runner/groups/xauusd_1m",
+      "queries_done": 36,
+      "rss_peak_bytes": 2823204864,
+      "started_at": 1792243211.9985259,
+      "status": "partial",
+      "timeframe": 1
+    },
+    "XAUUSD/3": {
+      "elapsed_seconds": 1200.12,
+      "exit_code": -15,
+      "instrument": "XAUUSD",
+      "key": "XAUUSD/3",
+      "output_dir": "/workspace/state/t153_runner/groups/xauusd_3m",
+      "queries_done": 36,
+      "rss_peak_bytes": 7110901760,
+      "started_at": 1792240212.0860114,
+      "status": "partial",
+      "timeframe": 3
+    },
+    "XAUUSD/5": {
+      "elapsed_seconds": 1200.114,
+      "exit_code": -15,
+      "instrument": "XAUUSD",
+      "key": "XAUUSD/5",
+      "output_dir": "/workspace/state/t153_runner/groups/xauusd_5m",
+      "queries_done": 36,
+      "rss_peak_bytes": 6746279936,
+      "started_at": 1792237236.8000302,
+      "status": "partial",
+      "timeframe": 5
+    },
+    "XAUUSD/60": {
+      "elapsed_seconds": 479.144,
+      "evidence_file": "/workspace/state/t153_runner/groups/xauusd_60m/t146_group_xauusd_60m.json",
+      "exit_code": 0,
+      "instrument": "XAUUSD",
+      "key": "XAUUSD/60",
+      "output_dir": "/workspace/state/t153_runner/groups/xauusd_60m",
+      "queries_done": 0,
+      "rss_peak_bytes": 6251479040,
+      "started_at": 1792235193.6013322,
+      "status": "complete",
+      "timeframe": 60
+    }
+  },
+  "version": 1
+}
