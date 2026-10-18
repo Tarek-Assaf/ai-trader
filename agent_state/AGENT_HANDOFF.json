@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 425,
+  "turn": "human",
+  "revision": 427,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -5140,7 +5140,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5154,8 +5154,13 @@
         "docs/evidence/t155_tai_parity_report.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "scripts/lab_t155_tai_parity.py",
+        "tests/unit/test_t155_tai_parity.py",
+        "docs/evidence/t155_tai_parity_summary.json",
+        "docs/evidence/t155_tai_parity_report.md"
+      ],
+      "completion_note": "Completed the Pod-only T-155 parity diagnostic. On 3,974 recorded NAS100 3m bars, hand-written independent EMA200, ATR14, ADX14, +DI14, -DI14 and Heikin Ashi references matched the production implementations exactly (max and median absolute difference 0.0, with no warmup mismatches). TA-Lib and pandas-ta were unavailable in the Pod image. The 31-entry VWAP sensitivity table found 0/31 entries passing all filters for UTC equal weighting, CME-open equal weighting, and CME-open tick-volume weighting; CME-open changed VWAP-side failures from 14 to 13 and dont-chase failures from 20 to 23. The diagnostic exited 0 with broker_calls=0, orders=0, sealed_holdout_read=false, gate1_evaluated=false and no cost/ledger/promotion or lake writes. Remaining unverifiable items are TradingView VWAP anchor/real NQ1! volume, 54m session anchoring, and futures-vs-CFD data."
     }
   ],
   "decisions": [
@@ -13517,6 +13522,39 @@
       "validated_by": "claude",
       "date": "2026-10-18",
       "reverify_if": "the Tai implementation or the owner trade file changes"
+    },
+    {
+      "id": "V-407",
+      "task_id": "T-155",
+      "subject": "T-155 independent indicator parity and VWAP sensitivity",
+      "method": "Ran the parity diagnostic on the owner-provided Pod against recorded NAS100 Capital.com data, inspected the redacted summary/report, ran py_compile and git diff --check, and checked all touched Python lines are <=100 characters.",
+      "result": "pass",
+      "checked": "Independent EMA200, ATR14, ADX14, +DI14, -DI14 and Heikin Ashi outputs matched the production implementations exactly across 3,974 3m bars. VWAP sensitivity covered UTC equal, CME-open equal and CME-open tick-volume modes for all 31 owner entries; all three produced 0/31 all-filter passes. TA-Lib and pandas-ta were unavailable. Safety counters remained zero for broker calls, orders, holdout reads, gate evaluation, lake writes and promotion paths.",
+      "evidence": [
+        "scripts/lab_t155_tai_parity.py",
+        "tests/unit/test_t155_tai_parity.py",
+        "docs/evidence/t155_tai_parity_summary.json",
+        "docs/evidence/t155_tai_parity_report.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-18T14:47:00Z",
+      "reverify_if": "Claude requests a correction to the reference formulas or VWAP sensitivity."
+    },
+    {
+      "id": "V-408",
+      "task_id": "T-155",
+      "subject": "T-155 review (Claude): is the Tai math wrong?",
+      "method": "Read report, summary and the independent reference functions; CI quality run; fixed a bad forming-candle test in T-151 (CI failure) myself.",
+      "result": "pass",
+      "checked": "Our EMA200, ATR14, ADX14, +DI/-DI14 and Heikin-Ashi match independent hand-written Wilder/EMA references exactly on 3,974 NAS100 3m bars, so the indicator MATH is not the cause. Caveat: the references were written by the same agent from the same Pine conventions, and TA-Lib/pandas-ta were unavailable, so this proves internal consistency, not equality with TradingView's own numbers. VWAP anchor/weighting changes do not help: 0/31 owner entries pass all filters in all three VWAP modes. Conclusion: the mismatch is not a VWAP or maths bug. Remaining candidates: the indicator settings on the owner's chart differ from the file defaults (e.g. setup type Renko instead of Open/Close, different tfmult, filters), futures-vs-CFD data, 54m session anchoring, or the owner's entries are discretionary.",
+      "evidence": [
+        "docs/evidence/t155_tai_parity_report.md",
+        "docs/evidence/t155_tai_parity_summary.json",
+        "scripts/lab_t155_tai_parity.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-18",
+      "reverify_if": "the Tai implementation changes"
     }
   ],
   "blockers": [
@@ -14523,6 +14561,20 @@
       ],
       "recommendation": "A: it gives the exact indicator values and signals per bar and the real NQ futures prices, which removes the CFD data differences.",
       "answer": "Owner 2026-10-18 17:57 Riyadh: TradingView chart-data export needs a paid plan (about $60), so it is not doable (option B: work with Pod data only)."
+    },
+    {
+      "id": "Q-066",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "Our maths matches the standard formulas and 0 of your 31 entries pass the indicator's filters even with VWAP set like TradingView, so the setup on your chart may differ from the file defaults. Please send ONE screenshot of the indicator's Settings > Inputs tab (scroll to show all inputs: setup type, higher-timeframe multiplier, filters, ADX, VWAP, refresh) and one of the same indicator's Style/visible signals on any 2 of your entry bars. Free, no export needed. Can you send them?",
+      "options": [
+        "A: Yes, I will send the Inputs screenshots (recommended)",
+        "B: The inputs are all defaults, I changed nothing",
+        "C: I do not use the indicator's buy/sell signals, I enter on my own reading"
+      ],
+      "recommendation": "A: it directly shows whether the chart runs the same configuration as the file, which is the one thing we cannot see from here.",
+      "answer": ""
     }
   ],
   "log": [
@@ -23394,6 +23446,36 @@
         "scripts/lab_t151_owner_trades.py"
       ],
       "summary": "Accepted T-151 (V-406): refresh-path variants hit 1 of 31 owner entries within 5 bars and 0 of 31 entries pass all Tai filters on our data (ADX/DI fails 21, dont-chase 20, HA state 20, EMA 12). Fixed a mypy error and formatting myself. Added T-155 (indicator parity against TradingView's exported plot values, blocked on the owner's chart-data export) and Q-065 to the owner. Turn to human. Owner then answered Q-065 (export is paid, option B): T-155 re-scoped to Pod-only parity against independent indicator references and VWAP-anchor sensitivity, status todo, turn to codex."
+    },
+    {
+      "revision": 426,
+      "ts": "2026-10-18T15:02:00Z",
+      "agent": "codex",
+      "action": "complete_t155_parity_diagnostic",
+      "task_ids": [
+        "T-155"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t155_tai_parity_report.md",
+        "docs/evidence/t155_tai_parity_summary.json",
+        "scripts/lab_t155_tai_parity.py",
+        "tests/unit/test_t155_tai_parity.py"
+      ],
+      "summary": "Completed T-155 from the accepted T-151 dependency. The Pod-only diagnostic compared independent EMA/ATR/ADX/DI/Heikin-Ashi formulas on 3,974 NAS100 3m bars with exact zero differences, then recomputed all 31 owner-entry filters under UTC equal, CME-open equal and CME-open tick-volume VWAP sensitivity; all produced 0/31 all-filter passes. TA-Lib and pandas-ta were unavailable. Safety remained zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. T-155 is handed to Claude for review. Then (same hand-off): Removed unused parity imports after the read-only Pod run; py_compile and the <=100-character line check remain clean. No diagnostic behavior or evidence changed. T-155 remains in Claude review."
+    },
+    {
+      "revision": 427,
+      "ts": "2026-10-18T18:50:00+03:00",
+      "agent": "claude",
+      "action": "review_t155_accepted_asked_inputs",
+      "task_ids": [
+        "T-155"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-155 (V-408): indicator maths matches independent references exactly and VWAP anchoring does not explain the mismatch (0/31 in all modes). Merged Codex's two consecutive entries into one. Asked the owner for the Inputs-tab screenshot (Q-066) to compare his chart settings with the file defaults. Turn to human."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
