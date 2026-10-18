@@ -30,6 +30,7 @@ try:
         HIGHER_MINUTES,
         TIMEFRAME_MINUTES,
         OwnerEntry,
+        _candidate_paths,
         _higher_groups,
         _risk,
         aggregate_3m,
@@ -50,6 +51,7 @@ except ModuleNotFoundError:  # direct ``python scripts/lab_t156_feature_dump.py`
         HIGHER_MINUTES,
         TIMEFRAME_MINUTES,
         OwnerEntry,
+        _candidate_paths,
         _higher_groups,
         _risk,
         aggregate_3m,
@@ -115,7 +117,7 @@ def _read_side_minutes(lake: Path, start: datetime, end: datetime, side: str) ->
         raise RuntimeError("pyarrow is required for T-156") from exc
     paired: dict[datetime, dict[str, Candle]] = defaultdict(dict)
     singles: dict[datetime, Candle] = {}
-    for path in sorted(lake.rglob("*.parquet")):
+    for path in _candidate_paths(lake):
         try:
             schema = set(pq.ParquetFile(path).schema.names)
             required = {"ts_utc", "open", "high", "low", "close"}
