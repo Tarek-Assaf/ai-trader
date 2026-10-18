@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 432,
+  "turn": "human",
+  "revision": 434,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-156 accepted. Q-068 answered: the indicator prints signals on Capital.com US100 too, so our replay logic, bar construction or timing differs. T-157 queued for Codex: find the first failing indicator rule per owner entry and test timing/anchor switches. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-157 accepted: our replay passes 0/31 owner entries; the 54m Heikin Ashi condition fails first in 20 of 31 and no tested variant fixes it. Q-069 asks the owner for the indicator's Pine source (or name/author and settings screenshots). T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5198,7 +5198,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5218,8 +5218,12 @@
         "docs/evidence/t157_report.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "scripts/lab_t157_rule_by_rule.py",
+        "docs/evidence/t157_rule_by_rule.csv",
+        "docs/evidence/t157_report.md"
+      ],
+      "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in ±3 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in ±3 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
     }
   ],
   "decisions": [
@@ -13646,6 +13650,38 @@
       "validated_by": "claude",
       "date": "2026-10-18T21:00:00+03:00",
       "reverify_if": "The owner supplies a TradingView run on the Capital.com US100 symbol, or a futures data source is added."
+    },
+    {
+      "id": "V-411",
+      "task_id": "T-157",
+      "subject": "T-157 rule-by-rule replay and timing switches",
+      "method": "Ran scripts/lab_t157_rule_by_rule.py on the owner-provided Pod with the NAS100 lake and owner CSV; inspected the report and artifact hashes; ran py_compile and git diff --check; verified the script has no broker, holdout or production-state access.",
+      "result": "pass",
+      "checked": "Pod run exited 0 with 31 entries, 5,103 data rows plus header, mid/bid/ask bases and nine registered switches. The forming-Wilder-SMA-EMA UTC baseline passed 0/31 at center and in ±3 bars; the best registered switch passed 1/31 in ±3 bars, below the 20/31 stop threshold. Baseline first-failure counts were ha_state 20, ema_side 3, adx_di 3, dont_chase 1 and four missing bars. Pod CSV SHA-256 b365f36b34199c1b21a2806f4fd541e98c04ff3236bc2aa2fdb82f97230e81a1; report SHA-256 d22698d39eef079f25c1e50d0561496c7dee2d4fc762bb64a3a03f16e53756df. No broker calls, orders, sealed holdout reads, gate, cost, ledger, promotion or lake writes.",
+      "evidence": [
+        "scripts/lab_t157_rule_by_rule.py",
+        "docs/evidence/t157_rule_by_rule.csv",
+        "docs/evidence/t157_report.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-18T18:36:04.783977Z",
+      "reverify_if": "Claude requests the full Pod CSV artifact or changes the registered switch set."
+    },
+    {
+      "id": "V-412",
+      "task_id": "T-157",
+      "subject": "Claude review of T-157 rule-by-rule replay gap",
+      "method": "Read report, CSV and script; confirmed times/directions-only comparison, stop rule honoured (best 1/31 < 20), no broker/holdout/gate/cost/ledger writes; checked old handoff entries identical to main; ran ruff check and ruff format (line length 100) and fixed lint (unused import, long report strings marked noqa).",
+      "result": "pass",
+      "checked": "Acceptance met. Result is negative but informative: baseline passes 0/31 on mid, bid and ask; first failing rule is the 54m Heikin Ashi state in 20 of 31 entries (EMA 3, ADX/DI 3, don't-chase 1, 4 missing bars). None of nine switches (closed/forming HA, UTC/Riyadh/CME anchors, Wilder vs simple, EMA seed, +-1 bar shift) gets near 20/31; best 1/31. So the 54m HA filter in our code does not match the indicator, and guessing more variants is not worthwhile without the indicator's source.",
+      "evidence": [
+        "docs/evidence/t157_report.md",
+        "docs/evidence/t157_rule_by_rule.csv",
+        "scripts/lab_t157_rule_by_rule.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-18T22:45:00+03:00",
+      "reverify_if": "The indicator's Pine source or exact HA/timeframe settings are supplied."
     }
   ],
   "blockers": [
@@ -14694,6 +14730,20 @@
       ],
       "recommendation": "A: if the labels vanish on US100, the signals depend on futures price and volume and cannot be reproduced on our CFD data; if they stay, we chase a timing difference.",
       "answer": "Owner 2026-10-18: Capital.com is not linked to his TradingView, but he sent a screenshot of 'US 100 Cash CFD' (3m, 13-14 Oct, ~30,500) where the Tai indicator DOES print many BUY/SELL labels (dashboard: Trades 53, SL 12, TP1 15, TP2 9, TP3 17, win rate 77.36%). So signals exist on CFD cash data and are not futures-only; our replay differs in logic, bars or timing. Owner says the owner-trades sheet already sent is the reference; 'let's finish it up'."
+    },
+    {
+      "id": "Q-069",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "T-157 shows our replay fails mainly on the 54-minute Heikin Ashi condition (20 of your 31 entries), and none of nine plausible variants fixes it. We have been rebuilding the indicator from its description. The reliable fix is to read the real code. Can you open the Tai indicator on TradingView, choose 'Source code' (the {} button on the indicator, if the author allows it), and paste or send the Pine script text, or tell me its exact name and author?",
+      "options": [
+        "A: I will send the Pine source code (recommended)",
+        "B: It is protected/invite-only, I can only send the name, author and a screenshot of all its Settings tabs (Inputs and Style)",
+        "C: Stop this investigation, we accept that we cannot reproduce it"
+      ],
+      "recommendation": "A: with the source we can copy the exact rules and replay them, instead of guessing variants.",
+      "answer": ""
     }
   ],
   "log": [
@@ -23664,6 +23714,36 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner answered Q-068 with a Capital.com US100 screenshot showing the indicator labels (53 trades). Queued T-157: rule-by-rule replay gap on the 31 owner entries (times and directions only). Turn to codex."
+    },
+    {
+      "revision": 433,
+      "ts": "2026-10-18T18:36:04.784010Z",
+      "agent": "codex",
+      "action": "complete_t157_rule_by_rule",
+      "task_ids": [
+        "T-157"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t157_rule_by_rule.py",
+        "docs/evidence/t157_rule_by_rule.csv",
+        "docs/evidence/t157_report.md"
+      ],
+      "summary": "Completed T-157 from accepted T-156. Read-only Pod replay evaluated each Tai rule for all 31 owner entries across ±3 bars and mid/bid/ask bases, tested nine registered HA/VWAP/ADX/DI/EMA/timestamp switches, and stopped under the 20/31 threshold. Baseline first failures: HA 20, EMA 3, ADX/DI 3, dont-chase 1, four missing bars; baseline and all price bases pass 0/31, best switch passes 1/31 in ±3. Pod artifact hashes and compact-index caveat are recorded. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
+    },
+    {
+      "revision": 434,
+      "ts": "2026-10-18T22:45:00+03:00",
+      "agent": "claude",
+      "action": "accept_t157_ask_q069",
+      "task_ids": [
+        "T-157"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t157_rule_by_rule.py"
+      ],
+      "summary": "Reviewed T-157: pass (lint fixed). Replay passes 0/31; 54m HA state is the first failing rule in 20/31; no tested switch helps. Asked owner Q-069 for the indicator's Pine source. No task queued; turn to human."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
