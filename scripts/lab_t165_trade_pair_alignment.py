@@ -84,38 +84,36 @@ def read_owner_trades(path: Path) -> tuple[OwnerTrade, ...]:
             number = str(row.get("Trade number", "")).strip()
             if number:
                 groups.setdefault(number, []).append(row)
-    trades: list[OwnerTrade] = []
-    for number, rows in sorted(groups.items(), key=lambda item: int(item[0]) if item[0].isdigit() else item[0]):
+    # The export has 54 tranches but 31 distinct entry timestamps.  T-165's
+    # acceptance count is 31, so collapse pyramids into one parent trade:
+    # quantity-weight entry/exit prices, use the final exit timestamp, sum
+    # excursion dollars and use the longest reported duration.
+    parents: dict[tuple[str, str], list[tuple[dict[str, str], dict[str, str]]]] = {}
+    for number, rows in groups.items():
         entry = next((r for r in rows if str(r.get("Type", "")).lower().startswith("entry")), None)
         exit_row = next((r for r in rows if str(r.get("Type", "")).lower().startswith("exit")), None)
         if entry is None or exit_row is None:
             continue
         kind = str(entry.get("Type", "")).lower()
         direction = "long" if "long" in kind else "short" if "short" in kind else ""
-        if not direction:
-            continue
-        qty = abs(_float(entry, "Size (qty)") or 0.0)
-        fav_usd = _float(entry, "Favorable excursion USD")
-        adv_usd = _float(entry, "Adverse excursion USD")
-        fav_points = fav_usd / (POINT_VALUE_USD * qty) if fav_usd is not None and qty else None
-        adv_points = abs(adv_usd) / (POINT_VALUE_USD * qty) if adv_usd is not None and qty else None
-        duration = _float(entry, "Duration (bars)")
-        trades.append(
-            OwnerTrade(
-                number=number,
-                direction=direction,
-                entry_time=parse_owner_datetime(str(entry["Date and time"])),
-                exit_time=parse_owner_datetime(str(exit_row["Date and time"])),
-                entry_price=float(entry["Price USD"]),
-                exit_price=float(exit_row["Price USD"]),
-                quantity=qty,
-                favorable_points=fav_points,
-                adverse_points=adv_points,
-                duration_bars=int(duration) if duration is not None else None,
-                favorable_usd=fav_usd,
-                adverse_usd=adv_usd,
-            )
-        )
+        if direction:
+            parents.setdefault((str(entry["Date and time"]), direction), []).append((entry, exit_row))
+    trades: list[OwnerTrade] = []
+    for parent_index, ((entry_stamp, direction), pairs) in enumerate(sorted(parents.items()), start=1):
+        entry_time = parse_owner_datetime(entry_stamp)
+        quantities = [abs(_float(entry, "Size (qty)") or 0.0) for entry, _ in pairs]
+        quantity = sum(quantities)
+        entry_price = sum(float(entry["Price USD"]) * qty for (entry, _), qty in zip(pairs, quantities, strict=True)) / quantity
+        exit_time = max(parse_owner_datetime(str(exit_row["Date and time"])) for _, exit_row in pairs)
+        exit_price = sum(float(exit_row["Price USD"]) * qty for (_, exit_row), qty in zip(pairs, quantities, strict=True)) / quantity
+        fav_usd_values = [_float(entry, "Favorable excursion USD") for entry, _ in pairs]
+        adv_usd_values = [_float(entry, "Adverse excursion USD") for entry, _ in pairs]
+        fav_usd = sum(value or 0.0 for value in fav_usd_values) if any(value is not None for value in fav_usd_values) else None
+        adv_usd = sum(value or 0.0 for value in adv_usd_values) if any(value is not None for value in adv_usd_values) else None
+        fav_points = fav_usd / (POINT_VALUE_USD * quantity) if fav_usd is not None and quantity else None
+        adv_points = abs(adv_usd) / (POINT_VALUE_USD * quantity) if adv_usd is not None and quantity else None
+        durations = [int(value) for entry, _ in pairs if (value := _float(entry, "Duration (bars)")) is not None]
+        trades.append(OwnerTrade(str(parent_index), direction, entry_time, exit_time, entry_price, exit_price, quantity, fav_points, adv_points, max(durations) if durations else None, fav_usd, adv_usd))
     return tuple(trades)
 
 
