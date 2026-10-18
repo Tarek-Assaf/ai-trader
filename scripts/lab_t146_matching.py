@@ -24,6 +24,11 @@ from statistics import mean
 from typing import Any
 
 try:
+    import numpy as np
+except ModuleNotFoundError:  # pragma: no cover - optional desktop dependency
+    np = None  # type: ignore[assignment]
+
+try:
     from trader.data.resample import Candle
 except ModuleNotFoundError:  # direct ``python scripts/lab_t146_matching.py`` execution
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -80,6 +85,29 @@ class ShapeCluster:
     cluster_id: int
     medoid: ShapeWindow
     members: tuple[ShapeWindow, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class MatchIndex:
+    """Precomputed matrix for one fixed-length library.
+
+    Every call in the OOS loop uses the same in-sample library.  Keeping its
+    values in one NumPy matrix makes the correlation prefilter and correlation
+    baseline a single vectorised operation instead of a Python loop over every
+    library window.  The scalar path remains available when NumPy is absent.
+    """
+
+    candidates: tuple[ShapeWindow, ...]
+    matrix: Any | None
+
+
+def build_match_index(library: Sequence[ShapeWindow]) -> MatchIndex:
+    """Build a reusable index for a fixed-length library."""
+    candidates = tuple(library)
+    matrix = None
+    if np is not None and candidates and len({len(item.values) for item in candidates}) == 1:
+        matrix = np.asarray([item.values for item in candidates], dtype=float)
+    return MatchIndex(candidates=candidates, matrix=matrix)
 
 
 def _finite(values: Iterable[float]) -> bool:
@@ -289,17 +317,52 @@ def find_matches(
     method: str = "dtw",
     k: int = 20,
     correlation_prefilter: int = CORRELATION_PREFILTER,
+    index: MatchIndex | None = None,
 ) -> tuple[Match, ...]:
-    """Find top past-only matches and remove overlapping candidates."""
+    """Find top past-only matches and remove overlapping candidates.
+
+    ``index`` enables the fast path used by the real-lake runner.  It computes
+    correlation distances for a whole library matrix at once, while retaining
+    the scalar implementation for callers without NumPy and for reference
+    comparisons in the unit tests.
+    """
     if method not in {"dtw", "correlation"}:
         raise ValueError("method must be dtw or correlation")
     if k <= 0:
         raise ValueError("k must be positive")
-    eligible = [
-        candidate
-        for candidate in library
+    candidates = tuple(index.candidates if index is not None else library)
+    eligible_pairs = [
+        (position, candidate)
+        for position, candidate in enumerate(candidates)
         if candidate.ts_end < query.ts_start and len(candidate.values) == len(query.values)
     ]
+    eligible = [candidate for _, candidate in eligible_pairs]
+    if index is not None and index.matrix is not None and np is not None and eligible:
+        positions = [position for position, _ in eligible_pairs]
+        query_array = np.asarray(query.values, dtype=float)
+        matrix = index.matrix[positions]
+        centred = matrix - matrix.mean(axis=1, keepdims=True)
+        query_centred = query_array - query_array.mean()
+        denominator = np.linalg.norm(centred, axis=1) * np.linalg.norm(query_centred)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            distances_array = 1.0 - (centred @ query_centred) / denominator
+        equal_constant = np.all(matrix == query_array, axis=1)
+        distances_array = np.where((denominator == 0) & equal_constant, 0.0, distances_array)
+        distances_array = np.where((denominator == 0) & ~equal_constant, 1.0, distances_array)
+        distances = [float(value) for value in distances_array]
+        if method == "correlation":
+            scored = [
+                Match(candidate, distance, method)
+                for candidate, distance in zip(eligible, distances, strict=True)
+                if math.isfinite(distance)
+            ]
+            return _non_overlapping(scored, len(query.values), k)
+        if method == "dtw" and correlation_prefilter > 0 and len(eligible) > correlation_prefilter:
+            order = sorted(
+                range(len(eligible)),
+                key=lambda position: (distances[position], eligible[position].start),
+            )[:correlation_prefilter]
+            eligible = [eligible[position] for position in order]
     if method == "dtw" and correlation_prefilter > 0 and len(eligible) > correlation_prefilter:
         eligible.sort(key=lambda candidate: correlation_distance(query.values, candidate.values))
         eligible = eligible[:correlation_prefilter]
@@ -687,13 +750,20 @@ def run_group(
     query_stride = 1
     for length in WINDOW_LENGTHS:
         library = in_sample.get(length, ())
+        match_index = build_match_index(library)
         queries, stride = _sample_queries(out_of_sample.get(length, ()), max_queries)
         query_stride = max(query_stride, stride)
         for method in ("dtw", "correlation"):
             for horizon in HORIZONS:
                 records: list[QueryRecord] = []
                 for query_number, query in enumerate(queries):
-                    matches = find_matches(query, library, method=method, k=20)
+                    matches = find_matches(
+                        query,
+                        library,
+                        method=method,
+                        k=20,
+                        index=match_index,
+                    )
                     controls = random_control(
                         query, library, count=len(matches), seed=seed + query_number
                     )

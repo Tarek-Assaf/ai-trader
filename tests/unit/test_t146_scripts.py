@@ -7,6 +7,8 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT))
@@ -142,6 +144,36 @@ def test_repeated_shape_beats_white_noise() -> None:
     matches = module.find_matches(query, (repeated, noise), method="dtw", k=2)
     assert matches[0].window.start == repeated.start
     assert matches[0].distance < matches[1].distance
+
+
+def test_vectorized_matcher_matches_scalar_scores() -> None:
+    module = load_script()
+    query = window(module, 100, (0.0, 1.0, 0.5, 1.5))
+    library = tuple(
+        window(module, index, values)
+        for index, values in enumerate(
+            (
+                (0.0, 1.0, 0.5, 1.5),
+                (0.0, 0.9, 0.4, 1.3),
+                (0.0, -0.4, 0.8, -0.2),
+                (0.0, 0.2, 0.1, 0.4),
+                (0.0, 1.5, 0.2, 0.8),
+            ),
+            start=1,
+        )
+    )
+    index = module.build_match_index(library)
+    for method in ("dtw", "correlation"):
+        scalar = module.find_matches(
+            query, library, method=method, k=3, correlation_prefilter=3
+        )
+        vectorized = module.find_matches(
+            query, library, method=method, k=3, correlation_prefilter=3, index=index
+        )
+        assert [item.window.start for item in vectorized] == [item.window.start for item in scalar]
+        assert [item.distance for item in vectorized] == pytest.approx(
+            [item.distance for item in scalar]
+        )
 
 
 def test_query_sampling_is_bounded_and_deterministic() -> None:
