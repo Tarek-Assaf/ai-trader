@@ -31,9 +31,9 @@ def test_forming_heikin_ashi_matches_hand_calculation() -> None:
 
 
 def test_forming_partial_can_cross_then_reverse() -> None:
-    first = forming_heikin_ashi((_bar(0, 100.0, 101.0, 98.0, 99.0),))
-    bullish = forming_heikin_ashi((_bar(0, 100.0, 104.0, 98.0, 103.0),))
-    bearish = forming_heikin_ashi((_bar(0, 100.0, 101.0, 95.0, 96.0),))
+    first = forming_heikin_ashi((_bar(0, 100.0, 100.5, 96.0, 97.0),))
+    bullish = forming_heikin_ashi((_bar(0, 100.0, 110.0, 99.0, 105.0),))
+    bearish = forming_heikin_ashi((_bar(0, 100.0, 101.0, 90.0, 95.0),))
     assert first[1] < first[0]
     assert bullish[1] > bullish[0]
     assert bearish[1] < bearish[0]
