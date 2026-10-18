@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 441,
+  "turn": "claude",
+  "revision": 442,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-159 accepted; owner confirmed New York export time (UTC-4) and Q-070 is answered. T-160 is in progress for Codex: use zoneinfo America/New_York only when reading owner CSV, re-check alignment and rerun T-157 once. No production UTC path changes, broker calls, orders, holdout reads or lake writes.",
+    "summary": "T-160 is blocked after implementing the New York zoneinfo owner-CSV conversion and tests. The required Pod-only alignment and T-157 replay cannot run because the owner terminal URL is blocked by the browser and the prior session is unavailable. No replay verdict, broker call, holdout read, lake write or production change occurred. B-030 records the exact network/session blocker.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5300,7 +5300,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "blocked",
       "requirements": [
         "R-03"
       ],
@@ -5318,8 +5318,15 @@
         "docs/evidence/t160_replay.csv"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Started T-160 from accepted T-159. Scope is limited to zoneinfo America/New_York conversion in owner-CSV readers, alignment re-check, and one T-157 replay rerun; production UTC paths and safety boundaries remain unchanged."
+      "evidence": [
+        "scripts/lab_t160_owner_time_ny.py: shared zoneinfo America/New_York conversion, T-159 alignment/T-157 replay orchestration, explicit fold=0 DST rule.",
+        "scripts/lab_t151_owner_trades.py, scripts/lab_t158_pipeline_audit.py, scripts/lab_t159_time_alignment.py: owner CSV readers use the shared conversion; T-155/T-156/T-157 inherit it through T-151.",
+        "tests/unit/test_t160_owner_time_ny.py: known summer, winter and DST fall-back timestamps; direct assertions passed.",
+        "docs/specs/t151_owner_trades_comparison.md: prior UTC note marked superseded by T-160; production src/trader UTC paths unchanged.",
+        "python -m py_compile touched scripts/tests passed; git diff --check passed. Full desktop pytest/ruff unavailable."
+      ],
+      "completion_note": "Implemented the one New York-time correction and its known-timestamp tests. The required bounded Pod run of T-159 alignment plus T-157 replay could not start: the owner-provided terminal URL returned ERR_BLOCKED_BY_CLIENT and the prior Pod tab/session was unavailable. No replay verdict or evidence artifact is claimed; exact blocker B-030 is handed to Claude.",
+      "review_notes": "Blocked pending an owner-provided reachable Pod terminal/session for the required read-only alignment and T-157 replay run."
     }
   ],
   "decisions": [
@@ -13820,6 +13827,23 @@
       "validated_by": "claude",
       "date": "2026-10-18T23:45:00+03:00",
       "reverify_if": "The owner confirms the export time zone or the parser/recorder time handling changes."
+    },
+    {
+      "id": "V-415",
+      "task_id": "T-160",
+      "subject": "T-160 New York owner-time conversion implementation",
+      "method": "Inspected the shared conversion and all owner-CSV readers; ran known timestamp assertions for summer, winter and DST fall-back fold=0; ran python -m py_compile and git diff --check. Pod run was attempted once through the owner-provided URL and was blocked before any command executed.",
+      "result": "implementation pass; acceptance blocked. Conversion maps 2026-10-06 10:00 to 14:00 UTC, 2026-12-01 10:00 to 15:00 UTC and ambiguous 2026-11-01 01:30 to the earlier 05:30 UTC occurrence. No replay output exists because the Pod terminal was unavailable.",
+      "evidence": [
+        "scripts/lab_t160_owner_time_ny.py",
+        "scripts/lab_t151_owner_trades.py",
+        "scripts/lab_t158_pipeline_audit.py",
+        "scripts/lab_t159_time_alignment.py",
+        "tests/unit/test_t160_owner_time_ny.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-18T21:00:00Z",
+      "reverify_if": "A reachable owner-provided Pod terminal/session becomes available."
     }
   ],
   "blockers": [
@@ -14033,6 +14057,13 @@
       "status": "resolved",
       "text": "T-159 confirms a repeatable +240-minute offset (49 comparable tranches, 87.76% agreement, permutation p=0.0005), but the owner export is documented and confirmed as UTC while Capital.com parsing, recorder normalization and resampling are explicit UTC. +240 is America/New_York EDT arithmetic, not Asia/Riyadh. No safe layer is identified; applying a timezone guess would violate the owner contract, so no correction or T-157 rerun is authorized.",
       "resolution": "Owner answered Q-070: the export is New York time (UTC-4). Fix scoped to T-160 (owner CSV reading only)."
+    },
+    {
+      "id": "B-030",
+      "task_id": "T-160",
+      "raised_by": "codex",
+      "status": "active",
+      "text": "T-160 requires a bounded read-only Pod run of scripts/lab_t160_owner_time_ny.py against /workspace/data/lake and the owner CSV. The prior Pod tab/session expired, and opening the owner-provided URL returned ERR_BLOCKED_BY_CLIENT. No T-159 alignment rerun or T-157 replay result can be claimed until a reachable Pod terminal/session is provided."
     }
   ],
   "questions": [
@@ -24009,6 +24040,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-160 from the accepted T-159 lineage after owner Q-070 confirmed the TradingView export uses New York/exchange time. Will use zoneinfo America/New_York in owner-CSV readers only, then rerun T-159 alignment and T-157 rule-by-rule replay once; no production UTC changes or broker/holdout/lake activity."
+    },
+    {
+      "revision": 442,
+      "ts": "2026-10-18T21:00:00Z",
+      "agent": "codex",
+      "action": "t160_conversion_ready_pod_blocked",
+      "task_ids": [
+        "T-160"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t160_owner_time_ny.py",
+        "scripts/lab_t151_owner_trades.py",
+        "scripts/lab_t158_pipeline_audit.py",
+        "scripts/lab_t159_time_alignment.py",
+        "tests/unit/test_t160_owner_time_ny.py",
+        "docs/specs/t151_owner_trades_comparison.md"
+      ],
+      "summary": "Implemented New York zoneinfo conversion in owner-CSV readers and known timestamp tests. Required Pod-only T-159 alignment/T-157 replay was not run: prior Pod session unavailable and owner URL rejected with ERR_BLOCKED_BY_CLIENT. No replay verdict or artifacts claimed; B-030 records the exact blocker. Turn to Claude."
     }
   ],
   "project_summary": "Owner confirmed his trade export is New York time (UTC-4); D-044. T-160 queued for Codex: read the owner list as New York time in the comparison scripts only, re-check alignment, rerun the 31-trade replay (was 0/31). Recorder, parser and bars stay UTC. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked."
