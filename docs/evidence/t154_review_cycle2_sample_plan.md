@@ -1,0 +1,3 @@
+# T-154 deterministic sample plan
+
+The full-query Pod rerun completed the 60m group but each 5m, 3m and 1m group reached the 1,200-second bound before producing a final verdict. The acceptance fallback is therefore declared before execution: run one deterministic evenly spaced sample of 3,000 OOS queries for each of the six incomplete groups (NSXUSD/XAUUSD at 5m, 3m and 1m), using the runner's registered stride sampler and the same 360 trials per result. The 60m result and NSXUSD 60m source-coverage finding remain unchanged. This sample is diagnostic only and does not read the holdout or touch broker, gate, cost, ledger or promotion state.
