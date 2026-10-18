@@ -473,11 +473,11 @@ def _refresh_candidates(chart: tuple[Candle, ...], gated: bool) -> tuple[Signal,
     open_trade: dict[str, float | str] | None = None
     for index, bar in enumerate(chart):
         if open_trade is not None:
-            direction = str(open_trade["direction"])
+            trade_direction = str(open_trade["direction"])
             stop = float(open_trade["stop"])
             target = float(open_trade["target"])
-            stop_hit = bar.low <= stop if direction == "long" else bar.high >= stop
-            target_hit = bar.high >= target if direction == "long" else bar.low <= target
+            stop_hit = bar.low <= stop if trade_direction == "long" else bar.high >= stop
+            target_hit = bar.high >= target if trade_direction == "long" else bar.low <= target
             if stop_hit or target_hit:
                 open_trade = None
             else:
@@ -683,35 +683,37 @@ def _condition_table(
             day_basis = basis.get(entry.entry_time.date().isoformat(), 0.0)
             adjusted_stop = structure_stop + day_basis
             owner_distance = (
-                abs(entry.entry_price - entry.stop_price)
-                if entry.stop_price is not None
-                else None
+                abs(entry.entry_price - entry.stop_price) if entry.stop_price is not None else None
             )
             adjusted_distance = abs(entry.entry_price - adjusted_stop)
-            row.update({
-                "structure_stop_price": structure_stop,
-                "structure_risk_points": structure_distance,
-                "basis_points": day_basis,
-                "basis_adjusted_structure_stop_price": adjusted_stop,
-                "owner_stop_distance_points": owner_distance,
-                "structure_stop_error_points": (
-                    abs(owner_distance - structure_distance)
-                    if owner_distance is not None
-                    else None
-                ),
-                "basis_adjusted_stop_error_points": (
-                    abs(owner_distance - adjusted_distance)
-                    if owner_distance is not None
-                    else None
-                ),
-            })
+            row.update(
+                {
+                    "structure_stop_price": structure_stop,
+                    "structure_risk_points": structure_distance,
+                    "basis_points": day_basis,
+                    "basis_adjusted_structure_stop_price": adjusted_stop,
+                    "owner_stop_distance_points": owner_distance,
+                    "structure_stop_error_points": (
+                        abs(owner_distance - structure_distance)
+                        if owner_distance is not None
+                        else None
+                    ),
+                    "basis_adjusted_stop_error_points": (
+                        abs(owner_distance - adjusted_distance)
+                        if owner_distance is not None
+                        else None
+                    ),
+                }
+            )
             if owner_distance is not None:
                 raw_errors.append(abs(owner_distance - structure_distance))
                 adjusted_errors.append(abs(owner_distance - adjusted_distance))
         rows.append(row)
+
     def median(values: list[float]) -> float | None:
         ordered = sorted(values)
         return ordered[len(ordered) // 2] if ordered else None
+
     return {
         "anchor": "utc_midnight",
         "entries": rows,
@@ -780,7 +782,7 @@ def _plain_report(payload: dict[str, Any]) -> str:
             f"{row.get('vwap_side')} | {row.get('dont_chase')} | "
             f"{row.get('risk_atr_ok')} | "
             f"{', '.join(row.get('failed_conditions', [])) or 'none'} |"
-            for row in payload['condition_table']['entries']
+            for row in payload["condition_table"]["entries"]
         ),
         "",
         "Safety: broker calls 0, orders 0, sealed holdout read false, and no gate, cost, ledger "
