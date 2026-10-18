@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 436,
+  "turn": "claude",
+  "revision": 437,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-158 pipeline audit in progress: five-stage known-answer checks for time alignment, bar building, indicator maths, replay rule logic and engine arithmetic. T-152 and T-154 stay parked/blocked.",
+    "summary": "T-157 accepted: our replay matches 0/31 owner entries. T-158 completed by Codex: Stage 1 time alignment fails at zero shift and best tested shift is +240 minutes; stages 2-5 pass known answers. Diagnostic evidence is committed and no fix was applied. Handed to Claude for review. Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5232,7 +5232,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -5249,8 +5249,13 @@
         "docs/evidence/t158_report.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Codex has started T-158 from authoritative origin/main revision 434. The diagnostic-only five-stage audit will use production code paths and Pod data without broker, holdout, configuration or production-state writes."
+      "evidence": [
+        "scripts/lab_t158_pipeline_audit.py",
+        "tests/unit/test_t158_pipeline_audit.py",
+        "docs/evidence/t158_pipeline_audit.json",
+        "docs/evidence/t158_report.md"
+      ],
+      "completion_note": "Completed the diagnostic-only five-stage audit on the reachable CPU Pod with no broker, holdout, gate, ledger, promotion or lake writes. Stage 1 fails at zero timestamp shift and finds +240 minutes as the best tested alignment; stages 2-5 pass their independent known answers. Proposed timestamp/session correction is recorded but not applied. Handing to Claude for review."
     }
   ],
   "decisions": [
@@ -13709,6 +13714,23 @@
       "validated_by": "claude",
       "date": "2026-10-18T22:45:00+03:00",
       "reverify_if": "The indicator's Pine source or exact HA/timeframe settings are supplied."
+    },
+    {
+      "id": "V-413",
+      "task_id": "T-158",
+      "subject": "T-158 five-stage pipeline audit",
+      "method": "Ran scripts/lab_t158_pipeline_audit.py on the reachable CPU Pod using the unsealed two-day lake and owner CSV; inspected the generated JSON/report; checked py_compile and git diff --check locally. No broker, order, sealed holdout, gate, cost-ledger, promotion or lake-write path is used.",
+      "result": "pass",
+      "checked": "Stage 1 is an explicit diagnostic FAIL: zero shift agreement 0.3704 on 27 comparable points, correlation -0.2352; best tested shift +240 minutes agreement 0.8621 on 29 comparable points, correlation 0.7448. Stage 2 has zero mismatches/missing bars for NSXUSD/XAUUSD at 1m/3m/5m/54m/60m and verifies 54m as 18x3m. Stage 3 EMA200/ATR14/ADX14/DI references match with max absolute error 0.0. Stage 4 classifies 31 entries (2 new, 29 refresh) and positive controls pass. Stage 5 hand ledger, lookahead, coin-flip and buy-and-hold controls produce expected arithmetic. Pod output generated_at 2026-10-18T19:20:47.255350+00:00.",
+      "evidence": [
+        "scripts/lab_t158_pipeline_audit.py",
+        "tests/unit/test_t158_pipeline_audit.py",
+        "docs/evidence/t158_pipeline_audit.json",
+        "docs/evidence/t158_report.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-18T19:25:00+03:00",
+      "reverify_if": "Claude requests a rerun, a full raw Pod artifact, or a change to the audit scope."
     }
   ],
   "blockers": [
@@ -23798,6 +23820,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-158 from authoritative origin/main revision 434. Five-stage production-path audit is in progress; safety scope is diagnostic-only with no broker, holdout, config, ledger, promotion or lake writes."
+    },
+    {
+      "revision": 437,
+      "ts": "2026-10-18T19:25:00+03:00",
+      "agent": "codex",
+      "action": "complete_t158_pipeline_audit",
+      "task_ids": [
+        "T-158"
+      ],
+      "files_changed": [
+        "scripts/lab_t158_pipeline_audit.py",
+        "tests/unit/test_t158_pipeline_audit.py",
+        "docs/evidence/t158_pipeline_audit.json",
+        "docs/evidence/t158_report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-158 diagnostic pipeline audit. Stage 1 zero-shift alignment fails (agreement 0.3704; best tested +240m agreement 0.8621); stages 2-5 pass known answers. No fix/tuning, broker call, order, holdout read, gate, ledger/promotion or lake write. Handing to Claude for review."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."

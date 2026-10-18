@@ -1,0 +1,52 @@
+{
+  "task": "T-158",
+  "source": {
+    "generated_at_utc": "2026-10-18T19:20:47.255350+00:00",
+    "pod_run": "cpu-pod-5cdff5454c57",
+    "script": "scripts/lab_t158_pipeline_audit.py",
+    "lake_window_days": 2,
+    "owner_entry_groups": 31
+  },
+  "owner_verdict": "FAIL: the zero-offset owner-vs-recorded time alignment is poor; the best tested shift is +240 minutes. Bar construction and indicator maths match independent references, replay classification and controls run, so timing/session alignment is the first concrete fault to fix in a separate task.",
+  "stages": {
+    "stage1_time_alignment": {
+      "status": "FAIL",
+      "zero_shift": {"offset_minutes": 0, "agreement": 0.37037037037037035, "comparable": 27, "correlation": -0.23520398851400073},
+      "best_shift": {"offset_minutes": 240, "agreement": 0.8620689655172413, "comparable": 29, "correlation": 0.7448350436348791},
+      "tested_offsets_minutes": "-720..720 by 30"
+    },
+    "stage2_bar_building": {
+      "status": "PASS",
+      "instruments": ["NSXUSD", "XAUUSD"],
+      "timeframes_minutes": [1, 3, 5, 54, 60],
+      "mismatched_bars": 0,
+      "missing_bars": 0,
+      "54m_grouping": "18 x 3m; verified"
+    },
+    "stage3_indicator_maths": {
+      "status": "PASS",
+      "instruments": ["NSXUSD", "XAUUSD"],
+      "indicators": ["EMA200", "ATR14", "ADX14", "plus_di14", "minus_di14"],
+      "max_absolute_error": 0.0,
+      "missing_actual": 0,
+      "missing_reference": 0,
+      "heikin_ashi_warmup": "included"
+    },
+    "stage4_replay_rules": {
+      "status": "PASS",
+      "entries": 31,
+      "classification_counts": {"new_signal": 2, "refresh": 29},
+      "ha_state_categories": {"flip_current_bar": 8, "opposite_colour": 12, "same_colour_no_flip": 11, "missing": 0},
+      "positive_control": {"known_signal": true, "break_close_rule": true, "break_open_rule": true, "broken_signals": {"close": 0, "open": 0}}
+    },
+    "stage5_engine_arithmetic": {
+      "status": "PASS",
+      "hand_ledger": {"trades": 10, "gross": 20.0, "cost": 10.0, "matches_production": true},
+      "lookahead_cheat": {"trades": 29, "win_rate": 1.0},
+      "coin_flip_control": {"trades": 10, "net_pnl": -5.0},
+      "buy_and_hold": {"engine_net_pnl": 28.0, "expected_before_cost": 28.5, "cost": 0.5, "difference": 0.0}
+    }
+  },
+  "safety": {"broker_calls": 0, "orders": 0, "sealed_holdout_read": false, "gate1_evaluated": false, "cost_ledger_promotion_writes": 0, "lake_writes": 0},
+  "proposed_fix": "Audit and correct the owner/replay timestamp and session alignment in a separate reviewed task; no fix or tuning is applied here."
+}
