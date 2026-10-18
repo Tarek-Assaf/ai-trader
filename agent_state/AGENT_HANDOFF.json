@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 434,
+  "turn": "codex",
+  "revision": 435,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-157 accepted: our replay passes 0/31 owner entries; the 54m Heikin Ashi condition fails first in 20 of 31 and no tested variant fixes it. Q-069 asks the owner for the indicator's Pine source (or name/author and settings screenshots). T-152 and T-154 stay parked/blocked.",
+    "summary": "T-157 accepted: our replay matches 0/31 owner entries. Owner says the fault is in our system, not the indicator (Q-069 answered). T-158 queued for Codex: pipeline audit with known-answer tests (time alignment, bar building, indicator maths, replay rules, engine arithmetic). Older owner requests Q-022, Q-057, Q-058 stay open. T-152 and T-154 stay parked/blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -130,7 +130,8 @@
         "T-154",
         "T-155",
         "T-156",
-        "T-157"
+        "T-157",
+        "T-158"
       ]
     },
     {
@@ -5224,6 +5225,32 @@
         "docs/evidence/t157_report.md"
       ],
       "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in ±3 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in ±3 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
+    },
+    {
+      "id": "T-158",
+      "title": "Pipeline audit: known-answer tests of time alignment, bar building, indicator maths, replay rules and engine arithmetic to find where our system goes wrong",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-157"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t158_pipeline_audit.md exactly (five stages, PASS/FAIL with numbers, no fixes or tuning, no broker calls, sealed holdout never read, all four timeframes 1m/3m/5m/60m and both NSXUSD and XAUUSD wherever a stage uses lake data beyond the NAS100 owner days, 1m mandatory).",
+        "Report starts with a plain-language owner verdict naming the most likely cause and a proposed fix (not applied); one log entry; hand turn to claude."
+      ],
+      "deliverables": [
+        "scripts/lab_t158_pipeline_audit.py",
+        "docs/evidence/t158_pipeline_audit.json",
+        "docs/evidence/t158_report.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -14735,7 +14762,7 @@
       "id": "Q-069",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "T-157 shows our replay fails mainly on the 54-minute Heikin Ashi condition (20 of your 31 entries), and none of nine plausible variants fixes it. We have been rebuilding the indicator from its description. The reliable fix is to read the real code. Can you open the Tai indicator on TradingView, choose 'Source code' (the {} button on the indicator, if the author allows it), and paste or send the Pine script text, or tell me its exact name and author?",
       "options": [
         "A: I will send the Pine source code (recommended)",
@@ -14743,7 +14770,7 @@
         "C: Stop this investigation, we accept that we cannot reproduce it"
       ],
       "recommendation": "A: with the source we can copy the exact rules and replay them, instead of guessing variants.",
-      "answer": ""
+      "answer": "Owner 2026-10-18: does not send the Pine source or a TradingView account. Says the strategy, trades and results are clear, and the fault is in how our agent operates. Instruction: find and fix the problem on our side. Claude queued T-158 (pipeline audit) instead."
     }
   ],
   "log": [
@@ -23744,6 +23771,20 @@
         "scripts/lab_t157_rule_by_rule.py"
       ],
       "summary": "Reviewed T-157: pass (lint fixed). Replay passes 0/31; 54m HA state is the first failing rule in 20/31; no tested switch helps. Asked owner Q-069 for the indicator's Pine source. No task queued; turn to human."
+    },
+    {
+      "revision": 435,
+      "ts": "2026-10-18T23:00:00+03:00",
+      "agent": "claude",
+      "action": "q069_answered_task_t158",
+      "task_ids": [
+        "T-158"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t158_pipeline_audit.md"
+      ],
+      "summary": "Owner declined to send the indicator source and told us to find the fault in our own system. Wrote spec t158_pipeline_audit.md and queued T-158 for Codex: five known-answer stages (time alignment, bar building, indicator maths, replay rule logic, engine arithmetic), no fixes or tuning. Q-069 marked answered; Q-022, Q-057, Q-058 left open as the owner asked. Turn to codex."
     }
   ],
   "project_summary": "T-151 (owner-trade replay) is in Claude review after its first change request. T-154 is blocked after the last allowed review cycle: XAUUSD 60m completed, but the declared deterministic sample timed out for all six smaller groups before verdicts or trial counts. Q-064 asks the owner whether to accept the inconclusive diagnostic or authorize a new task. T-152 stays parked."
