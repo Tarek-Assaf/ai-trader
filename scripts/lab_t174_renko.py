@@ -294,9 +294,13 @@ def main() -> None:
         "bars": len(bars),
         "owner_entries": len(owners),
         "baseline_open_close_t173": {
-            "variant": {"atr_timeframe": "54m", "anchor": "epoch", "mode": "closed"},
-            "within_2_cross": baseline["cross_timing"]["within_2_bars_same_direction"],
-            "matches": baseline["matches"],
+            "variant": "T-173 tfmult=18 epoch closed",
+            "within_2_cross": 1,
+            "matches": {"within_0": 1, "within_1": 3, "within_2": 4, "within_3": 4},
+            "renko_54m_epoch_closed": {
+                "within_2_cross": baseline["cross_timing"]["within_2_bars_same_direction"],
+                "matches": baseline["matches"],
+            },
         },
         "variants": variants,
         "verdict": verdict,
