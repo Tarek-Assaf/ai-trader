@@ -1,5 +1,5 @@
 import random
-from types import SimpleNamespace
+from dataclasses import dataclass
 
 from scripts.lab_t179_fragility import (
     new_signal_count,
@@ -9,8 +9,16 @@ from scripts.lab_t179_fragility import (
 )
 
 
+@dataclass(frozen=True)
+class Bar:
+    open: float
+    high: float
+    low: float
+    close: float
+
+
 def test_perturbation_is_deterministic_and_repairs_ohlc():
-    bar = SimpleNamespace(open=100.0, high=102.0, low=98.0, close=101.0)
+    bar = Bar(open=100.0, high=102.0, low=98.0, close=101.0)
     first = perturb_bar(bar, 1.0, random.Random(179))
     second = perturb_bar(bar, 1.0, random.Random(179))
     assert first == second
