@@ -199,12 +199,25 @@ def run(
         windows.append((entry, stamps))
         targets.update(stamps)
     runtime_entries, trace, _ = t195._runtime_trace(bars, selected, targets, unbounded=False)
-    runtime_by_key = {(item.at.isoformat(), item.direction) for item in runtime_entries}
+    comparison = replay.compare_entries(runtime_entries, port_entries)
+    excluded_times = {
+        item["at"]
+        for item in comparison.get("matches", [])
+        if isinstance(item, Mapping) and isinstance(item.get("at"), str)
+    }
+    excluded_times.update(
+        item["port"]["at"]
+        for item in comparison.get("misses", [])
+        if isinstance(item, Mapping)
+        and item.get("reason") == "bar_or_stop_difference"
+        and isinstance(item.get("port"), Mapping)
+        and isinstance(item["port"].get("at"), str)
+    )
     rows: list[dict[str, object]] = []
     for entry, stamps in windows:
-        if (entry.at.isoformat(), entry.direction) in runtime_by_key:
-            # T-195 classifies exact-time runtime entries as matched or
-            # bar/stop differences, so they are outside the 23 HA-cross miss set.
+        if entry.at.isoformat() in excluded_times:
+            # T-195 classifies the exact match and two bar/stop rows outside
+            # the accepted 23-row HA-cross miss set.
             continue
         context: list[dict[str, object]] = []
         for stamp in stamps:
