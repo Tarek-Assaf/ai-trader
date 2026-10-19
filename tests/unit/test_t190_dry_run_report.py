@@ -58,8 +58,8 @@ def test_long_hits_all_targets(monkeypatch):
     bars = [
         _shadow(start),
         _shadow(start + timedelta(minutes=3), ask_high="101"),
-        _shadow(start + timedelta(minutes=6), ask_high="102"),
-        _shadow(start + timedelta(minutes=9), ask_high="103"),
+        _shadow(start + timedelta(minutes=6), ask_high="102", bid_low="101"),
+        _shadow(start + timedelta(minutes=9), ask_high="103", bid_low="101"),
     ]
     trades = _run(monkeypatch, bars, TaiSignal(Direction.BUY, Decimal("100"), Decimal("99")))
     assert trades[0].hit == [1, 2, 3]
