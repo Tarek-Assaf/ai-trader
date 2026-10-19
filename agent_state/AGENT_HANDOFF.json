@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 484,
+  "turn": "claude",
+  "revision": 485,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). T-182 queued for Codex: session-anchored 54m Heikin Ashi groups diagnostic.",
+    "summary": "T-182 complete: session-anchored HA diagnostic did not meet the 25/31 gate. Best session_1800_ny closed result is 11/31 within 3 bars and 17/31 within 30 bars; historical rerun remains blocked.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6027,7 +6027,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -6046,8 +6046,12 @@
         "tests/unit/test_t162_pine_port.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t182_report.md",
+        "docs/evidence/t182_entries.csv",
+        "docs/evidence/t182_port.json"
+      ],
+      "completion_note": "Implemented the three pre-declared HA anchors and session VWAP anchor. Pod replay covered both closed and forming modes on the owner window. Best result was session_1800_ny closed at 11/31 within 3 bars and 17/31 within 30 bars; the 25/31 gate was not met. No tuning or additional offsets were attempted."
     }
   ],
   "decisions": [
@@ -15295,6 +15299,22 @@
       "validated_by": "claude",
       "date": "2026-10-19T04:55:00Z",
       "reverify_if": "The T-162 port, T-180 harness or owner-window lake data changes."
+    },
+    {
+      "id": "V-451",
+      "task_id": "T-182",
+      "subject": "T-182 session-anchored HA diagnostic",
+      "method": "Ran the owner-provided Pod harness against NAS100 3m recorded data for epoch, session_1800_ny and rth_0930_ny in closed and forming modes. Checked partial groups, DST and weekend-gap unit cases, session VWAP reset, holdout/safety invariants, py_compile and git diff --check.",
+      "result": "pass",
+      "checked": "Best session_1800_ny closed: 11/31 within 3 bars and 17/31 within 30 bars; gate 25/31 not met. All declared variants are reported; safety counters are zero and no holdout was read.",
+      "evidence": [
+        "docs/evidence/t182_report.md",
+        "docs/evidence/t182_entries.csv",
+        "docs/evidence/t182_port.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T08:05:00Z",
+      "reverify_if": "The T-162 port or owner-window data changes."
     }
   ],
   "blockers": [
@@ -26252,7 +26272,26 @@
         "docs/specs/t182_session_anchored_ha.md"
       ],
       "summary": "Accepted T-181 (V-450, D-063). Gate 25/31 still not met, rerun stays blocked. Found the port groups 54m Heikin Ashi on a UTC grid and drops partial groups, unlike TradingView's session-anchored bars; queued T-182 to test three pre-declared anchors. No broker calls."
+    },
+    {
+      "revision": 485,
+      "ts": "2026-10-19T08:05:00Z",
+      "agent": "codex",
+      "action": "complete_t182_session_anchored_ha",
+      "task_ids": [
+        "T-182"
+      ],
+      "files_changed": [
+        "scripts/lab_t162_pine_port.py",
+        "scripts/lab_t182_session_anchored_ha.py",
+        "tests/unit/test_t162_pine_port.py",
+        "docs/evidence/t182_report.md",
+        "docs/evidence/t182_entries.csv",
+        "docs/evidence/t182_port.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-182 session-anchored HA diagnostic. Best anchor session_1800_ny closed is 11/31 within 3 bars and 17/31 within 30; 25/31 gate not met. Session VWAP anchor corrected; no broker, orders, holdout, lake, production, tuning or secret access. Pod ruff/pytest unavailable; local compile and diff checks pass. Turn to Claude for review."
     }
   ],
-  "project_summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). T-182 queued for Codex: session-anchored 54m Heikin Ashi groups diagnostic."
+  "project_summary": "T-182 complete: session-anchored HA diagnostic did not meet the 25/31 gate. Best session_1800_ny closed result is 11/31 within 3 bars and 17/31 within 30 bars; historical rerun remains blocked."
 }

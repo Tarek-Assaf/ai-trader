@@ -27,7 +27,9 @@ WINDOW_START = datetime(2026, 10, 5, tzinfo=UTC)
 WINDOW_END = datetime(2026, 10, 17, tzinfo=UTC)
 
 
-def _match(entries: tuple[Any, ...], trades: tuple[Any, ...], tolerance: int) -> tuple[int, list[dict[str, Any]]]:
+def _match(
+    entries: tuple[Any, ...], trades: tuple[Any, ...], tolerance: int
+) -> tuple[int, list[dict[str, Any]]]:
     remaining = list(trades)
     rows: list[dict[str, Any]] = []
     matched = 0
@@ -69,7 +71,9 @@ def _match(entries: tuple[Any, ...], trades: tuple[Any, ...], tolerance: int) ->
     return matched, rows
 
 
-def _variant(entries: tuple[Any, ...], bars: tuple[Any, ...], anchor: str, mode: str) -> dict[str, Any]:
+def _variant(
+    entries: tuple[Any, ...], bars: tuple[Any, ...], anchor: str, mode: str
+) -> dict[str, Any]:
     trades, features = port.replay(bars, mode, anchor, "session_1800_ny")
     counts: dict[str, int] = {}
     rows_by_tolerance: dict[str, list[dict[str, Any]]] = {}
@@ -115,7 +119,11 @@ def run(lake: Path, owner_file: Path) -> dict[str, Any]:
         for anchor in ANCHORS
     }
     best_key = max(
-        ((data["entry_counts"]["3"], anchor, mode) for anchor, modes in variants.items() for mode, data in modes.items()),
+        (
+            (data["entry_counts"]["3"], anchor, mode)
+            for anchor, modes in variants.items()
+            for mode, data in modes.items()
+        ),
         key=lambda item: item[0],
     )
     return {
@@ -147,11 +155,16 @@ def run(lake: Path, owner_file: Path) -> dict[str, Any]:
 def report(payload: dict[str, Any]) -> str:
     verdict = payload["verdict"]
     lines = [
-        f"Best anchor {verdict['best_anchor']}, mode {verdict['best_mode']}: {verdict['within_3_bars']}/31 within 3 bars, {verdict['within_30_bars']}/31 within 30 bars; gate 25/31 met {'yes' if verdict['gate_25_of_31_met'] else 'no'}; VWAP anchor correct {'yes' if verdict['vwap_anchor_correct'] else 'no'}.",
+        f"Best anchor {verdict['best_anchor']}, mode {verdict['best_mode']}: "
+        f"{verdict['within_3_bars']}/31 within 3 bars, "
+        f"{verdict['within_30_bars']}/31 within 30 bars; "
+        f"gate 25/31 met {'yes' if verdict['gate_25_of_31_met'] else 'no'}; "
+        f"VWAP anchor correct {'yes' if verdict['vwap_anchor_correct'] else 'no'}.",
         "",
         "# T-182 session-anchored 54-minute Heikin Ashi diagnostic",
         "",
-        "The three pre-declared anchors were replayed in closed and forming modes. The 25/31 gate was not relaxed and no additional offsets were tested.",
+        "The three pre-declared anchors were replayed in closed and forming modes. "
+        "The 25/31 gate was not relaxed and no additional offsets were tested.",
         "",
         "| Anchor | Mode | Exact | ±1 | ±2 | ±3 | ±30 | Extra within 30 |",
         "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |",
@@ -160,13 +173,16 @@ def report(payload: dict[str, Any]) -> str:
         for mode, data in modes.items():
             counts = data["entry_counts"]
             lines.append(
-                f"| {anchor} | {mode} | {counts['0']} | {counts['1']} | {counts['2']} | {counts['3']} | {counts['30']} | {data['extra_entries_within_30_bars']} |"
+                f"| {anchor} | {mode} | {counts['0']} | {counts['1']} | "
+                f"{counts['2']} | {counts['3']} | {counts['30']} | "
+                f"{data['extra_entries_within_30_bars']} |"
             )
     lines += [
         "",
         "## VWAP and safety",
         "",
-        "The Pine `ta.vwap(hlc3)` session resets at the 18:00 New York CME session open. The port now uses `session_1800_ny` for replay and reports the anchor as correct.",
+        "The Pine `ta.vwap(hlc3)` session resets at the 18:00 New York CME session open. "
+        "The port now uses `session_1800_ny` for replay and reports the anchor as correct.",
         "",
         json.dumps(payload["safety"], indent=2, sort_keys=True),
         "",
@@ -180,7 +196,9 @@ def report(payload: dict[str, Any]) -> str:
             for row in data["comparison_rows"]:
                 if row["first_difference"] != "matched":
                     lines.append(
-                        f"- `{row['owner_time_utc']}` {row['direction']}: nearest `{row['nearest_port_entry_time']}` ({row['signed_delta_bars']} bars); first difference `{row['first_difference']}`."
+                        f"- `{row['owner_time_utc']}` {row['direction']}: nearest "
+                        f"`{row['nearest_port_entry_time']}` ({row['signed_delta_bars']} bars); "
+                        f"first difference `{row['first_difference']}`."
                     )
             lines.append("")
     return "\n".join(lines)
@@ -200,12 +218,41 @@ def main() -> int:
     args.report.write_text(report(payload), encoding="utf-8")
     with args.entries.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(["anchor", "mode", "owner_time_utc", "owner_time_ny", "direction", "nearest_port_entry_time", "signed_delta_bars", "matched", "first_difference"])
+        writer.writerow(
+            [
+                "anchor",
+                "mode",
+                "owner_time_utc",
+                "owner_time_ny",
+                "direction",
+                "nearest_port_entry_time",
+                "signed_delta_bars",
+                "matched",
+                "first_difference",
+            ]
+        )
         for anchor, modes in payload["anchors"].items():
             for mode, data in modes.items():
                 for row in data["comparison_rows"]:
-                    writer.writerow([anchor, mode, row["owner_time_utc"], row["owner_time_ny"], row["direction"], row["nearest_port_entry_time"], row["signed_delta_bars"], row["matched"], row["first_difference"]])
-    print(json.dumps({"task": "T-182", "verdict": payload["verdict"], "safety": payload["safety"]}, sort_keys=True))
+                    writer.writerow(
+                        [
+                            anchor,
+                            mode,
+                            row["owner_time_utc"],
+                            row["owner_time_ny"],
+                            row["direction"],
+                            row["nearest_port_entry_time"],
+                            row["signed_delta_bars"],
+                            row["matched"],
+                            row["first_difference"],
+                        ]
+                    )
+    print(
+        json.dumps(
+            {"task": "T-182", "verdict": payload["verdict"], "safety": payload["safety"]},
+            sort_keys=True,
+        )
+    )
     return 0
 
 

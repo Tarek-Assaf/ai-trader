@@ -245,7 +245,9 @@ def _group_indices(bars: Sequence[Candle], anchor: str) -> list[list[int]]:
     for _, indices in sorted(groups.items()):
         segment: list[int] = []
         for index in indices:
-            if segment and bars[index].ts_utc - bars[segment[-1]].ts_utc != timedelta(minutes=TIMEFRAME):
+            if segment and bars[index].ts_utc - bars[segment[-1]].ts_utc != timedelta(
+                minutes=TIMEFRAME
+            ):
                 output.append(segment)
                 segment = []
             segment.append(index)
@@ -261,7 +263,7 @@ def _ha_complete(
     result: list[dict[int, tuple[float, float]]] = [dict() for _ in bars]
     previous: tuple[float, float] | None = None
     for indices in _group_indices(bars, anchor):
-        if len(indices) != GROUP_BARS:
+        if anchor == "epoch" and len(indices) != GROUP_BARS:
             continue
         first, last = indices[0], indices[-1]
         if any(
@@ -295,7 +297,26 @@ def _ha_series(
     closes: list[float | None] = [None] * len(bars)
     previous_complete: tuple[float, float] | None = None
     for indices in _group_indices(bars, anchor):
-        if anchor == "epoch" and len(indices) != GROUP_BARS:
+        complete = len(indices) == GROUP_BARS
+        if anchor == "epoch" and not complete:
+            if mode != "forming":
+                continue
+            group_open = (
+                (bars[indices[0]].open + bars[indices[0]].close) / 2.0
+                if previous_complete is None
+                else (previous_complete[0] + previous_complete[1]) / 2.0
+            )
+            for end, i in enumerate(indices, 1):
+                prefix = indices[:end]
+                raw_open = bars[prefix[0]].open
+                raw_close = bars[prefix[-1]].close
+                close = (
+                    raw_open
+                    + max(bars[j].high for j in prefix)
+                    + min(bars[j].low for j in prefix)
+                    + raw_close
+                ) / 4.0
+                opens[i], closes[i] = group_open, close
             continue
         raw_open = bars[indices[0]].open
         raw_close = bars[indices[-1]].close

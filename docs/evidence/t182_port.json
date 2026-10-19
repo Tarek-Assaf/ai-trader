@@ -1,0 +1,3117 @@
+{
+  "anchors": {
+    "epoch": {
+      "closed": {
+        "anchor": "epoch",
+        "bars": 4013,
+        "comparison_rows": [
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T03:06:00+00:00",
+            "owner_time_ny": "2026-10-06T16:03:00-04:00",
+            "owner_time_utc": "2026-10-06T20:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 621.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T03:06:00+00:00",
+            "owner_time_ny": "2026-10-06T18:45:00-04:00",
+            "owner_time_utc": "2026-10-06T22:45:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 567.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T03:06:00+00:00",
+            "owner_time_ny": "2026-10-06T21:18:00-04:00",
+            "owner_time_utc": "2026-10-07T01:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 516.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T02:06:00+00:00",
+            "owner_time_ny": "2026-10-07T18:21:00-04:00",
+            "owner_time_utc": "2026-10-07T22:21:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 75.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T02:06:00+00:00",
+            "owner_time_ny": "2026-10-07T21:51:00-04:00",
+            "owner_time_utc": "2026-10-08T01:51:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 5.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T02:06:00+00:00",
+            "owner_time_ny": "2026-10-08T10:45:00-04:00",
+            "owner_time_utc": "2026-10-08T14:45:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": -253.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T23:15:00+00:00",
+            "owner_time_ny": "2026-10-08T11:09:00-04:00",
+            "owner_time_utc": "2026-10-08T15:09:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 162.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T23:15:00+00:00",
+            "owner_time_ny": "2026-10-08T19:03:00-04:00",
+            "owner_time_utc": "2026-10-08T23:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 4.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-09T00:27:00+00:00",
+            "owner_time_ny": "2026-10-09T10:30:00-04:00",
+            "owner_time_utc": "2026-10-09T14:30:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -281.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-09T20:51:00+00:00",
+            "owner_time_ny": "2026-10-09T12:30:00-04:00",
+            "owner_time_utc": "2026-10-09T16:30:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 87.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-12T00:03:00+00:00",
+            "owner_time_ny": "2026-10-11T18:18:00-04:00",
+            "owner_time_utc": "2026-10-11T22:18:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 35.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-12T00:21:00+00:00",
+            "owner_time_ny": "2026-10-11T20:27:00-04:00",
+            "owner_time_utc": "2026-10-12T00:27:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": -2.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-12T02:33:00+00:00",
+            "owner_time_ny": "2026-10-11T22:30:00-04:00",
+            "owner_time_utc": "2026-10-12T02:30:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 1.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-13T15:03:00+00:00",
+            "owner_time_ny": "2026-10-13T07:00:00-04:00",
+            "owner_time_utc": "2026-10-13T11:00:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 81.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-13T15:03:00+00:00",
+            "owner_time_ny": "2026-10-13T10:57:00-04:00",
+            "owner_time_utc": "2026-10-13T14:57:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 2.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-13T17:33:00+00:00",
+            "owner_time_ny": "2026-10-13T13:36:00-04:00",
+            "owner_time_utc": "2026-10-13T17:36:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -1.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-13T22:57:00+00:00",
+            "owner_time_ny": "2026-10-13T14:21:00-04:00",
+            "owner_time_utc": "2026-10-13T18:21:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 92.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-14T05:24:00+00:00",
+            "owner_time_ny": "2026-10-14T01:24:00-04:00",
+            "owner_time_utc": "2026-10-14T05:24:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 0.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-14T09:03:00+00:00",
+            "owner_time_ny": "2026-10-14T04:54:00-04:00",
+            "owner_time_utc": "2026-10-14T08:54:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 3.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:51:00+00:00",
+            "owner_time_ny": "2026-10-14T06:18:00-04:00",
+            "owner_time_utc": "2026-10-14T10:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -9.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T00:57:00+00:00",
+            "owner_time_ny": "2026-10-14T08:18:00-04:00",
+            "owner_time_utc": "2026-10-14T12:18:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": -227.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T23:00:00+00:00",
+            "owner_time_ny": "2026-10-14T18:24:00-04:00",
+            "owner_time_utc": "2026-10-14T22:24:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 12.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T23:00:00+00:00",
+            "owner_time_ny": "2026-10-15T00:30:00-04:00",
+            "owner_time_utc": "2026-10-15T04:30:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -110.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T23:00:00+00:00",
+            "owner_time_ny": "2026-10-15T01:27:00-04:00",
+            "owner_time_utc": "2026-10-15T05:27:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -129.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-15T12:45:00+00:00",
+            "owner_time_ny": "2026-10-15T08:45:00-04:00",
+            "owner_time_utc": "2026-10-15T12:45:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 0.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-15T14:21:00+00:00",
+            "owner_time_ny": "2026-10-15T09:42:00-04:00",
+            "owner_time_utc": "2026-10-15T13:42:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 13.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-16T01:00:00+00:00",
+            "owner_time_ny": "2026-10-15T20:57:00-04:00",
+            "owner_time_utc": "2026-10-16T00:57:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 1.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T10:24:00+00:00",
+            "owner_time_ny": "2026-10-16T06:12:00-04:00",
+            "owner_time_utc": "2026-10-16T10:12:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 4.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T10:24:00+00:00",
+            "owner_time_ny": "2026-10-16T07:03:00-04:00",
+            "owner_time_utc": "2026-10-16T11:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -13.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T11:57:00+00:00",
+            "owner_time_ny": "2026-10-16T09:18:00-04:00",
+            "owner_time_utc": "2026-10-16T13:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -27.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T11:57:00+00:00",
+            "owner_time_ny": "2026-10-16T10:42:00-04:00",
+            "owner_time_utc": "2026-10-16T14:42:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -55.0
+          }
+        ],
+        "entry_counts": {
+          "0": 2,
+          "1": 5,
+          "2": 7,
+          "3": 8,
+          "30": 15
+        },
+        "extra_entries_within_30_bars": 8,
+        "first_feature_values": [
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:45:00+00:00",
+            "vwap": 29741.23246212118
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:48:00+00:00",
+            "vwap": 29739.970937263766
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:51:00+00:00",
+            "vwap": 29738.721153846123
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:54:00+00:00",
+            "vwap": 29737.477990970627
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:57:00+00:00",
+            "vwap": 29736.250938438407
+          }
+        ],
+        "mode": "closed",
+        "port_entry_count": 23,
+        "trades": [
+          {
+            "direction": "long",
+            "entry_index": 928,
+            "entry_price": 31195.300000000003,
+            "entry_time": "2026-10-08T02:06:00+00:00",
+            "exit_index": 935,
+            "exit_reason": "be",
+            "exit_time": "2026-10-08T02:27:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31183.466182355183
+          },
+          {
+            "direction": "short",
+            "entry_index": 948,
+            "entry_price": 31163.300000000003,
+            "entry_time": "2026-10-08T03:06:00+00:00",
+            "exit_index": 952,
+            "exit_reason": "be",
+            "exit_time": "2026-10-08T03:24:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31186.340068045658
+          },
+          {
+            "direction": "short",
+            "entry_index": 1316,
+            "entry_price": 30796.9,
+            "entry_time": "2026-10-08T23:15:00+00:00",
+            "exit_index": 1321,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-08T23:30:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30808.46974664004
+          },
+          {
+            "direction": "short",
+            "entry_index": 1339,
+            "entry_price": 30765.0,
+            "entry_time": "2026-10-09T00:27:00+00:00",
+            "exit_index": 1339,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-09T00:27:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30768.934707962744
+          },
+          {
+            "direction": "long",
+            "entry_index": 1736,
+            "entry_price": 30899.1,
+            "entry_time": "2026-10-09T20:51:00+00:00",
+            "exit_index": 1739,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-11T22:36:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30880.977470379312
+          },
+          {
+            "direction": "long",
+            "entry_index": 1767,
+            "entry_price": 31018.6,
+            "entry_time": "2026-10-12T00:03:00+00:00",
+            "exit_index": 1767,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-12T00:03:00+00:00",
+            "highest_target": 3,
+            "stop_price": 31017.77804794554
+          },
+          {
+            "direction": "long",
+            "entry_index": 1773,
+            "entry_price": 31011.199999999997,
+            "entry_time": "2026-10-12T00:21:00+00:00",
+            "exit_index": 1774,
+            "exit_reason": "be",
+            "exit_time": "2026-10-12T00:24:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31003.556912607353
+          },
+          {
+            "direction": "long",
+            "entry_index": 1814,
+            "entry_price": 31000.1,
+            "entry_time": "2026-10-12T02:33:00+00:00",
+            "exit_index": 1844,
+            "exit_reason": "be",
+            "exit_time": "2026-10-12T04:03:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30984.935104671076
+          },
+          {
+            "direction": "short",
+            "entry_index": 2184,
+            "entry_price": 30641.4,
+            "entry_time": "2026-10-12T21:54:00+00:00",
+            "exit_index": 2186,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-12T22:00:00+00:00",
+            "highest_target": 0,
+            "stop_price": 30651.09695911708
+          },
+          {
+            "direction": "short",
+            "entry_index": 2517,
+            "entry_price": 30491.199999999997,
+            "entry_time": "2026-10-13T15:03:00+00:00",
+            "exit_index": 2536,
+            "exit_reason": "be",
+            "exit_time": "2026-10-13T16:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30540.893311670072
+          },
+          {
+            "direction": "short",
+            "entry_index": 2565,
+            "entry_price": 30489.550000000003,
+            "entry_time": "2026-10-13T17:33:00+00:00",
+            "exit_index": 2567,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-13T17:39:00+00:00",
+            "highest_target": 0,
+            "stop_price": 30513.458248605828
+          },
+          {
+            "direction": "long",
+            "entry_index": 2664,
+            "entry_price": 30596.699999999997,
+            "entry_time": "2026-10-13T22:57:00+00:00",
+            "exit_index": 2665,
+            "exit_reason": "be",
+            "exit_time": "2026-10-13T23:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30591.21340210219
+          },
+          {
+            "direction": "long",
+            "entry_index": 2704,
+            "entry_price": 30595.800000000003,
+            "entry_time": "2026-10-14T00:57:00+00:00",
+            "exit_index": 2705,
+            "exit_reason": "be",
+            "exit_time": "2026-10-14T01:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30586.659664916
+          },
+          {
+            "direction": "short",
+            "entry_index": 2793,
+            "entry_price": 30588.5,
+            "entry_time": "2026-10-14T05:24:00+00:00",
+            "exit_index": 2806,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T06:03:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30610.67123782414
+          },
+          {
+            "direction": "short",
+            "entry_index": 2866,
+            "entry_price": 30580.300000000003,
+            "entry_time": "2026-10-14T09:03:00+00:00",
+            "exit_index": 2867,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T09:06:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30586.246783689945
+          },
+          {
+            "direction": "short",
+            "entry_index": 2882,
+            "entry_price": 30578.199999999997,
+            "entry_time": "2026-10-14T09:51:00+00:00",
+            "exit_index": 2886,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T10:03:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30585.702689467897
+          },
+          {
+            "direction": "short",
+            "entry_index": 3102,
+            "entry_price": 29910.9,
+            "entry_time": "2026-10-14T21:33:00+00:00",
+            "exit_index": 3109,
+            "exit_reason": "be",
+            "exit_time": "2026-10-14T21:57:00+00:00",
+            "highest_target": 2,
+            "stop_price": 29919.861073455984
+          },
+          {
+            "direction": "short",
+            "entry_index": 3130,
+            "entry_price": 29802.4,
+            "entry_time": "2026-10-14T23:00:00+00:00",
+            "exit_index": 3134,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T23:15:00+00:00",
+            "highest_target": 3,
+            "stop_price": 29824.56781383417
+          },
+          {
+            "direction": "short",
+            "entry_index": 3395,
+            "entry_price": 29621.35,
+            "entry_time": "2026-10-15T12:45:00+00:00",
+            "exit_index": 3410,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-15T13:30:00+00:00",
+            "highest_target": 3,
+            "stop_price": 29665.501450585863
+          },
+          {
+            "direction": "short",
+            "entry_index": 3422,
+            "entry_price": 29630.800000000003,
+            "entry_time": "2026-10-15T14:21:00+00:00",
+            "exit_index": 3428,
+            "exit_reason": "be",
+            "exit_time": "2026-10-15T14:39:00+00:00",
+            "highest_target": 2,
+            "stop_price": 29666.45772522769
+          },
+          {
+            "direction": "long",
+            "entry_index": 3629,
+            "entry_price": 29860.6,
+            "entry_time": "2026-10-16T01:00:00+00:00",
+            "exit_index": 3686,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-16T03:51:00+00:00",
+            "highest_target": 3,
+            "stop_price": 29818.346754858514
+          },
+          {
+            "direction": "short",
+            "entry_index": 3812,
+            "entry_price": 29904.699999999997,
+            "entry_time": "2026-10-16T10:24:00+00:00",
+            "exit_index": 3815,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-16T10:33:00+00:00",
+            "highest_target": 0,
+            "stop_price": 29922.945460504005
+          },
+          {
+            "direction": "short",
+            "entry_index": 3842,
+            "entry_price": 29886.699999999997,
+            "entry_time": "2026-10-16T11:57:00+00:00",
+            "exit_index": 3843,
+            "exit_reason": "be",
+            "exit_time": "2026-10-16T12:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 29890.0738809919
+          }
+        ],
+        "vwap_anchor": "session_1800_ny",
+        "vwap_anchor_correct": true
+      },
+      "forming": {
+        "anchor": "epoch",
+        "bars": 4013,
+        "comparison_rows": [
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-06T16:03:00-04:00",
+            "owner_time_utc": "2026-10-06T20:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 3625.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-06T18:45:00-04:00",
+            "owner_time_utc": "2026-10-06T22:45:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 3571.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-06T21:18:00-04:00",
+            "owner_time_utc": "2026-10-07T01:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 3520.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-07T18:21:00-04:00",
+            "owner_time_utc": "2026-10-07T22:21:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-07T21:51:00-04:00",
+            "owner_time_utc": "2026-10-08T01:51:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-08T10:45:00-04:00",
+            "owner_time_utc": "2026-10-08T14:45:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-08T11:09:00-04:00",
+            "owner_time_utc": "2026-10-08T15:09:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 2763.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-08T19:03:00-04:00",
+            "owner_time_utc": "2026-10-08T23:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 2605.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-09T10:30:00-04:00",
+            "owner_time_utc": "2026-10-09T14:30:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 2296.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-09T12:30:00-04:00",
+            "owner_time_utc": "2026-10-09T16:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-11T18:18:00-04:00",
+            "owner_time_utc": "2026-10-11T22:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-11T20:27:00-04:00",
+            "owner_time_utc": "2026-10-12T00:27:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-11T22:30:00-04:00",
+            "owner_time_utc": "2026-10-12T02:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-13T07:00:00-04:00",
+            "owner_time_utc": "2026-10-13T11:00:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 446.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-13T10:57:00-04:00",
+            "owner_time_utc": "2026-10-13T14:57:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 367.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-13T13:36:00-04:00",
+            "owner_time_utc": "2026-10-13T17:36:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 314.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-13T14:21:00-04:00",
+            "owner_time_utc": "2026-10-13T18:21:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-14T01:24:00-04:00",
+            "owner_time_utc": "2026-10-14T05:24:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 78.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-14T04:54:00-04:00",
+            "owner_time_utc": "2026-10-14T08:54:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 8.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-14T06:18:00-04:00",
+            "owner_time_utc": "2026-10-14T10:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -20.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T08:18:00-04:00",
+            "owner_time_utc": "2026-10-14T12:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-14T18:24:00-04:00",
+            "owner_time_utc": "2026-10-14T22:24:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -262.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-15T00:30:00-04:00",
+            "owner_time_utc": "2026-10-15T04:30:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -384.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-15T01:27:00-04:00",
+            "owner_time_utc": "2026-10-15T05:27:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -403.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-15T08:45:00-04:00",
+            "owner_time_utc": "2026-10-15T12:45:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -549.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-15T09:42:00-04:00",
+            "owner_time_utc": "2026-10-15T13:42:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -568.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T20:57:00-04:00",
+            "owner_time_utc": "2026-10-16T00:57:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-16T06:12:00-04:00",
+            "owner_time_utc": "2026-10-16T10:12:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -978.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-16T07:03:00-04:00",
+            "owner_time_utc": "2026-10-16T11:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -995.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-16T09:18:00-04:00",
+            "owner_time_utc": "2026-10-16T13:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -1040.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:18:00+00:00",
+            "owner_time_ny": "2026-10-16T10:42:00-04:00",
+            "owner_time_utc": "2026-10-16T14:42:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -1068.0
+          }
+        ],
+        "entry_counts": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "30": 1
+        },
+        "extra_entries_within_30_bars": 0,
+        "first_feature_values": [
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:45:00+00:00",
+            "vwap": 29741.23246212118
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:48:00+00:00",
+            "vwap": 29739.970937263766
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:51:00+00:00",
+            "vwap": 29738.721153846123
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:54:00+00:00",
+            "vwap": 29737.477990970627
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:57:00+00:00",
+            "vwap": 29736.250938438407
+          }
+        ],
+        "mode": "forming",
+        "port_entry_count": 1,
+        "trades": [
+          {
+            "direction": "short",
+            "entry_index": 2871,
+            "entry_price": 30585.0,
+            "entry_time": "2026-10-14T09:18:00+00:00",
+            "exit_index": 2871,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-14T09:18:00+00:00",
+            "highest_target": 0,
+            "stop_price": 30593.066729276845
+          }
+        ],
+        "vwap_anchor": "session_1800_ny",
+        "vwap_anchor_correct": true
+      }
+    },
+    "rth_0930_ny": {
+      "closed": {
+        "anchor": "rth_0930_ny",
+        "bars": 4013,
+        "comparison_rows": [
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-06T16:03:00-04:00",
+            "owner_time_utc": "2026-10-06T20:03:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-06T18:45:00-04:00",
+            "owner_time_utc": "2026-10-06T22:45:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-06T21:18:00-04:00",
+            "owner_time_utc": "2026-10-07T01:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-07T18:21:00-04:00",
+            "owner_time_utc": "2026-10-07T22:21:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-07T21:51:00-04:00",
+            "owner_time_utc": "2026-10-08T01:51:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-08T10:45:00-04:00",
+            "owner_time_utc": "2026-10-08T14:45:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-08T11:09:00-04:00",
+            "owner_time_utc": "2026-10-08T15:09:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-08T19:03:00-04:00",
+            "owner_time_utc": "2026-10-08T23:03:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-09T10:30:00-04:00",
+            "owner_time_utc": "2026-10-09T14:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-09T12:30:00-04:00",
+            "owner_time_utc": "2026-10-09T16:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-11T18:18:00-04:00",
+            "owner_time_utc": "2026-10-11T22:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-11T20:27:00-04:00",
+            "owner_time_utc": "2026-10-12T00:27:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-11T22:30:00-04:00",
+            "owner_time_utc": "2026-10-12T02:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-13T07:00:00-04:00",
+            "owner_time_utc": "2026-10-13T11:00:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-13T10:57:00-04:00",
+            "owner_time_utc": "2026-10-13T14:57:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-13T13:36:00-04:00",
+            "owner_time_utc": "2026-10-13T17:36:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-13T14:21:00-04:00",
+            "owner_time_utc": "2026-10-13T18:21:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T01:24:00-04:00",
+            "owner_time_utc": "2026-10-14T05:24:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T04:54:00-04:00",
+            "owner_time_utc": "2026-10-14T08:54:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T06:18:00-04:00",
+            "owner_time_utc": "2026-10-14T10:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T08:18:00-04:00",
+            "owner_time_utc": "2026-10-14T12:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T18:24:00-04:00",
+            "owner_time_utc": "2026-10-14T22:24:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T00:30:00-04:00",
+            "owner_time_utc": "2026-10-15T04:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T01:27:00-04:00",
+            "owner_time_utc": "2026-10-15T05:27:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T08:45:00-04:00",
+            "owner_time_utc": "2026-10-15T12:45:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T09:42:00-04:00",
+            "owner_time_utc": "2026-10-15T13:42:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T20:57:00-04:00",
+            "owner_time_utc": "2026-10-16T00:57:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-16T06:12:00-04:00",
+            "owner_time_utc": "2026-10-16T10:12:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-16T07:03:00-04:00",
+            "owner_time_utc": "2026-10-16T11:03:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-16T09:18:00-04:00",
+            "owner_time_utc": "2026-10-16T13:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-16T10:42:00-04:00",
+            "owner_time_utc": "2026-10-16T14:42:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          }
+        ],
+        "entry_counts": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "30": 0
+        },
+        "extra_entries_within_30_bars": 0,
+        "first_feature_values": [
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:45:00+00:00",
+            "vwap": 29741.23246212118
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:48:00+00:00",
+            "vwap": 29739.970937263766
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:51:00+00:00",
+            "vwap": 29738.721153846123
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:54:00+00:00",
+            "vwap": 29737.477990970627
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:57:00+00:00",
+            "vwap": 29736.250938438407
+          }
+        ],
+        "mode": "closed",
+        "port_entry_count": 0,
+        "trades": [],
+        "vwap_anchor": "session_1800_ny",
+        "vwap_anchor_correct": true
+      },
+      "forming": {
+        "anchor": "rth_0930_ny",
+        "bars": 4013,
+        "comparison_rows": [
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-06T16:03:00-04:00",
+            "owner_time_utc": "2026-10-06T20:03:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-06T18:45:00-04:00",
+            "owner_time_utc": "2026-10-06T22:45:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-06T21:18:00-04:00",
+            "owner_time_utc": "2026-10-07T01:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-07T18:21:00-04:00",
+            "owner_time_utc": "2026-10-07T22:21:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-07T21:51:00-04:00",
+            "owner_time_utc": "2026-10-08T01:51:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-08T10:45:00-04:00",
+            "owner_time_utc": "2026-10-08T14:45:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-08T11:09:00-04:00",
+            "owner_time_utc": "2026-10-08T15:09:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-08T19:03:00-04:00",
+            "owner_time_utc": "2026-10-08T23:03:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-09T10:30:00-04:00",
+            "owner_time_utc": "2026-10-09T14:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-09T12:30:00-04:00",
+            "owner_time_utc": "2026-10-09T16:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-11T18:18:00-04:00",
+            "owner_time_utc": "2026-10-11T22:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-11T20:27:00-04:00",
+            "owner_time_utc": "2026-10-12T00:27:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-11T22:30:00-04:00",
+            "owner_time_utc": "2026-10-12T02:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-13T07:00:00-04:00",
+            "owner_time_utc": "2026-10-13T11:00:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-13T10:57:00-04:00",
+            "owner_time_utc": "2026-10-13T14:57:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-13T13:36:00-04:00",
+            "owner_time_utc": "2026-10-13T17:36:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-13T14:21:00-04:00",
+            "owner_time_utc": "2026-10-13T18:21:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T01:24:00-04:00",
+            "owner_time_utc": "2026-10-14T05:24:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T04:54:00-04:00",
+            "owner_time_utc": "2026-10-14T08:54:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T06:18:00-04:00",
+            "owner_time_utc": "2026-10-14T10:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T08:18:00-04:00",
+            "owner_time_utc": "2026-10-14T12:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-14T18:24:00-04:00",
+            "owner_time_utc": "2026-10-14T22:24:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T00:30:00-04:00",
+            "owner_time_utc": "2026-10-15T04:30:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T01:27:00-04:00",
+            "owner_time_utc": "2026-10-15T05:27:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T08:45:00-04:00",
+            "owner_time_utc": "2026-10-15T12:45:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T09:42:00-04:00",
+            "owner_time_utc": "2026-10-15T13:42:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "long",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-15T20:57:00-04:00",
+            "owner_time_utc": "2026-10-16T00:57:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-16T06:12:00-04:00",
+            "owner_time_utc": "2026-10-16T10:12:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-16T07:03:00-04:00",
+            "owner_time_utc": "2026-10-16T11:03:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-16T09:18:00-04:00",
+            "owner_time_utc": "2026-10-16T13:18:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          },
+          {
+            "direction": "short",
+            "first_difference": "missing_signal",
+            "matched": false,
+            "nearest_port_entry_time": null,
+            "owner_time_ny": "2026-10-16T10:42:00-04:00",
+            "owner_time_utc": "2026-10-16T14:42:00+00:00",
+            "port_direction": null,
+            "signed_delta_bars": null
+          }
+        ],
+        "entry_counts": {
+          "0": 0,
+          "1": 0,
+          "2": 0,
+          "3": 0,
+          "30": 0
+        },
+        "extra_entries_within_30_bars": 0,
+        "first_feature_values": [
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:45:00+00:00",
+            "vwap": 29741.23246212118
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:48:00+00:00",
+            "vwap": 29739.970937263766
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:51:00+00:00",
+            "vwap": 29738.721153846123
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:54:00+00:00",
+            "vwap": 29737.477990970627
+          },
+          {
+            "ha_close": null,
+            "ha_open": null,
+            "ts": "2026-10-16T20:57:00+00:00",
+            "vwap": 29736.250938438407
+          }
+        ],
+        "mode": "forming",
+        "port_entry_count": 0,
+        "trades": [],
+        "vwap_anchor": "session_1800_ny",
+        "vwap_anchor_correct": true
+      }
+    },
+    "session_1800_ny": {
+      "closed": {
+        "anchor": "session_1800_ny",
+        "bars": 4013,
+        "comparison_rows": [
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-07T01:24:00+00:00",
+            "owner_time_ny": "2026-10-06T16:03:00-04:00",
+            "owner_time_utc": "2026-10-06T20:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 107.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-07T01:24:00+00:00",
+            "owner_time_ny": "2026-10-06T18:45:00-04:00",
+            "owner_time_utc": "2026-10-06T22:45:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 53.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-07T01:24:00+00:00",
+            "owner_time_ny": "2026-10-06T21:18:00-04:00",
+            "owner_time_utc": "2026-10-07T01:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 2.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-07T22:21:00+00:00",
+            "owner_time_ny": "2026-10-07T18:21:00-04:00",
+            "owner_time_utc": "2026-10-07T22:21:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 0.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-08T02:00:00+00:00",
+            "owner_time_ny": "2026-10-07T21:51:00-04:00",
+            "owner_time_utc": "2026-10-08T01:51:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 3.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T02:45:00+00:00",
+            "owner_time_ny": "2026-10-08T10:45:00-04:00",
+            "owner_time_utc": "2026-10-08T14:45:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": -240.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T23:15:00+00:00",
+            "owner_time_ny": "2026-10-08T11:09:00-04:00",
+            "owner_time_utc": "2026-10-08T15:09:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 162.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T23:15:00+00:00",
+            "owner_time_ny": "2026-10-08T19:03:00-04:00",
+            "owner_time_utc": "2026-10-08T23:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 4.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-09T00:27:00+00:00",
+            "owner_time_ny": "2026-10-09T10:30:00-04:00",
+            "owner_time_utc": "2026-10-09T14:30:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -281.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-09T20:51:00+00:00",
+            "owner_time_ny": "2026-10-09T12:30:00-04:00",
+            "owner_time_utc": "2026-10-09T16:30:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 87.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-12T00:03:00+00:00",
+            "owner_time_ny": "2026-10-11T18:18:00-04:00",
+            "owner_time_utc": "2026-10-11T22:18:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 35.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-12T00:21:00+00:00",
+            "owner_time_ny": "2026-10-11T20:27:00-04:00",
+            "owner_time_utc": "2026-10-12T00:27:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": -2.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-12T02:33:00+00:00",
+            "owner_time_ny": "2026-10-11T22:30:00-04:00",
+            "owner_time_utc": "2026-10-12T02:30:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 1.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-13T15:03:00+00:00",
+            "owner_time_ny": "2026-10-13T07:00:00-04:00",
+            "owner_time_utc": "2026-10-13T11:00:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 81.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-13T15:03:00+00:00",
+            "owner_time_ny": "2026-10-13T10:57:00-04:00",
+            "owner_time_utc": "2026-10-13T14:57:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 2.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-13T17:33:00+00:00",
+            "owner_time_ny": "2026-10-13T13:36:00-04:00",
+            "owner_time_utc": "2026-10-13T17:36:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -1.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-13T22:57:00+00:00",
+            "owner_time_ny": "2026-10-13T14:21:00-04:00",
+            "owner_time_utc": "2026-10-13T18:21:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 92.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-14T05:24:00+00:00",
+            "owner_time_ny": "2026-10-14T01:24:00-04:00",
+            "owner_time_utc": "2026-10-14T05:24:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 0.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-14T09:03:00+00:00",
+            "owner_time_ny": "2026-10-14T04:54:00-04:00",
+            "owner_time_utc": "2026-10-14T08:54:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 3.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:51:00+00:00",
+            "owner_time_ny": "2026-10-14T06:18:00-04:00",
+            "owner_time_utc": "2026-10-14T10:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -9.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T00:57:00+00:00",
+            "owner_time_ny": "2026-10-14T08:18:00-04:00",
+            "owner_time_utc": "2026-10-14T12:18:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": -227.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T23:00:00+00:00",
+            "owner_time_ny": "2026-10-14T18:24:00-04:00",
+            "owner_time_utc": "2026-10-14T22:24:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 12.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T23:00:00+00:00",
+            "owner_time_ny": "2026-10-15T00:30:00-04:00",
+            "owner_time_utc": "2026-10-15T04:30:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -110.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T23:00:00+00:00",
+            "owner_time_ny": "2026-10-15T01:27:00-04:00",
+            "owner_time_utc": "2026-10-15T05:27:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -129.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-15T12:45:00+00:00",
+            "owner_time_ny": "2026-10-15T08:45:00-04:00",
+            "owner_time_utc": "2026-10-15T12:45:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 0.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-15T14:21:00+00:00",
+            "owner_time_ny": "2026-10-15T09:42:00-04:00",
+            "owner_time_utc": "2026-10-15T13:42:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 13.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-16T01:00:00+00:00",
+            "owner_time_ny": "2026-10-15T20:57:00-04:00",
+            "owner_time_utc": "2026-10-16T00:57:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 1.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T10:24:00+00:00",
+            "owner_time_ny": "2026-10-16T06:12:00-04:00",
+            "owner_time_utc": "2026-10-16T10:12:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 4.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T10:24:00+00:00",
+            "owner_time_ny": "2026-10-16T07:03:00-04:00",
+            "owner_time_utc": "2026-10-16T11:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -13.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T11:57:00+00:00",
+            "owner_time_ny": "2026-10-16T09:18:00-04:00",
+            "owner_time_utc": "2026-10-16T13:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -27.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T11:57:00+00:00",
+            "owner_time_ny": "2026-10-16T10:42:00-04:00",
+            "owner_time_utc": "2026-10-16T14:42:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -55.0
+          }
+        ],
+        "entry_counts": {
+          "0": 3,
+          "1": 6,
+          "2": 9,
+          "3": 11,
+          "30": 17
+        },
+        "extra_entries_within_30_bars": 13,
+        "first_feature_values": [
+          {
+            "ha_close": 29165.699999999997,
+            "ha_open": 29200.655532130077,
+            "ts": "2026-10-16T20:45:00+00:00",
+            "vwap": 29741.23246212118
+          },
+          {
+            "ha_close": 29165.699999999997,
+            "ha_open": 29200.655532130077,
+            "ts": "2026-10-16T20:48:00+00:00",
+            "vwap": 29739.970937263766
+          },
+          {
+            "ha_close": 29165.699999999997,
+            "ha_open": 29200.655532130077,
+            "ts": "2026-10-16T20:51:00+00:00",
+            "vwap": 29738.721153846123
+          },
+          {
+            "ha_close": 29165.699999999997,
+            "ha_open": 29200.655532130077,
+            "ts": "2026-10-16T20:54:00+00:00",
+            "vwap": 29737.477990970627
+          },
+          {
+            "ha_close": 29165.699999999997,
+            "ha_open": 29200.655532130077,
+            "ts": "2026-10-16T20:57:00+00:00",
+            "vwap": 29736.250938438407
+          }
+        ],
+        "mode": "closed",
+        "port_entry_count": 30,
+        "trades": [
+          {
+            "direction": "long",
+            "entry_index": 664,
+            "entry_price": 31264.5,
+            "entry_time": "2026-10-07T00:42:00+00:00",
+            "exit_index": 666,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-07T00:48:00+00:00",
+            "highest_target": 0,
+            "stop_price": 31254.007833643704
+          },
+          {
+            "direction": "short",
+            "entry_index": 678,
+            "entry_price": 31242.5,
+            "entry_time": "2026-10-07T01:24:00+00:00",
+            "exit_index": 680,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-07T01:30:00+00:00",
+            "highest_target": 0,
+            "stop_price": 31254.965813269886
+          },
+          {
+            "direction": "long",
+            "entry_index": 853,
+            "entry_price": 31185.6,
+            "entry_time": "2026-10-07T22:21:00+00:00",
+            "exit_index": 857,
+            "exit_reason": "be",
+            "exit_time": "2026-10-07T22:33:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31172.997193672996
+          },
+          {
+            "direction": "long",
+            "entry_index": 875,
+            "entry_price": 31201.4,
+            "entry_time": "2026-10-07T23:27:00+00:00",
+            "exit_index": 881,
+            "exit_reason": "be",
+            "exit_time": "2026-10-07T23:45:00+00:00",
+            "highest_target": 2,
+            "stop_price": 31196.5328617487
+          },
+          {
+            "direction": "short",
+            "entry_index": 913,
+            "entry_price": 31160.6,
+            "entry_time": "2026-10-08T01:21:00+00:00",
+            "exit_index": 914,
+            "exit_reason": "be",
+            "exit_time": "2026-10-08T01:24:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31174.22785573969
+          },
+          {
+            "direction": "long",
+            "entry_index": 926,
+            "entry_price": 31191.0,
+            "entry_time": "2026-10-08T02:00:00+00:00",
+            "exit_index": 927,
+            "exit_reason": "be",
+            "exit_time": "2026-10-08T02:03:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31183.306223323172
+          },
+          {
+            "direction": "long",
+            "entry_index": 939,
+            "entry_price": 31192.9,
+            "entry_time": "2026-10-08T02:39:00+00:00",
+            "exit_index": 939,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-08T02:39:00+00:00",
+            "highest_target": 3,
+            "stop_price": 31191.10296104891
+          },
+          {
+            "direction": "long",
+            "entry_index": 941,
+            "entry_price": 31190.800000000003,
+            "entry_time": "2026-10-08T02:45:00+00:00",
+            "exit_index": 941,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-08T02:45:00+00:00",
+            "highest_target": 3,
+            "stop_price": 31187.95694090442
+          },
+          {
+            "direction": "short",
+            "entry_index": 948,
+            "entry_price": 31163.300000000003,
+            "entry_time": "2026-10-08T03:06:00+00:00",
+            "exit_index": 952,
+            "exit_reason": "be",
+            "exit_time": "2026-10-08T03:24:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31186.340068045658
+          },
+          {
+            "direction": "short",
+            "entry_index": 1316,
+            "entry_price": 30796.9,
+            "entry_time": "2026-10-08T23:15:00+00:00",
+            "exit_index": 1321,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-08T23:30:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30808.46974664004
+          },
+          {
+            "direction": "short",
+            "entry_index": 1339,
+            "entry_price": 30765.0,
+            "entry_time": "2026-10-09T00:27:00+00:00",
+            "exit_index": 1339,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-09T00:27:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30768.934707962744
+          },
+          {
+            "direction": "long",
+            "entry_index": 1736,
+            "entry_price": 30899.1,
+            "entry_time": "2026-10-09T20:51:00+00:00",
+            "exit_index": 1739,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-11T22:36:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30880.977470379312
+          },
+          {
+            "direction": "long",
+            "entry_index": 1767,
+            "entry_price": 31018.6,
+            "entry_time": "2026-10-12T00:03:00+00:00",
+            "exit_index": 1767,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-12T00:03:00+00:00",
+            "highest_target": 3,
+            "stop_price": 31017.77804794554
+          },
+          {
+            "direction": "long",
+            "entry_index": 1773,
+            "entry_price": 31011.199999999997,
+            "entry_time": "2026-10-12T00:21:00+00:00",
+            "exit_index": 1774,
+            "exit_reason": "be",
+            "exit_time": "2026-10-12T00:24:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31003.556912607353
+          },
+          {
+            "direction": "long",
+            "entry_index": 1814,
+            "entry_price": 31000.1,
+            "entry_time": "2026-10-12T02:33:00+00:00",
+            "exit_index": 1844,
+            "exit_reason": "be",
+            "exit_time": "2026-10-12T04:03:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30984.935104671076
+          },
+          {
+            "direction": "short",
+            "entry_index": 2184,
+            "entry_price": 30641.4,
+            "entry_time": "2026-10-12T21:54:00+00:00",
+            "exit_index": 2186,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-12T22:00:00+00:00",
+            "highest_target": 0,
+            "stop_price": 30651.09695911708
+          },
+          {
+            "direction": "short",
+            "entry_index": 2517,
+            "entry_price": 30491.199999999997,
+            "entry_time": "2026-10-13T15:03:00+00:00",
+            "exit_index": 2536,
+            "exit_reason": "be",
+            "exit_time": "2026-10-13T16:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30540.893311670072
+          },
+          {
+            "direction": "short",
+            "entry_index": 2565,
+            "entry_price": 30489.550000000003,
+            "entry_time": "2026-10-13T17:33:00+00:00",
+            "exit_index": 2567,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-13T17:39:00+00:00",
+            "highest_target": 0,
+            "stop_price": 30513.458248605828
+          },
+          {
+            "direction": "long",
+            "entry_index": 2664,
+            "entry_price": 30596.699999999997,
+            "entry_time": "2026-10-13T22:57:00+00:00",
+            "exit_index": 2665,
+            "exit_reason": "be",
+            "exit_time": "2026-10-13T23:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30591.21340210219
+          },
+          {
+            "direction": "long",
+            "entry_index": 2704,
+            "entry_price": 30595.800000000003,
+            "entry_time": "2026-10-14T00:57:00+00:00",
+            "exit_index": 2705,
+            "exit_reason": "be",
+            "exit_time": "2026-10-14T01:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30586.659664916
+          },
+          {
+            "direction": "short",
+            "entry_index": 2793,
+            "entry_price": 30588.5,
+            "entry_time": "2026-10-14T05:24:00+00:00",
+            "exit_index": 2806,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T06:03:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30610.67123782414
+          },
+          {
+            "direction": "short",
+            "entry_index": 2866,
+            "entry_price": 30580.300000000003,
+            "entry_time": "2026-10-14T09:03:00+00:00",
+            "exit_index": 2867,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T09:06:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30586.246783689945
+          },
+          {
+            "direction": "short",
+            "entry_index": 2882,
+            "entry_price": 30578.199999999997,
+            "entry_time": "2026-10-14T09:51:00+00:00",
+            "exit_index": 2886,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T10:03:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30585.702689467897
+          },
+          {
+            "direction": "short",
+            "entry_index": 3102,
+            "entry_price": 29910.9,
+            "entry_time": "2026-10-14T21:33:00+00:00",
+            "exit_index": 3109,
+            "exit_reason": "be",
+            "exit_time": "2026-10-14T21:57:00+00:00",
+            "highest_target": 2,
+            "stop_price": 29919.861073455984
+          },
+          {
+            "direction": "short",
+            "entry_index": 3130,
+            "entry_price": 29802.4,
+            "entry_time": "2026-10-14T23:00:00+00:00",
+            "exit_index": 3134,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T23:15:00+00:00",
+            "highest_target": 3,
+            "stop_price": 29824.56781383417
+          },
+          {
+            "direction": "short",
+            "entry_index": 3395,
+            "entry_price": 29621.35,
+            "entry_time": "2026-10-15T12:45:00+00:00",
+            "exit_index": 3410,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-15T13:30:00+00:00",
+            "highest_target": 3,
+            "stop_price": 29665.501450585863
+          },
+          {
+            "direction": "short",
+            "entry_index": 3422,
+            "entry_price": 29630.800000000003,
+            "entry_time": "2026-10-15T14:21:00+00:00",
+            "exit_index": 3428,
+            "exit_reason": "be",
+            "exit_time": "2026-10-15T14:39:00+00:00",
+            "highest_target": 2,
+            "stop_price": 29666.45772522769
+          },
+          {
+            "direction": "long",
+            "entry_index": 3629,
+            "entry_price": 29860.6,
+            "entry_time": "2026-10-16T01:00:00+00:00",
+            "exit_index": 3686,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-16T03:51:00+00:00",
+            "highest_target": 3,
+            "stop_price": 29818.346754858514
+          },
+          {
+            "direction": "short",
+            "entry_index": 3812,
+            "entry_price": 29904.699999999997,
+            "entry_time": "2026-10-16T10:24:00+00:00",
+            "exit_index": 3815,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-16T10:33:00+00:00",
+            "highest_target": 0,
+            "stop_price": 29922.945460504005
+          },
+          {
+            "direction": "short",
+            "entry_index": 3842,
+            "entry_price": 29886.699999999997,
+            "entry_time": "2026-10-16T11:57:00+00:00",
+            "exit_index": 3843,
+            "exit_reason": "be",
+            "exit_time": "2026-10-16T12:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 29890.0738809919
+          }
+        ],
+        "vwap_anchor": "session_1800_ny",
+        "vwap_anchor_correct": true
+      },
+      "forming": {
+        "anchor": "session_1800_ny",
+        "bars": 4013,
+        "comparison_rows": [
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-07T01:21:00+00:00",
+            "owner_time_ny": "2026-10-06T16:03:00-04:00",
+            "owner_time_utc": "2026-10-06T20:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 106.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-07T01:21:00+00:00",
+            "owner_time_ny": "2026-10-06T18:45:00-04:00",
+            "owner_time_utc": "2026-10-06T22:45:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 52.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-07T01:21:00+00:00",
+            "owner_time_ny": "2026-10-06T21:18:00-04:00",
+            "owner_time_utc": "2026-10-07T01:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 1.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-07T22:21:00+00:00",
+            "owner_time_ny": "2026-10-07T18:21:00-04:00",
+            "owner_time_utc": "2026-10-07T22:21:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 0.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-08T02:00:00+00:00",
+            "owner_time_ny": "2026-10-07T21:51:00-04:00",
+            "owner_time_utc": "2026-10-08T01:51:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 3.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T02:45:00+00:00",
+            "owner_time_ny": "2026-10-08T10:45:00-04:00",
+            "owner_time_utc": "2026-10-08T14:45:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": -240.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T23:15:00+00:00",
+            "owner_time_ny": "2026-10-08T11:09:00-04:00",
+            "owner_time_utc": "2026-10-08T15:09:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 162.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-08T23:15:00+00:00",
+            "owner_time_ny": "2026-10-08T19:03:00-04:00",
+            "owner_time_utc": "2026-10-08T23:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 4.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-09T00:27:00+00:00",
+            "owner_time_ny": "2026-10-09T10:30:00-04:00",
+            "owner_time_utc": "2026-10-09T14:30:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -281.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-09T20:51:00+00:00",
+            "owner_time_ny": "2026-10-09T12:30:00-04:00",
+            "owner_time_utc": "2026-10-09T16:30:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 87.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-12T00:03:00+00:00",
+            "owner_time_ny": "2026-10-11T18:18:00-04:00",
+            "owner_time_utc": "2026-10-11T22:18:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 35.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-12T00:21:00+00:00",
+            "owner_time_ny": "2026-10-11T20:27:00-04:00",
+            "owner_time_utc": "2026-10-12T00:27:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": -2.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-12T02:33:00+00:00",
+            "owner_time_ny": "2026-10-11T22:30:00-04:00",
+            "owner_time_utc": "2026-10-12T02:30:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 1.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-13T15:03:00+00:00",
+            "owner_time_ny": "2026-10-13T07:00:00-04:00",
+            "owner_time_utc": "2026-10-13T11:00:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 81.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-13T15:03:00+00:00",
+            "owner_time_ny": "2026-10-13T10:57:00-04:00",
+            "owner_time_utc": "2026-10-13T14:57:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 2.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-13T17:33:00+00:00",
+            "owner_time_ny": "2026-10-13T13:36:00-04:00",
+            "owner_time_utc": "2026-10-13T17:36:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -1.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-13T22:57:00+00:00",
+            "owner_time_ny": "2026-10-13T14:21:00-04:00",
+            "owner_time_utc": "2026-10-13T18:21:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 92.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-14T05:24:00+00:00",
+            "owner_time_ny": "2026-10-14T01:24:00-04:00",
+            "owner_time_utc": "2026-10-14T05:24:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 0.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-14T09:03:00+00:00",
+            "owner_time_ny": "2026-10-14T04:54:00-04:00",
+            "owner_time_utc": "2026-10-14T08:54:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 3.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T09:51:00+00:00",
+            "owner_time_ny": "2026-10-14T06:18:00-04:00",
+            "owner_time_utc": "2026-10-14T10:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -9.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T00:57:00+00:00",
+            "owner_time_ny": "2026-10-14T08:18:00-04:00",
+            "owner_time_utc": "2026-10-14T12:18:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": -227.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T23:00:00+00:00",
+            "owner_time_ny": "2026-10-14T18:24:00-04:00",
+            "owner_time_utc": "2026-10-14T22:24:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 12.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T23:00:00+00:00",
+            "owner_time_ny": "2026-10-15T00:30:00-04:00",
+            "owner_time_utc": "2026-10-15T04:30:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -110.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-14T23:00:00+00:00",
+            "owner_time_ny": "2026-10-15T01:27:00-04:00",
+            "owner_time_utc": "2026-10-15T05:27:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -129.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-15T12:45:00+00:00",
+            "owner_time_ny": "2026-10-15T08:45:00-04:00",
+            "owner_time_utc": "2026-10-15T12:45:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 0.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-15T14:21:00+00:00",
+            "owner_time_ny": "2026-10-15T09:42:00-04:00",
+            "owner_time_utc": "2026-10-15T13:42:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 13.0
+          },
+          {
+            "direction": "long",
+            "first_difference": "matched",
+            "matched": true,
+            "nearest_port_entry_time": "2026-10-16T01:00:00+00:00",
+            "owner_time_ny": "2026-10-15T20:57:00-04:00",
+            "owner_time_utc": "2026-10-16T00:57:00+00:00",
+            "port_direction": "long",
+            "signed_delta_bars": 1.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T10:24:00+00:00",
+            "owner_time_ny": "2026-10-16T06:12:00-04:00",
+            "owner_time_utc": "2026-10-16T10:12:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": 4.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T10:24:00+00:00",
+            "owner_time_ny": "2026-10-16T07:03:00-04:00",
+            "owner_time_utc": "2026-10-16T11:03:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -13.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T11:57:00+00:00",
+            "owner_time_ny": "2026-10-16T09:18:00-04:00",
+            "owner_time_utc": "2026-10-16T13:18:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -27.0
+          },
+          {
+            "direction": "short",
+            "first_difference": "signal_or_refresh",
+            "matched": false,
+            "nearest_port_entry_time": "2026-10-16T11:57:00+00:00",
+            "owner_time_ny": "2026-10-16T10:42:00-04:00",
+            "owner_time_utc": "2026-10-16T14:42:00+00:00",
+            "port_direction": "short",
+            "signed_delta_bars": -55.0
+          }
+        ],
+        "entry_counts": {
+          "0": 3,
+          "1": 7,
+          "2": 9,
+          "3": 11,
+          "30": 17
+        },
+        "extra_entries_within_30_bars": 12,
+        "first_feature_values": [
+          {
+            "ha_close": 29185.750000000004,
+            "ha_open": 29183.177766065037,
+            "ts": "2026-10-16T20:45:00+00:00",
+            "vwap": 29741.23246212118
+          },
+          {
+            "ha_close": 29186.500000000004,
+            "ha_open": 29183.177766065037,
+            "ts": "2026-10-16T20:48:00+00:00",
+            "vwap": 29739.970937263766
+          },
+          {
+            "ha_close": 29187.625000000004,
+            "ha_open": 29183.177766065037,
+            "ts": "2026-10-16T20:51:00+00:00",
+            "vwap": 29738.721153846123
+          },
+          {
+            "ha_close": 29185.825000000004,
+            "ha_open": 29183.177766065037,
+            "ts": "2026-10-16T20:54:00+00:00",
+            "vwap": 29737.477990970627
+          },
+          {
+            "ha_close": 29188.450000000004,
+            "ha_open": 29183.177766065037,
+            "ts": "2026-10-16T20:57:00+00:00",
+            "vwap": 29736.250938438407
+          }
+        ],
+        "mode": "forming",
+        "port_entry_count": 29,
+        "trades": [
+          {
+            "direction": "short",
+            "entry_index": 677,
+            "entry_price": 31238.699999999997,
+            "entry_time": "2026-10-07T01:21:00+00:00",
+            "exit_index": 680,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-07T01:30:00+00:00",
+            "highest_target": 0,
+            "stop_price": 31255.006260444494
+          },
+          {
+            "direction": "long",
+            "entry_index": 853,
+            "entry_price": 31185.6,
+            "entry_time": "2026-10-07T22:21:00+00:00",
+            "exit_index": 857,
+            "exit_reason": "be",
+            "exit_time": "2026-10-07T22:33:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31172.997193672996
+          },
+          {
+            "direction": "long",
+            "entry_index": 875,
+            "entry_price": 31201.4,
+            "entry_time": "2026-10-07T23:27:00+00:00",
+            "exit_index": 881,
+            "exit_reason": "be",
+            "exit_time": "2026-10-07T23:45:00+00:00",
+            "highest_target": 2,
+            "stop_price": 31196.5328617487
+          },
+          {
+            "direction": "short",
+            "entry_index": 913,
+            "entry_price": 31160.6,
+            "entry_time": "2026-10-08T01:21:00+00:00",
+            "exit_index": 914,
+            "exit_reason": "be",
+            "exit_time": "2026-10-08T01:24:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31174.22785573969
+          },
+          {
+            "direction": "long",
+            "entry_index": 926,
+            "entry_price": 31191.0,
+            "entry_time": "2026-10-08T02:00:00+00:00",
+            "exit_index": 927,
+            "exit_reason": "be",
+            "exit_time": "2026-10-08T02:03:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31183.306223323172
+          },
+          {
+            "direction": "long",
+            "entry_index": 939,
+            "entry_price": 31192.9,
+            "entry_time": "2026-10-08T02:39:00+00:00",
+            "exit_index": 939,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-08T02:39:00+00:00",
+            "highest_target": 3,
+            "stop_price": 31191.10296104891
+          },
+          {
+            "direction": "long",
+            "entry_index": 941,
+            "entry_price": 31190.800000000003,
+            "entry_time": "2026-10-08T02:45:00+00:00",
+            "exit_index": 941,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-08T02:45:00+00:00",
+            "highest_target": 3,
+            "stop_price": 31187.95694090442
+          },
+          {
+            "direction": "short",
+            "entry_index": 948,
+            "entry_price": 31163.300000000003,
+            "entry_time": "2026-10-08T03:06:00+00:00",
+            "exit_index": 952,
+            "exit_reason": "be",
+            "exit_time": "2026-10-08T03:24:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31186.340068045658
+          },
+          {
+            "direction": "short",
+            "entry_index": 1316,
+            "entry_price": 30796.9,
+            "entry_time": "2026-10-08T23:15:00+00:00",
+            "exit_index": 1321,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-08T23:30:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30808.46974664004
+          },
+          {
+            "direction": "short",
+            "entry_index": 1339,
+            "entry_price": 30765.0,
+            "entry_time": "2026-10-09T00:27:00+00:00",
+            "exit_index": 1339,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-09T00:27:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30768.934707962744
+          },
+          {
+            "direction": "long",
+            "entry_index": 1736,
+            "entry_price": 30899.1,
+            "entry_time": "2026-10-09T20:51:00+00:00",
+            "exit_index": 1739,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-11T22:36:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30880.977470379312
+          },
+          {
+            "direction": "long",
+            "entry_index": 1767,
+            "entry_price": 31018.6,
+            "entry_time": "2026-10-12T00:03:00+00:00",
+            "exit_index": 1767,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-12T00:03:00+00:00",
+            "highest_target": 3,
+            "stop_price": 31017.77804794554
+          },
+          {
+            "direction": "long",
+            "entry_index": 1773,
+            "entry_price": 31011.199999999997,
+            "entry_time": "2026-10-12T00:21:00+00:00",
+            "exit_index": 1774,
+            "exit_reason": "be",
+            "exit_time": "2026-10-12T00:24:00+00:00",
+            "highest_target": 1,
+            "stop_price": 31003.556912607353
+          },
+          {
+            "direction": "long",
+            "entry_index": 1814,
+            "entry_price": 31000.1,
+            "entry_time": "2026-10-12T02:33:00+00:00",
+            "exit_index": 1844,
+            "exit_reason": "be",
+            "exit_time": "2026-10-12T04:03:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30984.935104671076
+          },
+          {
+            "direction": "short",
+            "entry_index": 2184,
+            "entry_price": 30641.4,
+            "entry_time": "2026-10-12T21:54:00+00:00",
+            "exit_index": 2186,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-12T22:00:00+00:00",
+            "highest_target": 0,
+            "stop_price": 30651.09695911708
+          },
+          {
+            "direction": "short",
+            "entry_index": 2517,
+            "entry_price": 30491.199999999997,
+            "entry_time": "2026-10-13T15:03:00+00:00",
+            "exit_index": 2536,
+            "exit_reason": "be",
+            "exit_time": "2026-10-13T16:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30540.893311670072
+          },
+          {
+            "direction": "short",
+            "entry_index": 2565,
+            "entry_price": 30489.550000000003,
+            "entry_time": "2026-10-13T17:33:00+00:00",
+            "exit_index": 2567,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-13T17:39:00+00:00",
+            "highest_target": 0,
+            "stop_price": 30513.458248605828
+          },
+          {
+            "direction": "long",
+            "entry_index": 2664,
+            "entry_price": 30596.699999999997,
+            "entry_time": "2026-10-13T22:57:00+00:00",
+            "exit_index": 2665,
+            "exit_reason": "be",
+            "exit_time": "2026-10-13T23:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30591.21340210219
+          },
+          {
+            "direction": "long",
+            "entry_index": 2704,
+            "entry_price": 30595.800000000003,
+            "entry_time": "2026-10-14T00:57:00+00:00",
+            "exit_index": 2705,
+            "exit_reason": "be",
+            "exit_time": "2026-10-14T01:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 30586.659664916
+          },
+          {
+            "direction": "short",
+            "entry_index": 2793,
+            "entry_price": 30588.5,
+            "entry_time": "2026-10-14T05:24:00+00:00",
+            "exit_index": 2806,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T06:03:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30610.67123782414
+          },
+          {
+            "direction": "short",
+            "entry_index": 2866,
+            "entry_price": 30580.300000000003,
+            "entry_time": "2026-10-14T09:03:00+00:00",
+            "exit_index": 2867,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T09:06:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30586.246783689945
+          },
+          {
+            "direction": "short",
+            "entry_index": 2882,
+            "entry_price": 30578.199999999997,
+            "entry_time": "2026-10-14T09:51:00+00:00",
+            "exit_index": 2886,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T10:03:00+00:00",
+            "highest_target": 3,
+            "stop_price": 30585.702689467897
+          },
+          {
+            "direction": "short",
+            "entry_index": 3102,
+            "entry_price": 29910.9,
+            "entry_time": "2026-10-14T21:33:00+00:00",
+            "exit_index": 3109,
+            "exit_reason": "be",
+            "exit_time": "2026-10-14T21:57:00+00:00",
+            "highest_target": 2,
+            "stop_price": 29919.861073455984
+          },
+          {
+            "direction": "short",
+            "entry_index": 3130,
+            "entry_price": 29802.4,
+            "entry_time": "2026-10-14T23:00:00+00:00",
+            "exit_index": 3134,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-14T23:15:00+00:00",
+            "highest_target": 3,
+            "stop_price": 29824.56781383417
+          },
+          {
+            "direction": "short",
+            "entry_index": 3395,
+            "entry_price": 29621.35,
+            "entry_time": "2026-10-15T12:45:00+00:00",
+            "exit_index": 3410,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-15T13:30:00+00:00",
+            "highest_target": 3,
+            "stop_price": 29665.501450585863
+          },
+          {
+            "direction": "short",
+            "entry_index": 3422,
+            "entry_price": 29630.800000000003,
+            "entry_time": "2026-10-15T14:21:00+00:00",
+            "exit_index": 3428,
+            "exit_reason": "be",
+            "exit_time": "2026-10-15T14:39:00+00:00",
+            "highest_target": 2,
+            "stop_price": 29666.45772522769
+          },
+          {
+            "direction": "long",
+            "entry_index": 3629,
+            "entry_price": 29860.6,
+            "entry_time": "2026-10-16T01:00:00+00:00",
+            "exit_index": 3686,
+            "exit_reason": "tp3",
+            "exit_time": "2026-10-16T03:51:00+00:00",
+            "highest_target": 3,
+            "stop_price": 29818.346754858514
+          },
+          {
+            "direction": "short",
+            "entry_index": 3812,
+            "entry_price": 29904.699999999997,
+            "entry_time": "2026-10-16T10:24:00+00:00",
+            "exit_index": 3815,
+            "exit_reason": "stop",
+            "exit_time": "2026-10-16T10:33:00+00:00",
+            "highest_target": 0,
+            "stop_price": 29922.945460504005
+          },
+          {
+            "direction": "short",
+            "entry_index": 3842,
+            "entry_price": 29886.699999999997,
+            "entry_time": "2026-10-16T11:57:00+00:00",
+            "exit_index": 3843,
+            "exit_reason": "be",
+            "exit_time": "2026-10-16T12:00:00+00:00",
+            "highest_target": 1,
+            "stop_price": 29890.0738809919
+          }
+        ],
+        "vwap_anchor": "session_1800_ny",
+        "vwap_anchor_correct": true
+      }
+    }
+  },
+  "generated_at": "2026-10-19T04:58:33.078888+00:00",
+  "owner_entries": 31,
+  "owner_timezone": "America/New_York",
+  "owner_window_utc": [
+    "2026-10-05T00:00:00+00:00",
+    "2026-10-17T00:00:00+00:00"
+  ],
+  "safety": {
+    "broker_calls": 0,
+    "lake_writes": 0,
+    "orders": 0,
+    "production_state_writes": 0,
+    "sealed_holdout_read": false,
+    "tuning": false
+  },
+  "task": "T-182",
+  "verdict": {
+    "best_anchor": "session_1800_ny",
+    "best_mode": "closed",
+    "gate_25_of_31_met": false,
+    "vwap_anchor_correct": true,
+    "within_30_bars": 17,
+    "within_3_bars": 11
+  }
+}
