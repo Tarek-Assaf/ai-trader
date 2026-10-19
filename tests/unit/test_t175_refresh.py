@@ -22,7 +22,7 @@ def test_classify_marks_recent_exit_as_refresh():
         OwnerEntry(bars[5].ts_utc, "long", 100, 1),
         OwnerEntry(bars[15].ts_utc, "long", 100, 1),
     )
-    exits = (OwnerExit("1", "long", bars[3].ts_utc, bars[10].ts_utc, "target"),)
+    exits = (OwnerExit("1", "long", bars[8].ts_utc, bars[10].ts_utc, "target"),)
     states = classify(owners, exits, bars)
     assert [row["class"] for row in states] == ["first", "refresh"]
     assert states[1]["bars_since_same_direction_exit"] == 5

@@ -14843,7 +14843,7 @@
       "subject": "Claude review of T-175 owner-exit-driven refresh diagnostic",
       "method": "Reviewed report, JSON and script against docs/specs/t175_owner_exit_refresh.md; ran ruff check and ruff format (line length 100) on the script and test after fixing import order, an E402 import and long lines (no logic change; report text unchanged); checked safety counters in the JSON (broker calls 0, orders 0, holdout reads 0, lake writes 0); port and earlier scripts untouched; verdict not_reproduced, explains-flag no.",
       "result": "pass",
-      "checked": "Spec followed: owner state forced from 54 exits, 31 entries classified first/refresh, conditions reported at offsets -2..+2, closed and forming modes. Best 7/31 (refresh 7, first 0), below the 15/31 noise cutoff and 25/31 goal. Owner-exit-driven refresh does not explain the entries.",
+      "checked": "Spec followed: owner state forced from 54 exits, 31 entries classified first/refresh, conditions reported at offsets -2..+2, closed and forming modes. Best 7/31 (refresh 7, first 0), below the 15/31 noise cutoff and 25/31 goal. Owner-exit-driven refresh does not explain the entries. Caveat found in review: classify() counts an owner entry's own exit row as an open owner position, so 30 of 31 entries were classed refresh and 1 first (the report's first=0 is an artefact of that). The 7/31 is therefore the result under the most permissive direction rule (no cross needed), which makes the negative stronger on direction; the lowest-passing condition is location (VWAP distance). Not rerun (Pod needed); the unit test expectation was corrected to match the spec (an entry during an open owner position is a refresh).",
       "evidence": [
         "docs/evidence/t175_report.md",
         "docs/evidence/t175_refresh.json",
@@ -25590,7 +25590,7 @@
         "scripts/lab_t175_refresh.py",
         "tests/unit/test_t175_refresh.py"
       ],
-      "summary": "Reviewed T-175: accepted (V-438) as negative. Ruff check and format pass (import order, E402 and long lines fixed, no logic change); no broker, order, holdout or lake activity. Owner-exit-driven refresh reproduces 7/31 (all refresh, 0 first), noise. Queued T-176: basis-free audit of the owner's CSV geometry against the Pine script. Rebuilt on main with Codex's log entry kept. Turn to codex (D-045)."
+      "summary": "Reviewed T-175: accepted (V-438) as negative. Ruff check and format pass (import order, E402 and long lines fixed, no logic change); no broker, order, holdout or lake activity. Owner-exit-driven refresh reproduces 7/31 (all refresh, 0 first), noise. Caveat: classification counted each entry's own exit row as open, so 30/31 refresh (7/31 is under the most permissive direction rule); fixed one wrong unit-test expectation. Queued T-176: basis-free audit of the owner's CSV geometry against the Pine script. Rebuilt on main with Codex's log entry kept. Turn to codex (D-045)."
     }
   ],
   "project_summary": "T-174 accepted as a negative diagnostic: the Renko setup does not reproduce the owner entries (best 4/31 within 2 bars, goal 25/31). T-175 tests whether the entries follow the Pine refresh rule when the state is driven by the owner's real exits. Historical Tai rerun stays gated until 25/31."
