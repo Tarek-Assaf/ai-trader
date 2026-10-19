@@ -137,7 +137,7 @@ def test_from_lake_reports_warmup_for_tiny_bid_ask_fixture(tmp_path: Path) -> No
     assert provider.warmup_ready is False
 
 
-def test_runtime_gate_and_recorder_registration() -> None:
+def test_runtime_gate_does_not_register_on_unfed_api_recorder() -> None:
     class Settings:
         broker_env = "demo"
         trading_mode = "paper"
@@ -172,11 +172,10 @@ def test_runtime_gate_and_recorder_registration() -> None:
         builder=ThreeMinuteBarBuilder("NSXUSD"),
         balance_provider=lambda: Decimal("1000"),
         rules_provider=lambda _epic: rules,
-        recorder=recorder,
         signal_provider=lambda _bar: None,
     )
     assert runtime is not None
-    assert callable(recorder.callback)
+    assert recorder.callback is None
 
     disabled_experiment = Settings()
     disabled_experiment.tai_demo_experiment = False

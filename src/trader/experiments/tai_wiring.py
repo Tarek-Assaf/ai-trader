@@ -23,9 +23,11 @@ from trader.data.instruments import InstrumentDataError
 from trader.data.resample import Candle
 from trader.execution.brokers.base import Direction, OrderRequest
 from trader.experiments.tai_demo import (
+    Alert,
     ClosedBar,
     Control,
     DemoOutcome,
+    Journal,
     OrderManager,
     PositionGateway,
     TaiDemoRefused,
@@ -587,13 +589,48 @@ class TaiOrderFactory:
 
 
 class TaiDemoRuntimeAdapter:
-    """Connect closed recorder minutes to the runner and schedule source."""
+    """Connect lake-fed closed minutes to the runner and schedule source."""
 
-    def __init__(self, runner: TaiDemoRunner, source: Any, builder: ThreeMinuteBarBuilder) -> None:
+    def __init__(
+        self,
+        runner: TaiDemoRunner,
+        source: Any,
+        builder: ThreeMinuteBarBuilder,
+        *,
+        journal: Journal | None = None,
+        alert: Alert | None = None,
+    ) -> None:
         self.runner = runner
         self.source = source
         self.builder = builder
+        self._journal = journal or (lambda _event: None)
+        self._alert = alert or (lambda message: LOGGER.info("tai demo: %s", message))
+        self._feed_stale = False
         self._bars: dict[str, ClosedBar] = {}
+
+    @property
+    def feed_stale(self) -> bool:
+        return self._feed_stale
+
+    def mark_feed_stale(self) -> None:
+        """Fail closed and emit one bounded stale-feed alert per outage."""
+        if self._feed_stale:
+            return
+        self._feed_stale = True
+        self._journal(
+            {
+                "event": "tai_feed_stale",
+                "reason": "no_new_closed_minute_for_5_minutes",
+            }
+        )
+        self._alert("Tai feed stale: no new closed minute for 5 minutes.")
+
+    def mark_feed_healthy(self) -> None:
+        """Allow decisions again after the tailer observes a new minute."""
+        if not self._feed_stale:
+            return
+        self._feed_stale = False
+        self._journal({"event": "tai_feed_recovered"})
 
     def on_minute_bar(self, minute: TaiMinuteBar) -> ClosedBar | None:
         bar = self.builder.add(minute)
@@ -606,37 +643,21 @@ class TaiDemoRuntimeAdapter:
         self.source.emit(CycleTrigger("bar_close", event_id, bar.at))
         return bar
 
-    def on_recorder_mid_bar(
-        self,
-        _symbol: str,
-        at: datetime,
-        open_price: float,
-        high: float,
-        low: float,
-        close: float,
-    ) -> ClosedBar | None:
-        """Callback shape used by :class:`CapitalDataRecorder`."""
-        return self.on_minute_bar(
-            TaiMinuteBar(
-                _minute_stamp(at),
-                # Recorder callbacks identify the configured symbol (NAS100),
-                # whereas the builder is keyed by the broker epic (NSXUSD).
-                # This adapter is constructed for one epic, so the builder's
-                # key is authoritative and the symbol remains diagnostic only.
-                self.builder.epic,
-                Decimal(str(open_price)),
-                Decimal(str(high)),
-                Decimal(str(low)),
-                Decimal(str(close)),
-            )
-        )
-
     def run(self, cycle: object) -> DemoOutcome:
         event_id = str(getattr(cycle, "event_id", ""))
         bar = self._bars.pop(event_id, None)
         if bar is None:
             return DemoOutcome("NO_TRADE", "bar_unavailable", event_id)
-        LOGGER.info("tai demo heartbeat event=%s at=%s", event_id, bar.at.isoformat())
+        signal = getattr(self.runner, "_signal", None)
+        warmup_bars = getattr(signal, "warmup_bars", 0)
+        LOGGER.info(
+            "tai demo heartbeat event=%s at=%s warmup_bars=%s",
+            event_id,
+            bar.at.isoformat(),
+            warmup_bars,
+        )
+        if self._feed_stale:
+            return DemoOutcome("NO_TRADE", "feed_stale", event_id)
         return self.runner.on_bar(bar)
 
 
@@ -651,7 +672,6 @@ def build_tai_demo_runtime(
     builder: ThreeMinuteBarBuilder,
     balance_provider: Callable[[], Decimal],
     rules_provider: Callable[[str], TaiInstrumentRules],
-    recorder: object | None = None,
     signal_provider: Callable[[ClosedBar], TaiSignal | None] | None = None,
     journal: Callable[[Mapping[str, object]], None] | None = None,
     alert: Callable[[str], None] | None = None,
@@ -684,11 +704,7 @@ def build_tai_demo_runtime(
         journal=journal,
         alert=alert,
     )
-    adapter = TaiDemoRuntimeAdapter(runner, source, builder)
-    register = getattr(recorder, "register_closed_minute_callback", None)
-    if callable(register):
-        register(adapter.on_recorder_mid_bar)
-    return adapter
+    return TaiDemoRuntimeAdapter(runner, source, builder, journal=journal, alert=alert)
 
 
 __all__ = [

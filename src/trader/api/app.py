@@ -11,6 +11,7 @@ import threading
 import traceback
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
+from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
@@ -222,12 +223,22 @@ def _build_tai_demo_runtime(
     capital_client: Any,
 ) -> Any:
     """Attach the opt-in Tai runner to the shared guarded cycle runtime."""
+    app.state.tai_feed_tailer = None
     if not bool(getattr(settings, "tai_demo_experiment", False)):
+        if not getattr(app.state, "tai_startup_logged", False):
+            _LOG.info(
+                "Tai demo startup experiment=off dry_run=%s epic=disabled warmup_bars=0 "
+                "start_balance_present=%s",
+                "on" if bool(getattr(settings, "tai_demo_dry_run", True)) else "off",
+                "yes" if bool(str(getattr(settings, "tai_demo_start_balance", ""))) else "no",
+            )
+            app.state.tai_startup_logged = True
         return None
     if cycle_source is None or capital_client is None:
         raise RuntimeDependencyUnavailable(
             "Tai demo wiring requires cycle source and Capital client"
         )
+    from trader.experiments.tai_feed import TaiLakeTailer
     from trader.experiments.tai_wiring import (
         CapitalBalanceProvider,
         CapitalInstrumentRulesProvider,
@@ -268,7 +279,7 @@ def _build_tai_demo_runtime(
 
             send_alert(Alert("tai_demo", message[:240]))
 
-    return build_tai_demo_runtime(
+    runtime_adapter = build_tai_demo_runtime(
         settings,
         epic=epic,
         order_manager=cast(Any, components.order_manager),
@@ -278,11 +289,54 @@ def _build_tai_demo_runtime(
         builder=ThreeMinuteBarBuilder(epic),
         balance_provider=CapitalBalanceProvider(capital_client),
         rules_provider=CapitalInstrumentRulesProvider(capital_client, epic),
-        recorder=getattr(app.state, "recorder", None),
         signal_provider=signal,
         journal=journal if callable(append_audit) else None,
         alert=alert,
     )
+    if runtime_adapter is not None:
+        history = getattr(signal, "history", ())
+        seed_after = history[-1].at + timedelta(minutes=2) if history else None
+        app.state.tai_feed_tailer = TaiLakeTailer(
+            lake_root,
+            epic,
+            runtime_adapter,
+            seed_after=seed_after,
+        )
+        if not getattr(app.state, "tai_startup_logged", False):
+            _LOG.info(
+                "Tai demo startup experiment=on dry_run=%s epic=%s warmup_bars=%d "
+                "start_balance_present=%s",
+                "on" if bool(getattr(settings, "tai_demo_dry_run", True)) else "off",
+                epic,
+                getattr(signal, "warmup_bars", 0),
+                "yes" if bool(str(getattr(settings, "tai_demo_start_balance", ""))) else "no",
+            )
+            app.state.tai_startup_logged = True
+    return runtime_adapter
+
+
+async def _tai_feed_loop(app: FastAPI) -> None:
+    """Tail the recorder lake without coupling the API to the worker stream."""
+    while True:
+        tailer = getattr(app.state, "tai_feed_tailer", None)
+        if tailer is not None:
+            try:
+                tailer.poll_once()
+            except Exception:  # noqa: BLE001 - a lake read must not stop the API
+                _LOG.warning("Tai lake feed poll failed", exc_info=True)
+            await asyncio.sleep(tailer.interval_seconds)
+        else:
+            await asyncio.sleep(1.0)
+
+
+def _start_tai_feed_tailer(app: FastAPI) -> None:
+    """Start one API-process tailer only when the gated runtime is composed."""
+    tailer = getattr(app.state, "tai_feed_tailer", None)
+    task = getattr(app.state, "tai_feed_task", None)
+    if tailer is not None and (task is None or task.done()):
+        app.state.tai_feed_task = asyncio.create_task(
+            _tai_feed_loop(app), name="tai-lake-feed"
+        )
 
 
 class _MemoryUsageLedger:
@@ -466,6 +520,7 @@ async def _runtime_retry_loop(
             if runtime is None:
                 raise RuntimeError("runtime composition unavailable")
             await runtime.start()
+            _start_tai_feed_tailer(app)
             set_runtime_health(None)
             return
         except asyncio.CancelledError:
@@ -493,6 +548,9 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime = None
     _app.state.runtime_cycle_source = None
     _app.state.runtime_feed_adapters = None
+    _app.state.tai_feed_tailer = None
+    _app.state.tai_feed_task = None
+    _app.state.tai_startup_logged = False
     _app.state.runtime_services = None
     _app.state.runtime_service_overrides = None
     set_runtime_health(None)
@@ -651,6 +709,7 @@ async def lifespan(_app: FastAPI) -> Any:
     if runtime is not None:
         try:
             await runtime.start()
+            _start_tai_feed_tailer(_app)
             set_runtime_health(None)
         except Exception as exc:
             detail = _runtime_failure_detail(exc)
@@ -784,6 +843,13 @@ async def lifespan(_app: FastAPI) -> Any:
         runtime = getattr(_app.state, "runtime", None)
         if runtime is not None:
             await runtime.stop()
+        tai_feed_task = getattr(_app.state, "tai_feed_task", None)
+        if tai_feed_task is not None:
+            tai_feed_task.cancel()
+            try:
+                await tai_feed_task
+            except asyncio.CancelledError:
+                pass
         shutdown_event = getattr(_app.state, "telegram_stop", None)
         shutdown_thread = getattr(_app.state, "telegram_thread", None)
         if shutdown_event is not None:
