@@ -1,0 +1,340 @@
+{
+  "task": "T-168",
+  "warmup_start": "2026-09-29T20:03:00+00:00",
+  "end": "2026-10-17T04:00:00+00:00",
+  "owner_timezone": "America/New_York",
+  "bars": 4013,
+  "reference": {
+    "cf": {
+      "trades": 53,
+      "sl": 12,
+      "tp1": 15,
+      "tp2": 9,
+      "tp3": 17
+    },
+    "nq1": {
+      "trades": 115,
+      "sl": 38,
+      "tp2": 12,
+      "tp3": 32
+    }
+  },
+  "modes": {
+    "closed": {
+      "full_range_trades": 33,
+      "windows": {
+        "ny_midnight_13_15": {
+          "start": "2026-10-13T04:00:00+00:00",
+          "end": "2026-10-15T04:00:00+00:00",
+          "summary": {
+            "trades": 10,
+            "completed": 10,
+            "open_at_end": 0,
+            "sl": 4,
+            "tp1": 0,
+            "tp2": 0,
+            "tp3": 3,
+            "be": 3,
+            "win_rate_completed_excluding_be": 0.3,
+            "total_r": 5.0,
+            "mix_denominator": 10,
+            "trades_per_day": 0.9090909090909091
+          }
+        },
+        "utc_midnight_13_15": {
+          "start": "2026-10-13T00:00:00+00:00",
+          "end": "2026-10-15T00:00:00+00:00",
+          "summary": {
+            "trades": 11,
+            "completed": 11,
+            "open_at_end": 0,
+            "sl": 3,
+            "tp1": 0,
+            "tp2": 0,
+            "tp3": 3,
+            "be": 5,
+            "win_rate_completed_excluding_be": 0.2727272727272727,
+            "total_r": 6.0,
+            "mix_denominator": 11,
+            "trades_per_day": 1.0
+          }
+        },
+        "owner_trade_window": {
+          "start": "2026-10-06T04:00:00+00:00",
+          "end": "2026-10-17T04:00:00+00:00",
+          "summary": {
+            "trades": 33,
+            "completed": 33,
+            "open_at_end": 0,
+            "sl": 14,
+            "tp1": 0,
+            "tp2": 0,
+            "tp3": 7,
+            "be": 12,
+            "win_rate_completed_excluding_be": 0.21212121212121213,
+            "total_r": 7.0,
+            "mix_denominator": 33,
+            "trades_per_day": 3.0
+          }
+        },
+        "nq1_reference_window": {
+          "start": "2026-10-06T04:00:00+00:00",
+          "end": "2026-10-17T04:00:00+00:00",
+          "summary": {
+            "trades": 33,
+            "completed": 33,
+            "open_at_end": 0,
+            "sl": 14,
+            "tp1": 0,
+            "tp2": 0,
+            "tp3": 7,
+            "be": 12,
+            "win_rate_completed_excluding_be": 0.21212121212121213,
+            "total_r": 7.0,
+            "mix_denominator": 33,
+            "trades_per_day": 3.0
+          }
+        }
+      },
+      "per_ny_day": {
+        "2026-10-07": {
+          "trades": 3,
+          "completed": 3,
+          "open_at_end": 0,
+          "sl": 1,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 1,
+          "be": 1,
+          "win_rate_completed_excluding_be": 0.3333333333333333,
+          "total_r": 2.0,
+          "mix_denominator": 3,
+          "trades_per_day": 0.2727272727272727
+        },
+        "2026-10-08": {
+          "trades": 4,
+          "completed": 4,
+          "open_at_end": 0,
+          "sl": 2,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 2,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": -2.0,
+          "mix_denominator": 4,
+          "trades_per_day": 0.36363636363636365
+        },
+        "2026-10-09": {
+          "trades": 1,
+          "completed": 1,
+          "open_at_end": 0,
+          "sl": 0,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 1,
+          "be": 0,
+          "win_rate_completed_excluding_be": 1.0,
+          "total_r": 3.0,
+          "mix_denominator": 1,
+          "trades_per_day": 0.09090909090909091
+        },
+        "2026-10-11": {
+          "trades": 3,
+          "completed": 3,
+          "open_at_end": 0,
+          "sl": 2,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 1,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": -2.0,
+          "mix_denominator": 3,
+          "trades_per_day": 0.2727272727272727
+        },
+        "2026-10-12": {
+          "trades": 2,
+          "completed": 2,
+          "open_at_end": 0,
+          "sl": 0,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 2,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": 0.0,
+          "mix_denominator": 2,
+          "trades_per_day": 0.18181818181818182
+        },
+        "2026-10-13": {
+          "trades": 8,
+          "completed": 8,
+          "open_at_end": 0,
+          "sl": 3,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 3,
+          "be": 2,
+          "win_rate_completed_excluding_be": 0.375,
+          "total_r": 6.0,
+          "mix_denominator": 8,
+          "trades_per_day": 0.7272727272727273
+        },
+        "2026-10-14": {
+          "trades": 2,
+          "completed": 2,
+          "open_at_end": 0,
+          "sl": 1,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 1,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": -1.0,
+          "mix_denominator": 2,
+          "trades_per_day": 0.18181818181818182
+        },
+        "2026-10-15": {
+          "trades": 8,
+          "completed": 8,
+          "open_at_end": 0,
+          "sl": 4,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 1,
+          "be": 3,
+          "win_rate_completed_excluding_be": 0.125,
+          "total_r": -1.0,
+          "mix_denominator": 8,
+          "trades_per_day": 0.7272727272727273
+        },
+        "2026-10-16": {
+          "trades": 2,
+          "completed": 2,
+          "open_at_end": 0,
+          "sl": 1,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 1,
+          "be": 0,
+          "win_rate_completed_excluding_be": 0.5,
+          "total_r": 2.0,
+          "mix_denominator": 2,
+          "trades_per_day": 0.18181818181818182
+        }
+      }
+    },
+    "forming": {
+      "full_range_trades": 0,
+      "windows": {
+        "ny_midnight_13_15": {
+          "start": "2026-10-13T04:00:00+00:00",
+          "end": "2026-10-15T04:00:00+00:00",
+          "summary": {
+            "trades": 0,
+            "completed": 0,
+            "open_at_end": 0,
+            "sl": 0,
+            "tp1": 0,
+            "tp2": 0,
+            "tp3": 0,
+            "be": 0,
+            "win_rate_completed_excluding_be": 0.0,
+            "total_r": 0,
+            "mix_denominator": 0,
+            "trades_per_day": 0.0
+          }
+        },
+        "utc_midnight_13_15": {
+          "start": "2026-10-13T00:00:00+00:00",
+          "end": "2026-10-15T00:00:00+00:00",
+          "summary": {
+            "trades": 0,
+            "completed": 0,
+            "open_at_end": 0,
+            "sl": 0,
+            "tp1": 0,
+            "tp2": 0,
+            "tp3": 0,
+            "be": 0,
+            "win_rate_completed_excluding_be": 0.0,
+            "total_r": 0,
+            "mix_denominator": 0,
+            "trades_per_day": 0.0
+          }
+        },
+        "owner_trade_window": {
+          "start": "2026-10-06T04:00:00+00:00",
+          "end": "2026-10-17T04:00:00+00:00",
+          "summary": {
+            "trades": 0,
+            "completed": 0,
+            "open_at_end": 0,
+            "sl": 0,
+            "tp1": 0,
+            "tp2": 0,
+            "tp3": 0,
+            "be": 0,
+            "win_rate_completed_excluding_be": 0.0,
+            "total_r": 0,
+            "mix_denominator": 0,
+            "trades_per_day": 0.0
+          }
+        },
+        "nq1_reference_window": {
+          "start": "2026-10-06T04:00:00+00:00",
+          "end": "2026-10-17T04:00:00+00:00",
+          "summary": {
+            "trades": 0,
+            "completed": 0,
+            "open_at_end": 0,
+            "sl": 0,
+            "tp1": 0,
+            "tp2": 0,
+            "tp3": 0,
+            "be": 0,
+            "win_rate_completed_excluding_be": 0.0,
+            "total_r": 0,
+            "mix_denominator": 0,
+            "trades_per_day": 0.0
+          }
+        }
+      },
+      "per_ny_day": {},
+      "forming_condition_diagnostics": {
+        "mode": "forming",
+        "bars": 4013,
+        "condition_pass_counts": {
+          "direction": 101,
+          "vwap": 24,
+          "risk": 34,
+          "adx_di": 33,
+          "ema": 51,
+          "smart_ok": 4
+        },
+        "no_chase": {
+          "implemented": false,
+          "pass_count": null,
+          "note": "The unchanged T-162 port has no separate no-chase predicate."
+        },
+        "refresh": {
+          "implemented": true,
+          "note": "Refresh entries are evaluated inside replay after the exit cooldown."
+        }
+      }
+    }
+  },
+  "safety": {
+    "broker_calls": 0,
+    "orders": 0,
+    "sealed_holdout_read": false,
+    "lake_writes": 0,
+    "production_state_writes": 0,
+    "tuning": false
+  },
+  "pod_artifact_sha256": {
+    "counts": "e8027d280352c8a7e2287f95c6b225f8ccd825232ff646e06250e853767bbae1",
+    "report": "5736381cf9a7eaaba67947601616979f51f4967dc3f7a9090f14b0dd3e2f95bc"
+  }
+}

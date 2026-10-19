@@ -23,7 +23,7 @@ WINDOWS = {
 REFERENCE = {"cf": {"trades": 53, "sl": 12, "tp1": 15, "tp2": 9, "tp3": 17}, "nq1": {"trades": 115, "sl": 38, "tp2": 12, "tp3": 32}}
 
 
-def summarize(trades: list[port.PortTrade]) -> dict[str, object]:
+def summarize(trades: list[port.PortTrade], days: float = 1.0) -> dict[str, object]:
     counts = Counter(t.exit_reason for t in trades if t.exit_reason)
     completed = sum(counts.values())
     total_r = sum({"stop": -1.0, "be": 0.0, "tp1": 1.0, "tp2": 2.0, "tp3": 3.0}.get(t.exit_reason, 0.0) for t in trades)
@@ -33,7 +33,7 @@ def summarize(trades: list[port.PortTrade]) -> dict[str, object]:
         "tp3": counts.get("tp3", 0), "be": counts.get("be", 0),
         "win_rate_completed_excluding_be": (counts.get("tp1", 0) + counts.get("tp2", 0) + counts.get("tp3", 0)) / completed if completed else 0.0,
         "total_r": total_r, "mix_denominator": completed,
-        "trades_per_day": len(trades) / 11.0,
+        "trades_per_day": len(trades) / days if days else 0.0,
     }
 
 
@@ -74,12 +74,19 @@ def main() -> None:
         filtered = {}
         for name, (start, stop) in WINDOWS.items():
             lo, hi = start.astimezone(UTC), stop.astimezone(UTC)
-            filtered[name] = {"start": lo.isoformat(), "end": hi.isoformat(), "summary": summarize([t for t in trades if lo <= t.entry_time < hi])}
+            filtered[name] = {"start": lo.isoformat(), "end": hi.isoformat(), "summary": summarize([t for t in trades if lo <= t.entry_time < hi], (hi - lo).total_seconds() / 86400.0)}
         daily: dict[str, dict[str, object]] = {}
         by_day: dict[str, list[port.PortTrade]] = defaultdict(list)
         for trade in trades:
             by_day[trade.entry_time.astimezone(NY).date().isoformat()].append(trade)
-        for day, day_trades in sorted(by_day.items()): daily[day] = summarize(day_trades)
+        if bars:
+            first_day = bars[0].ts_utc.astimezone(NY).date()
+            last_day = bars[-1].ts_utc.astimezone(NY).date()
+            cursor = first_day
+            while cursor <= last_day:
+                key = cursor.isoformat()
+                daily[key] = summarize(by_day.get(key, []))
+                cursor += timedelta(days=1)
         modes[mode] = {"full_range_trades": len(trades), "windows": filtered, "per_ny_day": daily, "forming_condition_diagnostics": condition_diagnostics(bars, features, mode)}
     payload = {"task": "T-168", "generated_at": datetime.now(UTC).isoformat(), "warmup_start": warm_start.astimezone(UTC).isoformat(), "end": end.isoformat(), "owner_timezone": "America/New_York", "bars": len(bars), "reference": REFERENCE, "modes": modes, "safety": {"broker_calls": 0, "orders": 0, "sealed_holdout_read": False, "lake_writes": 0, "production_state_writes": 0, "tuning": False}}
     args.output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
