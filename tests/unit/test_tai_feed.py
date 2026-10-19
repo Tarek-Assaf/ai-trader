@@ -141,3 +141,22 @@ def test_tai_market_open_fails_closed_and_throttles_retries() -> None:
     assert client.calls == 1
     assert is_open(now + timedelta(minutes=11)) is False
     assert client.calls == 2
+
+
+def test_tailer_logs_first_poll_and_fed_minutes(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    start = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
+    _write_fixture(tmp_path / "NSXUSD" / "1m_capital" / "2026" / "10.parquet", start, 6)
+    tailer = TaiLakeTailer(
+        tmp_path, "NSXUSD", Consumer(), clock=lambda: start + timedelta(minutes=10)
+    )
+
+    with caplog.at_level("INFO", logger="trader.experiments.tai_feed"):
+        assert tailer.poll_once(start + timedelta(minutes=10)) == 6
+        assert tailer.poll_once(start + timedelta(minutes=10, seconds=20)) == 0
+
+    lines = [r.getMessage() for r in caplog.records if "tai feed poll=" in r.getMessage()]
+    assert len(lines) == 1
+    assert "fed=6" in lines[0]
+    assert "last_lake_minute=" in lines[0]

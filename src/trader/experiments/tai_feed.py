@@ -7,6 +7,7 @@ second, unconnected recorder instance.
 
 from __future__ import annotations
 
+import logging
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
@@ -15,6 +16,8 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from trader.experiments.tai_wiring import TaiMinuteBar
+
+LOGGER = logging.getLogger(__name__)
 
 
 class TaiMinuteConsumer(Protocol):
@@ -141,6 +144,7 @@ class TaiLakeTailer:
         self._last_seen_minute = _normalise_seed(seed_after)
         self._last_progress_at = now
         self._stale = False
+        self._polls = 0
 
     @property
     def last_seen_minute(self) -> datetime | None:
@@ -162,6 +166,19 @@ class TaiLakeTailer:
         for minute in pending:
             self.consumer.on_minute_bar(minute)
             self._last_seen_minute = minute.at
+        self._polls += 1
+        if pending or self._polls == 1 or self._polls % 15 == 0:
+            # One compact line on the first poll, whenever minutes are fed, and about every
+            # five minutes otherwise, so a silent feed is visible in the log.
+            LOGGER.info(
+                "tai feed poll=%d lake_minutes=%d last_lake_minute=%s fed=%d last_seen=%s stale=%s",
+                self._polls,
+                len(minutes),
+                minutes[-1].at.isoformat() if minutes else "none",
+                len(pending),
+                self._last_seen_minute.isoformat() if self._last_seen_minute else "none",
+                self._stale,
+            )
         if pending:
             self._last_progress_at = current
             self._stale = False

@@ -312,11 +312,13 @@ def _build_tai_demo_runtime(
         if not getattr(app.state, "tai_startup_logged", False):
             _LOG.info(
                 "Tai demo startup experiment=on dry_run=%s epic=%s warmup_bars=%d "
-                "start_balance_present=%s",
+                "start_balance_present=%s warmup_last_bar=%s feed_seed_after=%s",
                 "on" if bool(getattr(settings, "tai_demo_dry_run", True)) else "off",
                 epic,
                 getattr(signal, "warmup_bars", 0),
                 "yes" if bool(str(getattr(settings, "tai_demo_start_balance", ""))) else "no",
+                history[-1].at.isoformat() if history else "none",
+                seed_after.isoformat(),
             )
             app.state.tai_startup_logged = True
     return runtime_adapter
