@@ -39,6 +39,11 @@ DEFAULT_END = datetime(2026, 10, 17, tzinfo=NY).astimezone(UTC)
 DEFAULT_HOLDOUT_START = DEFAULT_END
 WARMUP = timedelta(days=7)
 
+# The dry check runs four chart timeframes per instrument.  Cache the immutable
+# 1-minute source once per instrument so each cell only filters and resamples
+# the already loaded rows; no data is written to the lake.
+_SOURCE_CACHE: dict[Path, dict[str, tuple[Any, ...]]] = {}
+
 
 def parse_date(value: str) -> datetime:
     """Parse an owner-window date as New York midnight, returned in UTC."""
@@ -69,7 +74,12 @@ def guard_window(start: datetime, end: datetime, holdout_start: datetime) -> Non
 def _bars_for_window(
     lake: Path, instrument: str, timeframe: int, start: datetime, end: datetime
 ) -> tuple[Any, ...]:
-    source = load_histdata_candles(lake, instrument, 1)
+    lake_key = lake.resolve()
+    source_by_instrument = _SOURCE_CACHE.setdefault(lake_key, {})
+    source = source_by_instrument.get(instrument)
+    if source is None:
+        source = tuple(load_histdata_candles(lake, instrument, 1))
+        source_by_instrument[instrument] = source
     warm = start - WARMUP
     minutes = tuple(item for item in source if warm <= item.ts_utc < end)
     bars = tuple(item for item in port.resample_ohlc(minutes, timeframe) if item.complete)
