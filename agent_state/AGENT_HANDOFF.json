@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 513,
+  "revision": 515,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude.",
+    "summary": "T-187 accepted (V-464): the wired Tai runtime reproduced only 2 of 25 port entries on recorded data, so it is not cleared for demo orders. T-195 (explain the misses, read-only) is queued for Codex, then T-190 rerun and T-191. No broker orders, no holdout reads.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,8 +47,8 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-189",
-    "last_status": "review"
+    "last_task": "T-187",
+    "last_status": "done"
   },
   "requirements": [
     {
@@ -168,7 +168,8 @@
         "T-191",
         "T-192",
         "T-193",
-        "T-194"
+        "T-194",
+        "T-195"
       ]
     },
     {
@@ -6163,7 +6164,7 @@
       "title": "Offline replay of the wired Tai demo runtime against the closed T-162 port (dry-run proof)",
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "done",
       "phase": 8,
       "requirements": [
         "R-03"
@@ -6184,9 +6185,15 @@
       "evidence": [
         "docs/specs/t187_tai_demo_offline_replay.md",
         "scripts/lab_t187_runtime_replay.py",
-        "tests/unit/test_t187_runtime_replay.py"
+        "tests/unit/test_t187_runtime_replay.py",
+        "docs/evidence/t187/summary.json",
+        "docs/evidence/t187/report.md"
       ],
-      "completion_note": "Built the read-only T-187 replay script and comparison-helper test from authoritative origin/main. The script feeds recorded pre-holdout NSXUSD 1m mids through ThreeMinuteBarBuilder and the real TaiSignalProvider, compares session_1800_ny port entries, records epoch-anchor information, and exercises TaiDemoRunner dry-run with zero order calls. Local compileall and diff checks pass; pytest/Ruff/mypy are unavailable. The bounded Pod replay could not start because the owner-provided terminal returned Waiting for service to respond; no lake, holdout or broker access occurred. Turn to Claude for review and a later Pod run."
+      "completion_note": "Ran the already-built scripts/lab_t187_runtime_replay.py once on the owner Pod with the pre-holdout NSXUSD lake. The run completed status=ok over 5,203,143 minute rows and ten selected trading dates before 2026-07-01T00:00:00Z. The wired runtime matched 2 of 25 session_1800_ny port entries, produced 0 extras and 23 misses (22 missing_runtime_direction, one bar_or_stop_difference at 2026-06-22T23:21:00Z), so the exact 100-percent acceptance criterion is not met; the cause is recorded. Dry-run emitted 2 journal lines with 0 order calls. Safety counters are clean: no broker calls, network, sealed holdout read, lake writes, risk/gate edits or redeploy. Evidence is in docs/evidence/t187/. Handing to Claude for review.",
+      "review_notes": [
+        "Pod replay completed on the reachable owner terminal. The exact acceptance comparison failed: 2 of 25 session_1800_ny port entries matched, 0 extras, 23 misses. Twenty-two misses are missing_runtime_direction and one is a bar_or_stop_difference at 2026-06-22T23:21:00Z.",
+        "The bounded dry-run made 0 order calls and recorded broker_calls=0, network_access=false, sealed_holdout_read=false, lake_writes=false, risk_or_gate_edits=false and redeploy=false. See docs/evidence/t187/report.md and summary.json."
+      ]
     },
     {
       "phase": 8,
@@ -6377,6 +6384,33 @@
       "deliverables": [
         "docs/evidence/t194/report.md",
         "docs/evidence/t194/summary.json"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-195",
+      "title": "Explain why the wired Tai runtime misses 22 of 25 port entries (read-only diagnostic)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-187"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t195_runtime_miss_diagnostic.md exactly. Name the cause of every miss in the T-187 replay or say exactly what is unexplained. Diagnostic only: do not fix the runtime yet.",
+        "No broker order or write call, no network, no sealed holdout read, no risk or gate edits, no redeploy, no secrets. Ruff check and format (line length 100), CI green. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t195_runtime_miss_diagnostic.md",
+        "scripts/lab_t195_runtime_miss.py",
+        "tests/unit/test_t195_runtime_miss.py",
+        "docs/evidence/t195/"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -6937,6 +6971,13 @@
     {
       "id": "D-071",
       "statement": "Claude: T-190 accepted (V-463). First report 15:00-17:23 UTC has 0 signals, consistent with the live dry run logging none; it is a valid empty result, not a failure. USD needs value-per-point (follow-up for the late-today rerun). T-187 sent back with changes requested only to run its already-built Pod replay, since the owner confirmed the Pod terminal is reachable. Next for Codex: T-187 Pod run, a T-190 rerun late today, then T-191.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "claude"
+    },
+    {
+      "id": "D-072",
+      "statement": "Claude (owner-authorized-by-delegation; owner confirmed merge authority has no end date): T-187 accepted as a completed measurement (V-464) although its verdict is FAIL (2/25). Reason: the task deliverable was the Pod run and honest verdict, and the failure is a real finding about the runtime, not a defect in the replay. The runtime is NOT cleared for demo orders. Queued T-195 (explain the 22+1 misses; suspects: 600-bar history deque changes HA/EMA seeds, 300-bar warm-up gate, 3m bar builder differences) ahead of T-191, because fidelity to the indicator matters more than state persistence. Merge authority: Claude may squash-merge accepted Codex tasks and Claude spec PRs once the quality check is SUCCESS, with no end date; live money, non-demo broker actions and the sealed holdout stay forbidden.",
       "status": "final",
       "do_not_reopen": false,
       "decided_by": "claude"
@@ -15899,6 +15940,20 @@
       ],
       "validated_by": "claude",
       "reverify_if": "report logic or runtime path changes"
+    },
+    {
+      "id": "V-464",
+      "task_id": "T-187",
+      "subject": "T-187 bounded Pod replay of the wired Tai runtime vs the closed T-162 port",
+      "method": "Read docs/evidence/t187/report.md and summary.json from Codex's Pod run (status ok, 5,203,143 pre-holdout minute rows, 10 trading dates up to 2026-06-30). Checked the safety counters and the command against the spec.",
+      "result": "pass",
+      "checked": "The task asked for one Pod run and a verdict; it was delivered. The verdict is FAIL: the runtime matched 2 of 25 session_1800_ny port entries, 0 extras, 23 misses (22 missing_runtime_direction, 1 bar_or_stop_difference at 2026-06-22T23:21Z). Dry run made 0 order calls; broker_calls 0, network false, holdout read false, lake writes false, risk/gate edits false, redeploy false. The cause of the misses is only labelled, not explained, so the runtime must not be enabled for demo orders; T-195 finds the cause.",
+      "evidence": [
+        "docs/evidence/t187/report.md",
+        "docs/evidence/t187/summary.json"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "TaiSignalProvider, ThreeMinuteBarBuilder or the T-162 port changes"
     }
   ],
   "blockers": [
@@ -16125,9 +16180,11 @@
       "id": "B-031",
       "task_id": "T-187",
       "raised_by": "codex",
-      "status": "open",
+      "status": "resolved",
       "text": "T-187 bounded read-only replay cannot start: the owner-provided Pod terminal URL returned “Waiting for service to respond — The service on this port is either still initializing or not running.” No lake was read and no evidence run was started; retry only after the owner supplies a reachable Pod terminal/service.",
-      "resolution": ""
+      "resolution": "Owner Pod became reachable. The required T-187 replay completed at status=ok; exact comparison failed and is recorded in docs/evidence/t187/report.md and summary.json.",
+      "resolved_by": "codex",
+      "resolved_at": "2026-10-19"
     }
   ],
   "questions": [
@@ -27337,6 +27394,38 @@
         "docs/evidence/t190/equity.png"
       ],
       "summary": "Accepted T-190 (V-463, D-071): ruff clean, no broker calls; first report empty (0 signals, 15:00-17:23 UTC). T-187 changes requested to run its Pod replay now that the terminal is reachable. Then T-190 rerun late today, then T-191. Turn to codex."
+    },
+    {
+      "revision": 514,
+      "ts": "2026-10-19T17:46:00Z",
+      "agent": "codex",
+      "action": "complete_t187_pod_replay",
+      "task_ids": [
+        "T-187"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t187/summary.json",
+        "docs/evidence/t187/report.md"
+      ],
+      "summary": "Ran the already-built T-187 replay once on the reachable owner Pod. The exact comparison failed at 2/25 matched, 0 extras and 23 misses (22 missing_runtime_direction and one bar_or_stop_difference). Dry-run made 0 order calls and all safety counters are clean. Evidence recorded; handing to Claude for review."
+    },
+    {
+      "revision": 515,
+      "ts": "2026-10-19T18:20:00Z",
+      "agent": "claude",
+      "action": "accept_t187_queue_t195",
+      "task_ids": [
+        "T-187",
+        "T-195"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t195_runtime_miss_diagnostic.md",
+        "docs/evidence/t187/report.md",
+        "docs/evidence/t187/summary.json"
+      ],
+      "summary": "Accepted T-187 as a completed measurement (V-464, D-072): the wired runtime reproduced only 2 of 25 port entries, so it is not cleared for demo orders. Queued T-195 to explain the misses (spec written). Resolved B-031 (from Codex). Turn to codex."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."

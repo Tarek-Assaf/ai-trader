@@ -1,0 +1,45 @@
+{
+  "task": "T-187",
+  "status": "ok",
+  "label": "T-187 offline wired Tai runtime replay, dry-run only",
+  "pod_command": "python scripts/lab_t187_runtime_replay.py --lake /workspace/data/lake --holdout-start 2026-07-01T00:00:00Z --output-dir /tmp/t187",
+  "epic": "NSXUSD",
+  "holdout_start": "2026-07-01T00:00:00+00:00",
+  "selected_trading_dates": [
+    "2026-06-19", "2026-06-21", "2026-06-22", "2026-06-23", "2026-06-24",
+    "2026-06-25", "2026-06-26", "2026-06-28", "2026-06-29", "2026-06-30"
+  ],
+  "minute_rows": 5203143,
+  "port_session_1800_entries": 25,
+  "port_epoch_entries_information_only": 27,
+  "runtime_entries": [
+    {"at": "2026-06-22T16:00:00+00:00", "direction": "SELL", "entry": "30353.864", "stop": "30377.306305385721031"},
+    {"at": "2026-06-24T16:00:00+00:00", "direction": "BUY", "entry": "29556.867", "stop": "29462.963656558964332"}
+  ],
+  "comparison": {
+    "exact": false,
+    "matched": 2,
+    "matches": 2,
+    "extras": 0,
+    "misses": 23,
+    "port_count": 25,
+    "runtime_count": 2,
+    "miss_reasons": {"missing_runtime_direction": 22, "bar_or_stop_difference": 1},
+    "first_bar_or_stop_difference": {
+      "at": "2026-06-22T23:21:00+00:00",
+      "direction": "BUY",
+      "entry": "30360.649",
+      "stop": "30334.88497838238"
+    }
+  },
+  "dry_run": {"dry_run_would_submit": 2, "journal_lines": 2, "order_calls": 0},
+  "safety": {
+    "broker_calls": 0,
+    "order_calls": 0,
+    "network_access": false,
+    "sealed_holdout_read": false,
+    "lake_writes": false,
+    "risk_or_gate_edits": false,
+    "redeploy": false
+  }
+}
