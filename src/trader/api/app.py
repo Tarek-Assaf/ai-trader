@@ -9,7 +9,7 @@ import os
 import random
 import threading
 import traceback
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from pathlib import Path
@@ -21,6 +21,7 @@ from trader.api.control import router as control_router
 from trader.api.health import health_payload, set_runtime_health
 from trader.channels.router import ChatRouter, RoutedIntent
 from trader.channels.telegram import TelegramBotTransport, TelegramChannel
+from trader.core.audit import AuditEvent
 from trader.core.config import load_all_configs
 from trader.core.logging import configure_logging
 from trader.core.settings import EnvironmentSettings
@@ -184,6 +185,18 @@ def _start_runtime_if_configured(
                 register = getattr(source, "register_feed_adapters", None)
                 if callable(register):
                     register(app.state.runtime_feed_adapters)
+        tai_runtime = _build_tai_demo_runtime(
+            app,
+            settings,
+            configs,
+            components,
+            cycle_source,
+            capital_client=getattr(app.state, "capital_client", None),
+        )
+        if tai_runtime is not None:
+            metadata = dict(components.metadata)
+            metadata["tai_demo_runtime"] = tai_runtime
+            components.metadata = metadata
         runtime = build_runtime(
             components=components,
             control_source=control_source,
@@ -197,6 +210,79 @@ def _start_runtime_if_configured(
         app.state.runtime = None
         set_runtime_health("runtime_unavailable", _runtime_failure_detail(exc))
         _LOG.exception("runtime composition unavailable")
+
+
+def _build_tai_demo_runtime(
+    app: FastAPI,
+    settings: EnvironmentSettings,
+    configs: dict[str, Any],
+    components: RuntimeComponents,
+    cycle_source: Any,
+    *,
+    capital_client: Any,
+) -> Any:
+    """Attach the opt-in Tai runner to the shared guarded cycle runtime."""
+    if not bool(getattr(settings, "tai_demo_experiment", False)):
+        return None
+    if cycle_source is None or capital_client is None:
+        raise RuntimeDependencyUnavailable(
+            "Tai demo wiring requires cycle source and Capital client"
+        )
+    from trader.experiments.tai_wiring import (
+        CapitalBalanceProvider,
+        CapitalInstrumentRulesProvider,
+        TaiSignalProvider,
+        ThreeMinuteBarBuilder,
+        build_tai_demo_runtime,
+    )
+
+    raw = configs.get("instruments")
+    dump = getattr(raw, "model_dump", None)
+    values = dump() if callable(dump) else raw
+    instruments = values.get("instruments", values) if isinstance(values, dict) else {}
+    epic = next(
+        (
+            str(item.get("capital_epic"))
+            for item in instruments.values()
+            if isinstance(item, dict) and item.get("capital_epic")
+        ),
+        "US100",
+    )
+    workspace = Path(os.getenv("WORKSPACE_DIR", "/workspace"))
+    lake_root = Path(os.getenv("DATA_LAKE_DIR", str(workspace / "data" / "lake")))
+    signal = TaiSignalProvider.from_lake(lake_root, epic)
+    journal_object = (getattr(app.state, "runtime_services", None) or {}).get("journal")
+    append_audit = getattr(journal_object, "append", None)
+
+    def journal(payload: Mapping[str, object]) -> None:
+        if callable(append_audit):
+            event_type = str(payload.get("event", "tai_demo"))
+            append_audit(AuditEvent(event_type, dict(payload)))
+
+    def alert(message: str) -> None:
+        _LOG.error("tai demo alert: %s", message)
+        channel = getattr(app.state, "telegram_channel", None)
+        send_alert = getattr(channel, "send_alert", None)
+        if callable(send_alert):
+            from trader.channels.telegram import Alert
+
+            send_alert(Alert("tai_demo", message[:240]))
+
+    return build_tai_demo_runtime(
+        settings,
+        epic=epic,
+        order_manager=components.order_manager,
+        position_gateway=components.broker,
+        control=app.state.execution_control_source,
+        source=cycle_source,
+        builder=ThreeMinuteBarBuilder(epic),
+        balance_provider=CapitalBalanceProvider(capital_client),
+        rules_provider=CapitalInstrumentRulesProvider(capital_client, epic),
+        recorder=getattr(app.state, "recorder", None),
+        signal_provider=signal,
+        journal=journal if callable(append_audit) else None,
+        alert=alert,
+    )
 
 
 class _MemoryUsageLedger:
@@ -445,6 +531,7 @@ async def lifespan(_app: FastAPI) -> Any:
     )
     _app.state.instrument_mapper = None
     _app.state.capital_account_fields = None
+    _app.state.capital_client = None
     capital_client: CapitalComClient | None = None
     has_capital_credentials = all(
         value is not None and bool(value.get_secret_value())
@@ -468,6 +555,7 @@ async def lifespan(_app: FastAPI) -> Any:
             )
         try:
             capital_client = CapitalComClient(settings)
+            _app.state.capital_client = capital_client
             mapper = InstrumentMapper(configs["instruments"].model_dump(), capital_client)
             _app.state.instrument_mapper = mapper
             mapper.refresh_all()
@@ -477,6 +565,7 @@ async def lifespan(_app: FastAPI) -> Any:
             if capital_client is not None:
                 capital_client.close()
                 capital_client = None
+                _app.state.capital_client = None
     recorder: CapitalDataRecorder | None = None
     try:
         raw_instruments = configs["instruments"].model_dump()["instruments"]

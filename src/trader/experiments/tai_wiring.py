@@ -9,6 +9,7 @@ gate and defaults to dry-run.
 from __future__ import annotations
 
 import math
+import logging
 from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -26,11 +27,13 @@ from trader.experiments.tai_demo import (
     DemoOutcome,
     TaiDemoRefused,
     TaiDemoRunner,
+    TaiDemoSettings,
     TaiInstrumentRules,
     TaiSignal,
 )
 
 NY = ZoneInfo("America/New_York")
+LOGGER = logging.getLogger(__name__)
 EMA_PERIOD = 200
 ADX_PERIOD = 14
 SWING_LOOKBACK = 5
@@ -242,6 +245,9 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[float | None, ...] |
     anchor_keys: list[datetime | None] = []
     for bar in bars:
         local = bar.at.astimezone(NY)
+        if local.hour == 17:
+            anchor_keys.append(None)
+            continue
         start = datetime(local.year, local.month, local.day, 18, tzinfo=NY)
         if local.hour < 18:
             start -= timedelta(days=1)
@@ -393,6 +399,14 @@ class TaiSignalProvider:
     def history(self) -> tuple[ClosedBar, ...]:
         return tuple(self._bars)
 
+    @property
+    def warmup_ready(self) -> bool:
+        return len(self._bars) >= self.minimum_history
+
+    @property
+    def warmup_bars(self) -> int:
+        return len(self._bars)
+
     def __call__(self, bar: ClosedBar) -> TaiSignal | None:
         self._bars.append(bar)
         if len(self._bars) < self.minimum_history:
@@ -531,11 +545,15 @@ class CapitalBalanceProvider:
 
 
 def _round_price(value: Decimal, tick: Decimal, direction: Direction, *, stop: bool) -> Decimal:
+    """Round both levels away/toward price using the broker-safe side rule.
+
+    BUY stops and targets both floor to a tick; SELL stops and targets both
+    ceil.  The resulting stop remains on the protective side and targets move
+    toward the entry rather than widening the requested structure.
+    """
+    del stop  # The direction determines the safe rounding side for both levels.
     ratio = value / tick
-    if direction is Direction.BUY:
-        mode = ROUND_FLOOR if stop else ROUND_FLOOR
-    else:
-        mode = ROUND_CEILING if stop else ROUND_CEILING
+    mode = ROUND_FLOOR if direction is Direction.BUY else ROUND_CEILING
     return ratio.to_integral_value(rounding=mode) * tick
 
 
@@ -618,6 +636,7 @@ class TaiDemoRuntimeAdapter:
         bar = self._bars.pop(event_id, None)
         if bar is None:
             return DemoOutcome("NO_TRADE", "bar_unavailable", event_id)
+        LOGGER.info("tai demo heartbeat event=%s at=%s", event_id, bar.at.isoformat())
         return self.runner.on_bar(bar)
 
 
@@ -642,6 +661,16 @@ def build_tai_demo_runtime(
     if not demo_settings.enabled:
         return None
     signal = signal_provider or TaiSignalProvider()
+    if isinstance(signal, TaiSignalProvider) and journal is not None:
+        journal(
+            {
+                "event": "tai_demo_warmup",
+                "epic": epic,
+                "bars": signal.warmup_bars,
+                "required": signal.minimum_history,
+                "ready": signal.warmup_ready,
+            }
+        )
     runner = TaiDemoRunner(
         settings=demo_settings,
         order_manager=order_manager,

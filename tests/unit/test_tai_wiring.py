@@ -1,5 +1,6 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -16,7 +17,10 @@ from trader.experiments.tai_demo import (
 from trader.experiments.tai_wiring import (
     TaiMinuteBar,
     TaiOrderFactory,
+    TaiSignalProvider,
     ThreeMinuteBarBuilder,
+    _features,
+    build_tai_demo_runtime,
     parse_tai_instrument_rules,
 )
 
@@ -84,6 +88,182 @@ def test_order_factory_rounds_price_levels_and_rejects_short_stop() -> None:
     )
     with pytest.raises(TaiDemoRefused, match="minimum stop"):
         TaiOrderFactory("NSXUSD", lambda _epic: close_rules)(signal, "cycle-1", Decimal("0.1"))
+
+
+def test_order_factory_rounds_sell_levels_up_and_requires_tick_distance() -> None:
+    rules = TaiInstrumentRules(
+        Decimal("0.1"), Decimal("0.1"), Decimal("1"), Decimal("0.1"), Decimal("1"), Decimal("1")
+    )
+    factory = TaiOrderFactory("NSXUSD", lambda _epic: rules)
+    signal = TaiSignal(Direction.SELL, Decimal("100.03"), Decimal("101.09"))
+    order = factory(signal, "sell-cycle", Decimal("0.1"))
+    assert order.stop_level == Decimal("101.1")
+    assert order.profit_level == Decimal("96.9")
+    missing = TaiInstrumentRules(Decimal("0.1"), Decimal("0.1"), Decimal("1"))
+    with pytest.raises(TaiDemoRefused, match="tick and minimum distance"):
+        TaiOrderFactory("NSXUSD", lambda _epic: missing)(signal, "missing", Decimal("0.1"))
+
+
+def test_from_lake_reports_warmup_for_tiny_bid_ask_fixture(tmp_path: Path) -> None:
+    pq = pytest.importorskip("pyarrow.parquet")
+    import pyarrow as pa
+
+    start = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
+    rows = []
+    for offset in range(3):
+        stamp = start + timedelta(minutes=offset)
+        for side, base in (("bid", 100.0), ("ask", 101.0)):
+            rows.append(
+                {
+                    "epic": "NSXUSD",
+                    "ts_utc": stamp,
+                    "side": side,
+                    "open": base,
+                    "high": base + 1,
+                    "low": base - 1,
+                    "close": base + 0.5,
+                }
+            )
+    path = tmp_path / "NSXUSD" / "1m_capital" / "2026" / "10.parquet"
+    path.parent.mkdir(parents=True)
+    pq.write_table(pa.Table.from_pylist(rows), path)
+    provider = TaiSignalProvider.from_lake(tmp_path, "NSXUSD")
+    assert provider.warmup_bars == 1
+    assert provider.warmup_ready is False
+
+
+def test_runtime_gate_and_recorder_registration() -> None:
+    class Settings:
+        broker_env = "demo"
+        trading_mode = "paper"
+        live_trading_enabled = False
+        tai_demo_experiment = True
+        tai_demo_dry_run = True
+        tai_demo_start_balance = "1000"
+        tai_demo_base_lot = "0.1"
+
+    class Recorder:
+        def __init__(self) -> None:
+            self.callback = None
+
+        def register_closed_minute_callback(self, callback: object) -> None:
+            self.callback = callback
+
+    class Source:
+        def emit(self, _event: object) -> None:
+            pass
+
+    recorder = Recorder()
+    rules = TaiInstrumentRules(
+        Decimal("0.1"), Decimal("0.1"), Decimal("1"), Decimal("0.1"), Decimal("1"), Decimal("1")
+    )
+    runtime = build_tai_demo_runtime(
+        Settings(),
+        epic="NSXUSD",
+        order_manager=object(),
+        position_gateway=object(),
+        control=object(),
+        source=Source(),
+        builder=ThreeMinuteBarBuilder("NSXUSD"),
+        balance_provider=lambda: Decimal("1000"),
+        rules_provider=lambda _epic: rules,
+        recorder=recorder,
+        signal_provider=lambda _bar: None,
+    )
+    assert runtime is not None
+    assert callable(recorder.callback)
+
+    disabled_experiment = Settings()
+    disabled_experiment.tai_demo_experiment = False
+    assert (
+        build_tai_demo_runtime(
+            disabled_experiment,
+            epic="NSXUSD",
+            order_manager=object(),
+            position_gateway=object(),
+            control=object(),
+            source=Source(),
+            builder=ThreeMinuteBarBuilder("NSXUSD"),
+            balance_provider=lambda: Decimal("1000"),
+            rules_provider=lambda _epic: rules,
+        )
+        is None
+    )
+
+    for field, value in (
+        ("broker_env", "live"),
+        ("trading_mode", "auto"),
+        ("live_trading_enabled", True),
+    ):
+        disabled = Settings()
+        setattr(disabled, field, value)
+        assert (
+            build_tai_demo_runtime(
+                disabled,
+                epic="NSXUSD",
+                order_manager=object(),
+                position_gateway=object(),
+                control=object(),
+                source=Source(),
+                builder=ThreeMinuteBarBuilder("NSXUSD"),
+                balance_provider=lambda: Decimal("1000"),
+                rules_provider=lambda _epic: rules,
+            )
+            is None
+        )
+
+
+def test_signal_features_match_t162_closed_fixture_with_buy_and_sell() -> None:
+    from scripts import lab_t162_pine_port as port
+
+    start = datetime(2026, 10, 1, 22, 0, tzinfo=UTC)
+    bars = []
+    for index in range(400):
+        group = index // 18
+        level = Decimal("100") if group % 2 == 0 else Decimal("120")
+        drift = Decimal(index % 18) / Decimal("50")
+        open_price = level + (drift if group % 2 == 0 else -drift)
+        close = open_price + (Decimal("0.5") if group % 2 == 0 else Decimal("-0.5"))
+        high = max(open_price, close) + Decimal("0.2")
+        low = min(open_price, close) - Decimal("0.2")
+        bars.append(
+            ClosedBar(
+                start + timedelta(minutes=index * 3),
+                "NSXUSD",
+                open_price,
+                high,
+                low,
+                close,
+            )
+        )
+    ours = _features(bars)
+    candles = tuple(
+        port.Candle(
+            item.at,
+            float(item.open),
+            float(item.high),
+            float(item.low),
+            float(item.close),
+            0.0,
+            ("NSXUSD", "fixture"),
+            True,
+            3,
+        )
+        for item in bars
+    )
+    expected = port.compute_features(candles, "closed")
+    for name in ("ema", "atr", "adx", "plus_di", "minus_di", "vwap"):
+        actual = ours[name]
+        reference = getattr(expected, name)
+        assert all(
+            left == right
+            or (left is not None and right is not None and abs(left - right) < 1e-9)
+            for left, right in zip(actual, reference, strict=True)
+        )
+    assert ours["buy"] == expected.buy_cross
+    assert ours["sell"] == expected.sell_cross
+    assert any(ours["buy"])
+    assert any(ours["sell"])
 
 
 def test_dry_run_journals_without_submitting() -> None:
