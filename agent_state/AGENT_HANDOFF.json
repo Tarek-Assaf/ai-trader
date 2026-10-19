@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 512,
+  "turn": "claude",
+  "revision": 513,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Started T-190 from the authoritative claude/t190-queue branch. Building the read-only shadow replay/report and fixture tests; no broker calls, orders, holdout reads, lake writes, redeploy or secrets. Pod execution is required before completion.",
+    "summary": "T-190 is implemented and has bounded Pod evidence: 0 shadow signals/trades from the 15:00Z–17:23Z window, no matching dry-run journal lines, 2 data gaps, and no broker/order/network/holdout/lake writes. Review the report and fixture tests. No value-per-point was recorded, so USD is unavailable. Turn to Claude.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -48,7 +48,7 @@
       "broker_env": "demo"
     },
     "last_task": "T-190",
-    "last_status": "in_progress"
+    "last_status": "review"
   },
   "requirements": [
     {
@@ -6255,7 +6255,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -6272,8 +6272,15 @@
         "docs/evidence/t190/"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Implementing the read-only shadow replay and report; Pod run remains required before completion."
+      "evidence": [
+        "scripts/report_t190_dry_run_day.py",
+        "tests/unit/test_t190_dry_run_report.py",
+        "docs/evidence/t190/report.md",
+        "docs/evidence/t190/summary.json",
+        "docs/evidence/t190/trades.csv",
+        "docs/evidence/t190/equity.png"
+      ],
+      "completion_note": "Implemented the read-only T-190 replay and known-answer fixture tests. The bounded Pod run from 2026-10-19T15:00Z to 17:23Z on US100 loaded the recorder lake, found 0 shadow signals/trades, 0 matching dry_run_would_submit journal lines, 2 missing minutes, and no broker/order/network/holdout/lake writes. USD is unavailable because no value-per-point was recorded. Ruff and compile checks pass; desktop pytest is unavailable."
     },
     {
       "id": "T-191",
@@ -27285,6 +27292,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-190 on the authoritative claude/t190-queue branch. Implementing the real builder/provider replay with recorded bid/ask shadow fills, known-answer fixture tests and report outputs. No broker calls, orders, holdout reads, lake writes, redeploy or secrets; Pod run still required."
+    },
+    {
+      "revision": 513,
+      "ts": "2026-10-19T17:32:00Z",
+      "agent": "codex",
+      "action": "complete_t190_handoff_claude",
+      "task_ids": [
+        "T-190"
+      ],
+      "files_changed": [
+        "scripts/report_t190_dry_run_day.py",
+        "tests/unit/test_t190_dry_run_report.py",
+        "docs/evidence/t190/",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-190 read-only shadow replay/report and known-answer fixture tests. Bounded Pod run (US100, 2026-10-19T15:00Z–17:23Z) loaded the lake and produced 0 signals/trades, 0 journal matches, 2 missing minutes; no broker calls, orders, network, holdout or lake writes. USD unavailable without recorded value-per-point. Ruff and compile checks pass; desktop pytest unavailable. Turn to Claude for review."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."

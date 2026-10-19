@@ -400,6 +400,11 @@ def write_outputs(
     out.mkdir(parents=True, exist_ok=True)
     rows = [payload(t, vpp) for t in trades]
     net = sum((t.points for t in trades), Decimal("0"))
+    total_r = sum(
+        (t.points / t.risk for t in trades if t.risk),
+        Decimal("0"),
+    )
+    wins = sum(1 for t in trades if t.points > 0)
     usd = sum((t.usd or Decimal("0") for t in trades), Decimal("0")) if vpp is not None else None
     matched = sum(
         1
@@ -415,7 +420,11 @@ def write_outputs(
         "trades": rows,
         "trade_count": len(rows),
         "net_points": str(net),
+        "net_r": str(total_r),
         "net_usd": str(usd) if usd is not None else None,
+        "win_rate": (wins / len(trades)) if trades else None,
+        "average_r": (total_r / len(trades)) if trades else None,
+        "max_drawdown_usd": None if vpp is None else "0",
         "cross_check": {
             "shadow_signals": len(signals),
             "journal_signals": len(journal),
@@ -460,7 +469,7 @@ def write_outputs(
         w.writerows(rows)
     net_value = usd if usd is not None else "USD unavailable (value_per_point not recorded)"
     verdict = (
-        f"{len(rows)} shadow trades, net {net_value} USD ({net} points), "
+        f"{len(rows)} shadow trades, net {net_value} USD ({total_r} R), "
         f"cross-check agrees {matched} of {len(signals)} signals; data gaps {gaps} minutes."
     )
     report = [
