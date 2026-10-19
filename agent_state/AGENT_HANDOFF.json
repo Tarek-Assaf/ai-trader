@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 501,
+  "turn": "claude",
+  "revision": 502,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-187 offline replay is in progress from authoritative origin/main. It will compare the wired runtime with the closed T-162 session-anchored port on the latest ten pre-holdout trading days and prove dry-run emits no order calls. No broker, network, holdout, redeploy or risk/gate action.",
+    "summary": "T-187 build is ready for Claude review: offline pre-holdout replay script, session-anchored T-162 comparison, epoch information list and mock dry-run proof are implemented. The owner-provided Pod terminal was unavailable (waiting for service), so no lake replay or evidence artifacts were generated. No broker, network, holdout, redeploy, risk/gate or secrets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -48,7 +48,7 @@
       "broker_env": "demo"
     },
     "last_task": "T-187",
-    "last_status": "in_progress"
+    "last_status": "review"
   },
   "requirements": [
     {
@@ -6156,7 +6156,7 @@
       "title": "Offline replay of the wired Tai demo runtime against the closed T-162 port (dry-run proof)",
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "phase": 8,
       "requirements": [
         "R-03"
@@ -6173,8 +6173,12 @@
         "scripts/lab_t187_runtime_replay.py",
         "docs/evidence/t187/"
       ],
-      "evidence": [],
-      "completion_note": "Started T-187 from authoritative origin/main after Claude queued the task in rev500. Building the offline runtime replay and mock dry-run proof only; no broker, network, holdout, redeploy, risk/gate edit or secrets."
+      "evidence": [
+        "docs/specs/t187_tai_demo_offline_replay.md",
+        "scripts/lab_t187_runtime_replay.py",
+        "tests/unit/test_t187_runtime_replay.py"
+      ],
+      "completion_note": "Built the read-only T-187 replay script and comparison-helper test from authoritative origin/main. The script feeds recorded pre-holdout NSXUSD 1m mids through ThreeMinuteBarBuilder and the real TaiSignalProvider, compares session_1800_ny port entries, records epoch-anchor information, and exercises TaiDemoRunner dry-run with zero order calls. Local compileall and diff checks pass; pytest/Ruff/mypy are unavailable. The bounded Pod replay could not start because the owner-provided terminal returned Waiting for service to respond; no lake, holdout or broker access occurred. Turn to Claude for review and a later Pod run."
     }
   ],
   "decisions": [
@@ -15566,6 +15570,22 @@
       "validated_by": "codex",
       "date": "2026-10-19T15:00:00+03:00",
       "reverify_if": "T-186 review feedback, runtime composition, recorder callback contract, Capital metadata or Tai port parity changes."
+    },
+    {
+      "id": "V-458",
+      "task_id": "T-187",
+      "subject": "T-187 offline wired runtime replay build",
+      "method": "Reviewed the T-187 spec and implementation; ran python -m compileall -q src scripts tests/unit/test_t187_runtime_replay.py and git diff --check. The Pod terminal was checked once for the bounded read-only replay and reported Waiting for service to respond.",
+      "result": "pass",
+      "checked": "The script is read-only, filters all rows before the explicit holdout boundary, uses the shared T-186 builder and signal provider, compares session_1800_ny entries with one-tick stop tolerance, records epoch-anchor information only, and runs TaiDemoRunner with dry_run=true against a gateway whose submit method cannot be reached. No broker, network, holdout, lake write or secrets were used.",
+      "evidence": [
+        "docs/specs/t187_tai_demo_offline_replay.md",
+        "scripts/lab_t187_runtime_replay.py",
+        "tests/unit/test_t187_runtime_replay.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T16:00:00+03:00",
+      "reverify_if": "T-187 review changes, replay boundary, T-186 signal/wiring behavior or a reachable Pod replay window."
     }
   ],
   "blockers": [
@@ -15787,6 +15807,14 @@
       "status": "resolved",
       "text": "T-160 requires a bounded read-only Pod run of scripts/lab_t160_owner_time_ny.py against /workspace/data/lake and the owner CSV. The prior Pod tab/session expired, and opening the owner-provided URL returned ERR_BLOCKED_BY_CLIENT. No T-159 alignment rerun or T-157 replay result can be claimed until a reachable Pod terminal/session is provided.",
       "resolution": "Owner supplied a reachable Pod URL. The direct-execution import fallback was fixed, then the bounded T-160 run completed at commit 786dc430. Artifacts and hashes are recorded in docs/evidence/t160_report.md and t160_owner_time_ny.json."
+    },
+    {
+      "id": "B-031",
+      "task_id": "T-187",
+      "raised_by": "codex",
+      "status": "open",
+      "text": "T-187 bounded read-only replay cannot start: the owner-provided Pod terminal URL returned \u201cWaiting for service to respond \u2014 The service on this port is either still initializing or not running.\u201d No lake was read and no evidence run was started; retry only after the owner supplies a reachable Pod terminal/service.",
+      "resolution": ""
     }
   ],
   "questions": [
@@ -26800,6 +26828,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-187 from authoritative origin/main after Claude queued the task in rev500. Build and offline replay only; no broker, network, holdout, redeploy, risk/gate edits or secrets. Turn remains codex while implementing."
+    },
+    {
+      "revision": 502,
+      "ts": "2026-10-19T16:00:00+03:00",
+      "agent": "codex",
+      "action": "review_t187_build_pod_unavailable",
+      "task_ids": [
+        "T-187"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed the T-187 build and comparison-helper test from authoritative origin/main. Compileall and diff checks pass; desktop pytest/Ruff/mypy are unavailable. The bounded Pod URL returned Waiting for service to respond, so no lake replay or evidence was claimed. No broker, network, holdout, redeploy, risk/gate or secrets. Turn to Claude for review."
     }
   ],
   "project_summary": "T-186 accepted; T-044 cannot start because T-017 remains blocked on B-007 missing Capital.com recorder overlap data. No safe unblocked Codex task is available."
