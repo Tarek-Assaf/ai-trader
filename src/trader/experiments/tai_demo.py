@@ -37,7 +37,7 @@ class TaiDemoSettings:
     live_trading_enabled: bool
     experiment_enabled: bool
     base_lot: Decimal = Decimal("0.1")
-    lot_per_balance: Decimal = Decimal("10000")
+    start_balance: Decimal = Decimal("10000")
 
     @property
     def enabled(self) -> bool:
@@ -49,22 +49,26 @@ class TaiDemoSettings:
         )
 
     def __post_init__(self) -> None:
-        for name in ("base_lot", "lot_per_balance"):
+        for name in ("base_lot", "start_balance"):
             value = getattr(self, name)
             if not isinstance(value, Decimal) or not value.is_finite() or value <= 0:
                 raise ValueError(f"{name} must be a positive finite Decimal")
 
     @classmethod
     def from_settings(cls, settings: object) -> TaiDemoSettings:
+        start = Decimal(str(getattr(settings, "tai_demo_start_balance", "0")))
+        if getattr(settings, "tai_demo_experiment", False) and start <= 0:
+            raise TaiDemoRefused(
+                "TAI_DEMO_START_BALANCE must be set to the demo balance at the start of the "
+                "experiment (lot = 0.1 x balance / start balance)"
+            )
         return cls(
             broker_env=str(getattr(settings, "broker_env", "")),
             trading_mode=str(getattr(settings, "trading_mode", "")),
             live_trading_enabled=bool(getattr(settings, "live_trading_enabled", True)),
             experiment_enabled=bool(getattr(settings, "tai_demo_experiment", False)),
             base_lot=Decimal(str(getattr(settings, "tai_demo_base_lot", "0.1"))),
-            lot_per_balance=Decimal(
-                str(getattr(settings, "tai_demo_lot_per_balance", "10000"))
-            ),
+            start_balance=Decimal(str(getattr(settings, "tai_demo_start_balance", "0"))),
         )
 
     def require_enabled(self) -> None:
@@ -141,12 +145,12 @@ class TaiSignal:
         )
         levels = list(defaults)
         levels[: len(self.targets)] = self.targets
-        for previous, current in zip(levels, levels[1:]):
+        for previous, current in zip(levels, levels[1:], strict=False):
             if self.direction is Direction.BUY and current <= previous:
                 raise ValueError("BUY targets must increase")
             if self.direction is Direction.SELL and current >= previous:
                 raise ValueError("SELL targets must decrease")
-        return tuple(levels)
+        return (levels[0], levels[1], levels[2])
 
 
 @dataclass(frozen=True, slots=True)
@@ -401,7 +405,7 @@ class TaiDemoRunner:
             raise TaiDemoRefused("demo balance must be a positive finite Decimal")
         raw = max(
             self.settings.base_lot,
-            self.settings.base_lot * balance / self.settings.lot_per_balance,
+            self.settings.base_lot * balance / self.settings.start_balance,
         )
         aligned = (raw / rules.size_step).to_integral_value(rounding=ROUND_DOWN) * rules.size_step
         if aligned < rules.min_size:
@@ -434,23 +438,19 @@ class TaiDemoRunner:
         return (Decimal("0.4"), Decimal("0.3"), Decimal("0.3"))[index - 1]
 
     @classmethod
-    def _partial_amount(
-        cls, state: _ManagedPosition, current_size: Decimal, index: int
-    ) -> Decimal:
+    def _partial_amount(cls, state: _ManagedPosition, current_size: Decimal, index: int) -> Decimal:
         fraction = cls._exit_fraction(index)
         if state.size_step is None:
             # Legacy injected mock gateways have no broker metadata; retain their
             # deterministic third-size behavior while production uses broker steps.
             return min(current_size, state.original_size / Decimal("3"))
         raw = state.original_size * fraction
-        rounded = (
-            (raw / state.size_step).to_integral_value(rounding=ROUND_HALF_UP)
-            * state.size_step
-        )
-        capped = (
-            (current_size / state.size_step).to_integral_value(rounding=ROUND_DOWN)
-            * state.size_step
-        )
+        rounded = (raw / state.size_step).to_integral_value(
+            rounding=ROUND_HALF_UP
+        ) * state.size_step
+        capped = (current_size / state.size_step).to_integral_value(
+            rounding=ROUND_DOWN
+        ) * state.size_step
         return min(rounded, capped)
 
     def _journal_event(self, cycle_id: str, event: str, **details: object) -> None:

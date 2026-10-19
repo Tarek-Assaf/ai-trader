@@ -10,6 +10,7 @@ from trader.experiments.tai_demo import (
     TaiDemoRefused,
     TaiDemoRunner,
     TaiDemoSettings,
+    TaiInstrumentRules,
     TaiSignal,
 )
 
@@ -73,8 +74,13 @@ def bar(price="100", *, high="100", low="100", closed=True, market_open=True, in
     return ClosedBar(
         datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
         "NSXUSD",
-        Decimal(price), Decimal(high), Decimal(low), Decimal(price),
-        closed=closed, market_open=market_open, in_break=in_break,
+        Decimal(price),
+        Decimal(high),
+        Decimal(low),
+        Decimal(price),
+        closed=closed,
+        market_open=market_open,
+        in_break=in_break,
     )
 
 
@@ -111,8 +117,11 @@ def test_three_flag_guard_refuses_every_unsafe_combination():
         with pytest.raises(TaiDemoRefused):
             TaiDemoRunner(
                 settings=TaiDemoSettings(*values, False),
-                order_manager=object(), position_gateway=object(), signal_provider=lambda _: None,
-                order_factory=lambda *_: None, control=Control(),
+                order_manager=object(),
+                position_gateway=object(),
+                signal_provider=lambda _: None,
+                order_factory=lambda *_: None,
+                control=Control(),
             )
 
 
@@ -159,3 +168,47 @@ def test_scale_out_and_stop_to_entry_bookkeeping():
     assert gateway.partial[-1] == ("deal-1", Decimal("1"))
     runner_instance.on_bar(bar(high="103"))
     assert gateway.closed == ["deal-1"]
+
+
+def _sizing_runner(balance, start="1000"):
+    gateway = Gateway()
+    manager = Manager(gateway)
+    return TaiDemoRunner(
+        settings=TaiDemoSettings("demo", "paper", False, True, start_balance=Decimal(start)),
+        order_manager=manager,
+        position_gateway=gateway,
+        signal_provider=lambda _bar: None,
+        order_factory=lambda *_: None,
+        control=Control(),
+        balance_provider=lambda: Decimal(balance),
+    )
+
+
+def test_lot_is_base_at_start_and_grows_proportionally_with_balance():
+    rules = TaiInstrumentRules(Decimal("0.01"), Decimal("0.01"))
+    assert _sizing_runner("1000")._requested_size(rules) == Decimal("0.10")
+    assert _sizing_runner("1100")._requested_size(rules) == Decimal("0.11")
+    assert _sizing_runner("1500")._requested_size(rules) == Decimal("0.15")
+    # start 10,999.80 (owner demo) must trade exactly 0.1 at the start
+    assert _sizing_runner("10999.80", "10999.80")._requested_size(rules) == Decimal("0.10")
+
+
+def test_lot_never_below_base_and_rounds_down_to_step():
+    rules = TaiInstrumentRules(Decimal("0.01"), Decimal("0.05"))
+    assert _sizing_runner("500")._requested_size(rules) == Decimal("0.10")
+    assert _sizing_runner("1190")._requested_size(rules) == Decimal("0.10")
+    assert _sizing_runner("1200")._requested_size(rules) == Decimal("0.10")
+    assert _sizing_runner("1500")._requested_size(rules) == Decimal("0.15")
+
+
+def test_enabled_experiment_without_start_balance_is_refused():
+    class Cfg:
+        broker_env = "demo"
+        trading_mode = "paper"
+        live_trading_enabled = False
+        tai_demo_experiment = True
+        tai_demo_base_lot = "0.1"
+        tai_demo_start_balance = "0"
+
+    with pytest.raises(TaiDemoRefused):
+        TaiDemoSettings.from_settings(Cfg())
