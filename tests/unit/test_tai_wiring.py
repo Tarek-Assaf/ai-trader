@@ -75,7 +75,7 @@ def test_capital_rules_parser_requires_distance_and_preserves_values() -> None:
     assert rules.size_step == Decimal("0.1")
     assert rules.tick_size == Decimal("0.1")
     assert rules.min_stop_distance == Decimal("1.0")
-    with pytest.raises(ValueError, match="missing minStop"):
+    with pytest.raises(ValueError, match="missing minDealSize"):
         parse_tai_instrument_rules({"instrument": payload["instrument"], "dealingRules": {}})
 
 

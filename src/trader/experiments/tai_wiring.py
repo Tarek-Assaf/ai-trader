@@ -291,7 +291,7 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[Any, ...]]:
     for indices in groups.values():
         if len(indices) != GROUP_BARS or any(
             bars[a].at + timedelta(minutes=3) != bars[b].at
-            for a, b in zip(indices, indices[1:], strict=True)
+            for a, b in zip(indices, indices[1:], strict=False)
         ):
             continue
         raw_open, raw_close = float(bars[indices[0]].open), float(bars[indices[-1]].close)
