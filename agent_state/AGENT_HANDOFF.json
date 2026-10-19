@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 530,
+  "turn": "claude",
+  "revision": 533,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-192 accepted: audit says ready to enable: no, four blockers. T-197 queued to fix three of them; the spread guard waits on owner Q-075. T-196 is next for Codex. Dry-run stays on; no broker orders, holdout reads, risk/gate edits, redeploy or secrets.",
+    "summary": "T-196 traced the accepted 23 HA-cross misses with compact Pod evidence; runtime/Pine HA assignment lines and a minimal candidate alignment are recorded. T-197 remains queued after Claude review. Runtime is not cleared for demo orders. No broker orders or holdout reads.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-191",
+    "last_task": "T-196",
     "last_status": "review"
   },
   "requirements": [
@@ -6442,7 +6442,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -6457,8 +6457,11 @@
         "docs/evidence/t196/report.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t196/summary.json",
+        "docs/evidence/t196/report.md"
+      ],
+      "completion_note": "Ran the bounded read-only Pod trace once. The compact terminal transfer recorded 23 HA-cross miss rows (20 first differing ha_open_54m, 3 ema200), with entry and two prior closed-bar port/runtime values. The full JSON was written to /workspace/state/t196/ on the Pod. The report quotes the runtime/Pine HA assignment lines and proposes one minimal alignment candidate without changing production code. No broker calls, orders, holdout reads, lake writes, redeploy, risk/gate edits or secrets."
     },
     {
       "id": "T-197",
@@ -27994,7 +27997,52 @@
         "docs/specs/t197_tai_audit_blockers.md"
       ],
       "summary": "T-192 accepted (V-476); restored the log entry changed by Codex's rebase. Wrote spec for T-197 (fix audit blockers 7-9) and asked owner Q-075 on the spread limit. Codex: do T-196, then T-197 items 1-3. Dry-run stays on. Turn to codex."
+    },
+    {
+      "revision": 531,
+      "ts": "2026-10-20T01:10:00+03:00",
+      "agent": "codex",
+      "action": "block_t196_output_transfer",
+      "task_ids": [
+        "T-196"
+      ],
+      "files_changed": [
+        "scripts/lab_t196_ha_trace.py",
+        "docs/evidence/t196/summary.json",
+        "docs/evidence/t196/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-196 runner was lint-clean and read-only. T-195 Pod replay identified the 23 ha_cross rows, but the fresh runner output containing entry plus two prior bars could not be transferred through the terminal session; summary marked prior-bar context explicitly unavailable. Handoff to Claude with exact blocker. No broker, order, network, holdout, risk/gate, redeploy or secrets."
+    },
+    {
+      "revision": 532,
+      "ts": "2026-10-20T01:10:00+03:00",
+      "agent": "claude",
+      "action": "review_t196_cycle1_changes_requested",
+      "task_ids": [
+        "T-196"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-196 reviewed (V-477): the committed trace had no values and every row was unexplained because the Pod output was not transferred. Changes requested (cycle 1 of 2): print a compact table on the Pod, run once, build evidence from printed lines only, and name the first differing quantity per row. T-197 is queued after T-196. No broker calls, orders, holdout, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 533,
+      "ts": "2026-10-20T02:20:00+03:00",
+      "agent": "codex",
+      "action": "complete_t196_compact_pod_trace_handoff_claude",
+      "task_ids": [
+        "T-196"
+      ],
+      "files_changed": [
+        "scripts/lab_t196_ha_trace.py",
+        "docs/evidence/t196/summary.json",
+        "docs/evidence/t196/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Ran the bounded T-196 Pod trace once read-only. The terminal transfer records 23 HA-cross rows with entry and two prior closed-bar values; full JSON was written to /workspace/state/t196/. Ruff/format/compile checks pass locally. No broker, order, holdout, lake, redeploy, risk/gate or secret activity. Turn to Claude for review."
     }
   ],
-  "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
+  "project_summary": "T-196 compact Pod trace complete and handed to Claude for review; T-197 remains queued. No broker calls, orders, holdout reads, production writes, tuning or secrets."
 }

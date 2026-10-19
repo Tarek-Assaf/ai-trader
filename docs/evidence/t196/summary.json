@@ -1,929 +1,476 @@
 {
-  "blocker": "The fresh Pod run produced the required trace source, but its full output could not be transferred through the terminal session in this turn; prior-bar evidence is marked explicitly unavailable rather than fabricated.",
   "epic": "NSXUSD",
+  "first_difference_counts": {
+    "ema200": 3,
+    "ha_open_54m": 20
+  },
   "ha_cross_miss_rows": 23,
   "holdout_start": "2026-07-01T00:00:00+00:00",
+  "pod_output": {
+    "row_transfer": "T196_ROW pipe records copied from terminal output; numeric display rounded to 10 significant digits",
+    "state_summary": "/workspace/state/t196/summary.json"
+  },
   "port_entries": 26,
   "rows": [
     {
       "at": "2026-06-19T11:57:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-19T11:57:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "30272.2985",
+        "30272.13913"
+      ],
+      "first_difference": "ema200",
+      "prior": [
+        [
+          "30272.48546",
+          "30272.33679"
+        ],
+        [
+          "30272.39879",
+          "30272.2447"
+        ]
+      ]
     },
     {
       "at": "2026-06-21T23:30:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-21T23:30:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "30365.09397",
+        "30365.09397"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "30365.09397",
+          "30365.09397"
+        ],
+        [
+          "30365.09397",
+          "30365.09397"
+        ]
+      ]
     },
     {
       "at": "2026-06-22T05:30:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-22T05:30:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "30277.77829",
+        "30277.77829"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "30277.77829",
+          "30277.77829"
+        ],
+        [
+          "30277.77829",
+          "30277.77829"
+        ]
+      ]
     },
     {
       "at": "2026-06-22T15:57:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-22T15:57:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "30470.2348",
+        "30470.2348"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "30470.2348",
+          "30470.2348"
+        ],
+        [
+          "30470.2348",
+          "30470.2348"
+        ]
+      ]
     },
     {
       "at": "2026-06-23T00:57:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-23T00:57:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "30303.3324",
+        "30303.3324"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "30303.3324",
+          "30303.3324"
+        ],
+        [
+          "30303.3324",
+          "30303.3324"
+        ]
+      ]
     },
     {
       "at": "2026-06-23T02:15:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-23T02:15:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "30282.4532",
+        "30282.4532"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "30282.4532",
+          "30282.4532"
+        ],
+        [
+          "30282.4532",
+          "30282.4532"
+        ]
+      ]
     },
     {
       "at": "2026-06-24T00:15:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-24T00:15:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29412.01233",
+        "29412.01233"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29412.01233",
+          "29412.01233"
+        ],
+        [
+          "29412.01233",
+          "29412.01233"
+        ]
+      ]
     },
     {
       "at": "2026-06-24T04:51:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-24T04:51:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29481.08724",
+        "29481.08724"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29481.08724",
+          "29481.08724"
+        ],
+        [
+          "29481.08724",
+          "29481.08724"
+        ]
+      ]
     },
     {
       "at": "2026-06-24T13:57:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-24T13:57:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29490.48262",
+        "29490.48262"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29490.48262",
+          "29490.48262"
+        ],
+        [
+          "29490.48262",
+          "29490.48262"
+        ]
+      ]
     },
     {
       "at": "2026-06-24T15:09:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-24T15:09:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29484.86065",
+        "29484.86065"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29492.85431",
+          "29492.85431"
+        ],
+        [
+          "29484.86065",
+          "29484.86065"
+        ]
+      ]
     },
     {
       "at": "2026-06-24T23:42:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-24T23:42:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "BUY",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29177.71735",
+        "29177.71735"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29177.71735",
+          "29177.71735"
+        ],
+        [
+          "29177.71735",
+          "29177.71735"
+        ]
+      ]
     },
     {
       "at": "2026-06-26T01:39:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-26T01:39:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29474.22483",
+        "29472.77493"
+      ],
+      "first_difference": "ema200",
+      "prior": [
+        [
+          "29476.29027",
+          "29474.84868"
+        ],
+        [
+          "29475.22068",
+          "29473.77465"
+        ]
+      ]
     },
     {
       "at": "2026-06-26T08:18:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-26T08:18:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "BUY",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29033.61165",
+        "29033.61165"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29033.61165",
+          "29033.61165"
+        ],
+        [
+          "29033.61165",
+          "29033.61165"
+        ]
+      ]
     },
     {
       "at": "2026-06-26T15:15:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-26T15:15:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "BUY",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29074.56427",
+        "29074.56427"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29074.56427",
+          "29074.56427"
+        ],
+        [
+          "29074.56427",
+          "29074.56427"
+        ]
+      ]
     },
     {
       "at": "2026-06-26T19:39:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-26T19:39:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29205.34386",
+        "29205.70379"
+      ],
+      "first_difference": "ema200",
+      "prior": [
+        [
+          "29205.94436",
+          "29206.34772"
+        ],
+        [
+          "29205.67489",
+          "29206.05634"
+        ]
+      ]
     },
     {
       "at": "2026-06-28T23:18:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-28T23:18:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "BUY",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29207.63992",
+        "29207.63992"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29207.63992",
+          "29207.63992"
+        ],
+        [
+          "29207.63992",
+          "29207.63992"
+        ]
+      ]
     },
     {
       "at": "2026-06-29T01:57:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-29T01:57:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29245.43243",
+        "29245.43243"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29245.43243",
+          "29245.43243"
+        ],
+        [
+          "29245.43243",
+          "29245.43243"
+        ]
+      ]
     },
     {
       "at": "2026-06-29T03:21:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-29T03:21:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29239.32384",
+        "29239.32384"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29239.32384",
+          "29239.32384"
+        ],
+        [
+          "29239.32384",
+          "29239.32384"
+        ]
+      ]
     },
     {
       "at": "2026-06-29T05:03:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-29T05:03:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "BUY",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29182.5734",
+        "29182.5734"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29182.5734",
+          "29182.5734"
+        ],
+        [
+          "29182.5734",
+          "29182.5734"
+        ]
+      ]
     },
     {
       "at": "2026-06-29T15:45:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-29T15:45:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29416.14876",
+        "29416.14877"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29416.14876",
+          "29416.14877"
+        ],
+        [
+          "29416.14876",
+          "29416.14877"
+        ]
+      ]
     },
     {
       "at": "2026-06-30T02:36:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-30T02:36:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "BUY",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29736.43652",
+        "29736.43652"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29736.43652",
+          "29736.43652"
+        ],
+        [
+          "29736.43652",
+          "29736.43652"
+        ]
+      ]
     },
     {
       "at": "2026-06-30T09:51:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-30T09:51:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29847.76507",
+        "29847.76507"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29847.76507",
+          "29847.76507"
+        ],
+        [
+          "29847.76507",
+          "29847.76507"
+        ]
+      ]
     },
     {
       "at": "2026-06-30T14:27:00+00:00",
-      "cause": "runtime_gate_ha_cross",
-      "context": {
-        "entry_bar": {
-          "at": "2026-06-30T14:27:00+00:00",
-          "first_difference": null,
-          "port": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          },
-          "runtime": {
-            "adx14": null,
-            "ema200": null,
-            "ha_close_54m": null,
-            "ha_colour": null,
-            "ha_cross": false,
-            "ha_open_54m": null,
-            "minus_di14": null,
-            "plus_di14": null,
-            "session_anchor": null,
-            "vwap": null
-          }
-        },
-        "prior_bars": {
-          "exact_reason": "T-195 committed entry rows only; the T-196 runner now collects the two prior bars on a fresh Pod run.",
-          "status": "not_recorded_in_T-195_artifact"
-        }
-      },
       "direction": "SELL",
-      "first_difference": null
+      "display_precision": "10 significant digits",
+      "entry": [
+        "29827.84871",
+        "29827.84871"
+      ],
+      "first_difference": "ha_open_54m",
+      "prior": [
+        [
+          "29827.84871",
+          "29827.84871"
+        ],
+        [
+          "29827.84871",
+          "29827.84871"
+        ]
+      ]
     }
   ],
   "safety": {
@@ -936,10 +483,12 @@
     "sealed_holdout_read": false,
     "secrets_read": false
   },
+  "selected_window": "10 trading dates before holdout start",
   "source": {
-    "runner": "scripts/lab_t196_ha_trace.py",
-    "t195_summary": "docs/evidence/t195/summary.json"
+    "port": "scripts/lab_t162_pine_port.py",
+    "runtime": "src/trader/experiments/tai_wiring.py",
+    "t195_script": "scripts/lab_t195_runtime_miss.py"
   },
-  "status": "partial_evidence",
+  "status": "ok",
   "task": "T-196"
 }
