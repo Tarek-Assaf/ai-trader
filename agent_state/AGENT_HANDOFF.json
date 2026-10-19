@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 530,
+  "revision": 532,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-192 accepted: audit says ready to enable: no, four blockers. T-197 queued to fix three of them; the spread guard waits on owner Q-075. T-196 is next for Codex. Dry-run stays on; no broker orders, holdout reads, risk/gate edits, redeploy or secrets.",
+    "summary": "T-191 accepted; T-192 audit says ready to enable: no (4 blockers, T-197 queued). T-195: 23 of 25 misses fail first at the HA cross gate; T-196 (trace the values) sent back once. Q-075 (spread limit) awaits the owner. Dry-run stays on. No broker orders, no holdout reads.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6442,7 +6442,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "changes_requested",
       "requirements": [
         "R-03"
       ],
@@ -6450,15 +6450,19 @@
         "T-195"
       ],
       "acceptance_criteria": [
-        "Follow docs/specs/t196_ha_cross_trace.md exactly. Read-only, offline; no broker call, no sealed holdout read, no risk or gate edits, no redeploy, no secrets. Ruff check and format (line length 100), CI green. One log entry, hand the turn to claude, stop."
+        "Follow docs/specs/t196_ha_cross_trace.md exactly. Read-only, offline; no broker call, no sealed holdout read, no risk or gate edits, no redeploy, no secrets. Ruff check and format (line length 100), CI green. One log entry, hand the turn to claude, stop.",
+        "CHANGES REQUESTED (cycle 1, V-477): the committed summary.json has every value null and every row 'unexplained'; the report says 23 in one place and 25 in another. No cause is shown. The Pod run apparently produced the trace but could not be transferred. Fix only the transfer: (1) make scripts/lab_t196_ha_trace.py also print a COMPACT table to the terminal, one line per ha_cross miss (at, side, first differing quantity, port value, runtime value, and for that quantity the value on each of the two prior bars), at most about 4 KB in total, and write the full JSON to /workspace/state/t196/ on the Pod; (2) run it once on the Pod; if the terminal output is longer than 4 KB print it in chunks of about 3 KB and copy each chunk; (3) build docs/evidence/t196/summary.json and report.md from those printed lines only (no invented values), count rows consistently (23 ha_cross rows), name the first differing quantity per row, quote the two differing code lines (runtime HA vs Pine port), and describe one minimal fix without making it; (4) start from current origin/main (T-192 and T-197 spec are merged), ruff check/format line 100, mypy, CI green; one log entry; turn to claude. If the output still cannot be transferred, state exactly why and ask the owner to paste the terminal output."
       ],
       "deliverables": [
         "docs/evidence/t196/summary.json",
         "docs/evidence/t196/report.md"
       ],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 1,
+      "evidence": [
+        "docs/evidence/t196/summary.json",
+        "docs/evidence/t196/report.md"
+      ],
+      "completion_note": "Runner and partial entry-bar trace are committed. The complete two-prior-bar output could not be transferred from the Pod terminal in this turn, so the task is blocked pending one fresh Pod run or output transfer."
     },
     {
       "id": "T-197",
@@ -16249,6 +16253,20 @@
       ],
       "validated_by": "claude",
       "reverify_if": "T-192 audit scope or Tai sizing behavior changes"
+    },
+    {
+      "id": "V-477",
+      "task_id": "T-196",
+      "subject": "T-196 first review of branch codex/t196-ha-cross-trace (PR #373)",
+      "method": "Read the report.md and summary.json on the branch and the task spec.",
+      "result": "fail",
+      "checked": "All 23 rows carry null values and the cause 'unexplained'; no first differing quantity is shown, the two prior bars are 'not recorded', and the report counts 23 and 25 inconsistently. The trace runner exists but its output was never transferred, so the acceptance (every row has a first differing value) is unmet.",
+      "evidence": [
+        "docs/evidence/t196/report.md",
+        "docs/evidence/t196/summary.json"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "new Pod output is recorded"
     }
   ],
   "blockers": [
@@ -27994,6 +28012,35 @@
         "docs/specs/t197_tai_audit_blockers.md"
       ],
       "summary": "T-192 accepted (V-476); restored the log entry changed by Codex's rebase. Wrote spec for T-197 (fix audit blockers 7-9) and asked owner Q-075 on the spread limit. Codex: do T-196, then T-197 items 1-3. Dry-run stays on. Turn to codex."
+    },
+    {
+      "revision": 531,
+      "ts": "2026-10-20T01:10:00+03:00",
+      "agent": "codex",
+      "action": "block_t196_output_transfer",
+      "task_ids": [
+        "T-196"
+      ],
+      "files_changed": [
+        "scripts/lab_t196_ha_trace.py",
+        "docs/evidence/t196/summary.json",
+        "docs/evidence/t196/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-196 runner is lint-clean and read-only. T-195 Pod replay identified the 23 ha_cross rows, but the fresh runner output containing entry plus two prior bars could not be transferred through the terminal session; summary marks prior-bar context explicitly unavailable. Handoff to Claude with exact blocker. No broker, order, network, holdout, risk/gate, redeploy or secrets."
+    },
+    {
+      "revision": 532,
+      "ts": "2026-10-20T01:10:00+03:00",
+      "agent": "claude",
+      "action": "review_t196_cycle1_changes_requested",
+      "task_ids": [
+        "T-196"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-196 reviewed (V-477): the committed trace has no values and every row is unexplained because the Pod output was not transferred. Changes requested (cycle 1 of 2): print a compact table on the Pod (about 4 KB), run once, build the evidence from the printed lines only, name the first differing quantity per row. Merged T-192 acceptance (#372); closed #367. T-197 is queued after T-196 (spec merged); Q-075 (spread limit) is waiting on the owner. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
