@@ -8,8 +8,8 @@ gate and defaults to dry-run.
 
 from __future__ import annotations
 
-import math
 import logging
+import math
 from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -24,7 +24,10 @@ from trader.data.resample import Candle
 from trader.execution.brokers.base import Direction, OrderRequest
 from trader.experiments.tai_demo import (
     ClosedBar,
+    Control,
     DemoOutcome,
+    OrderManager,
+    PositionGateway,
     TaiDemoRefused,
     TaiDemoRunner,
     TaiDemoSettings,
@@ -299,9 +302,7 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[float | None, ...] |
             + raw_close
         ) / 4.0
         open_price = (
-            (raw_open + raw_close) / 2.0
-            if previous is None
-            else (previous[0] + previous[1]) / 2.0
+            (raw_open + raw_close) / 2.0 if previous is None else (previous[0] + previous[1]) / 2.0
         )
         # The closed T-162/T-182 series exposes the completed prior 54m HA
         # value on the current group, avoiding look-ahead into this group.
@@ -477,9 +478,7 @@ def parse_tai_instrument_rules(payload: Mapping[str, Any]) -> TaiInstrumentRules
     tick = _as_decimal(instrument.get("tickSize"), "tickSize")
     minimum, min_unit = _raw_rule(rules, "minDealSize")
     step, step_unit = _raw_rule(rules, "minSizeIncrement")
-    stop, stop_unit = _raw_rule(
-        rules, "minStopOrLimitDistance", "minStopDistance", "minDistance"
-    )
+    stop, stop_unit = _raw_rule(rules, "minStopOrLimitDistance", "minStopDistance", "minDistance")
     try:
         limit, limit_unit = _raw_rule(rules, "minLimitDistance")
     except InstrumentDataError:
@@ -504,7 +503,7 @@ def parse_tai_instrument_rules(payload: Mapping[str, Any]) -> TaiInstrumentRules
 class CapitalInstrumentRulesProvider:
     """Read-only Capital.com rules provider; refreshes before every entry."""
 
-    def __init__(self, client: object, epic: str) -> None:
+    def __init__(self, client: Any, epic: str) -> None:
         if not epic.strip():
             raise ValueError("epic must not be empty")
         self._client = client
@@ -512,7 +511,7 @@ class CapitalInstrumentRulesProvider:
 
     def __call__(self, epic: str | None = None) -> TaiInstrumentRules:
         target = (epic or self.epic).strip()
-        details = getattr(self._client, "market_details")(target)
+        details = self._client.market_details(target)
         if not isinstance(details, Mapping):
             raise TaiDemoRefused("broker instrument rules are unavailable")
         return parse_tai_instrument_rules(details)
@@ -521,12 +520,12 @@ class CapitalInstrumentRulesProvider:
 class CapitalBalanceProvider:
     """Read the account balance before each potential entry, without persisting PII."""
 
-    def __init__(self, client: object, account_id: str | None = None) -> None:
+    def __init__(self, client: Any, account_id: str | None = None) -> None:
         self._client = client
         self._account_id = account_id
 
     def __call__(self) -> Decimal:
-        payload = getattr(self._client, "account_info")()
+        payload = self._client.account_info()
         accounts = payload.get("accounts") if isinstance(payload, Mapping) else None
         if not isinstance(accounts, Sequence) or isinstance(accounts, str):
             raise TaiDemoRefused("broker account balance is unavailable")
@@ -644,9 +643,9 @@ def build_tai_demo_runtime(
     settings: object,
     *,
     epic: str,
-    order_manager: object,
-    position_gateway: object,
-    control: object,
+    order_manager: OrderManager,
+    position_gateway: PositionGateway,
+    control: Control,
     source: Any,
     builder: ThreeMinuteBarBuilder,
     balance_provider: Callable[[], Decimal],

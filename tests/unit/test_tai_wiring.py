@@ -35,12 +35,17 @@ def test_three_minute_builder_requires_all_members_and_preserves_flags() -> None
     builder = ThreeMinuteBarBuilder("NSXUSD")
     assert builder.add(minute(start)) is None
     assert builder.add(minute(start + timedelta(minutes=2))) is None
-    result = builder.add(TaiMinuteBar(
-        start + timedelta(minutes=1),
-        "NSXUSD",
-        Decimal("100"), Decimal("101"), Decimal("99"), Decimal("100"),
-        market_open=False,
-    ))
+    result = builder.add(
+        TaiMinuteBar(
+            start + timedelta(minutes=1),
+            "NSXUSD",
+            Decimal("100"),
+            Decimal("101"),
+            Decimal("99"),
+            Decimal("100"),
+            market_open=False,
+        )
+    )
     assert result is not None
     assert result.at == start
     assert result.open == Decimal("100")
@@ -256,8 +261,7 @@ def test_signal_features_match_t162_closed_fixture_with_buy_and_sell() -> None:
         actual = ours[name]
         reference = getattr(expected, name)
         assert all(
-            left == right
-            or (left is not None and right is not None and abs(left - right) < 1e-9)
+            left == right or (left is not None and right is not None and abs(left - right) < 1e-9)
             for left, right in zip(actual, reference, strict=True)
         )
     assert ours["buy"] == expected.buy_cross

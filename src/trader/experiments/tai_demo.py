@@ -320,10 +320,7 @@ class TaiDemoRunner:
             or order.reference_price != signal.entry
             or (
                 not allows_price_rounding
-                and (
-                    order.stop_level != signal.stop
-                    or order.profit_level != signal.levels()[2]
-                )
+                and (order.stop_level != signal.stop or order.profit_level != signal.levels()[2])
             )
         ):
             self._journal_event(cycle_id, "order_refused", reason="order_factory_mismatch")
