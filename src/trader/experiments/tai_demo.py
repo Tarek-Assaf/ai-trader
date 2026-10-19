@@ -462,7 +462,9 @@ class TaiDemoRunner:
             if not self._dry_run
             else ()
         )
-        if positions or any(state.epic == bar.epic for state in self._managed.values()):
+        if positions or (
+            self._dry_run and any(state.epic == bar.epic for state in self._managed.values())
+        ):
             self._journal_event(cycle_id, "position_open", epic=bar.epic)
             return self._outcome(cycle_id, "NO_TRADE", "one_position_rule")
         if self._startup_blocked:
@@ -564,7 +566,18 @@ class TaiDemoRunner:
         if self._dry_run:
             self._manage_shadow_exits(bar, cycle_id)
             return
-        for position in tuple(self._positions.get_positions()):
+        positions = tuple(self._positions.get_positions())
+        present_ids = {position.deal_id for position in positions}
+        for deal_id, state in tuple(self._managed.items()):
+            if state.shadow or state.epic != bar.epic or deal_id in present_ids:
+                continue
+            self._managed.pop(deal_id, None)
+            self._journal_event(
+                cycle_id, "reconcile_closed", deal_id=deal_id, reason="broker_closed"
+            )
+            self._send_alert(f"flat {bar.epic} broker_closed")
+            self._persist_state()
+        for position in positions:
             if position.epic != bar.epic:
                 continue
             state = self._managed.get(position.deal_id)
@@ -617,6 +630,25 @@ class TaiDemoRunner:
                         )
                 self._persist_state()
 
+            if deal_id not in self._managed:
+                continue
+            stop_level = (
+                state.entry
+                if state.entry_stop_moved
+                else (
+                    state.entry - state.risk
+                    if state.direction is Direction.BUY
+                    else state.entry + state.risk
+                )
+            )
+            if not self._stop_hit(state.direction, bar, stop_level):
+                continue
+            reason = "stop_entry" if state.entry_stop_moved else "stop"
+            self._managed.pop(deal_id, None)
+            self._journal_event(cycle_id, "exit", deal_id=deal_id, reason=reason)
+            self._send_alert(f"flat {bar.epic} {reason}")
+            self._persist_state()
+
     def _manage_shadow_exits(self, bar: ClosedBar, cycle_id: str) -> None:
         for deal_id, state in tuple(self._managed.items()):
             if not state.shadow or state.epic != bar.epic:
@@ -655,6 +687,25 @@ class TaiDemoRunner:
                     )
                 self._persist_state()
 
+            if deal_id not in self._managed:
+                continue
+            stop_level = (
+                state.entry
+                if state.entry_stop_moved
+                else (
+                    state.entry - state.risk
+                    if state.direction is Direction.BUY
+                    else state.entry + state.risk
+                )
+            )
+            if not self._stop_hit(state.direction, bar, stop_level):
+                continue
+            reason = "stop_entry" if state.entry_stop_moved else "stop"
+            self._managed.pop(deal_id, None)
+            self._journal_event(cycle_id, "exit", deal_id=deal_id, reason=reason)
+            self._send_alert(f"flat {bar.epic} {reason}")
+            self._persist_state()
+
     def _flatten(self, cycle_id: str) -> None:
         if self._dry_run:
             for deal_id, state in tuple(self._managed.items()):
@@ -676,6 +727,10 @@ class TaiDemoRunner:
     @staticmethod
     def _target_hit(direction: Direction, bar: ClosedBar, target: Decimal) -> bool:
         return bar.high >= target if direction is Direction.BUY else bar.low <= target
+
+    @staticmethod
+    def _stop_hit(direction: Direction, bar: ClosedBar, stop: Decimal) -> bool:
+        return bar.low <= stop if direction is Direction.BUY else bar.high >= stop
 
     def _requested_size(self, rules: TaiInstrumentRules | None) -> Decimal | None:
         if rules is None or self._balance_provider is None:

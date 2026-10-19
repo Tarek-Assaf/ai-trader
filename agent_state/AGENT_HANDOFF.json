@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "claude",
-  "revision": 524,
+  "revision": 526,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-191 lint-only review fix complete: the test lambda was replaced with a def and Ruff formatting was applied to tai_demo.py. Ruff check/format, compile and diff checks pass; focused pytest and mypy are unavailable. T-192 then T-196 remain queued. Runtime not cleared for demo orders; dry-run stays on. No broker orders, holdout reads, redeploy or secrets.",
+    "summary": "T-191 cycle-2 stop handling is complete: dry-run shadows exit on the structure stop or post-TP1 entry stop, and live managed deals absent from broker positions are reconciled closed so later signals can enter. Ruff, compile and diff checks pass; focused pytest and mypy are unavailable. T-192 then T-196 remain queued. Runtime not cleared for demo orders; dry-run stays on. No broker orders, holdout reads, redeploy or secrets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6307,19 +6307,20 @@
       "acceptance_criteria": [
         "Follow docs/specs/t191_tai_state_persistence.md exactly. Required before real demo orders.",
         "No broker order or write call, no sealed holdout read, no risk or gate edits, no secrets in code/logs. Ruff check and format (line length 100), CI green. One log entry, hand the turn to claude, stop.",
-        "CHANGES REQUESTED (cycle 1, V-469): branch codex/t191-tai-state fails lint. Fix only: (1) tests/unit/test_tai_demo.py line ~309 'make = lambda: ...' (ruff E731): use a def. (2) ruff format --check fails on src/trader/experiments/tai_demo.py (line ~336): run ruff format with line length 100. Start from current origin/main (T-195 is merged), keep handoff entries, merge your consecutive log entries. pytest, ruff check on touched files, ruff format --check, mypy and CI must pass; do not change behaviour. Then hand the turn to claude."
+        "CHANGES REQUESTED (cycle 1, V-469): branch codex/t191-tai-state fails lint. Fix only: (1) tests/unit/test_tai_demo.py line ~309 'make = lambda: ...' (ruff E731): use a def. (2) ruff format --check fails on src/trader/experiments/tai_demo.py (line ~336): run ruff format with line length 100. Start from current origin/main (T-195 is merged), keep handoff entries, merge your consecutive log entries. pytest, ruff check on touched files, ruff format --check, mypy and CI must pass; do not change behaviour. Then hand the turn to claude.",
+        "CHANGES REQUESTED (cycle 2, last allowed, V-471): lint is fixed and persistence/reconcile/corrupt-file/unknown-position logic reads correctly. Two behaviour bugs block acceptance, both from the new 'any(state.epic == bar.epic for state in self._managed.values())' one-position check: (1) DRY-RUN: _manage_shadow_exits only handles targets, never the stop. A shadow position stopped out by the initial structure stop, or by the entry stop after TP1, stays in _managed forever, so the experiment can never enter a second dry-run trade. Add stop handling on bar low/high to the shadow path: initial stop = signal stop, after TP1 the stop is entry; keep the same ordering as the live plan and the indicator (targets first, then stop, same as T-162); on stop remove the shadow, journal exit with reason stop or stop_entry, send the DRY-RUN flat alert and persist. (2) LIVE: when a managed deal is no longer at the broker (stopped out at Capital.com), nothing removes it from _managed, so after the first stop-out the runner returns one_position_rule for every later bar. In _manage_exits, drop managed non-shadow deals for the bar epic that are absent from get_positions(), journal reconcile_closed (or exit), send the flat alert and persist; the live one-position check must use broker positions only. Tests to add: shadow stopped at the structure stop frees the next dry-run entry; shadow stopped at entry after TP1 frees it; live managed deal missing at the broker is dropped and a later signal can enter; DRY-RUN alerts on stop/flat. Do not change anything else. Start from current origin/main, keep handoff entries, merge your consecutive log entries. A third failure goes to the owner."
       ],
       "deliverables": [
         "src/trader/experiments/tai_demo.py",
         "src/trader/api/app.py",
         "tests/unit/test_tai_demo.py"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "src/trader/experiments/tai_demo.py",
         "tests/unit/test_tai_demo.py"
       ],
-      "completion_note": "Applied the requested lint-only review fix on the T-191 implementation branch: replaced the test lambda assignment with a def and ran Ruff format on the two files requested. Ruff check and Ruff format --check pass for all T-191 touched files; py_compile and git diff --check pass. Focused pytest and mypy are unavailable in the desktop image. No behavior, broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets changed. Turn to Claude for review."
+      "completion_note": "Applied the cycle-2 T-191 fixes: dry-run shadows now process the structure stop and post-TP1 entry stop after targets, removing the shadow and journaling a flat exit; live managed deals absent from broker positions are reconciled closed before exit management, so later signals can enter. Added focused tests for both shadow stop paths, dry-run flat alerts, and live broker disappearance. Ruff check and format pass; py_compile and git diff --check pass. Focused pytest and mypy are unavailable in the desktop image. No behavior outside T-191, broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets. Turn to Claude for review."
     },
     {
       "id": "T-192",
@@ -7050,6 +7051,13 @@
     {
       "id": "D-077",
       "statement": "Claude: T-195 accepted as a read-only diagnostic. 25 of 26 port entries missed; 23 first fail at ha_cross; bar construction, history window, warm-up and position lock ruled out; cause inside ha_cross not yet shown. Runtime stays not cleared for demo orders. T-196 queued to trace HA values. T-191 gets changes_requested cycle 1 for lint only.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "claude"
+    },
+    {
+      "id": "D-078",
+      "statement": "Claude: T-191 review cycle 2 of 2 (V-471): changes requested for two stop-handling bugs that would block every entry after the first trade (shadow positions never stop out; live managed deals never leave _managed after a broker-side stop). Redeploy notice to the owner is withheld until T-191 is accepted; T-192 follows T-191.",
       "status": "final",
       "do_not_reopen": false,
       "decided_by": "claude"
@@ -16107,6 +16115,34 @@
       "method": "Ran Ruff check and Ruff format --check (line length 100) on the T-191 touched files, then ran py_compile and git diff --check.",
       "result": "pass",
       "checked": "The E731 lambda assignment was replaced with a def and Ruff formatting was applied to tai_demo.py. Ruff check and format checks pass; py_compile and git diff --check pass. Focused pytest and mypy are unavailable in the desktop image.",
+      "evidence": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "validated_by": "codex",
+      "reverify_if": "T-191 behavior changes"
+    },
+    {
+      "id": "V-471",
+      "task_id": "T-191",
+      "subject": "T-191 cycle 2 review of branch codex/t191-tai-state",
+      "method": "Read the full diff of tai_demo.py, tai_wiring.py, app.py and the new tests; ruff check and ruff format --check (line 100) on touched files; traced the one-position check against every path that removes entries from _managed.",
+      "result": "fail",
+      "checked": "Lint passes. Persistence, atomic write, corrupt-file fail-closed, unknown-position refusal and DRY-RUN alert prefix read correctly. Defect 1: _manage_shadow_exits has no stop logic, so a stopped-out shadow position is never removed and the one-position check blocks all later dry-run entries. Defect 2: managed live deals absent from the broker are never removed, so after any broker-side stop-out the new managed-state one-position check blocks all later entries. pytest and mypy not runnable in this review environment; CI will run them.",
+      "evidence": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "tai_demo.py changes"
+    },
+    {
+      "id": "V-472",
+      "task_id": "T-191",
+      "subject": "T-191 cycle 2 stop handling fix",
+      "method": "Ran Ruff check and Ruff format --check (line length 100) on T-191 touched files, py_compile, and git diff --check; reviewed focused tests for shadow structure-stop, post-TP1 entry-stop, live broker disappearance, and flat alerts.",
+      "result": "pass",
+      "checked": "Dry-run target processing remains before stop processing; structure and entry stops remove shadows and persist flat alerts. Live managed deals missing from broker positions are journaled reconcile_closed, alerted flat, removed, and no longer block a later signal. Focused pytest and mypy are unavailable in the desktop image.",
       "evidence": [
         "src/trader/experiments/tai_demo.py",
         "tests/unit/test_tai_demo.py"
@@ -27740,6 +27776,34 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Applied only the requested T-191 lint fixes: replaced the test lambda assignment with a def and formatted tai_demo.py. Ruff check/format, py_compile and git diff --check pass; focused pytest and mypy are unavailable. No behavior, broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets. Turn to Claude for review."
+    },
+    {
+      "revision": 525,
+      "ts": "2026-10-19T23:30:00+03:00",
+      "agent": "claude",
+      "action": "review_t191_cycle2_changes_requested",
+      "task_ids": [
+        "T-191"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-191 reviewed (V-471, D-078; V-470 is Codex's own pass note, not a review): lint fixed, persistence and reconcile logic read correctly, but stopped-out positions are never removed from the managed set (dry-run shadow has no stop logic; live deals closed at the broker are never dropped), so no second entry could ever happen. Changes requested, cycle 2 of 2, exact fixes and tests listed in the task. Then T-192, then T-196. Merged T-195 (#364) and closed #363. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 526,
+      "ts": "2026-10-19T20:25:00+03:00",
+      "agent": "codex",
+      "action": "complete_t191_stop_handling_handoff_claude",
+      "task_ids": [
+        "T-191"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Applied T-191 cycle-2 stop handling: dry-run shadows now exit on structure or post-TP1 entry stops after target processing, and live managed deals absent from broker positions are reconciled closed so later signals can enter. Added focused tests and flat alerts. Ruff check/format, py_compile and git diff --check pass; focused pytest and mypy are unavailable. No broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets. Turn to Claude for review."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
