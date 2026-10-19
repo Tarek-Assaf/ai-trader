@@ -13,7 +13,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from decimal import Decimal
-from typing import Any, Protocol
+from typing import Protocol
 
 from trader.execution.brokers.base import Direction, OrderRequest, Position
 from trader.execution.control import ControlMode
