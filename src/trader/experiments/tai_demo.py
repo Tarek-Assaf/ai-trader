@@ -16,7 +16,7 @@ import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
-from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Protocol
 
@@ -291,6 +291,7 @@ class TaiDemoRunner:
         self._epic = epic
         self._startup_blocked = False
         self._state_corrupt = False
+        self._refusal_alerted: set[str] = set()
         persisted_state = self._load_state()
         # Runtime composition may be retried after a dependency outage. Keep
         # Tai position bookkeeping across that retry so an open demo position
@@ -442,16 +443,20 @@ class TaiDemoRunner:
 
         cycle_id = f"tai-demo-{bar.at.astimezone(UTC).strftime('%Y%m%dT%H%M%S')}-{bar.epic}"
         if not bar.closed:
-            return self._outcome(cycle_id, "NO_TRADE", "bar_not_closed")
+            return self._refusal(cycle_id, "bar_not_closed", event="bar_not_closed")
         mode = self._control.read()
         if mode is ControlMode.KILL:
             self._flatten(cycle_id)
             return self._outcome(cycle_id, "NO_TRADE", "kill_switch_active")
         if mode is not ControlMode.RUN:
-            return self._outcome(cycle_id, "NO_TRADE", "execution_paused")
+            return self._refusal(cycle_id, "execution_paused", event="execution_paused")
         self._manage_exits(bar, cycle_id)
         if not bar.market_open or bar.in_break:
-            return self._outcome(cycle_id, "NO_TRADE", "market_closed_or_blackout")
+            return self._refusal(
+                cycle_id,
+                "market_closed_or_blackout",
+                event="market_closed_or_blackout",
+            )
 
         positions = (
             tuple(
@@ -465,20 +470,36 @@ class TaiDemoRunner:
         if positions or (
             self._dry_run and any(state.epic == bar.epic for state in self._managed.values())
         ):
-            self._journal_event(cycle_id, "position_open", epic=bar.epic)
-            return self._outcome(cycle_id, "NO_TRADE", "one_position_rule")
+            return self._refusal(
+                cycle_id,
+                "one_position_rule",
+                event="position_open",
+                epic=bar.epic,
+            )
         if self._startup_blocked:
-            return self._outcome(cycle_id, "REJECTED", "startup_reconciliation_failed")
+            return self._refusal(
+                cycle_id,
+                "startup_reconciliation_failed",
+                event="startup_reconciliation_failed",
+                action="REJECTED",
+            )
         signal = self._signal(bar)
         if signal is None:
+            self._journal_event(cycle_id, "no_signal", reason="no_signal")
             return self._outcome(cycle_id, "NO_TRADE", "no_signal")
         try:
             rules = self._rules_provider(bar.epic) if self._rules_provider is not None else None
             requested_size = self._requested_size(rules)
             order = self._build_order(signal, cycle_id, requested_size)
         except (TaiDemoRefused, ValueError) as exc:
-            self._journal_event(cycle_id, "order_refused", epic=bar.epic, reason=str(exc))
-            return self._outcome(cycle_id, "REJECTED", "order_rules_unavailable")
+            return self._refusal(
+                cycle_id,
+                "order_rules_unavailable",
+                event="order_refused",
+                action="REJECTED",
+                epic=bar.epic,
+                detail=str(exc),
+            )
         if requested_size is not None and order.size != requested_size:
             order = replace(order, size=requested_size)
         allows_price_rounding = bool(getattr(self._order_factory, "allows_price_rounding", False))
@@ -491,8 +512,12 @@ class TaiDemoRunner:
                 and (order.stop_level != signal.stop or order.profit_level != signal.levels()[2])
             )
         ):
-            self._journal_event(cycle_id, "order_refused", reason="order_factory_mismatch")
-            return self._outcome(cycle_id, "REJECTED", "order_factory_mismatch")
+            return self._refusal(
+                cycle_id,
+                "order_factory_mismatch",
+                event="order_refused",
+                action="REJECTED",
+            )
         if self._dry_run:
             shadow_id = f"shadow:{cycle_id}"
             self._managed[shadow_id] = _ManagedPosition(
@@ -526,16 +551,29 @@ class TaiDemoRunner:
         try:
             receipt = self._orders.submit(cycle_id, order)
         except ExecutionPaused:
-            self._journal_event(cycle_id, "guardian_veto", epic=bar.epic)
-            self._send_alert(f"entry vetoed for {bar.epic}")
-            return self._outcome(cycle_id, "REJECTED", "guardian_veto")
+            return self._refusal(
+                cycle_id,
+                "guardian_veto",
+                event="guardian_veto",
+                action="REJECTED",
+                epic=bar.epic,
+            )
         if receipt is None:
-            self._journal_event(cycle_id, "guardian_veto", epic=bar.epic)
-            return self._outcome(cycle_id, "REJECTED", "guardian_veto")
+            return self._refusal(
+                cycle_id,
+                "receipt_none",
+                event="guardian_veto",
+                action="REJECTED",
+                epic=bar.epic,
+            )
         position = getattr(receipt, "position", None)
         if not isinstance(position, Position):
-            self._journal_event(cycle_id, "order_refused", reason="receipt_missing_position")
-            return self._outcome(cycle_id, "REJECTED", "receipt_missing_position")
+            return self._refusal(
+                cycle_id,
+                "receipt_missing_position",
+                event="order_refused",
+                action="REJECTED",
+            )
         risk = abs(signal.entry - signal.stop)
         self._managed[position.deal_id] = _ManagedPosition(
             epic=bar.epic,
@@ -550,6 +588,7 @@ class TaiDemoRunner:
                 if rules is not None and rules.value_per_point is not None
                 else None
             ),
+            remaining_size=position.size,
         )
         self._journal_event(
             cycle_id,
@@ -566,7 +605,11 @@ class TaiDemoRunner:
         if self._dry_run:
             self._manage_shadow_exits(bar, cycle_id)
             return
-        positions = tuple(self._positions.get_positions())
+        try:
+            positions = tuple(self._positions.get_positions())
+        except Exception as exc:  # noqa: BLE001 - exit management must fail safe
+            self._exit_failure(cycle_id, "positions", None, None, exc)
+            return
         present_ids = {position.deal_id for position in positions}
         for deal_id, tracked in tuple(self._managed.items()):
             if tracked.shadow or tracked.epic != bar.epic or deal_id in present_ids:
@@ -587,18 +630,40 @@ class TaiDemoRunner:
             for index, target in enumerate(state.targets, start=1):
                 if index in state.hit or not self._target_hit(state.direction, bar, target):
                     continue
-                state.hit.add(index)
                 if index == 1 and not state.entry_stop_moved:
-                    self._positions.modify_position(
-                        position.deal_id,
-                        stop_level=state.entry,
-                        profit_level=state.targets[2],
-                    )
+                    try:
+                        self._positions.modify_position(
+                            position.deal_id,
+                            stop_level=state.entry,
+                            profit_level=state.targets[2],
+                        )
+                    except Exception as exc:  # noqa: BLE001 - preserve the position
+                        self._exit_failure(cycle_id, "modify", position.deal_id, index, exc)
+                        state.hit.discard(index)
+                        self._persist_state()
+                        return
                     state.entry_stop_moved = True
                     self._journal_event(cycle_id, "stop_to_entry", deal_id=position.deal_id)
                     self._send_alert(f"stop moved to entry for {bar.epic}")
                 if index == 3:
-                    self._positions.close_position(position.deal_id)
+                    try:
+                        result = self._positions.close_position(position.deal_id)
+                    except Exception as exc:  # noqa: BLE001 - preserve the position
+                        self._exit_failure(cycle_id, "close", position.deal_id, index, exc)
+                        state.hit.discard(index)
+                        self._persist_state()
+                        return
+                    if self._is_partial_fill(result):
+                        filled = self._filled_size(result)
+                        if filled is not None and Decimal("0") < filled < position.size:
+                            state.remaining_size = position.size - filled
+                        self._partial_exit_failure(
+                            cycle_id, position.deal_id, index, state, result, position.size
+                        )
+                        state.hit.discard(index)
+                        self._persist_state()
+                        return
+                    state.hit.add(index)
                     self._managed.pop(position.deal_id, None)
                     self._journal_event(
                         cycle_id, "exit", deal_id=position.deal_id, reason="target_3"
@@ -610,8 +675,29 @@ class TaiDemoRunner:
                 if callable(close_partial):
                     amount = self._partial_amount(state, current_size, index)
                     if amount > 0 and amount < current_size:
-                        close_partial(position.deal_id, amount)
+                        try:
+                            result = close_partial(position.deal_id, amount)
+                        except Exception as exc:  # noqa: BLE001 - preserve the position
+                            self._exit_failure(
+                                cycle_id, "partial_close", position.deal_id, index, exc
+                            )
+                            state.hit.discard(index)
+                            self._persist_state()
+                            return
+                        if self._is_partial_fill(result):
+                            filled = self._filled_size(result)
+                            if filled is not None and Decimal("0") < filled < amount:
+                                current_size -= filled
+                                state.remaining_size = current_size
+                            self._partial_exit_failure(
+                                cycle_id, position.deal_id, index, state, result, amount
+                            )
+                            state.hit.discard(index)
+                            self._persist_state()
+                            return
                         current_size -= amount
+                        state.remaining_size = current_size
+                        state.hit.add(index)
                         self._journal_event(
                             cycle_id,
                             "scale_out",
@@ -622,13 +708,99 @@ class TaiDemoRunner:
                         )
                         self._send_alert(f"partial exit {bar.epic} target_{index}")
                     else:
+                        state.hit.add(index)
                         self._journal_event(
                             cycle_id,
                             "scale_out_unavailable",
                             deal_id=position.deal_id,
                             target=index,
                         )
+                else:
+                    state.hit.add(index)
                 self._persist_state()
+
+    def _exit_failure(
+        self,
+        cycle_id: str,
+        operation: str,
+        deal_id: str | None,
+        index: int | None,
+        exc: BaseException,
+    ) -> None:
+        """Record one bounded exit failure without exposing broker details."""
+
+        self._journal_event(
+            cycle_id,
+            "exit_error",
+            operation=operation,
+            deal_id=deal_id,
+            target=index,
+            error_type=type(exc).__name__,
+        )
+        key = f"exit:{operation}:{deal_id or 'unknown'}:{index or 0}"
+        if key not in self._refusal_alerted:
+            self._refusal_alerted.add(key)
+            self._send_alert(f"Tai {operation} failed; position remains managed for retry.")
+
+    def _partial_exit_failure(
+        self,
+        cycle_id: str,
+        deal_id: str,
+        index: int,
+        state: _ManagedPosition,
+        result: object,
+        requested: Decimal,
+    ) -> None:
+        """Record an uncertain or partial close while keeping state persisted."""
+
+        self._journal_event(
+            cycle_id,
+            "exit_partial_fill",
+            operation="close" if index == 3 else "partial_close",
+            deal_id=deal_id,
+            target=index,
+            requested=requested,
+            status=self._result_status(result),
+            remaining_size=state.remaining_size,
+        )
+        key = f"exit:partial:{deal_id}:{index}"
+        if key not in self._refusal_alerted:
+            self._refusal_alerted.add(key)
+            self._send_alert("Tai exit partially filled; position remains managed for retry.")
+
+    @staticmethod
+    def _result_status(result: object) -> str | None:
+        if isinstance(result, Mapping):
+            for key in ("status", "dealStatus", "deal_status"):
+                value = result.get(key)
+                if value is not None:
+                    return str(value)
+        value = getattr(result, "status", None)
+        return str(value) if value is not None else None
+
+    @classmethod
+    def _is_partial_fill(cls, result: object) -> bool:
+        status = cls._result_status(result)
+        if status is None:
+            return isinstance(result, str) and "PARTIAL_FILL" in result.upper()
+        return "PARTIAL" in status.upper()
+
+    @staticmethod
+    def _filled_size(result: object) -> Decimal | None:
+        values: Mapping[str, object] | None = result if isinstance(result, Mapping) else None
+        raw = None
+        if values is not None:
+            for key in ("filled_size", "filledSize", "filled", "size"):
+                if key in values:
+                    raw = values[key]
+                    break
+        if raw is None:
+            raw = getattr(result, "filled_size", None)
+        try:
+            amount = Decimal(str(raw)) if raw is not None else None
+        except (InvalidOperation, TypeError, ValueError):
+            return None
+        return amount if amount is not None and amount.is_finite() and amount > 0 else None
 
     def _manage_shadow_exits(self, bar: ClosedBar, cycle_id: str) -> None:
         for deal_id, state in tuple(self._managed.items()):
@@ -776,6 +948,24 @@ class TaiDemoRunner:
             **details,
         }
         self._journal(payload)
+
+    def _refusal(
+        self,
+        cycle_id: str,
+        reason: str,
+        *,
+        event: str,
+        action: str = "NO_TRADE",
+        **details: object,
+    ) -> DemoOutcome:
+        """Journal a refusal and emit one bounded safety alert for its reason."""
+
+        self._journal_event(cycle_id, event, reason=reason, **details)
+        if reason not in self._refusal_alerted:
+            self._refusal_alerted.add(reason)
+            epic = details.get("epic") or self._epic or "unknown"
+            self._send_alert(f"entry refused for {epic}: {reason}")
+        return self._outcome(cycle_id, action, reason)
 
     def _send_alert(self, message: str) -> None:
         prefix = "DRY-RUN: " if self._dry_run else ""

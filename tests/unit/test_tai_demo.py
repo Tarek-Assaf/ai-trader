@@ -48,6 +48,22 @@ class Gateway:
         return "partial"
 
 
+class FailingModifyGateway(Gateway):
+    def modify_position(self, deal_id, *, stop_level, profit_level=None):
+        raise RuntimeError("modify rejected")
+
+
+class FailingCloseGateway(Gateway):
+    def close_position(self, deal_id):
+        raise RuntimeError("close rejected")
+
+
+class PartialFillGateway(Gateway):
+    def close_partial(self, deal_id, size):
+        self.partial.append((deal_id, size))
+        return {"status": "PARTIALLY_FILLED", "filled_size": "0.5"}
+
+
 class Manager:
     def __init__(self, gateway, veto=False):
         self.gateway = gateway
@@ -158,6 +174,18 @@ def test_guardian_veto_and_market_closed_are_journaled_without_entry():
     assert blocked.on_bar(bar(market_open=False)).reason == "market_closed_or_blackout"
 
 
+def test_refusal_alerts_are_journaled_and_throttled():
+    events = []
+    alerts = []
+    instance, _ = runner(
+        Gateway(), control=Control(ControlMode.PAUSE), journal=events.append, alerts=alerts
+    )
+    assert instance.on_bar(bar()).reason == "execution_paused"
+    assert instance.on_bar(bar()).reason == "execution_paused"
+    assert [event["reason"] for event in events] == ["execution_paused", "execution_paused"]
+    assert len(alerts) == 1
+
+
 def test_kill_flattens_and_alerts():
     gateway = Gateway()
     control = Control(ControlMode.KILL)
@@ -178,6 +206,46 @@ def test_scale_out_and_stop_to_entry_bookkeeping():
     assert gateway.partial[-1] == ("deal-1", Decimal("1"))
     runner_instance.on_bar(bar(high="103"))
     assert gateway.closed == ["deal-1"]
+
+
+def test_rejected_modify_keeps_position_and_retries_with_one_alert():
+    gateway = FailingModifyGateway()
+    events = []
+    alerts = []
+    instance, _ = runner(gateway, journal=events.append, alerts=alerts)
+    assert instance.on_bar(bar()).action == "SUBMITTED"
+    assert instance.on_bar(bar(high="101")).reason == "one_position_rule"
+    assert instance.on_bar(bar(high="101")).reason == "one_position_rule"
+    assert any(
+        event["event"] == "exit_error" and event["operation"] == "modify" for event in events
+    )
+    assert len(alerts) == 2  # entry alert plus one bounded exit-failure alert
+    assert gateway.positions
+
+
+def test_rejected_close_keeps_position_and_retries():
+    gateway = FailingCloseGateway()
+    events = []
+    alerts = []
+    instance, _ = runner(gateway, journal=events.append, alerts=alerts)
+    assert instance.on_bar(bar()).action == "SUBMITTED"
+    assert instance.on_bar(bar(high="103")).reason == "one_position_rule"
+    assert instance.on_bar(bar(high="103")).reason == "one_position_rule"
+    assert any(event["event"] == "exit_error" and event["operation"] == "close" for event in events)
+    assert gateway.positions
+
+
+def test_partial_close_is_journaled_and_position_state_is_retained():
+    gateway = PartialFillGateway()
+    events = []
+    alerts = []
+    instance, _ = runner(gateway, journal=events.append, alerts=alerts)
+    assert instance.on_bar(bar()).action == "SUBMITTED"
+    assert instance.on_bar(bar(high="101")).reason == "one_position_rule"
+    assert any(event["event"] == "exit_partial_fill" for event in events)
+    state = instance.snapshot_state()["deal-1"]
+    assert state.remaining_size == Decimal("2.5")
+    assert "deal-1" in instance.snapshot_state()
 
 
 def test_runtime_rebuild_restores_open_position_management():

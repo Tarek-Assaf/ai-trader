@@ -49,6 +49,19 @@ GROUP_BARS = 18
 EXPERIMENT_LABEL = "Tai port, owner-directed demo experiment, loosely matched to the owner"
 
 
+def is_cme_maintenance_break(at: datetime) -> bool:
+    """Return whether a timestamp falls in the CME 17:00-18:00 New York break.
+
+    The conversion is performed with ``zoneinfo`` rather than a fixed offset so
+    the production bar guard follows New York daylight-saving transitions.
+    """
+
+    if at.tzinfo is None or at.utcoffset() is None:
+        raise ValueError("break timestamps must be timezone-aware")
+    local = at.astimezone(NY)
+    return local.hour == 17
+
+
 @dataclass(frozen=True, slots=True)
 class TaiMinuteBar:
     """A complete recorder minute bar used by the 3-minute builder."""
@@ -144,6 +157,11 @@ class ThreeMinuteBarBuilder:
             in_break=any(self._in_break(item.at) or item.in_break for item in members),
             volume=sum((item.volume for item in members), Decimal("0")),
         )
+
+    def set_in_break_callback(self, callback: Callable[[datetime], bool]) -> None:
+        """Update the calendar callback while preserving pending minutes."""
+
+        self._in_break = callback
 
     def extend(self, minutes: Iterable[TaiMinuteBar]) -> tuple[ClosedBar, ...]:
         result: list[ClosedBar] = []
@@ -739,6 +757,7 @@ __all__ = [
     "TaiOrderFactory",
     "TaiSignalProvider",
     "ThreeMinuteBarBuilder",
+    "is_cme_maintenance_break",
     "minute_bar_from_candle",
     "parse_tai_instrument_rules",
 ]

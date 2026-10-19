@@ -22,4 +22,13 @@ Method: read-only source and test review. No broker, order, holdout, gate, risk-
 
 The runtime has strong environment, dry-run, control, Guardian/P&L boundary, sizing, stale-feed, and price-distance protections. It is not ready to enable because the spread guard is absent, the CME break is not wired, refusal outcomes are not uniformly alerted/journaled, and exit API errors/partial fills are not handled with the required fail-safe alert path.
 
-ready to enable: no, blockers: missing spread ceiling, unwired CME 17:00-18:00 New York break, incomplete refusal alert/journal coverage, and unhandled Tai exit API errors/partial fills.
+## Resolved in T-197
+
+| Audit item | Resolution | Evidence |
+|---|---|---|
+| 7. CME maintenance break | Production Tai bars now use a DST-aware `America/New_York` 17:00-18:00 callback. Bars spanning that interval carry `in_break` and the runner refuses them. | `src/trader/api/app.py`, `src/trader/experiments/tai_wiring.py`, `tests/unit/test_tai_wiring.py` |
+| 8. Refusal journal and alerts | All listed refusal outcomes write a journal row. Safety refusals emit one bounded alert per reason; no-signal rows remain quiet to avoid per-bar alert noise. | `src/trader/experiments/tai_demo.py`, `tests/unit/test_tai_demo.py` |
+| 9. Exit error handling | Modify, close, and partial-close failures are journaled and alerted once. Position state is persisted and the target remains retryable on the next bar; partial-fill metadata updates remaining size when available. | `src/trader/experiments/tai_demo.py`, `tests/unit/test_tai_demo.py` |
+| 6. Spread ceiling | Deferred pending owner answer to Q-075. | No code change |
+
+ready to enable: no, blocker: spread ceiling remains deferred pending owner answer to Q-075.

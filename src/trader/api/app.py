@@ -252,6 +252,7 @@ def _build_tai_demo_runtime(
         TaiSignalProvider,
         ThreeMinuteBarBuilder,
         build_tai_demo_runtime,
+        is_cme_maintenance_break,
     )
 
     raw = configs.get("instruments")
@@ -279,11 +280,11 @@ def _build_tai_demo_runtime(
         else TaiSignalProvider.from_lake(lake_root, epic)
     )
     previous_builder = getattr(previous_tai_runtime, "builder", None)
-    builder = (
-        previous_builder
-        if isinstance(previous_builder, ThreeMinuteBarBuilder)
-        else ThreeMinuteBarBuilder(epic)
-    )
+    if isinstance(previous_builder, ThreeMinuteBarBuilder):
+        previous_builder.set_in_break_callback(is_cme_maintenance_break)
+        builder = previous_builder
+    else:
+        builder = ThreeMinuteBarBuilder(epic, in_break=is_cme_maintenance_break)
     pending_bars = (
         previous_tai_runtime.pending_bars()
         if previous_tai_runtime is not None

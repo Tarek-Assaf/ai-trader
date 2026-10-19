@@ -21,6 +21,7 @@ from trader.experiments.tai_wiring import (
     ThreeMinuteBarBuilder,
     _features,
     build_tai_demo_runtime,
+    is_cme_maintenance_break,
     parse_tai_instrument_rules,
 )
 
@@ -59,6 +60,25 @@ def test_three_minute_builder_does_not_fill_gaps() -> None:
     start = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
     builder = ThreeMinuteBarBuilder("NSXUSD")
     assert builder.extend((minute(start), minute(start + timedelta(minutes=2)))) == ()
+
+
+def test_cme_break_callback_is_dst_aware_and_marks_spanning_bars() -> None:
+    # 17:00 New York is 21:00 UTC in October and 22:00 UTC in January.
+    assert is_cme_maintenance_break(datetime(2026, 10, 19, 21, 0, tzinfo=UTC))
+    assert is_cme_maintenance_break(datetime(2026, 1, 19, 22, 0, tzinfo=UTC))
+    assert not is_cme_maintenance_break(datetime(2026, 10, 19, 20, 59, tzinfo=UTC))
+
+    start = datetime(2026, 10, 19, 20, 59, tzinfo=UTC)
+    builder = ThreeMinuteBarBuilder("NSXUSD", in_break=is_cme_maintenance_break)
+    result = builder.extend(
+        (
+            minute(start),
+            minute(start + timedelta(minutes=1)),
+            minute(start + timedelta(minutes=2)),
+        )
+    )
+    assert len(result) == 1
+    assert result[0].in_break is True
 
 
 def test_capital_rules_parser_requires_distance_and_preserves_values() -> None:
