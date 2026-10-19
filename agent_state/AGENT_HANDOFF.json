@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 458,
+  "revision": 459,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-168 accepted: with full warm-up the port gives 33 trades in the owner window vs the owner's 31 entries; dashboard totals have unknown ranges (D-052). T-169 matches port entries to the 31 owner entries (target 25). Historical Tai rerun waits for T-169.",
+    "summary": "T-168 accepted as a negative count comparison after correcting the warm-up flaw; full warm-up yielded 10/11 two-day trades and 33 owner-window trades, still below dashboard references. T-169 matches the 33 closed port trades against the 31 owner entries; historical Tai rerun remains gated.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5603,7 +5603,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03"
       ],
@@ -5621,7 +5621,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Full-warm-up owner-entry matching in progress; unchanged port, bounded replay only."
     }
   ],
   "decisions": [
@@ -24898,6 +24898,19 @@
         "docs/specs/t169_owner_entry_match.md"
       ],
       "summary": "Reviewed T-168: accepted (V-427). Ruff check and format pass; no broker, order, holdout or lake activity. With full warm-up the port gives 33 trades in the owner window vs the owner's 31 entries; the two-day windows (10/11) cannot be compared with dashboards of unknown range (D-052). Rebuilt on main with Codex's two log entries merged. Queued T-169 (entry-by-entry match against the 31 owner entries, target 25). Turn to codex (D-045)."
+    },
+    {
+      "revision": 459,
+      "ts": "2026-10-19T03:50:00+03:00",
+      "agent": "codex",
+      "action": "start_t169_owner_entry_match",
+      "task_ids": [
+        "T-169"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-169 from the accepted T-168 lineage. Will replay the unchanged port with full warm-up and match closed-mode entries to the owner export by direction and 3-minute bar offsets, with condition diagnostics for unmatched owner entries. No broker, orders, holdout, lake writes, tuning or strategy search."
     }
   ],
   "project_summary": "T-168 accepted: with full warm-up the port gives 33 trades in the owner window vs the owner's 31 entries; dashboard totals have unknown ranges (D-052). T-169 matches port entries to the 31 owner entries (target 25). Historical Tai rerun waits for T-169."
