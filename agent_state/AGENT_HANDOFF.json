@@ -14860,7 +14860,7 @@
       "reverify_if": "The port, owner CSV or lake bars change."
     },
     {
-      "id": "V-438",
+      "id": "V-439",
       "task_id": "T-176",
       "subject": "T-176 owner trade geometry audit",
       "method": "Ran the bounded CSV/source/NSXUSD 3-minute ATR audit on the owner Pod and reviewed the report, JSON and raw artifact hashes. Pod exit 0; JSON SHA-256 9490361c752b77011e9235735ceac2e516f6f3ec7978eea2820765de8383d05d; report SHA-256 18f49da3c2e017f2fd96e91059f8214971f3ebc7abcda44f33ea5137e32af0aa. Ran Python compile and git diff --check locally; pytest and Ruff were unavailable in the desktop/Pod runtimes.",
