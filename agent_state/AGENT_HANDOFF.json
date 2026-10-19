@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 502,
+  "turn": "human",
+  "revision": 504,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-187 build is ready for Claude review: offline pre-holdout replay script, session-anchored T-162 comparison, epoch information list and mock dry-run proof are implemented. The owner-provided Pod terminal was unavailable (waiting for service), so no lake replay or evidence artifacts were generated. No broker, network, holdout, redeploy, risk/gate or secrets.",
+    "summary": "T-188 build is ready for Claude review: the gated Tai runtime now tails the recorder lake in the API process, skips incomplete/duplicate minutes, guards stale feeds and records startup/heartbeat observability. T-187 remains in Claude review pending Pod replay. Desktop pytest/Ruff/mypy are unavailable; no broker, network, redeploy, holdout, risk/gate edits or secrets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-187",
+    "last_task": "T-188",
     "last_status": "review"
   },
   "requirements": [
@@ -6189,11 +6189,18 @@
         "R-03"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "docs/specs/t188_tai_demo_bar_feed.md",
+        "src/trader/experiments/tai_feed.py",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_tai_feed.py",
+        "tests/unit/test_tai_wiring.py"
+      ],
+      "completion_note": "Implemented the API-process TaiLakeTailer over the recorder Parquet lake. It emits only complete paired bid/ask minutes before the current boundary, deduplicates in order, seeds after signal warm-up, builds the existing ThreeMinuteBarBuilder path, logs 3M heartbeat timestamps with warm-up counts, and starts only when the gated runtime is enabled. Removed the unfed API-side recorder callback, added one-shot five-minute stale/recovery journal and Telegram alerts with a fail-closed adapter, and added temporary-lake fixture tests for 60 minutes to 20 bars, incomplete minutes, restart seeding and stale recovery. Local compileall, py_compile, handoff validation and diff checks pass; pytest/Ruff/mypy are unavailable on this desktop. No broker, network, redeploy, risk/gate edit or secrets.",
       "id": "T-188",
       "title": "Give the Tai demo runtime a real bar feed (lake tailer in the API process)",
-      "status": "todo",
+      "status": "done",
       "depends_on": [
         "T-186"
       ],
@@ -15610,6 +15617,46 @@
       "validated_by": "codex",
       "date": "2026-10-19T16:00:00+03:00",
       "reverify_if": "T-187 review changes, replay boundary, T-186 signal/wiring behavior or a reachable Pod replay window."
+    },
+    {
+      "id": "V-459",
+      "task_id": "T-188",
+      "subject": "Tai API-process lake tail and stale-feed guard",
+      "method": "Reviewed the T-188 spec against the implementation; ran python -m compileall -q src scripts tests/unit/test_tai_feed.py tests/unit/test_tai_wiring.py, py_compile on changed modules, git diff --check and python agent_state/validate_handoff.py. Pytest, Ruff and mypy are unavailable in the desktop image.",
+      "result": "pass",
+      "checked": "TaiLakeTailer reads paired bid/ask rows strictly before the current minute, feeds each minute once to the existing ThreeMinuteBarBuilder path, starts only for the enabled Tai experiment, and emits no order itself. The adapter blocks decisions during one-shot stale-feed alerts and recovers on new flow.",
+      "evidence": [
+        "src/trader/experiments/tai_feed.py",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_tai_feed.py",
+        "tests/unit/test_tai_wiring.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T16:50:00+03:00",
+      "reverify_if": "Claude review changes, CI lint/type/test failures, or the recorder lake schema/tail semantics change."
+    },
+    {
+      "id": "V-460",
+      "task_id": "T-188",
+      "subject": "Tai demo bar feed (lake tailer) reviewed",
+      "method": "Code review of tai_feed.py, app.py wiring and tests/unit/test_tai_feed.py; CI quality for results; Claude fixed three review points in the same change",
+      "result": "pass",
+      "checked": [
+        "tailer feeds each closed minute once and builds 3m bars",
+        "stale-feed alert single and recovers",
+        "never replays history on empty warm-up",
+        "poll runs off the event loop",
+        "stale guard uses broker opening hours and fails closed"
+      ],
+      "evidence": [
+        "src/trader/experiments/tai_feed.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_tai_feed.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19",
+      "reverify_if": "the tailer, the recorder lake layout or the Tai runtime adapter changes"
     }
   ],
   "blockers": [
@@ -26869,6 +26916,34 @@
         "tests/unit/test_t187_runtime_replay.py"
       ],
       "summary": "Queued T-188 (priority): the Pod showed the API and the recorder run as separate processes, and T-186 registered its minute-bar callback on an API-side recorder that is never connected to the stream, so the runtime would get no bars. Spec docs/specs/t188_tai_demo_bar_feed.md (lake tailer in the API process, stale-feed alert, start-up line). T-187: build merged-for-CI (Claude applied ruff format); the lake replay itself has not been run (needs the Pod lake), so T-187 stays in review until a replay result exists; it does not block T-188. Turn to codex."
+    },
+    {
+      "revision": 503,
+      "ts": "2026-10-19T16:35:00+03:00",
+      "agent": "codex",
+      "action": "start_t188_lake_tail",
+      "task_ids": [
+        "T-188"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-188 from authoritative origin/main after the spec merged in PR #343. Implementing the API-process lake tailer and stale-feed guard with fixture tests; no broker, network, redeploy, risk/gate edits or secrets. Turn remains codex while implementing. Then: Completed T-188 API-process recorder-lake tailer, one-shot stale-feed guard, startup/heartbeat observability and temporary-lake tests. Local compile/static checks pass; pytest/Ruff/mypy are unavailable on the desktop. No broker, network, redeploy, holdout, risk/gate edits or secrets. Turn to Claude for review."
+    },
+    {
+      "revision": 504,
+      "ts": "2026-10-19T16:05:00+03:00",
+      "agent": "claude",
+      "action": "accept_t188_with_fixes",
+      "task_ids": [
+        "T-188"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/api/app.py",
+        "tests/unit/test_tai_feed.py"
+      ],
+      "summary": "Reviewed T-188 (merged main, merged Codex's two consecutive entries into rev 503). Accepted after three fixes by Claude: (1) the lake poll ran synchronously inside the API event loop, now runs in a worker thread; (2) with no warm-up the tailer would have replayed all recorded history as live bars, now it starts after the last closed minute; (3) the stale-feed guard had no market hours, so it would alert every night and weekend, now uses the broker opening hours and fails closed. Added a test for (3). Not yet exercised on the real lake. Redeploy and enabling stay the owner's call. Turn to human."
     }
   ],
   "project_summary": "T-186 accepted; T-044 cannot start because T-017 remains blocked on B-007 missing Capital.com recorder overlap data. No safe unblocked Codex task is available."
