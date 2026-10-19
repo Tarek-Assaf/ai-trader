@@ -24,6 +24,8 @@ class EnvironmentSettings(BaseSettings):
     broker_env: Literal["demo", "live"] = "demo"
     live_trading_enabled: bool = False
     tai_demo_experiment: bool = False
+    # T-186 remains a no-order dry run until the owner explicitly changes it.
+    tai_demo_dry_run: bool = True
     tai_demo_base_lot: Decimal = Decimal("0.1")
     tai_demo_start_balance: Decimal = Decimal("0")
     approval_mode: bool = False
