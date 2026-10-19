@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 504,
+  "turn": "claude",
+  "revision": 507,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-188 build is ready for Claude review: the gated Tai runtime now tails the recorder lake in the API process, skips incomplete/duplicate minutes, guards stale feeds and records startup/heartbeat observability. T-187 remains in Claude review pending Pod replay. Desktop pytest/Ruff/mypy are unavailable; no broker, network, redeploy, holdout, risk/gate edits or secrets.",
+    "summary": "Completed T-189 read-only reconnect diagnosis: documented all stream/worker reconnect paths and synchronous ping handling, added secret-free reconnect context INFO logging with fake-socket coverage, added the MarketHours minute-gap lab and temporary-lake test, and recorded the evidence-backed ConnectionClosedError hypothesis. Ruff, format, py_compile and diff checks pass; desktop pytest is blocked because pytest, pyarrow and httpx are unavailable. No broker calls, orders, redeploy, risk/gate edits or secrets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-188",
+    "last_task": "T-189",
     "last_status": "review"
   },
   "requirements": [
@@ -162,7 +162,8 @@
         "T-185",
         "T-186",
         "T-187",
-        "T-188"
+        "T-188",
+        "T-189"
       ]
     },
     {
@@ -6210,6 +6211,37 @@
       "deliverables": [
         "docs/specs/t188_tai_demo_bar_feed.md"
       ]
+    },
+    {
+      "id": "T-189",
+      "title": "Diagnose the recorder reconnect storm and measure missing minutes (read-only)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-188"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t189_recorder_reconnect_diagnosis.md exactly. Read-only: no order or broker write call, no redeploy, no risk or gate edits, no secrets in logs."
+      ],
+      "deliverables": [
+        "docs/specs/t189_recorder_reconnect_diagnosis.md",
+        "scripts/lab_t189_minute_gaps.py",
+        "docs/evidence/t189/"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t189/reconnect_diagnosis.md",
+        "docs/evidence/t189/minute_gap_report.md",
+        "scripts/lab_t189_minute_gaps.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_t189_minute_gaps.py"
+      ],
+      "completion_note": "Completed the read-only diagnosis and handed it to Claude. The stream documents callback, socket/protocol, no-data watchdog, REST ping/connect and generic reconnect paths; each retry emits one bounded INFO record with exception class, close code/reason when present, ping/tick ages and connection age. Added a MarketHours-aware Parquet minute-gap report with bid-only/ask-only and process-wide rejected-candle status reporting plus a temporary lake test. Ruff, format, py_compile and git diff --check pass. Desktop pytest is unavailable (pytest, pyarrow and httpx are not installed), so CI must run the full suite. No broker, network, redeploy, order, risk/gate or secret activity."
     }
   ],
   "decisions": [
@@ -26944,6 +26976,25 @@
         "tests/unit/test_tai_feed.py"
       ],
       "summary": "Reviewed T-188 (merged main, merged Codex's two consecutive entries into rev 503). Accepted after three fixes by Claude: (1) the lake poll ran synchronously inside the API event loop, now runs in a worker thread; (2) with no warm-up the tailer would have replayed all recorded history as live bars, now it starts after the last closed minute; (3) the stale-feed guard had no market hours, so it would alert every night and weekend, now uses the broker opening hours and fails closed. Added a test for (3). Not yet exercised on the real lake. Redeploy and enabling stay the owner's call. Turn to human."
+    },
+    {
+      "revision": 507,
+      "ts": "2026-10-19T13:58:00Z",
+      "agent": "codex",
+      "action": "complete_t189_handoff_claude",
+      "task_ids": [
+        "T-189"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/stream.py",
+        "scripts/lab_t189_minute_gaps.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_t189_minute_gaps.py",
+        "docs/evidence/t189/reconnect_diagnosis.md",
+        "docs/evidence/t189/minute_gap_report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-189 read-only diagnosis and handed the branch to Claude for review. Local pytest is blocked by missing desktop dependencies; no broker or Pod writes."
     }
   ],
   "project_summary": "T-186 accepted; T-044 cannot start because T-017 remains blocked on B-007 missing Capital.com recorder overlap data. No safe unblocked Codex task is available."
