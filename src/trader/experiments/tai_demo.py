@@ -36,6 +36,9 @@ class TaiDemoSettings:
     trading_mode: str
     live_trading_enabled: bool
     experiment_enabled: bool
+    # Kept immediately after the four startup gates so the existing positional
+    # test fixtures can opt into/out of dry-run without shifting sizing fields.
+    dry_run: bool = False
     base_lot: Decimal = Decimal("0.1")
     start_balance: Decimal = Decimal("10000")
 
@@ -68,7 +71,11 @@ class TaiDemoSettings:
             live_trading_enabled=bool(getattr(settings, "live_trading_enabled", True)),
             experiment_enabled=bool(getattr(settings, "tai_demo_experiment", False)),
             base_lot=Decimal(str(getattr(settings, "tai_demo_base_lot", "0.1"))),
-            start_balance=Decimal(str(getattr(settings, "tai_demo_start_balance", "0"))),
+            # The disabled default does not need a balance.  Keep the value
+            # valid for the immutable settings object; the enabled path above
+            # still refuses an unset owner-provided start balance.
+            start_balance=start if start > 0 else Decimal("1"),
+            dry_run=bool(getattr(settings, "tai_demo_dry_run", True)),
         )
 
     def require_enabled(self) -> None:
@@ -93,6 +100,7 @@ class ClosedBar:
     closed: bool = True
     market_open: bool = True
     in_break: bool = False
+    volume: Decimal = Decimal("0")
 
     def __post_init__(self) -> None:
         if self.at.tzinfo is None or self.at.utcoffset() is None:
@@ -106,6 +114,8 @@ class ClosedBar:
             raise ValueError("bar prices must be positive finite decimals")
         if self.high < max(self.open, self.close) or self.low > min(self.open, self.close):
             raise ValueError("bar high/low do not contain open/close")
+        if not isinstance(self.volume, Decimal) or not self.volume.is_finite() or self.volume < 0:
+            raise ValueError("bar volume must be a finite non-negative Decimal")
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,6 +170,9 @@ class TaiInstrumentRules:
     min_size: Decimal
     size_step: Decimal
     value_per_point: Decimal | None = None
+    tick_size: Decimal | None = None
+    min_stop_distance: Decimal | None = None
+    min_limit_distance: Decimal | None = None
 
     def __post_init__(self) -> None:
         for name in ("min_size", "size_step"):
@@ -172,6 +185,12 @@ class TaiInstrumentRules:
             or self.value_per_point <= 0
         ):
             raise ValueError("value_per_point must be a positive finite Decimal")
+        for name in ("tick_size", "min_stop_distance", "min_limit_distance"):
+            value = getattr(self, name)
+            if value is not None and (
+                not isinstance(value, Decimal) or not value.is_finite() or value <= 0
+            ):
+                raise ValueError(f"{name} must be a positive finite Decimal")
 
 
 @dataclass(frozen=True, slots=True)
@@ -242,6 +261,7 @@ class TaiDemoRunner:
         control: Control,
         balance_provider: BalanceProvider | None = None,
         instrument_rules_provider: InstrumentRulesProvider | None = None,
+        dry_run: bool | None = None,
         journal: Journal | None = None,
         alert: Alert | None = None,
     ) -> None:
@@ -254,6 +274,7 @@ class TaiDemoRunner:
         self._control = control
         self._balance_provider = balance_provider
         self._rules_provider = instrument_rules_provider
+        self._dry_run = settings.dry_run if dry_run is None else dry_run
         self._journal = journal or (lambda _event: None)
         self._alert = alert or (lambda message: LOGGER.info("tai demo: %s", message))
         self._managed: dict[str, _ManagedPosition] = {}
@@ -283,20 +304,38 @@ class TaiDemoRunner:
         signal = self._signal(bar)
         if signal is None:
             return self._outcome(cycle_id, "NO_TRADE", "no_signal")
-        rules = self._rules_provider(bar.epic) if self._rules_provider is not None else None
-        requested_size = self._requested_size(rules)
-        order = self._build_order(signal, cycle_id, requested_size)
+        try:
+            rules = self._rules_provider(bar.epic) if self._rules_provider is not None else None
+            requested_size = self._requested_size(rules)
+            order = self._build_order(signal, cycle_id, requested_size)
+        except (TaiDemoRefused, ValueError) as exc:
+            self._journal_event(cycle_id, "order_refused", epic=bar.epic, reason=str(exc))
+            return self._outcome(cycle_id, "REJECTED", "order_rules_unavailable")
         if requested_size is not None and order.size != requested_size:
             order = replace(order, size=requested_size)
+        allows_price_rounding = bool(getattr(self._order_factory, "allows_price_rounding", False))
         if (
             order.client_order_id != cycle_id
             or order.epic != bar.epic
             or order.reference_price != signal.entry
-            or order.stop_level != signal.stop
-            or order.profit_level != signal.levels()[2]
+            or (
+                not allows_price_rounding
+                and (order.stop_level != signal.stop or order.profit_level != signal.levels()[2])
+            )
         ):
             self._journal_event(cycle_id, "order_refused", reason="order_factory_mismatch")
             return self._outcome(cycle_id, "REJECTED", "order_factory_mismatch")
+        if self._dry_run:
+            self._journal_event(
+                cycle_id,
+                "dry_run_would_submit",
+                epic=bar.epic,
+                direction=order.direction.value,
+                size=order.size,
+                stop_level=order.stop_level,
+                profit_level=order.profit_level,
+            )
+            return self._outcome(cycle_id, "DRY_RUN", "order_would_submit")
         try:
             receipt = self._orders.submit(cycle_id, order)
         except ExecutionPaused:

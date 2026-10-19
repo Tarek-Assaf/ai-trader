@@ -323,7 +323,16 @@ class RuntimeService:
             reason = "kill_switch_active" if mode is ControlMode.KILL else "execution_paused"
             return RuntimeResult.no_trade(reason, resolved_cycle_id)
         try:
-            value = self.components.decision_loop.run(cycle)
+            tai_runtime: Any = self.components.metadata.get("tai_demo_runtime")
+            event_id = getattr(cycle, "event_id", "")
+            if (
+                tai_runtime is not None
+                and isinstance(event_id, str)
+                and event_id.startswith("bar:3M:")
+            ):
+                value = tai_runtime.run(cycle)
+            else:
+                value = self.components.decision_loop.run(cycle)
             if inspect.isawaitable(value):
                 value = await value
             self._backoff = self._backoff_initial

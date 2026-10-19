@@ -207,12 +207,16 @@ class CapitalDataRecorder:
         *,
         clock: Any = lambda: datetime.now(UTC),
         feed_adapters: Any | None = None,
+        closed_minute_callback: Callable[[str, datetime, float, float, float, float], None]
+        | None = None,
     ) -> None:
         self._store = store
         self._symbols = dict(symbols_by_epic)
         self._status_path = Path(status_path)
         self._clock = clock
         self._feed_adapters = feed_adapters
+        self._closed_minute_callback = closed_minute_callback
+        self._closed_mid_pending: dict[tuple[str, datetime], dict[str, OhlcUpdate]] = {}
         self._pending: dict[tuple[str, datetime, str], _BufferedUpdate] = {}
         self._last_tick_by_epic: dict[str, datetime] = {}
         self._started_at = self._clock().astimezone(UTC)
@@ -289,6 +293,29 @@ class CapitalDataRecorder:
             item.update.timestamp.astimezone(UTC).replace(second=0, microsecond=0)
             for item in accepted
         ).isoformat()
+        callback_mid = self._closed_minute_callback
+        if callable(callback_mid):
+            for item in accepted:
+                stamp = item.update.timestamp.astimezone(UTC).replace(second=0, microsecond=0)
+                self._closed_mid_pending.setdefault((item.symbol, stamp), {})[
+                    item.update.price_type
+                ] = item.update
+            for (symbol, stamp), sides in list(self._closed_mid_pending.items()):
+                bid, ask = sides.get("bid"), sides.get("ask")
+                if bid is None or ask is None:
+                    continue
+                self._closed_mid_pending.pop((symbol, stamp), None)
+                try:
+                    callback_mid(
+                        symbol,
+                        stamp,
+                        (bid.open + ask.open) / 2,
+                        (bid.high + ask.high) / 2,
+                        (bid.low + ask.low) / 2,
+                        (bid.close + ask.close) / 2,
+                    )
+                except Exception:  # noqa: BLE001 - data listeners must not stop persistence
+                    continue
         adapter = self._feed_adapters
         derived_callback = getattr(adapter, "on_closed_bar", None)
         callback = derived_callback
@@ -316,6 +343,18 @@ class CapitalDataRecorder:
         """Attach the shared runtime trigger adapter after construction."""
         with self._lock:
             self._feed_adapters = adapters
+
+    def register_closed_minute_callback(
+        self, callback: Callable[[str, datetime, float, float, float, float], None] | None
+    ) -> None:
+        """Attach a listener for complete bid/ask mid minute bars.
+
+        The callback is invoked only when both sides of a closed minute are
+        present.  It receives the configured symbol, UTC minute and OHLC mid
+        values.  Callback failures are isolated from persistence.
+        """
+        with self._lock:
+            self._closed_minute_callback = callback
 
     def on_update(self, update: OhlcUpdate) -> None:
         """Keep partial values in memory until their minute closes or REST confirms it."""
