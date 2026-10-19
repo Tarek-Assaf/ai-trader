@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import argparse
-import base64
 import csv
 import json
 import sys
@@ -335,6 +334,57 @@ def payload(trade: Trade, vpp: Decimal | None) -> dict[str, Any]:
     }
 
 
+def _write_fallback_chart(path: Path, values: list[float]) -> None:
+    """Write a small labelled-equity PNG without adding a plotting dependency."""
+    import struct
+    import zlib
+
+    width, height = 640, 320
+    pixels = bytearray([255, 255, 255] * width * height)
+
+    def point(x: int, y: int, colour: tuple[int, int, int] = (30, 30, 30)) -> None:
+        if 0 <= x < width and 0 <= y < height:
+            offset = (y * width + x) * 3
+            pixels[offset : offset + 3] = bytes(colour)
+
+    for x in range(55, width - 20):
+        point(x, height - 35)
+    for y in range(20, height - 34):
+        point(55, y)
+    if values:
+        low, high = min(values), max(values)
+        span = high - low or 1.0
+        for left, right in zip(values, values[1:], strict=False):
+            x1 = 55 + int(values.index(left) * (width - 76) / max(1, len(values) - 1))
+            x2 = 55 + int(values.index(right) * (width - 76) / max(1, len(values) - 1))
+            y1 = height - 35 - int((left - low) * (height - 55) / span)
+            y2 = height - 35 - int((right - low) * (height - 55) / span)
+            steps = max(abs(x2 - x1), abs(y2 - y1), 1)
+            for step in range(steps + 1):
+                point(
+                    x1 + (x2 - x1) * step // steps, y1 + (y2 - y1) * step // steps, (31, 119, 180)
+                )
+
+    def chunk(kind: bytes, payload: bytes) -> bytes:
+        return (
+            struct.pack(">I", len(payload))
+            + kind
+            + payload
+            + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF)
+        )
+
+    raw = b"".join(
+        b"\x00" + bytes(pixels[row * width * 3 : (row + 1) * width * 3]) for row in range(height)
+    )
+    png = (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw, 9))
+        + chunk(b"IEND", b"")
+    )
+    path.write_bytes(png)
+
+
 def write_outputs(
     out: Path,
     trades: list[Trade],
@@ -344,6 +394,8 @@ def write_outputs(
     end: datetime,
     gaps: int,
     vpp: Decimal | None,
+    minute_rows: int,
+    closed_bars: int,
 ) -> None:
     out.mkdir(parents=True, exist_ok=True)
     rows = [payload(t, vpp) for t in trades]
@@ -358,6 +410,8 @@ def write_outputs(
         "task": "T-190",
         "label": LABEL,
         "window": {"from": start.isoformat(), "to": end.isoformat()},
+        "minute_rows_loaded": minute_rows,
+        "closed_3m_bars_loaded": closed_bars,
         "trades": rows,
         "trade_count": len(rows),
         "net_points": str(net),
@@ -453,11 +507,9 @@ def write_outputs(
         fig.savefig(out / "equity.png", dpi=120)
         plt.close(fig)
     except Exception:
-        (out / "equity.png").write_bytes(
-            base64.b64decode(
-                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
-            )
-        )
+        values = [0.0]
+        values.extend(float(t.usd or 0) for t in trades)
+        _write_fallback_chart(out / "equity.png", values)
 
 
 def main() -> int:
@@ -492,7 +544,16 @@ def main() -> int:
         else 0
     )
     write_outputs(
-        args.output_dir, trades, signals, journal, args.start, args.end, gaps, args.value_per_point
+        args.output_dir,
+        trades,
+        signals,
+        journal,
+        args.start,
+        args.end,
+        gaps,
+        args.value_per_point,
+        len(minutes),
+        len(bars),
     )
     print(
         json.dumps(
