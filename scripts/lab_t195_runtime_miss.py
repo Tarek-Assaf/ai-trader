@@ -52,11 +52,14 @@ def _read_diagnostic_minutes(
             if not required.issubset(names):
                 continue
             columns = sorted(required | ({"side", "epic"} & names))
-            for batch in pq.ParquetFile(path).iter_batches(columns=columns, batch_size=65536):
+            table = pq.read_table(
+                path,
+                columns=columns,
+                filters=[("ts_utc", ">=", window_start), ("ts_utc", "<", holdout_start)],
+            )
+            for batch in table.to_batches(max_chunksize=65536):
                 for row in batch.to_pylist():
                     stamp = replay._utc(row.get("ts_utc"))
-                    if stamp < window_start or stamp >= holdout_start:
-                        continue
                     recorded = str(row.get("epic") or "")
                     if recorded and recorded not in {epic, "NAS100", "US100"}:
                         continue
