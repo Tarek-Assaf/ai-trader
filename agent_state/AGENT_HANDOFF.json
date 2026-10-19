@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 520,
+  "turn": "claude",
+  "revision": 521,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-195 cycle 2: rebuilding the miss evidence with independent bar comparison, explicit port/runtime values, and named runtime gate causes.",
+    "summary": "T-195 cycle 2 fixes are in PR #360 for Claude review: independent bar comparison, explicit port/runtime evidence fields, and named first-gate causes. The deployed Pod script was not overwritten; the prior bounded run confirmed the baseline only.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -48,7 +48,7 @@
       "broker_env": "demo"
     },
     "last_task": "T-195",
-    "last_status": "in_progress"
+    "last_status": "review"
   },
   "requirements": [
     {
@@ -27552,6 +27552,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-195 cycle 2 from the authoritative claude/t195-cr3 review branch (PR #359). Fixing the three review findings: independently compare runtime-builder bars with UTC-resampled bars, record explicit port/runtime entry and indicator values, and classify each miss by the first named runtime gate or a precise remaining unknown. Read-only diagnostic only; no broker, orders, holdout, lake writes, redeploy, risk/gate edits or secrets. Turn remains codex while implementing."
+    },
+    {
+      "revision": 521,
+      "ts": "2026-10-19T19:55:00+03:00",
+      "agent": "codex",
+      "action": "complete_t195_cycle2_handoff_claude",
+      "task_ids": [
+        "T-195"
+      ],
+      "files_changed": [
+        "scripts/lab_t195_runtime_miss.py",
+        "tests/unit/test_t195_runtime_miss.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed the cycle-2 review fixes in PR #360 (base claude/t195-cr3): runtime bars are compared with an independent UTC resampler, each row records explicit port and nearest runtime entry values beside the indicator/gate trace, and causes name the first failing runtime gate or precise remaining trace state instead of a default label. Added helper tests. Python compileall and git diff --check pass; desktop pytest, Ruff, mypy and uv are unavailable. The owner Pod terminal was reachable and the bounded prior-build run confirmed 25 port entries, 2 runtime entries and 23 misses; the deployed script predates this branch, so no new output files were claimed. No broker calls, orders, holdout reads, lake writes, redeploy, risk/gate edits or secrets. Turn to Claude for review."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
