@@ -276,19 +276,13 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[Any, ...]]:
             vwap.append(equal_sum / equal_count)
     ha_open: list[Any] = [None] * len(bars)
     ha_close: list[Any] = [None] * len(bars)
-    groups: dict[tuple[datetime, int], list[int]] = defaultdict(list)
+    # The closed T-162 port groups chart bars into UTC epoch-aligned 54 minute buckets.
+    groups: dict[int, list[int]] = defaultdict(list)
     for index, bar in enumerate(bars):
-        local = bar.at.astimezone(NY)
-        if local.hour == 17:
-            continue
-        session_date = local.date() if local.hour >= 18 else local.date() - timedelta(days=1)
-        origin = datetime(
-            session_date.year, session_date.month, session_date.day, 18, tzinfo=NY
-        ).astimezone(UTC)
-        elapsed = max(0, int((bar.at - origin).total_seconds() // 60))
-        groups[(origin, elapsed // 54)].append(index)
+        epoch = int(bar.at.timestamp() // 60)
+        groups[epoch - epoch % (GROUP_BARS * 3)].append(index)
     previous: tuple[float, float] | None = None
-    for indices in groups.values():
+    for _, indices in sorted(groups.items()):
         if len(indices) != GROUP_BARS or any(
             bars[a].at + timedelta(minutes=3) != bars[b].at
             for a, b in zip(indices, indices[1:], strict=False)
