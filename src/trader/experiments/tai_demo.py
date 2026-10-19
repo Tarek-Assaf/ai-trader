@@ -126,13 +126,14 @@ class TaiSignal:
             self.entry + risk * 2 if self.direction is Direction.BUY else self.entry - risk * 2,
             self.entry + risk * 3 if self.direction is Direction.BUY else self.entry - risk * 3,
         )
-        values = tuple(self.targets) + defaults
-        levels = values[:3]
-        if self.direction is Direction.BUY and not levels[0] > self.entry:
-            raise ValueError("BUY target must be above entry")
-        if self.direction is Direction.SELL and not levels[0] < self.entry:
-            raise ValueError("SELL target must be below entry")
-        return levels  # type: ignore[return-value]
+        levels = list(defaults)
+        levels[: len(self.targets)] = self.targets
+        for previous, current in zip(levels, levels[1:]):
+            if self.direction is Direction.BUY and current <= previous:
+                raise ValueError("BUY targets must increase")
+            if self.direction is Direction.SELL and current >= previous:
+                raise ValueError("SELL targets must decrease")
+        return tuple(levels)
 
 
 @dataclass(frozen=True, slots=True)
@@ -240,7 +241,9 @@ class TaiDemoRunner:
         if (
             order.client_order_id != cycle_id
             or order.epic != bar.epic
+            or order.reference_price != signal.entry
             or order.stop_level != signal.stop
+            or order.profit_level != signal.levels()[2]
         ):
             self._journal_event(cycle_id, "order_refused", reason="order_factory_mismatch")
             return self._outcome(cycle_id, "REJECTED", "order_factory_mismatch")
