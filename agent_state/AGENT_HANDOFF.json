@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 488,
+  "revision": 489,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-182 accepted. Historical rerun blocked (best session-anchored result 11/31 within 3 bars; gate 25/31). Bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No unblocked Codex task was available this turn; owner will queue the next two tasks after this handoff.",
+    "summary": "T-184 is in progress: bounded diagnostic of the unchanged Tai port on full TRAINING 3m history, with cost and zero-cost outputs and loose-match labeling. T-185 remains queued after T-184; no gate relaxation or broker trading is authorized.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6067,7 +6067,7 @@
       "completion_note": "",
       "id": "T-184",
       "title": "Historical test of the Tai port on 3m lake history (labelled loosely matched; diagnostic)",
-      "status": "todo",
+      "status": "in_progress",
       "depends_on": [
         "T-180"
       ],
@@ -26400,7 +26400,20 @@
         "docs/specs/t185_tai_demo_paper.md"
       ],
       "summary": "Owner answered Q-071 (option A) and asked for a demo paper-trading run today. Recorded D-066. Queued T-184 (historical 3m test of the Tai port, labelled loosely matched, diagnostic) then T-185 (demo-only Tai paper runner behind TAI_DEMO_EXPERIMENT, normal Risk Guardian path; spec written). No tfmult sweep (owner screenshots show 18). First demo run needs an owner redeploy with advance notice. 25/31 gate not relaxed. Turn to codex."
+    },
+    {
+      "revision": 489,
+      "ts": "2026-10-19T07:30:00Z",
+      "agent": "codex",
+      "action": "start_t184_hist_3m",
+      "task_ids": [
+        "T-184"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-184 from the authoritative origin/main lineage. The queued diagnostic will run the unchanged Tai port on full TRAINING 3m lake history for NSXUSD and XAUUSD, with cost and zero-cost reports, owner-window comparison, explicit loose-match labeling, holdout refusal and bounded execution. T-185 remains queued after T-184. No broker orders or live/demo trading."
     }
   ],
-  "project_summary": "T-182 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No unblocked Codex task was available this turn; owner will queue the next two tasks after this handoff. Turn is Claude's."
+  "project_summary": "T-184 is in progress: bounded diagnostic of the unchanged Tai port on full TRAINING 3m history, with cost and zero-cost outputs and loose-match labeling. T-185 remains queued after T-184; no gate relaxation or broker trading is authorized."
 }
