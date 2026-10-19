@@ -73,7 +73,7 @@ def _first_gate(gates: Mapping[str, bool]) -> str | None:
 
 
 def _runtime_trace(
-    bars: Sequence[ClosedBar], selected: set[datetime.date], *, unbounded: bool
+    bars: Sequence[ClosedBar], selected: set[datetime.date], target_times: set[datetime], *, unbounded: bool
 ) -> tuple[tuple[replay.RuntimeEntry, ...], dict[str, dict[str, object]], int]:
     provider = TaiSignalProvider(minimum_history=MINIMUM_HISTORY)
     if unbounded:
@@ -84,6 +84,10 @@ def _runtime_trace(
         signal = provider(bar)
         history = provider.history
         index = len(history) - 1
+        if bar.at not in target_times:
+            if signal is not None and bar.at.astimezone(replay.NY).date() in selected:
+                result.append(replay.RuntimeEntry(bar.at, signal.direction.value, signal.entry, signal.stop))
+            continue
         features = tai_wiring._features(history)
         candles = tuple(_candle(item) for item in history)
         ha_open, ha_close = port._ha_series(candles, "closed", "session_1800_ny")
@@ -191,8 +195,9 @@ def run(lake: Path, holdout_start: datetime, *, epic: str = "NSXUSD", days: int 
     port_entries = replay._port_entries(bars, selected, ha_anchor="session_1800_ny")
     port_candles = tuple(_candle(bar) for bar in bars)
     _, port_features = port.replay(port_candles, "closed", ha_anchor="session_1800_ny", vwap_anchor="session_1800_ny")
-    bounded, bounded_trace, _ = _runtime_trace(bars, selected, unbounded=False)
-    unbounded, unbounded_trace, _ = _runtime_trace(bars, selected, unbounded=True)
+    target_times = {entry.at for entry in port_entries}
+    bounded, bounded_trace, _ = _runtime_trace(bars, selected, target_times, unbounded=False)
+    unbounded, unbounded_trace, _ = _runtime_trace(bars, selected, target_times, unbounded=True)
     bounded_by_key = _entry_by_key(bounded)
     unbounded_by_key = _entry_by_key(unbounded)
     port_by_key = _entry_by_key(port_entries)
