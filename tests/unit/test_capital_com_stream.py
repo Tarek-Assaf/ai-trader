@@ -206,6 +206,39 @@ def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
     assert json.loads(sockets[1].sent[0])["cst"] == "fresh-cst"
 
 
+def test_reconnect_logs_context_without_payload_or_credentials(caplog) -> None:
+    rest = FakeRest()
+    stop = threading.Event()
+    first = FakeSocket([subscribe_reply(), ping_reply(), event(1791021600000), OSError("forced")])
+    second = FakeSocket(
+        [subscribe_reply(), ping_reply(), event(1791021660000)],
+        on_message=lambda _raw: stop.set(),
+    )
+    sockets = iter([first, second])
+    caplog.set_level(logging.INFO, logger="trader.integrations.capital_com.stream")
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        lambda _update: None,
+        connection_factory=lambda *_args, **_kwargs: next(sockets),
+        reconnect_min_seconds=0.01,
+        reconnect_max_seconds=0.02,
+        sleep=lambda _delay: None,
+        clock=lambda: datetime(2026, 10, 3, 10, 3, tzinfo=UTC),
+    )
+
+    client.run_forever(stop)
+
+    records = [record for record in caplog.records if record.levelno == logging.INFO]
+    assert len(records) == 1
+    message = records[0].getMessage()
+    assert "exception=OSError" in message
+    assert "seconds_since_ping_reply=0.000" in message
+    assert "seconds_since_tick=0.000" in message
+    assert "connection_age_seconds=0.000" in message
+    assert "forced" not in message
+
+
 def test_connect_failure_reports_reconnect_and_recovers() -> None:
     rest = FakeRest()
     updates: list[OhlcUpdate] = []

@@ -100,6 +100,8 @@ class CapitalComStreamClient:
         self._ping_reply_ok: bool | None = None
         self._reply_status = "missing"
         self._last_data_at: datetime | None = None
+        self._last_ping_reply_at: datetime | None = None
+        self._connection_started_at: datetime | None = None
 
     @property
     def reconnect_count(self) -> int:
@@ -216,6 +218,38 @@ class CapitalComStreamClient:
         correlation_id = self._send_request(socket, "ping")
         self._await_reply(socket, correlation_id, "ping")
         self._ping_reply_ok = True
+        self._last_ping_reply_at = self._clock().astimezone(UTC)
+
+    def _record_reconnect(self, exc: BaseException, reason: str) -> None:
+        """Log one bounded, secret-free reconnect observation per failed attempt."""
+        now = self._clock().astimezone(UTC)
+
+        def age_seconds(stamp: datetime | None) -> str:
+            if stamp is None:
+                return "unknown"
+            return f"{max(0.0, (now - stamp).total_seconds()):.3f}"
+
+        close_code = getattr(exc, "code", None)
+        if not isinstance(close_code, int):
+            close_code = "unknown"
+        close_reason = getattr(exc, "reason", None)
+        if not isinstance(close_reason, str) or not close_reason:
+            close_reason = "unknown"
+        else:
+            close_reason = close_reason[:160]
+        connection_age = age_seconds(self._connection_started_at)
+        _LOG.info(
+            "Capital.com WebSocket reconnect: exception=%s reason=%s close_code=%s "
+            "close_reason=%s seconds_since_ping_reply=%s seconds_since_tick=%s "
+            "connection_age_seconds=%s",
+            type(exc).__name__,
+            reason,
+            close_code,
+            close_reason,
+            age_seconds(self._last_ping_reply_at),
+            age_seconds(self._last_data_at),
+            connection_age,
+        )
 
     @staticmethod
     def _number(value: object) -> float:
@@ -346,9 +380,11 @@ class CapitalComStreamClient:
         while not stop_event.is_set():
             try:
                 self._rest.ping()
+                self._connection_started_at = None
                 with self._connect(
                     _STREAM_URL, open_timeout=10, close_timeout=2, ping_interval=None
                 ) as socket:
+                    self._connection_started_at = self._clock().astimezone(UTC)
                     self._correlation = 0
                     self._reply_status = "missing"
                     self._subscribe(socket)
@@ -384,25 +420,27 @@ class CapitalComStreamClient:
             except _ConsumerCallbackFailure as exc:
                 self._ping_reply_ok = False
                 self._reconnect_count += 1
+                reason = type(exc.original).__name__
+                self._record_reconnect(exc.original, reason)
                 if not stop_event.is_set() and self._on_reconnect is not None:
-                    self._on_reconnect(self._reconnect_count, type(exc.original).__name__)
+                    self._on_reconnect(self._reconnect_count, reason)
                 raise exc.original from None
             except (ConnectionClosed, OSError, TimeoutError, StreamProtocolError) as exc:
                 self._ping_reply_ok = False
                 self._reconnect_count += 1
                 if stop_event.is_set():
                     break
+                reason = "no_data_timeout" if "no-data timeout" in str(exc) else type(exc).__name__
+                self._record_reconnect(exc, reason)
                 _LOG.warning("Capital.com WebSocket disconnected (%s)", type(exc).__name__)
                 if self._on_reconnect is not None:
-                    reason = (
-                        "no_data_timeout" if "no-data timeout" in str(exc) else type(exc).__name__
-                    )
                     self._on_reconnect(self._reconnect_count, reason)
             except Exception as exc:
                 self._ping_reply_ok = False
                 self._reconnect_count += 1
                 if stop_event.is_set():
                     break
+                self._record_reconnect(exc, type(exc).__name__)
                 _LOG.warning("Capital.com WebSocket reconnecting (%s)", type(exc).__name__)
                 if self._on_reconnect is not None:
                     self._on_reconnect(self._reconnect_count, type(exc).__name__)

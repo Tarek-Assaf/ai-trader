@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 505,
+  "revision": 507,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -6219,20 +6219,29 @@
       "requirements": [
         "R-03"
       ],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "review_cycles": 1,
+      "evidence": [
+        "docs/evidence/t189/reconnect_diagnosis.md",
+        "docs/evidence/t189/minute_gap_report.md",
+        "scripts/lab_t189_minute_gaps.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_t189_minute_gaps.py"
+      ],
+      "completion_note": "Completed the read-only diagnosis and handed it to Claude. The stream documents callback, socket/protocol, no-data watchdog, REST ping/connect and generic reconnect paths; each retry emits one bounded INFO record with exception class, close code/reason when present, ping/tick ages and connection age. Added a MarketHours-aware Parquet minute-gap report with bid-only/ask-only and process-wide rejected-candle status reporting plus a temporary lake test. Ruff, format, py_compile and git diff --check pass. Desktop pytest is unavailable (pytest, pyarrow and httpx are not installed), so CI must run the full suite. No broker, network, redeploy, order, risk/gate or secret activity.",
       "id": "T-189",
       "title": "Diagnose the recorder reconnect storm and measure missing minutes (read-only)",
-      "status": "todo",
+      "status": "changes_requested",
       "depends_on": [
         "T-188"
       ],
       "acceptance_criteria": [
-        "Follow docs/specs/t189_recorder_reconnect_diagnosis.md exactly. Read-only: no order or broker write call, no redeploy, no risk or gate edits, no secrets in logs."
+        "Follow docs/specs/t189_recorder_reconnect_diagnosis.md exactly. Read-only: no order or broker write call, no redeploy, no risk or gate edits, no secrets in logs.",
+        "CHANGES REQUESTED (cycle 1): Codex worked from an older copy of the spec and did not see the 2026-10-19 17:15 evidence block now on main. Re-read docs/specs/t189_recorder_reconnect_diagnosis.md on main and answer (f), (g) and (h) in docs/evidence/t189/reconnect_diagnosis.md, from the code: (f) which dependency raises RuntimeDependencyUnavailable in the runtime composition and why it repeats about every 6 minutes (does the API process log in to Capital.com again on that cadence); (g) whether the API process and the recorder worker share one Capital.com session/key so a login in one invalidates the other's WebSocket token (compare re-login timing in code with reconnect timing; if plausible, propose one session owner or a login throttle, no change to risk or order paths); (h) whether each runtime recovery resets the Tai runner state (open position, last bar, warm-up) and could lose track of a demo position or double-enter; add a unit test and fix if so. Also name the single most likely cause of the reconnect storm. The stream logging, gap tool and tests already on this branch are accepted and merged; do not redo them."
       ],
       "deliverables": [
-        "docs/specs/t189_recorder_reconnect_diagnosis.md"
+        "docs/specs/t189_recorder_reconnect_diagnosis.md",
+        "scripts/lab_t189_minute_gaps.py",
+        "docs/evidence/t189/"
       ]
     }
   ],
@@ -26982,6 +26991,43 @@
         "docs/specs/t189_recorder_reconnect_diagnosis.md"
       ],
       "summary": "Queued T-189. Owner health output on the new Pod (image 1bdd99b) shows reconnect_count 0 -> 9 in about 30 minutes, all ConnectionClosedError, recorder degraded, and the owner confirms it is the only Pod running with these credentials. T-189: document reconnect paths, add a reconnect log line, check ping handling, measure missing minutes in the lake, name the most likely cause. Read-only; no redeploy. Turn to codex."
+    },
+    {
+      "revision": 506,
+      "ts": "2026-10-19T13:58:00Z",
+      "agent": "codex",
+      "action": "complete_t189_handoff_claude",
+      "task_ids": [
+        "T-189"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/stream.py",
+        "scripts/lab_t189_minute_gaps.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_t189_minute_gaps.py",
+        "docs/evidence/t189/reconnect_diagnosis.md",
+        "docs/evidence/t189/minute_gap_report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-189 read-only diagnosis and handed the branch to Claude for review. Local pytest is blocked by missing desktop dependencies; no broker or Pod writes."
+    },
+    {
+      "revision": 507,
+      "ts": "2026-10-19T17:50:00+03:00",
+      "agent": "claude",
+      "action": "partial_accept_t189_changes_requested",
+      "task_ids": [
+        "T-189"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t189/",
+        "scripts/lab_t189_minute_gaps.py",
+        "src/trader/integrations/capital_com/stream.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_t189_minute_gaps.py"
+      ],
+      "summary": "Reviewed T-189 (rebuilt on current main; Codex's branch predated the spec update). Reconnect logging, gap tool and tests pass ruff and are merged. T-189 stays open (changes_requested, cycle 1): Codex did not answer the 17:15 questions (f) why runtime_dependency_unavailable repeats about every 6 minutes, (g) whether API and recorder logins invalidate each other's session, (h) whether a runtime recovery resets Tai runner state while a demo position is open. The gap report has no real numbers yet (needs the Pod lake). Decision by delegation: keep the work read-only. Turn to codex."
     }
   ],
   "project_summary": "T-186 accepted; T-044 cannot start because T-017 remains blocked on B-007 missing Capital.com recorder overlap data. No safe unblocked Codex task is available."
