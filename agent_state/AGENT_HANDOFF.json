@@ -16146,7 +16146,8 @@
       "subject": "T-191 cycle 2 acceptance of branch codex/t191-tai-state",
       "method": "Read the diff of tai_demo.py, tai_wiring.py, app.py and tests; ruff check/format (line 100); mypy on tai_demo.py (found and fixed two typing errors); CI mypy failure root-caused.",
       "validated_by": "claude",
-      "checked": "Read tai_demo.py diff: shadow stop/stop_entry exits after targets, flat alert and persist; live managed deals absent from get_positions dropped with reconcile_closed. Tests for structure stop, entry stop after TP1, live missing deal then re-entry, alerts present. ruff check/format clean; mypy clean for tai_demo.py after two typing fixes. No broker writes, holdout reads, risk/gate edits."
+      "checked": "Read tai_demo.py diff: shadow stop/stop_entry exits after targets, flat alert and persist; live managed deals absent from get_positions dropped with reconcile_closed. Tests for structure stop, entry stop after TP1, live missing deal then re-entry, alerts present. ruff check/format clean; mypy clean for tai_demo.py after two typing fixes. No broker writes, holdout reads, risk/gate edits.",
+      "evidence": "Read tai_demo.py diff: shadow stop/stop_entry exits after targets, flat alert and persist; live managed deals absent from get_positions dropped with reconcile_closed. Tests for structure stop, entry stop after TP1, live missing deal then re-entry, alerts present. ruff check/format clean; mypy clean for tai_demo.py after two typing fixes. No broker writes, holdout reads, risk/gate edits."
     }
   ],
   "blockers": [
