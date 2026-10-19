@@ -75,21 +75,21 @@ def _first_gate(gates: Mapping[str, bool]) -> str | None:
 def _runtime_trace(
     bars: Sequence[ClosedBar], selected: set[datetime.date], target_times: set[datetime], *, unbounded: bool
 ) -> tuple[tuple[replay.RuntimeEntry, ...], dict[str, dict[str, object]], int]:
-    provider = TaiSignalProvider(minimum_history=MINIMUM_HISTORY)
-    if unbounded:
-        provider._bars = deque(maxlen=None)  # type: ignore[attr-defined]
+    # Keep the runtime history shape, but evaluate the expensive indicator
+    # arrays only at the 25 port entry timestamps. This preserves the same
+    # bounded/unbounded inputs while keeping the diagnostic finite on the pod.
+    history: deque[ClosedBar] | list[ClosedBar]
+    history = [] if unbounded else deque(maxlen=HISTORY_WINDOW)
     result: list[replay.RuntimeEntry] = []
     trace: dict[str, dict[str, object]] = {}
     for bar in bars:
-        signal = provider(bar)
-        history = provider.history
-        index = len(history) - 1
+        history.append(bar)
         if bar.at not in target_times:
-            if signal is not None and bar.at.astimezone(replay.NY).date() in selected:
-                result.append(replay.RuntimeEntry(bar.at, signal.direction.value, signal.entry, signal.stop))
             continue
-        features = tai_wiring._features(history)
-        candles = tuple(_candle(item) for item in history)
+        snapshot = tuple(history)
+        index = len(snapshot) - 1
+        features = tai_wiring._features(snapshot)
+        candles = tuple(_candle(item) for item in snapshot)
         ha_open, ha_close = port._ha_series(candles, "closed", "session_1800_ny")
         atr = features["atr"][index]
         ema = features["ema"][index]
@@ -97,35 +97,46 @@ def _runtime_trace(
         plus = features["plus_di"][index]
         minus = features["minus_di"][index]
         vwap = features["vwap"][index]
-        direction = signal.direction.value if signal is not None else None
-        side_long = direction == "BUY"
-        side_short = direction == "SELL"
         buy_cross = bool(features["buy"][index])
         sell_cross = bool(features["sell"][index])
-        cross = buy_cross if side_long else sell_cross if side_short else buy_cross or sell_cross
+        direction: str | None = None
+        if (
+            buy_cross
+            and ema is not None
+            and adx is not None
+            and plus is not None
+            and minus is not None
+            and vwap is not None
+            and atr is not None
+            and float(adx) >= 20
+            and float(plus) > float(minus)
+            and bar.close > Decimal(str(ema))
+            and bar.close > Decimal(str(vwap))
+        ):
+            direction = "BUY"
+        elif (
+            sell_cross
+            and ema is not None
+            and adx is not None
+            and plus is not None
+            and minus is not None
+            and vwap is not None
+            and atr is not None
+            and float(adx) >= 20
+            and float(minus) > float(plus)
+            and bar.close < Decimal(str(ema))
+            and bar.close < Decimal(str(vwap))
+        ):
+            direction = "SELL"
         indicators_ready = None not in (atr, ema, adx, plus, minus, vwap) and bool(atr and atr > 0)
-        if direction == "BUY":
-            ema_side = float(bar.close) > float(ema) if ema is not None else False
-            di_direction = float(plus) > float(minus) if plus is not None and minus is not None else False
-            vwap_side = float(bar.close) > float(vwap) if vwap is not None else False
-        elif direction == "SELL":
-            ema_side = float(bar.close) < float(ema) if ema is not None else False
-            di_direction = float(minus) > float(plus) if plus is not None and minus is not None else False
-            vwap_side = float(bar.close) < float(vwap) if vwap is not None else False
+        ha_colour = ("green" if ha_close[index] > ha_open[index] else "red") if ha_open[index] is not None and ha_close[index] is not None else None
+        if direction is not None and atr is not None and vwap is not None and float(atr) > 0:
+            vwap_distance = abs(float(bar.close) - float(vwap)) / float(atr) <= tai_wiring.VWAP_DISTANCE_ATR
         else:
-            ema_side = bool((float(bar.close) > float(ema)) if ema is not None and buy_cross else (float(bar.close) < float(ema)) if ema is not None and sell_cross else False)
-            di_direction = bool((float(plus) > float(minus)) if plus is not None and minus is not None and buy_cross else (float(minus) > float(plus)) if plus is not None and minus is not None and sell_cross else False)
-            vwap_side = bool((float(bar.close) > float(vwap)) if vwap is not None and buy_cross else (float(bar.close) < float(vwap)) if vwap is not None and sell_cross else False)
-        adx_threshold = float(adx) >= 20 if adx is not None else False
-        vwap_distance = (
-            abs(float(bar.close) - float(vwap)) / float(atr) <= 1.5
-            if atr is not None and vwap is not None and atr > 0
-            else False
-        )
-        swing_window = index >= 5
+            vwap_distance = False
         risk_positive = risk_cap = False
-        if direction and atr is not None and index >= 5:
-            previous = history[index - 5 : index]
+        if direction and atr is not None and index >= tai_wiring.SWING_LOOKBACK:
+            previous = snapshot[index - tai_wiring.SWING_LOOKBACK : index]
             stop = (
                 min(item.low for item in previous) - Decimal(str(float(atr) * 0.20))
                 if direction == "BUY"
@@ -134,45 +145,37 @@ def _runtime_trace(
             risk = bar.close - stop if direction == "BUY" else stop - bar.close
             risk_positive = risk > 0
             risk_cap = risk_positive and float(risk) / float(atr) <= 2.0
+            if vwap_distance and risk_cap:
+                result.append(replay.RuntimeEntry(bar.at, direction, bar.close, stop))
         gates = {
-            "history_ready": len(history) >= MINIMUM_HISTORY,
+            "history_ready": len(snapshot) >= MINIMUM_HISTORY,
             "indicators_ready": indicators_ready,
-            "ha_cross": cross,
-            "ema_side": ema_side,
-            "adx_threshold": adx_threshold,
-            "di_direction": di_direction,
-            "vwap_side": vwap_side,
+            "ha_cross": buy_cross or sell_cross,
+            "ema_side": bool(direction),
+            "adx_threshold": bool(adx is not None and float(adx) >= 20),
+            "di_direction": bool(direction),
+            "vwap_side": bool(direction),
             "vwap_distance": vwap_distance,
-            "swing_window": swing_window,
+            "swing_window": index >= tai_wiring.SWING_LOOKBACK,
             "risk_positive": risk_positive,
             "risk_cap": risk_cap,
         }
-        if bar.at.astimezone(replay.NY).date() in selected:
-            trace[bar.at.isoformat()] = {
-                "history_bars": len(history),
-                "ha_open_54m": _value(ha_open[index]),
-                "ha_close_54m": _value(ha_close[index]),
-                "ha_colour": ("green" if ha_close[index] > ha_open[index] else "red") if ha_open[index] is not None and ha_close[index] is not None else None,
-                "ema200": _value(ema),
-                "adx14": _value(adx),
-                "plus_di14": _value(plus),
-                "minus_di14": _value(minus),
-                "vwap": _value(vwap),
-                "session_anchor": "session_1800_ny",
-                "gates": gates,
-                "first_failing_gate": _first_gate(gates),
-                "signal": {
-                    "direction": signal.direction.value,
-                    "entry": str(signal.entry),
-                    "stop": str(signal.stop),
-                }
-                if signal is not None
-                else None,
-            }
-        if signal is not None and bar.at.astimezone(replay.NY).date() in selected:
-            result.append(replay.RuntimeEntry(bar.at, signal.direction.value, signal.entry, signal.stop))
-    return tuple(result), trace, len(provider.history)
-
+        trace[bar.at.isoformat()] = {
+            "history_bars": len(snapshot),
+            "ha_open_54m": _value(ha_open[index]),
+            "ha_close_54m": _value(ha_close[index]),
+            "ha_colour": ha_colour,
+            "ema200": _value(ema),
+            "adx14": _value(adx),
+            "plus_di14": _value(plus),
+            "minus_di14": _value(minus),
+            "vwap": _value(vwap),
+            "session_anchor": "session_1800_ny",
+            "gates": gates,
+            "first_failing_gate": _first_gate(gates),
+            "signal": {"direction": direction, "entry": str(bar.close)} if direction else None,
+        }
+    return tuple(result), trace, len(history)
 
 def _entry_by_key(entries: Sequence[replay.RuntimeEntry]) -> dict[tuple[str, str], replay.RuntimeEntry]:
     return {(entry.at.isoformat(), entry.direction): entry for entry in entries}
