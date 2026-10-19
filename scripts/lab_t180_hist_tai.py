@@ -151,8 +151,21 @@ def _replay(bars: tuple[Any, ...], timeframe: int) -> tuple[tuple[Any, ...], Any
         port.TIMEFRAME, port.HIGHER_MINUTES = old_timeframe, old_higher
 
 
-def _signal_count(features: Any) -> int:
-    return sum(features.buy_cross) + sum(features.sell_cross)
+def _in_window(stamp: datetime, start: datetime, end: datetime) -> bool:
+    return start <= stamp < end
+
+
+def _signal_count(features: Any, bars: tuple[Any, ...], start: datetime, end: datetime) -> int:
+    """Count port signals only for chart bars inside the requested owner window."""
+    return sum(
+        flag
+        for bar, flag in zip(bars, features.buy_cross, strict=True)
+        if _in_window(bar.ts_utc, start, end)
+    ) + sum(
+        flag
+        for bar, flag in zip(bars, features.sell_cross, strict=True)
+        if _in_window(bar.ts_utc, start, end)
+    )
 
 
 def _gross_r(trade: Any) -> float | None:
@@ -216,21 +229,36 @@ def run_cell(
             "timeframe_minutes": timeframe,
             "source_rows": 0,
             "bars": 0,
+            "warmup_bars": 0,
+            "window_bars": 0,
             "signal_count": 0,
             "trades": [],
             "per_year": {},
             "status": "no rows in owner window",
             "label": LABEL,
         }
+    warmup_bars = tuple(bar for bar in bars if bar.ts_utc < start)
+    window_bars = tuple(bar for bar in bars if _in_window(bar.ts_utc, start, end))
     raw_trades, features = _replay(bars, timeframe)
-    trades = [_trade_payload(item, instrument, costs) for item in raw_trades]
+    trades = [
+        _trade_payload(item, instrument, costs)
+        for item in raw_trades
+        if _in_window(item.entry_time, start, end)
+    ]
+    discarded_warmup_trades = sum(item.entry_time < start for item in raw_trades)
+    signal_count = _signal_count(features, bars, start, end)
+    zero_trade_reason = "not exposed" if signal_count > 0 and not trades else None
     return {
         "instrument": instrument,
         "timeframe_minutes": timeframe,
-        "source_rows": len(bars),
-        "bars": len(bars),
-        "signal_count": _signal_count(features),
+        "source_rows": len(window_bars),
+        "bars": len(window_bars),
+        "warmup_bars": len(warmup_bars),
+        "window_bars": len(window_bars),
+        "signal_count": signal_count,
         "trade_count": len(trades),
+        "discarded_warmup_trades": discarded_warmup_trades,
+        "zero_trade_reason": zero_trade_reason,
         "trades": trades,
         "per_year": _year_summary(trades),
         "status": "ok",
@@ -253,7 +281,7 @@ def run(
         for timeframe in TIMEFRAMES
     ]
     return {
-        "task": "T-180",
+        "task": "T-181",
         "generated_at": datetime.now(UTC).isoformat(),
         "label": LABEL,
         "window": {"start": start.isoformat(), "end": end.isoformat()},
@@ -277,23 +305,26 @@ def run(
 def report(payload: dict[str, Any]) -> str:
     cells = payload["cells"]
     lines = [
-        "# T-180 historical Tai harness dry check",
+        "# T-181 historical Tai harness window-only dry check",
         "",
-        f"**Verdict:** Harness ready yes; cells run: {sum(c['status'] == 'ok' for c in cells)}/8; "
-        "holdout guard tested yes; longer history NOT run.",
+        f"**Verdict:** Window-only counts yes; cells run "
+        f"{sum(c['status'] == 'ok' for c in cells)}/8; "
+        f"zero-trade cells explained {sum(c.get('zero_trade_reason') is not None for c in cells)}; "
+        "longer history NOT run.",
         "",
         f"Owner window: `{payload['window']['start']}` through `{payload['window']['end']}` "
         "(end exclusive; New York midnight dates).",
         "",
         f"Label: `{LABEL}`",
         "",
-        "| Instrument | Timeframe | Source rows/bars | Signals | Trades | Status |",
-        "| --- | ---: | ---: | ---: | ---: | --- |",
+        "| Instrument | Timeframe | Warmup bars | Window bars | Signals | Trades | Status |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | --- |",
     ]
     for cell in cells:
         lines.append(
             f"| {cell['instrument']} | {cell['timeframe_minutes']}m | "
-            f"{cell['source_rows']} | {cell['signal_count']} | "
+            f"{cell.get('warmup_bars', 0)} | {cell.get('window_bars', cell['bars'])} | "
+            f"{cell['signal_count']} | "
             f"{cell.get('trade_count', 0)} | {cell['status']} |"
         )
     lines += [
@@ -305,6 +336,9 @@ def report(payload: dict[str, Any]) -> str:
         "## Safety",
         "",
         json.dumps(payload["safety"], sort_keys=True),
+        "",
+        "Zero-trade cells report `not exposed` because the unchanged T-162 port "
+        "does not expose entry-filter counters.",
         "",
         "Longer history was not run; this is a dry check of the owner window only.",
         "",
@@ -333,7 +367,7 @@ def main() -> int:
     print(
         json.dumps(
             {
-                "task": "T-180",
+                "task": "T-181",
                 "cells": len(payload["cells"]),
                 "safety": payload["safety"],
             },
