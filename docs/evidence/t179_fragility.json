@@ -1,0 +1,171 @@
+{
+  "bars": 4055,
+  "baseline_signals": 45,
+  "basis_reference": {
+    "comparison": {
+      "0.5": "smaller",
+      "1.0": "smaller",
+      "2.0": "smaller",
+      "4.0": "smaller"
+    },
+    "points": 221.05,
+    "source": "T-164 open-price NQ1/NAS100 median basis"
+  },
+  "draws_per_sd": 200,
+  "median_consecutive_close_difference_points": 6.200000000004366,
+  "noise_sds_index_points": [
+    0.5,
+    1.0,
+    2.0,
+    4.0
+  ],
+  "per_sd": {
+    "0.5": {
+      "baseline_reappears_exact": {
+        "mean": 42.105,
+        "p05": 39.95,
+        "p95": 44.0
+      },
+      "baseline_reappears_within_3": {
+        "mean": 44.05,
+        "p05": 42.0,
+        "p95": 45.0
+      },
+      "baseline_reappears_within_30": {
+        "mean": 44.705,
+        "p05": 44.0,
+        "p95": 45.0
+      },
+      "baseline_signal_count": 45,
+      "draws": 200,
+      "new_signals_no_baseline_within_30": {
+        "mean": 2.015,
+        "p05": 0.0,
+        "p95": 9.0
+      },
+      "owner_entries_within_3": {
+        "mean": 3.605,
+        "p05": 3.0,
+        "p95": 5.0
+      },
+      "owner_entries_within_30": {
+        "mean": 15.21,
+        "p05": 15.0,
+        "p95": 16.0
+      }
+    },
+    "1.0": {
+      "baseline_reappears_exact": {
+        "mean": 38.905,
+        "p05": 34.95,
+        "p95": 43.0
+      },
+      "baseline_reappears_within_3": {
+        "mean": 42.33,
+        "p05": 39.0,
+        "p95": 45.0
+      },
+      "baseline_reappears_within_30": {
+        "mean": 44.38,
+        "p05": 43.0,
+        "p95": 45.0
+      },
+      "baseline_signal_count": 45,
+      "draws": 200,
+      "new_signals_no_baseline_within_30": {
+        "mean": 3.98,
+        "p05": 0.0,
+        "p95": 13.0
+      },
+      "owner_entries_within_3": {
+        "mean": 3.845,
+        "p05": 3.0,
+        "p95": 5.0
+      },
+      "owner_entries_within_30": {
+        "mean": 15.325,
+        "p05": 15.0,
+        "p95": 16.0
+      }
+    },
+    "2.0": {
+      "baseline_reappears_exact": {
+        "mean": 32.655,
+        "p05": 20.950000000000003,
+        "p95": 39.0
+      },
+      "baseline_reappears_within_3": {
+        "mean": 37.695,
+        "p05": 22.950000000000003,
+        "p95": 43.0
+      },
+      "baseline_reappears_within_30": {
+        "mean": 41.955,
+        "p05": 26.0,
+        "p95": 45.0
+      },
+      "baseline_signal_count": 45,
+      "draws": 200,
+      "new_signals_no_baseline_within_30": {
+        "mean": 8.07,
+        "p05": 0.0,
+        "p95": 23.049999999999983
+      },
+      "owner_entries_within_3": {
+        "mean": 4.42,
+        "p05": 3.0,
+        "p95": 7.0
+      },
+      "owner_entries_within_30": {
+        "mean": 15.17,
+        "p05": 11.0,
+        "p95": 18.0
+      }
+    },
+    "4.0": {
+      "baseline_reappears_exact": {
+        "mean": 23.61,
+        "p05": 13.0,
+        "p95": 31.0
+      },
+      "baseline_reappears_within_3": {
+        "mean": 30.03,
+        "p05": 16.0,
+        "p95": 38.0
+      },
+      "baseline_reappears_within_30": {
+        "mean": 38.255,
+        "p05": 24.0,
+        "p95": 45.0
+      },
+      "baseline_signal_count": 45,
+      "draws": 200,
+      "new_signals_no_baseline_within_30": {
+        "mean": 11.285,
+        "p05": 1.0,
+        "p95": 31.099999999999966
+      },
+      "owner_entries_within_3": {
+        "mean": 6.185,
+        "p05": 3.0,
+        "p95": 9.0
+      },
+      "owner_entries_within_30": {
+        "mean": 15.0,
+        "p05": 11.0,
+        "p95": 19.0
+      }
+    }
+  },
+  "safety": {
+    "broker_calls": 0,
+    "holdout_reads": 0,
+    "lake_writes": 0,
+    "orders": 0,
+    "production_state_writes": 0,
+    "secrets": false,
+    "tuning": false
+  },
+  "seed": 179,
+  "task": "T-179"
+}
