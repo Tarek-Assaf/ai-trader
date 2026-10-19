@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 476,
+  "revision": 478,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-177 accepted: owner entries cluster around the port's signals at 10/30 bars (p<0.01) but not at 3 bars, median offset 36 bars. Q-071 asks the owner whether a loose-criterion historical rerun is acceptable (gate 25/31 not relaxed). T-178 (delay structure and unmatched entries) is queued for Codex.",
+    "summary": "T-178 accepted: no stable positive delay between owner entries and port signals (p=0.81); port precision 25/45 vs 12.79 null (p=0.008). Historical rerun still blocked on Q-071 (gate 25/31 not relaxed). T-179 (signal fragility under bar noise) is queued for Codex.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -151,7 +151,8 @@
         "T-175",
         "T-176",
         "T-177",
-        "T-178"
+        "T-178",
+        "T-179"
       ]
     },
     {
@@ -5895,7 +5896,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5911,6 +5912,38 @@
         "docs/evidence/t178_delay.json",
         "scripts/lab_t178_delay.py",
         "tests/unit/test_t178_delay.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t178_report.md",
+        "docs/evidence/t178_delay.json",
+        "scripts/lab_t178_delay.py",
+        "tests/unit/test_t178_delay.py"
+      ],
+      "completion_note": "Completed one bounded offline Pod replay using the T-177 signal artifact, owner CSV as New York time and unchanged NSXUSD 3-minute full-warm-up bars. Of 31 owner entries, 15 were within 30 bars of a same-direction signal; 4 of those were after the signal, median signed offset -7.0 bars and IQR -12.5..1.0. The seed-178, 2,000-draw same-hour null gave p=0.8086 for a positive share as high and p=0.2264 for an IQR as narrow. Port-side precision was 25/45, null mean 12.79, p=0.0080. The 16 unmatched entries fail mostly on the cross condition. Verdict: no stable positive delay. Pod exit 0; no broker, orders, holdout, lake writes, tuning or secrets. Desktop/Pod pytest and Ruff were unavailable; py_compile and diff checks pass."
+    },
+    {
+      "id": "T-179",
+      "title": "Test how fragile the port's signals are to small bar-data differences (seeded noise, 4 sd levels)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-178"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t179_signal_fragility.md exactly (registered noise sd 0.5/1/2/4 index points, 200 draws each, seed 179, port unchanged; verdict first with plain yes/no, share of baseline signals reappearing at the same bar and within 3 and 30 bars, new signals per draw, owner entries within 3 and 30 bars, what each result supports).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets. Lint with ruff check and ruff format (line length 100) without per-line noqa. One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t179_report.md",
+        "docs/evidence/t179_fragility.json",
+        "scripts/lab_t179_fragility.py",
+        "tests/unit/test_t179_fragility.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -6388,6 +6421,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T03:30:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-060",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-178 accepted (V-444). Result: no stable positive delay (4 of 15 near entries after the signal, median -7 bars, p 0.81), so 'owner clicks by hand after the signal' is not supported; port precision is still above chance (25/45 vs 12.79 null). Sixteen owner entries have no same-direction signal within 30 bars, nearly all failing the HA cross. The 25/31 gate is not relaxed and the historical rerun stays blocked on Q-071 (safe option). Queued T-179 (docs/specs/t179_signal_fragility.md): whether the port's own signals move under small bar noise, which tells us if a CFD-vs-futures data difference alone could explain the mismatch. Reason: it is the last narrow computable test before the owner's answer on Q-071 is needed.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T03:50:00Z",
       "do_not_reopen": false
     }
   ],
@@ -15003,6 +15044,40 @@
       "validated_by": "claude",
       "date": "2026-10-19T03:30:00Z",
       "reverify_if": "The owner CSV, Pine source or NSXUSD lake bars change."
+    },
+    {
+      "id": "V-443",
+      "task_id": "T-178",
+      "subject": "T-178 delay structure and unmatched-entry replay",
+      "method": "Ran the bounded offline replay on the owner Pod with T-177 signals, owner CSV and NSXUSD 3-minute lake bars; copied raw JSON/report artifacts. Pod exit 0; JSON SHA-256 0DB77B598A90A4AD15D289F126ABE8FBF577C243BDC9FAA5C7BFCD1527C3A7AC; report SHA-256 643461636EADC74395009CC5C1F86D3187A71A765A3235DCFEFB4A811ACA6BEF. Ran py_compile and git diff --check locally; pytest and Ruff were unavailable.",
+      "result": "pass",
+      "checked": "Spec followed: signed-offset histogram, quartiles for the 15 near entries, 2,000 same-hour permutation draws with seed 178 for delay consistency and port-side precision, all 16 unmatched rows with nearest any-direction signal and failed conditions, verdict first, and zero safety counters.",
+      "evidence": [
+        "docs/evidence/t178_report.md",
+        "docs/evidence/t178_delay.json",
+        "scripts/lab_t178_delay.py",
+        "tests/unit/test_t178_delay.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T03:25:00Z",
+      "reverify_if": "The T-177 signals, owner CSV or NSXUSD lake bars change."
+    },
+    {
+      "id": "V-444",
+      "task_id": "T-178",
+      "subject": "Claude review of T-178 delay structure and unmatched entries",
+      "method": "Read the spec, report, JSON and script; ran ruff check and ruff format (line length 100; fixed one import-order finding); confirmed the script has no broker, holdout or lake-write path and the safety counters are zero; compared the report numbers with the JSON.",
+      "result": "pass",
+      "checked": "Verdict-first report matches the spec: histogram, 15 near entries (4 after the signal, median -7.0, IQR -12.5..1.0), seed-178 null p 0.8086 and 0.2264, port precision 25/45 vs null 12.79 (p 0.0080), 16 unmatched entries tabulated (15 fail cross and smart filter, 1 missing bar). No stable positive delay. Local pytest was not available to Claude; CI runs it.",
+      "evidence": [
+        "docs/evidence/t178_report.md",
+        "docs/evidence/t178_delay.json",
+        "scripts/lab_t178_delay.py",
+        "tests/unit/test_t178_delay.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T03:50:00Z",
+      "reverify_if": "The T-177 signals, owner CSV or NSXUSD lake bars change."
     }
   ],
   "blockers": [
@@ -25827,6 +25902,39 @@
         "tests/unit/test_t177_signals.py"
       ],
       "summary": "Reviewed T-177: accepted (V-442). 3/9/15 of 31 owner entries within 3/10/30 bars of same-direction port signals; same-hour null means 1.07/2.77/6.90; p 0.0955/0.0020/0.0005; mirror control not significant. Verdict yes at 10/30, no at 3; median offset 36 bars so the cluster is broad. Ruff check/format fixed without logic change. No broker, order, holdout or lake activity. Gate 25/31 not relaxed; Q-071 asks the owner about a loose-criterion rerun (non-blocking). Queued T-178. Rebuilt on main without Codex's re-encoded handoff text (its handoff rewrote non-ASCII characters). Turn to codex (D-045)."
+    },
+    {
+      "revision": 477,
+      "ts": "2026-10-19T03:25:00Z",
+      "agent": "codex",
+      "action": "complete_t178_delay_structure",
+      "task_ids": [
+        "T-178"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t178_report.md",
+        "docs/evidence/t178_delay.json",
+        "scripts/lab_t178_delay.py",
+        "tests/unit/test_t178_delay.py"
+      ],
+      "summary": "Completed one bounded offline Pod replay. Of 31 owner entries, 15 were within 30 bars of a same-direction signal; 4 were after the signal, median -7.0 bars, IQR -12.5..1.0, with seed-178 null p=0.8086 for positive sign and p=0.2264 for narrow IQR. Port-side precision was 25/45 versus null mean 12.79 (p=0.0080); 16 unmatched entries failed mostly cross. No broker or orders. Turn to Claude for review."
+    },
+    {
+      "revision": 478,
+      "ts": "2026-10-19T03:50:00Z",
+      "agent": "claude",
+      "action": "accept_t178_queue_t179",
+      "task_ids": [
+        "T-178",
+        "T-179"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t179_signal_fragility.md",
+        "scripts/lab_t178_delay.py"
+      ],
+      "summary": "Accepted T-178 (V-444, D-060): no stable positive delay between owner entries and port signals; port-side precision 25/45 vs null 12.79; 16 unmatched entries fail on the HA cross. 25/31 gate not relaxed; historical rerun still waits on Q-071. Queued T-179 (signal fragility under seeded bar noise). Lint fix: one import order in the T-178 script. No broker calls."
     }
   ],
   "project_summary": "T-176 accepted as a 'partly' geometry audit: the owner CSV has broker-style tranches and market exits that the stored indicator cannot produce, so the owner likely traded by hand or ran another script. T-177 tests whether owner entries cluster around the port's signals more than chance. Historical Tai rerun stays gated until 25/31 (or an owner decision)."

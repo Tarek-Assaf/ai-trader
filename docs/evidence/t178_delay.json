@@ -1,0 +1,691 @@
+{
+  "bars": 4055,
+  "observed_delay": {
+    "iqr": 13.5,
+    "median": -7.0,
+    "positive": 4,
+    "positive_share": 0.26666666666666666,
+    "q1": -12.5,
+    "q3": 1.0,
+    "total": 31,
+    "within_30": 15
+  },
+  "offset_histogram": {
+    "+0..+5": 3,
+    "+12..+17": 1,
+    "+18..+23": 1,
+    "+24..+29": 0,
+    "+30..+35": 0,
+    "+36..+41": 1,
+    "+42..+47": 1,
+    "+48..+53": 0,
+    "+54..+59": 1,
+    "+6..+11": 0,
+    "+60..+60": 0,
+    "-12..-7": 4,
+    "-18..-13": 2,
+    "-24..-19": 0,
+    "-30..-25": 2,
+    "-36..-31": 0,
+    "-42..-37": 1,
+    "-48..-43": 0,
+    "-54..-49": 0,
+    "-6..-1": 2,
+    "-60..-55": 0,
+    "outside": 12
+  },
+  "owner_entries": 31,
+  "permutation": {
+    "delay_iqr_mean": 20.4625,
+    "delay_iqr_p_narrow": 0.22638680659670166,
+    "draws": 2000,
+    "port_precision_mean": 12.7935,
+    "port_precision_p_high": 0.0079960019990005,
+    "positive_share_mean": 0.43605830835830833,
+    "positive_share_p_high": 0.8085957021489255,
+    "seed": 178
+  },
+  "port_precision": {
+    "matched": 25,
+    "per_day": {
+      "2026-10-07": 1,
+      "2026-10-08": 3,
+      "2026-10-11": 2,
+      "2026-10-13": 5,
+      "2026-10-14": 1,
+      "2026-10-15": 11,
+      "2026-10-16": 2
+    },
+    "rows": [
+      {
+        "direction": "short",
+        "index": 945,
+        "kind": "first",
+        "matched": false,
+        "owner_minus_signal": -243,
+        "time": "2026-10-08T01:12:00+00:00"
+      },
+      {
+        "direction": "long",
+        "index": 976,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -18,
+        "time": "2026-10-08T02:45:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 989,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 230,
+        "time": "2026-10-08T03:27:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 990,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 229,
+        "time": "2026-10-08T03:30:00+00:00"
+      },
+      {
+        "direction": "long",
+        "index": 1209,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": 2,
+        "time": "2026-10-08T14:39:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 1402,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -26,
+        "time": "2026-10-09T00:21:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 1403,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -27,
+        "time": "2026-10-09T00:24:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 1421,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": -45,
+        "time": "2026-10-09T01:18:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 1422,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": -46,
+        "time": "2026-10-09T01:21:00+00:00"
+      },
+      {
+        "direction": "long",
+        "index": 1813,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 40,
+        "time": "2026-10-09T20:54:00+00:00"
+      },
+      {
+        "direction": "long",
+        "index": 1846,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": 7,
+        "time": "2026-10-12T00:06:00+00:00"
+      },
+      {
+        "direction": "long",
+        "index": 1848,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": 5,
+        "time": "2026-10-12T00:12:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2329,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 213,
+        "time": "2026-10-13T00:21:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2330,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 212,
+        "time": "2026-10-13T00:24:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2331,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 211,
+        "time": "2026-10-13T00:27:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2333,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 209,
+        "time": "2026-10-13T00:33:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2348,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 194,
+        "time": "2026-10-13T01:18:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2349,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 193,
+        "time": "2026-10-13T01:21:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2449,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 93,
+        "time": "2026-10-13T06:21:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2551,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -9,
+        "time": "2026-10-13T11:27:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2552,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -10,
+        "time": "2026-10-13T11:30:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2556,
+        "kind": "first",
+        "matched": true,
+        "owner_minus_signal": -14,
+        "time": "2026-10-13T11:42:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2573,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": -31,
+        "time": "2026-10-13T12:33:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2637,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -16,
+        "time": "2026-10-13T15:45:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2638,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -17,
+        "time": "2026-10-13T15:48:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2802,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 107,
+        "time": "2026-10-14T00:03:00+00:00"
+      },
+      {
+        "direction": "long",
+        "index": 2816,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": -127,
+        "time": "2026-10-14T00:45:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 2986,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -7,
+        "time": "2026-10-14T09:15:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3284,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": -37,
+        "time": "2026-10-15T00:15:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3319,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 50,
+        "time": "2026-10-15T02:00:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3320,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 49,
+        "time": "2026-10-15T02:03:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3395,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -7,
+        "time": "2026-10-15T05:48:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3396,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -8,
+        "time": "2026-10-15T05:51:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3398,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -10,
+        "time": "2026-10-15T05:57:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3399,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -11,
+        "time": "2026-10-15T06:00:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3400,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -12,
+        "time": "2026-10-15T06:03:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3529,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": 5,
+        "time": "2026-10-15T12:30:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3532,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": 2,
+        "time": "2026-10-15T12:39:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3533,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": 1,
+        "time": "2026-10-15T12:42:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3534,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": 0,
+        "time": "2026-10-15T12:45:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3559,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -6,
+        "time": "2026-10-15T14:00:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3769,
+        "kind": "refresh",
+        "matched": false,
+        "owner_minus_signal": 193,
+        "time": "2026-10-16T00:33:00+00:00"
+      },
+      {
+        "direction": "long",
+        "index": 3786,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -9,
+        "time": "2026-10-16T01:24:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3964,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -2,
+        "time": "2026-10-16T10:18:00+00:00"
+      },
+      {
+        "direction": "short",
+        "index": 3965,
+        "kind": "refresh",
+        "matched": true,
+        "owner_minus_signal": -3,
+        "time": "2026-10-16T10:21:00+00:00"
+      }
+    ],
+    "total": 45
+  },
+  "safety": {
+    "broker_calls": 0,
+    "holdout_reads": 0,
+    "lake_writes": 0,
+    "orders": 0,
+    "production_state_writes": 0,
+    "secrets": false,
+    "tuning": false
+  },
+  "same_direction_offsets_owner_minus_signal": [
+    -347,
+    -294,
+    -243,
+    -88,
+    -18,
+    2,
+    -183,
+    -26,
+    263,
+    -88,
+    null,
+    5,
+    46,
+    -9,
+    -16,
+    36,
+    -127,
+    -77,
+    -7,
+    21,
+    231,
+    -37,
+    -26,
+    -7,
+    0,
+    -6,
+    -9,
+    -2,
+    14,
+    59,
+    87
+  ],
+  "signals_source": "docs/evidence/t177_signals.json",
+  "task": "T-178",
+  "unmatched_entries": [
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-06T16:03:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": -347,
+        "time": "2026-10-08T01:12:00+00:00"
+      },
+      "same_offset_owner_minus_signal": -347
+    },
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-06T18:45:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": -294,
+        "time": "2026-10-08T01:12:00+00:00"
+      },
+      "same_offset_owner_minus_signal": -294
+    },
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-06T21:18:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter",
+        "risk_cap"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": -243,
+        "time": "2026-10-08T01:12:00+00:00"
+      },
+      "same_offset_owner_minus_signal": -243
+    },
+    {
+      "direction": "long",
+      "entry_time_ny": "2026-10-07T18:21:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": -57,
+        "time": "2026-10-08T01:12:00+00:00"
+      },
+      "same_offset_owner_minus_signal": -88
+    },
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-08T11:09:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "long",
+        "owner_minus_signal": 10,
+        "time": "2026-10-08T14:39:00+00:00"
+      },
+      "same_offset_owner_minus_signal": -183
+    },
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-09T10:30:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "long",
+        "owner_minus_signal": -128,
+        "time": "2026-10-09T20:54:00+00:00"
+      },
+      "same_offset_owner_minus_signal": 263
+    },
+    {
+      "direction": "long",
+      "entry_time_ny": "2026-10-09T12:30:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "long",
+        "owner_minus_signal": -88,
+        "time": "2026-10-09T20:54:00+00:00"
+      },
+      "same_offset_owner_minus_signal": -88
+    },
+    {
+      "direction": "long",
+      "entry_time_ny": "2026-10-11T18:18:00-04:00",
+      "failed_conditions": [
+        "missing_bar"
+      ],
+      "nearest_any_direction": null,
+      "same_offset_owner_minus_signal": null
+    },
+    {
+      "direction": "long",
+      "entry_time_ny": "2026-10-11T22:30:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "long",
+        "owner_minus_signal": 46,
+        "time": "2026-10-12T00:12:00+00:00"
+      },
+      "same_offset_owner_minus_signal": 46
+    },
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-13T13:36:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": 36,
+        "time": "2026-10-13T15:48:00+00:00"
+      },
+      "same_offset_owner_minus_signal": 36
+    },
+    {
+      "direction": "long",
+      "entry_time_ny": "2026-10-13T14:21:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": 51,
+        "time": "2026-10-13T15:48:00+00:00"
+      },
+      "same_offset_owner_minus_signal": -127
+    },
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-14T01:24:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": -77,
+        "time": "2026-10-14T09:15:00+00:00"
+      },
+      "same_offset_owner_minus_signal": -77
+    },
+    {
+      "direction": "long",
+      "entry_time_ny": "2026-10-14T08:18:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": 61,
+        "time": "2026-10-14T09:15:00+00:00"
+      },
+      "same_offset_owner_minus_signal": 231
+    },
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-14T18:24:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter",
+        "risk_cap"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": -37,
+        "time": "2026-10-15T00:15:00+00:00"
+      },
+      "same_offset_owner_minus_signal": -37
+    },
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-16T09:18:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter",
+        "risk_cap"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": 59,
+        "time": "2026-10-16T10:21:00+00:00"
+      },
+      "same_offset_owner_minus_signal": 59
+    },
+    {
+      "direction": "short",
+      "entry_time_ny": "2026-10-16T10:42:00-04:00",
+      "failed_conditions": [
+        "cross",
+        "smart_filter"
+      ],
+      "nearest_any_direction": {
+        "direction": "short",
+        "owner_minus_signal": 87,
+        "time": "2026-10-16T10:21:00+00:00"
+      },
+      "same_offset_owner_minus_signal": 87
+    }
+  ]
+}
