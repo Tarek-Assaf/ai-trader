@@ -167,7 +167,8 @@
         "T-190",
         "T-191",
         "T-192",
-        "T-193"
+        "T-193",
+        "T-194"
       ]
     },
     {
@@ -6347,6 +6348,31 @@
       "review_cycles": 0,
       "evidence": [],
       "completion_note": ""
+    },
+    {
+      "id": "T-194",
+      "title": "Tai port historical test on 1m/5m/60m, NSXUSD and XAUUSD (parallel lane)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-184"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t194_tai_history_all_timeframes.md exactly. 1m mandatory and first; label loosely matched to the owner; holdout never read.",
+        "No broker order or write call, no sealed holdout read, no risk or gate edits, no secrets. Ruff check and format (line length 100), CI green. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t194/report.md",
+        "docs/evidence/t194/summary.json"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -6895,7 +6921,7 @@
     },
     {
       "id": "D-070",
-      "statement": "Owner 2026-10-19 (chat, afternoon Riyadh): watch the Tai dry run today and get a trades-and-P&L report late today; redeploy the image and fix whatever is needed to start real DEMO trading; run parallel tests alongside. Claude queued, in order: T-187 (run its Pod replay, already built), T-190 (dry-run day report, due today), T-191 (persist/reconcile position state), T-192 (pre-enable audit), T-193 (recorder gap measurement). Switching dry-run off stays the owner's decision after T-192. Parked items (Q-022, Q-057, T-152, T-154) stay parked. T-183 spec is withdrawn: T-173 already tested tfmult.",
+      "statement": "Owner 2026-10-19 (chat): watch the Tai dry run today, get a trades-and-P&L report late today, redeploy and fix what is needed to start real DEMO trading, and run tests that do not need the demo account in parallel. ORDER. Lane A (path to demo, do in this order): T-187 (run its already-built Pod replay), T-190 (dry-run day report, due today), T-191 (persist and reconcile position state), T-192 (pre-enable audit). Lane B (parallel, no demo account): T-193 (recorder gap measurement) and T-194 (historical Tai test on 1m/5m/60m). Codex takes Lane A first; Lane B only while Lane A waits on the owner (redeploy, Pod) or Claude review. Switching dry-run off stays the owner's decision after T-192. Parked items (Q-022, Q-057, T-152, T-154) stay parked. T-183 spec withdrawn: T-173 already tested tfmult.",
       "status": "final",
       "do_not_reopen": false,
       "decided_by": "claude"
@@ -27232,16 +27258,18 @@
         "T-190",
         "T-191",
         "T-192",
-        "T-193"
+        "T-193",
+        "T-194"
       ],
       "files_changed": [
         "agent_state/AGENT_HANDOFF.json",
         "docs/specs/t190_dry_run_day_report.md",
         "docs/specs/t191_tai_state_persistence.md",
         "docs/specs/t192_tai_pre_enable_audit.md",
-        "docs/specs/t193_recorder_gap_followup.md"
+        "docs/specs/t193_recorder_gap_followup.md",
+        "docs/specs/t194_tai_history_all_timeframes.md"
       ],
-      "summary": "Owner asked for a dry-run trades/P&L report today and the path to real demo trading (D-070). Queued T-190 report (due today), T-191 state persistence, T-192 pre-enable audit, T-193 gap measurement; T-187 Pod run first if the Pod is reachable. No broker calls. Turn to codex."
+      "summary": "Owner asked for a dry-run trades/P&L report today and the path to real demo trading (D-070). Lane A in order: T-187 Pod run, T-190 report (due today), T-191 state persistence, T-192 pre-enable audit. Lane B in parallel: T-193 gap measurement, T-194 historical test 1m/5m/60m. No broker calls. Turn to codex."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
