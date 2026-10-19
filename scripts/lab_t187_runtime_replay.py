@@ -28,7 +28,7 @@ except ModuleNotFoundError:
     from scripts import lab_t162_pine_port as port
 
 from trader.data.resample import Candle
-from trader.execution.brokers.base import Direction, OrderRequest
+from trader.execution.brokers.base import OrderRequest
 from trader.execution.control import ControlMode
 from trader.experiments.tai_demo import (
     ClosedBar,
@@ -65,11 +65,7 @@ def parse_stamp(value: str) -> datetime:
 
 def _candidate_paths(lake: Path, epic: str) -> tuple[Path, ...]:
     aliases = (epic, "NAS100", "US100") if epic == DEFAULT_EPIC else (epic,)
-    roots = [
-        lake / alias / timeframe
-        for alias in aliases
-        for timeframe in ("1m_capital", "1m")
-    ]
+    roots = [lake / alias / timeframe for alias in aliases for timeframe in ("1m_capital", "1m")]
     return tuple(
         sorted({path for root in roots if root.is_dir() for path in root.rglob("*.parquet")})
     )
@@ -122,8 +118,7 @@ def _read_pre_holdout_minutes(lake: Path, epic: str, holdout_start: datetime) ->
             continue
         bid, ask = sides["bid"], sides["ask"]
         values = tuple(
-            (float(bid[name]) + float(ask[name])) / 2.0
-            for name in ("open", "high", "low", "close")
+            (float(bid[name]) + float(ask[name])) / 2.0 for name in ("open", "high", "low", "close")
         )
         rows.append(Candle(stamp, *values, 0.0, (epic, "mid"), True, 1))
     if not paired:

@@ -5,7 +5,7 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
+  "turn": "codex",
   "revision": 502,
   "current_phase": 1,
   "protocol": {
@@ -161,7 +161,8 @@
         "T-184",
         "T-185",
         "T-186",
-        "T-187"
+        "T-187",
+        "T-188"
       ]
     },
     {
@@ -6179,6 +6180,29 @@
         "tests/unit/test_t187_runtime_replay.py"
       ],
       "completion_note": "Built the read-only T-187 replay script and comparison-helper test from authoritative origin/main. The script feeds recorded pre-holdout NSXUSD 1m mids through ThreeMinuteBarBuilder and the real TaiSignalProvider, compares session_1800_ny port entries, records epoch-anchor information, and exercises TaiDemoRunner dry-run with zero order calls. Local compileall and diff checks pass; pytest/Ruff/mypy are unavailable. The bounded Pod replay could not start because the owner-provided terminal returned Waiting for service to respond; no lake, holdout or broker access occurred. Turn to Claude for review and a later Pod run."
+    },
+    {
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "requirements": [
+        "R-03"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "id": "T-188",
+      "title": "Give the Tai demo runtime a real bar feed (lake tailer in the API process)",
+      "status": "todo",
+      "depends_on": [
+        "T-186"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t188_tai_demo_bar_feed.md exactly. Tests with a temporary parquet lake and mock source only; no broker call, no redeploy, no risk or gate edits. Dry-run default stays true."
+      ],
+      "deliverables": [
+        "docs/specs/t188_tai_demo_bar_feed.md"
+      ]
     }
   ],
   "decisions": [
@@ -26818,19 +26842,6 @@
     },
     {
       "revision": 501,
-      "ts": "2026-10-19T15:50:00+03:00",
-      "agent": "codex",
-      "action": "start_t187_runtime_replay",
-      "task_ids": [
-        "T-187"
-      ],
-      "files_changed": [
-        "agent_state/AGENT_HANDOFF.json"
-      ],
-      "summary": "Started T-187 from authoritative origin/main after Claude queued the task in rev500. Build and offline replay only; no broker, network, holdout, redeploy, risk/gate edits or secrets. Turn remains codex while implementing."
-    },
-    {
-      "revision": 502,
       "ts": "2026-10-19T16:00:00+03:00",
       "agent": "codex",
       "action": "review_t187_build_pod_unavailable",
@@ -26840,7 +26851,24 @@
       "files_changed": [
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the T-187 build and comparison-helper test from authoritative origin/main. Compileall and diff checks pass; desktop pytest/Ruff/mypy are unavailable. The bounded Pod URL returned Waiting for service to respond, so no lake replay or evidence was claimed. No broker, network, holdout, redeploy, risk/gate or secrets. Turn to Claude for review."
+      "summary": "Started T-187 ('Started T-187 from authoritative origin/main after Claude queued the task in rev500. Build and offline replay only; no broker, network, holdout, redeploy, risk/gate edits or secrets. Turn remains codex while implementing.') then: Completed the T-187 build and comparison-helper test from authoritative origin/main. Compileall and diff checks pass; desktop pytest/Ruff/mypy are unavailable. The bounded Pod URL returned Waiting for service to respond, so no lake replay or evidence was claimed. No broker, network, holdout, redeploy, risk/gate or secrets. Turn to Claude for review."
+    },
+    {
+      "revision": 502,
+      "ts": "2026-10-19T15:45:00+03:00",
+      "agent": "claude",
+      "action": "queue_t188_feed_review_t187",
+      "task_ids": [
+        "T-188",
+        "T-187"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t188_tai_demo_bar_feed.md",
+        "scripts/lab_t187_runtime_replay.py",
+        "tests/unit/test_t187_runtime_replay.py"
+      ],
+      "summary": "Queued T-188 (priority): the Pod showed the API and the recorder run as separate processes, and T-186 registered its minute-bar callback on an API-side recorder that is never connected to the stream, so the runtime would get no bars. Spec docs/specs/t188_tai_demo_bar_feed.md (lake tailer in the API process, stale-feed alert, start-up line). T-187: build merged-for-CI (Claude applied ruff format); the lake replay itself has not been run (needs the Pod lake), so T-187 stays in review until a replay result exists; it does not block T-188. Turn to codex."
     }
   ],
   "project_summary": "T-186 accepted; T-044 cannot start because T-017 remains blocked on B-007 missing Capital.com recorder overlap data. No safe unblocked Codex task is available."
