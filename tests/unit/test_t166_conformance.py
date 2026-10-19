@@ -5,12 +5,20 @@ from scripts import lab_t162_pine_port as port
 from trader.data.resample import Candle
 
 
-def _bars(count: int, *, day: int = 6, close: float = 100.0) -> tuple[Candle, ...]:
-    start = datetime(2026, 10, day, tzinfo=UTC)
+def _bars(
+    count: int, *, day: int = 6, close: float = 100.0, start: datetime | None = None
+) -> tuple[Candle, ...]:
+    first = start or datetime(2026, 10, day, tzinfo=UTC)
     return tuple(
-        Candle(start + timedelta(minutes=3 * i), close, close + 1.0, close - 1.0, 0.0)
+        Candle(first + timedelta(minutes=3 * i), close, close + 1.0, close - 1.0, close, 1.0)
         for i in range(count)
     )
+
+
+def _aligned_start() -> datetime:
+    # First 54-minute bucket boundary (epoch-aligned, as the port groups bars) after 2026-10-06.
+    minutes = int(datetime(2026, 10, 6, tzinfo=UTC).timestamp() // 60)
+    return datetime.fromtimestamp((minutes // 54 + 1) * 54 * 60, UTC)
 
 
 def _features(
@@ -47,7 +55,7 @@ def test_t166_structure_risk_uses_previous_bars_and_atr_buffer():
     ok, risk = port._risk(bars, _features(6, atr=1.0), 5, "long")
     # Pine uses low[1]..low[5], so the current bar's low=99 is excluded:
     # stop=95-0.20 and entry=100, giving 5.20R, above the 2 ATR cap.
-    assert risk == 5.2
+    assert abs(risk - 5.2) < 1e-9
     assert not ok
 
 
@@ -59,7 +67,7 @@ def test_t166_smart_filter_requires_direction_and_location():
 
 
 def test_t166_closed_ha_values_are_lookahead_off():
-    bars = _bars(36)
+    bars = _bars(36, start=_aligned_start())
     opens, closes = port._ha_series(bars, "closed")
     # Pine request.security(..., lookahead_off) exposes the prior confirmed
     # 54-minute value throughout the next group; the first group is unconfirmed.

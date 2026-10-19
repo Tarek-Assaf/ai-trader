@@ -14286,7 +14286,7 @@
       "id": "V-425",
       "task_id": "T-166",
       "subject": "Claude review of T-166 Pine-port conformance audit",
-      "method": "Read the audit table, the new tests and the spec; ran ruff check --fix and ruff format (line length 100) on the test file; checked the safety counters in the report.",
+      "method": "Read the audit table, the new tests and the spec; ran ruff check --fix and ruff format (line length 100) on the test file; checked the safety counters in the report. CI first run failed on three of the new tests (test bugs, not port bugs); fixed the test helper and ran all five tests locally with stubs, all pass.",
       "result": "pass",
       "checked": "Acceptance met: rule table with Pine lines, port functions and tests; 12 covered, 2 missing (unused with owner settings), 1 difference; 34 inputs listed; Q-066 confirms owner values; no port change; no broker, order, holdout, lake or production activity.",
       "evidence": [
@@ -24722,7 +24722,7 @@
         "docs/specs/t167_dashboard_count_check.md",
         "tests/unit/test_t166_conformance.py"
       ],
-      "summary": "Reviewed T-166: pass (V-425). Merged PR 297 first, rebuilt Codex's T-166 on main, fixed import order and one long line. Recorded D-050 and queued T-167, a count-and-mix comparison of the port against the owner's two dashboards, which needs no bar alignment. Historical Tai rerun stays blocked until T-167. Turn to codex (D-045)."
+      "summary": "Reviewed T-166: pass (V-425). Merged PR 297 first, rebuilt Codex's T-166 on main, fixed import order and one long line, and corrected three of Codex's new tests that failed in CI (helper put 0.0 in the close field; 54-minute test bars were not epoch-aligned). No port code changed. Recorded D-050 and queued T-167, a count-and-mix comparison of the port against the owner's two dashboards, which needs no bar alignment. Historical Tai rerun stays blocked until T-167. Turn to codex (D-045)."
     }
   ],
   "project_summary": "T-166 accepted: the Pine port matches the source on 12 of 15 audited rules and the owner's inputs equal the defaults. Entry-by-entry reproduction is impossible on our data (D-049), so T-167 compares the port's trade counts and outcome mix with the owner's dashboards (D-050). Historical Tai rerun waits for T-167."
