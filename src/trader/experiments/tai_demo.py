@@ -474,6 +474,7 @@ class TaiDemoRunner:
                 cycle_id,
                 "one_position_rule",
                 event="position_open",
+                alert=False,
                 epic=bar.epic,
             )
         if self._startup_blocked:
@@ -561,7 +562,7 @@ class TaiDemoRunner:
         if receipt is None:
             return self._refusal(
                 cycle_id,
-                "receipt_none",
+                "guardian_veto",
                 event="guardian_veto",
                 action="REJECTED",
                 epic=bar.epic,
@@ -956,12 +957,17 @@ class TaiDemoRunner:
         *,
         event: str,
         action: str = "NO_TRADE",
+        alert: bool = True,
         **details: object,
     ) -> DemoOutcome:
-        """Journal a refusal and emit one bounded safety alert for its reason."""
+        """Journal a refusal and emit one bounded safety alert for its reason.
+
+        ``alert=False`` is for routine refusals (an already-open position) that are
+        journaled but are not a blocked would-be entry worth a notification.
+        """
 
         self._journal_event(cycle_id, event, reason=reason, **details)
-        if reason not in self._refusal_alerted:
+        if alert and reason not in self._refusal_alerted:
             self._refusal_alerted.add(reason)
             epic = details.get("epic") or self._epic or "unknown"
             self._send_alert(f"entry refused for {epic}: {reason}")

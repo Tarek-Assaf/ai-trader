@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 537,
+  "turn": "codex",
+  "revision": 538,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-197 implemented audit items 7-9 and is ready for Claude review; Q-075 spread ceiling remains open, so Tai is not ready to enable. T-196 trace is accepted. Dry-run stays on. No broker orders, holdout reads, risk/gate edits or secrets.",
+    "summary": "T-197 implemented audit items 7-9 and is ready for Claude review; Q-075 spread ceiling remains open, so Tai is not ready to enable. T-196 trace is accepted. Dry-run stays on. No broker orders, holdout reads, risk/gate edits or secrets. T-197 accepted: CME break wired, refusals journaled, exit errors fail safe; spread guard still waits for Q-075. Next for Codex: T-193.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -48,7 +48,7 @@
       "broker_env": "demo"
     },
     "last_task": "T-197",
-    "last_status": "review"
+    "last_status": "done"
   },
   "requirements": [
     {
@@ -6471,7 +6471,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -16323,6 +16323,23 @@
       ],
       "validated_by": "codex",
       "reverify_if": "T-197 review requests changes or CI reports a failure"
+    },
+    {
+      "id": "V-482",
+      "task_id": "T-197",
+      "subject": "T-197 review and acceptance",
+      "method": "Read spec and diff against acceptance; read CI log of PR 379 (mypy clean, 826 pass, 3 fail); fixed the 3 failures in the Claude review (None receipt keeps reason guardian_veto, routine one_position_rule refusals journal without an alert, CME-break test fixture start 21:00 UTC); ruff check/format line 100 clean; merge only after quality CI success.",
+      "result": "pass",
+      "checked": "CME break wired DST-aware via zoneinfo; all refusal outcomes journaled and alerts throttled; exit modify/close/partial errors journaled, one alert, state kept and retried; Q-075 spread guard correctly left out; dry-run untouched; no broker writes, holdout reads, risk/gate edits, redeploy or secrets.",
+      "evidence": [
+        "docs/evidence/t192/audit.md",
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/experiments/tai_wiring.py",
+        "tests/unit/test_tai_demo.py",
+        "tests/unit/test_tai_wiring.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "Tai runtime exit or refusal code changes"
     }
   ],
   "blockers": [
@@ -28176,6 +28193,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Implemented T-197 items 7-9 with focused tests and safe local validation. Q-075 spread ceiling remains deferred. Full CI and mypy are left for Claude review. No broker calls or destructive operations. Turn to claude."
+    },
+    {
+      "revision": 538,
+      "ts": "2026-10-20T02:58:00+03:00",
+      "agent": "claude",
+      "action": "accept_t197_queue_t193",
+      "task_ids": [
+        "T-197",
+        "T-193"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_wiring.py"
+      ],
+      "summary": "T-197 accepted (V-482) after fixing 3 failing tests (guardian_veto reason on None receipt, no alert for routine one_position_rule, CME break test fixture). Next for Codex: T-193 (recorder reconnects, Pod measurement). Dry-run stays on. No broker calls, holdout reads, risk/gate edits, redeploy or secrets. Turn to codex."
     }
   ],
   "project_summary": "T-197 implementation is complete and handed to Claude for review; items 7-9 are addressed, Q-075 spread ceiling remains open, and Tai stays disabled/dry-run. T-196 trace is accepted. No broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets."

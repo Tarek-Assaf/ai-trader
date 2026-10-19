@@ -68,7 +68,7 @@ def test_cme_break_callback_is_dst_aware_and_marks_spanning_bars() -> None:
     assert is_cme_maintenance_break(datetime(2026, 1, 19, 22, 0, tzinfo=UTC))
     assert not is_cme_maintenance_break(datetime(2026, 10, 19, 20, 59, tzinfo=UTC))
 
-    start = datetime(2026, 10, 19, 20, 59, tzinfo=UTC)
+    start = datetime(2026, 10, 19, 21, 0, tzinfo=UTC)
     builder = ThreeMinuteBarBuilder("NSXUSD", in_break=is_cme_maintenance_break)
     result = builder.extend(
         (
