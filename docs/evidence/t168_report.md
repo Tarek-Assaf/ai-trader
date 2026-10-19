@@ -22,6 +22,6 @@ The forming mode still produced zero trades over the full range. Of 4,013 bars, 
 
 Pod command exited 0: `timeout 1200s /app/.venv/bin/python scripts/lab_t168_counts.py --lake /workspace/data/lake --owner-file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv --output /tmp/t168_counts.json --report /tmp/t168_report.md`.
 
-Pod artifact SHA-256: counts `3fc095ff76aa727c26430db07627df2f1229cac66b8a3ea69b0c0100a6201ac3`; report `3a3c36b00036ef4ff396259c3331b87284d7862785e5e4f911a30986614a3ab2`.
+Pod artifact SHA-256: counts `f52866325c2a4b7f3d030fd333e78ad3ccb22946eb6e3835243f5e0a8943fa3a`; report `3a3c36b00036ef4ff396259c3331b87284d7862785e5e4f911a30986614a3ab2`.
 
 Safety counters are all zero/false: no broker calls, orders, sealed holdout read, lake writes, production-state writes, tuning, or strategy search.
