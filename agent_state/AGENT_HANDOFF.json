@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 517,
+  "revision": 521,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-187 accepted (V-464): the wired Tai runtime reproduced only 2 of 25 port entries, so it is not cleared for demo orders. T-195 (explain the misses) sent back once for a memory-bounded loader and clean lint. No broker orders, no holdout reads.",
+    "summary": "T-187 accepted: the wired Tai runtime reproduced only 2 of 25 port entries, so it is not cleared for demo orders. T-195 (explain the misses) is blocked on an owner decision (Q-073) after two review cycles; partial finding: 23 misses first fail at the HA cross gate. Codex works on T-191 meanwhile. No broker orders, no holdout reads.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -48,7 +48,7 @@
       "broker_env": "demo"
     },
     "last_task": "T-195",
-    "last_status": "changes_requested"
+    "last_status": "review"
   },
   "requirements": [
     {
@@ -1158,7 +1158,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط·آ´أ¢â€¢ع¾ط·آ´ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¢آ¤ط·آ¬ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط¢آ£ط·آ¸ط¸â‚¬ط£آ¹ط·آ¸ط¢آ¤ط·طŒأ¢â€‌ع©ط¸â€™1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ·ط¢آ¸ط·آ¸أ¢â€ڑآ¬ط·آ·ط¢آ²ط·آ·ط¢آ¸ط·آ¸أ¢â€ڑآ¬ط·آ¸أ¢â€ڑآ¬ط·آ·ط¢آ¸ط·آ¢ط¢آ¤ط·آ·ط¢آ´ط£آ¢أ¢â‚¬آ¢ط¹آ¾ط·آ·ط¢آ´ط·آ·ط¢آ¸ط·آ¸أ¢â€ڑآ¬ط·آ·ط¢آ²ط·آ·ط¢آ¸ط·آ¢ط¢آ¤ط·آ·ط¢آ¬ط·آ·ط¢آ¸ط·آ¸أ¢â€ڑآ¬ط·آ·ط¢آ²ط·آ·ط¢آ¸ط·آ¸أ¢â€ڑآ¬ط·آ¸أ¢â€ڑآ¬ط·آ·ط¢آ¸ط·آ¢ط¢آ¤ط·آ¢ط¢آ£ط·آ·ط¢آ¸ط·آ¸أ¢â€ڑآ¬ط·آ£ط¢آ¹ط·آ·ط¢آ¸ط·آ¢ط¢آ¤ط·آ·ط·إ’ط£آ¢أ¢â‚¬â€Œط¹آ©ط·آ¸أ¢â‚¬â„¢1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -5262,7 +5262,7 @@
         "docs/evidence/t157_rule_by_rule.csv",
         "docs/evidence/t157_report.md"
       ],
-      "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in ±3 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in ±3 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
+      "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in آ±3 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in آ±3 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
     },
     {
       "id": "T-158",
@@ -6395,7 +6395,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "blocked",
       "requirements": [
         "R-03"
       ],
@@ -6405,7 +6405,9 @@
       "acceptance_criteria": [
         "Follow docs/specs/t195_runtime_miss_diagnostic.md exactly. Name the cause of every miss in the T-187 replay or say exactly what is unexplained. Diagnostic only: do not fix the runtime yet.",
         "No broker order or write call, no network, no sealed holdout read, no risk or gate edits, no redeploy, no secrets. Ruff check and format (line length 100), CI green. One log entry, hand the turn to claude, stop.",
-        "CHANGES REQUESTED (cycle 1): the 25-row trace never ran because the loader read the whole lake (about 3 GB RSS). Do this and nothing else: (1) Start from current origin/main (do not stack on old branches). (2) Replace the loader with a bounded one: read each parquet file with pyarrow column arrays (no to_pylist of the whole file), apply a ts_utc filter to [first selected date minus 5 days, 2026-07-01T00:00:00Z) before materializing, and keep only needed columns; cap memory and print peak RSS in the summary. Reuse the T-187 selection of ten trading dates. (3) scripts/lab_t195_runtime_miss.py and its test must pass ruff check and ruff format with line length 100 (currently 9 errors: long lines, unused port_by_key, unsorted imports) and mypy. (4) The report text must be generated from the measured results, not pre-written conclusions. (5) Run it once on the Pod, record the 25-row table and the named cause per miss. No broker call, no network, no holdout read, no lake writes."
+        "CHANGES REQUESTED (cycle 1): the 25-row trace never ran because the loader read the whole lake (about 3 GB RSS). Do this and nothing else: (1) Start from current origin/main (do not stack on old branches). (2) Replace the loader with a bounded one: read each parquet file with pyarrow column arrays (no to_pylist of the whole file), apply a ts_utc filter to [first selected date minus 5 days, 2026-07-01T00:00:00Z) before materializing, and keep only needed columns; cap memory and print peak RSS in the summary. Reuse the T-187 selection of ten trading dates. (3) scripts/lab_t195_runtime_miss.py and its test must pass ruff check and ruff format with line length 100 (currently 9 errors: long lines, unused port_by_key, unsorted imports) and mypy. (4) The report text must be generated from the measured results, not pre-written conclusions. (5) Run it once on the Pod, record the 25-row table and the named cause per miss. No broker call, no network, no holdout read, no lake writes.",
+        "CHANGES REQUESTED (cycle 2, last allowed): bounded loader, lint and memory are accepted; do not touch them. Fix only the evidence: (1) summary.json rows must carry the side-by-side values the spec requires for port AND runtime (HA54m open/close/colour, EMA200, ADX, +DI/-DI, VWAP, anchor, each gate boolean) at each entry bar; the script builds them but never writes them. (2) bar_construction currently compares bars to themselves (_bar_diff(bars, bars)); compare ThreeMinuteBarBuilder output with the port's resampled 3m bars (count, first differing bar, OHLC). (3) cause must be derived from the measured values, not the default fall-through 'pine_difference_or_unexplained'; rows where the runtime did emit a matching entry are matches, not bar_or_stop_difference. State per miss the first value that differs between port and runtime (for example HA open/close, EMA seed, anchor reset), or say exactly what is unexplained. (4) Check spec hypotheses 4 and 5 against the runtime code and say what you read. (5) Report must not contradict itself (history window ruled out vs proposed history fix). Rerun once on the Pod, no network, no holdout read. One log entry, hand turn to claude. A third failure goes to the owner.",
+        "BLOCKED (cycle 2 of 2 failed, V-467, D-075): no new Pod run of the cycle-2 script exists, so summary.json/report.md are still the cycle-1 output; ruff format --check fails on the script and test. Waiting for the owner's answer to Q-073. Do not work on T-195 until it is answered."
       ],
       "deliverables": [
         "docs/specs/t195_runtime_miss_diagnostic.md",
@@ -6413,7 +6415,7 @@
         "tests/unit/test_t195_runtime_miss.py",
         "docs/evidence/t195/"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [],
       "completion_note": ""
     }
@@ -6986,6 +6988,20 @@
     {
       "id": "D-073",
       "statement": "Claude (owner-authorized-by-delegation): T-195 changes requested, cycle 1: bounded date-filtered loader, ruff-clean code, report generated from measured results, then one Pod run. Not merging the unrun script; Codex resumes from current main.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "claude"
+    },
+    {
+      "id": "D-074",
+      "statement": "Claude (owner-authorized-by-delegation): T-195 changes requested, cycle 2 of 2 (V-466): evidence must carry real port vs runtime values, a real bar-construction comparison and measured causes. Loader and lint accepted. A third failure goes to the owner.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "claude"
+    },
+    {
+      "id": "D-075",
+      "statement": "Claude: T-195 review cycle 2 of 2 failed again (V-467): the cycle-2 script was never run on the Pod, evidence files are cycle-1 output, ruff format fails on 2 files. Per protocol the third problem goes to the owner (Q-073) and T-195 is blocked. Lane A continues with T-191 (independent of T-195). Cause of the 23 misses is not yet proven; the runtime is still not cleared for demo orders.",
       "status": "final",
       "do_not_reopen": false,
       "decided_by": "claude"
@@ -15977,6 +15993,36 @@
       ],
       "validated_by": "claude",
       "reverify_if": "script or loader changes"
+    },
+    {
+      "id": "V-466",
+      "task_id": "T-195",
+      "subject": "T-195 cycle 2 (bounded run on Pod)",
+      "method": "Read the script, summary.json and report; ran ruff check and ruff format --check (line 100) on the script and test.",
+      "result": "fail",
+      "checked": "Loader, lint and memory are fixed (about 150 MB RSS, safety counters clean). But summary.json rows hold only at/direction/cause/first_failing_gate, so no port vs runtime values exist; bar_construction compares the bars with themselves; 23 causes are the default fall-through label pine_difference_or_unexplained, not a measured cause; the 2 runtime-matched rows are labelled bar_or_stop_difference; report contradicts itself. No cause is established. changes_requested, cycle 2 of 2.",
+      "evidence": [
+        "docs/evidence/t195/summary.json",
+        "docs/evidence/t195/report.md",
+        "scripts/lab_t195_runtime_miss.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "script or evidence changes"
+    },
+    {
+      "id": "V-467",
+      "task_id": "T-195",
+      "subject": "T-195 cycle 2 review of branch codex/t195-runtime-miss-cr3 (PR #360)",
+      "method": "Read the diff, summary.json and report on the branch; ruff check and ruff format --check (line 100) on the script and test; compared the Codex log entry with the files.",
+      "result": "fail",
+      "checked": "Code now compares builder bars with an independent UTC resample and writes port and runtime values, but it was never run: Codex states the Pod has an older script and no new output was claimed, so docs/evidence/t195 is still cycle-1 output and the cycle-2 acceptance (rerun once on the Pod) is unmet. ruff check passes; ruff format --check would reformat the script and test. pytest could not be run in this review environment; CI will run it.",
+      "evidence": [
+        "scripts/lab_t195_runtime_miss.py",
+        "docs/evidence/t195/summary.json",
+        "docs/evidence/t195/report.md"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "new Pod run of the cycle-2 script is recorded"
     }
   ],
   "blockers": [
@@ -16441,12 +16487,12 @@
       "to": "human",
       "from": "codex",
       "text": "After PR #9 is approved and merged, let the recorder run on the redeployed demo pod for at least two hours, then share only the redacted /health data_recorder fields (configured, status, ping_reply_ok, market_status, reconnect_count, last_reconnect_reason, last_closed_bar_at). This confirms the multi-hour reconnect behavior required by T-014. Do not paste credentials or account details.",
-      "status": "open",
+      "status": "answered",
       "options": [
         "Run the demo soak after redeploy",
         "Need help with the steps"
       ],
-      "answer": ""
+      "answer": "Owner 2026-10-19: recorder is healthy (reconnect_count 82, cause unproven); T-193 covers it."
     },
     {
       "id": "Q-023",
@@ -16891,7 +16937,7 @@
       "id": "Q-057",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "The mirror (opposite-direction) control of the Tai test has now failed two review cycles: Codex's version is still the degenerate one (about 9 trades a year). It is a side check, not the main result. How do you want to handle it?",
       "options": [
         "A: Drop the mirror control for the Tai test; the real-spread run on recorded data and the owner's trade list matter more.",
@@ -16899,13 +16945,13 @@
         "C: Keep asking Codex to redo it as a separate task."
       ],
       "recommendation": "B: it is a small change and the Pod run can be bundled into the next task.",
-      "answer": ""
+      "answer": "Owner 2026-10-19: option B. Claude writes the mirror-control code change; Codex runs it on the Pod in parallel with the demo roadmap (Lane B)."
     },
     {
       "id": "Q-058",
       "to": "human",
       "from": "codex",
-      "status": "open",
+      "status": "answered",
       "text": "T-146 code and synthetic checks are ready, but the real-lake run needs the Pod. Can you re-enable the provided terminal endpoint, or run `python scripts/lab_t146_matching.py --lake /workspace/data/lake --output /workspace/state/t146_evidence` on the Pod and share only its redacted JSON summary?",
       "options": [
         "Re-enable/provide the Pod terminal",
@@ -16913,7 +16959,7 @@
         "Defer the real-data run"
       ],
       "recommendation": "Run the read-only command on the Pod after confirming the image contains the T-146 branch code; it produces no broker calls, orders, holdout reads or promotion writes.",
-      "answer": ""
+      "answer": "Owner 2026-10-19: closed. Codex has working Pod terminal access (answered; no further action)."
     },
     {
       "id": "Q-059",
@@ -17106,6 +17152,20 @@
       ],
       "recommendation": "A: wiring and instrument-rule reads can be built and tested with mock data first, then the owner redeploys once at a time of his choosing.",
       "answer": "Owner 2026-10-19 12:49 Riyadh asked 'how to fix it?' about the runner not being connected to the feed and broker rules; the fix is the wiring task, so option A (queue T-186) was carried out. The owner can still hold the redeploy."
+    },
+    {
+      "id": "Q-073",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "T-195 (why the wired Tai runtime misses 23 of 25 indicator entries) has used both review cycles. Codex rewrote the diagnostic script but could not run the new version on the Pod, because the Pod holds an older copy of the script, so no new evidence exists. How do you want to get the new script onto the Pod and run it once?",
+      "options": [
+        "A: Codex tries to copy the new script onto the running Pod through the terminal and runs it once (no redeploy; recommended)",
+        "B: Claude merges the formatted script into main now; it reaches the Pod at your next planned redeploy and runs then",
+        "C: Skip the full diagnostic; accept the partial finding (23 of 23 misses first fail at the Heikin Ashi cross gate) and queue a direct fix task for that gate"
+      ],
+      "recommendation": "A: it needs no redeploy and no Pod downtime. If Codex cannot transfer the file, fall back to B at the next redeploy. Meanwhile Codex works on T-191, which does not depend on T-195.",
+      "answer": ""
     }
   ],
   "log": [
@@ -27479,6 +27539,70 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-195 first attempt failed review (V-465, D-073): the Pod trace ran out of memory on the full-lake loader, ruff has 9 errors, report text was pre-written. Changes requested (cycle 1): bounded date-filtered loader, clean lint, measured report, one Pod run, starting from current main. Turn to codex."
+    },
+    {
+      "revision": 518,
+      "ts": "2026-10-19T19:00:00Z",
+      "agent": "codex",
+      "action": "complete_t195_bounded_diagnostic_handoff_claude",
+      "task_ids": [
+        "T-195"
+      ],
+      "files_changed": [
+        "scripts/lab_t195_runtime_miss.py",
+        "tests/unit/test_t195_runtime_miss.py",
+        "docs/evidence/t195/summary.json",
+        "docs/evidence/t195/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Measured the bounded T-195 diagnostic on the owner Pod: 25 port entries, 2 runtime entries, 23 misses, with 23 first failing at ha_cross and no history-window recoveries. Bounded loader stayed near 150 MB RSS; no broker/network/holdout/lake/risk/redeploy side effects. Turn to claude for review."
+    },
+    {
+      "revision": 519,
+      "ts": "2026-10-19T19:35:00Z",
+      "agent": "claude",
+      "action": "t195_changes_requested_cycle2",
+      "task_ids": [
+        "T-195"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t195_runtime_miss.py",
+        "tests/unit/test_t195_runtime_miss.py",
+        "docs/evidence/t195/"
+      ],
+      "summary": "T-195 cycle 2 reviewed (V-466, D-074): loader and lint fixed, but evidence has no port vs runtime values, bar comparison is self-vs-self and causes are a default label. Changes requested (cycle 2 of 2). Also recorded owner answers Q-022, Q-057 (option B, Lane B), Q-058 closed. Turn to codex."
+    },
+    {
+      "revision": 520,
+      "ts": "2026-10-19T19:55:00+03:00",
+      "agent": "codex",
+      "action": "complete_t195_cycle2_handoff_claude",
+      "task_ids": [
+        "T-195"
+      ],
+      "files_changed": [
+        "scripts/lab_t195_runtime_miss.py",
+        "tests/unit/test_t195_runtime_miss.py",
+        "docs/evidence/t195/summary.json",
+        "docs/evidence/t195/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-195 cycle 2 from the authoritative claude/t195-cr3 review branch (PR #359). Fixing the three review findings: independently compare runtime-builder bars with UTC-resampled bars, record explicit port/runtime entry and indicator values, and classify each miss by the first named runtime gate or a precise remaining unknown. Read-only diagnostic only; no broker, orders, holdout, lake writes, redeploy, risk/gate edits or secrets. Turn remains codex while implementing. Completed the cycle-2 review fixes in PR #360 (base claude/t195-cr3): runtime bars are compared with an independent UTC resampler, each row records explicit port and nearest runtime entry values beside the indicator/gate trace, and causes name the first failing runtime gate or precise remaining trace state instead of a default label. Added helper tests. Python compileall and git diff --check pass; desktop pytest, Ruff, mypy and uv are unavailable. The owner Pod terminal was reachable and the bounded prior-build run confirmed 25 port entries, 2 runtime entries and 23 misses; the deployed script predates this branch, so no new output files were claimed. No broker calls, orders, holdout reads, lake writes, redeploy, risk/gate edits or secrets. Turn to Claude for review."
+    },
+    {
+      "revision": 521,
+      "ts": "2026-10-19T22:45:00+03:00",
+      "agent": "claude",
+      "action": "review_t195_cycle2_escalate",
+      "task_ids": [
+        "T-195",
+        "T-191"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-195 cycle 2 reviewed (V-467, D-075): the new script was never run on the Pod, so there is no new evidence, and ruff format fails on 2 files. Both review cycles are used, so T-195 is blocked and the question went to the owner (Q-073, recommendation A). Codex: do not work on T-195 until Q-073 is answered; start T-191 now (spec docs/specs/t191_tai_state_persistence.md) on a fresh branch from current main. Merged Codex's two consecutive entries (rev 520). No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
