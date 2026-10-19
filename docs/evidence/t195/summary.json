@@ -1,0 +1,695 @@
+{
+  "bar_construction": {
+    "count": 3859,
+    "same": true
+  },
+  "bounded_history_bars": 600,
+  "bounded_runtime_entries": 1,
+  "closed_3m_bars": 3859,
+  "comparison": {
+    "exact": false,
+    "extras": [],
+    "matched": 1,
+    "matches": [
+      {
+        "at": "2026-06-24T16:00:00+00:00",
+        "direction": "BUY",
+        "stop_delta": "3.32E-13"
+      }
+    ],
+    "misses": [
+      {
+        "port": {
+          "entry": "30278.921",
+          "stop": "30249.203843524592"
+        },
+        "reason": "bar_or_stop_difference",
+        "runtime_candidate": {
+          "entry": "29556.867",
+          "stop": "29462.963656558964332"
+        }
+      },
+      {
+        "port": {
+          "entry": "30262.32",
+          "stop": "30281.5112111378"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "30219.055",
+          "stop": "30256.351975421672"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "30240.708",
+          "stop": "30267.824759658448"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "30320.586",
+          "stop": "30377.42052887693"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "30360.649",
+          "stop": "30334.88497838238"
+        },
+        "reason": "bar_or_stop_difference",
+        "runtime_candidate": {
+          "entry": "29556.867",
+          "stop": "29462.963656558964332"
+        }
+      },
+      {
+        "port": {
+          "entry": "30266.175",
+          "stop": "30271.209335323256"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "30262.566",
+          "stop": "30311.61962030889"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29353.703",
+          "stop": "29381.041960623064"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29414.199",
+          "stop": "29469.779715014396"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29454.681",
+          "stop": "29494.675408277486"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29369.498",
+          "stop": "29500.044786382216"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29773.364",
+          "stop": "29738.88289788457"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29375.137",
+          "stop": "29435.314793981925"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29193.186",
+          "stop": "29130.558000782872"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29238.22",
+          "stop": "29122.427219577297"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29172.407",
+          "stop": "29228.112319150947"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29212.014",
+          "stop": "29144.57730857682"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29203.164",
+          "stop": "29215.309529042534"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29191.242",
+          "stop": "29205.903371881883"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29269.566",
+          "stop": "29237.358834888"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29232.271",
+          "stop": "29384.63117276517"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29746.153",
+          "stop": "29688.956252852488"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29763.442",
+          "stop": "29799.556551589812"
+        },
+        "reason": "missing_runtime_direction"
+      },
+      {
+        "port": {
+          "entry": "29762.821",
+          "stop": "29770.751522703096"
+        },
+        "reason": "missing_runtime_direction"
+      }
+    ],
+    "port_count": 26,
+    "runtime_count": 1
+  },
+  "epic": "NSXUSD",
+  "holdout_start": "2026-07-01T00:00:00+00:00",
+  "hypothesis_counts": {
+    "matched": 1,
+    "runtime_gate_ha_cross": 25
+  },
+  "measurement": "Generated by scripts/lab_t195_runtime_miss.py on the owner Pod at 2026-10-19T19:56Z with the bounded 14-day loader; the Pod raw JSON included port/runtime values, HA54m, EMA200, ADX, DI, VWAP, anchor, and gate details for every row.",
+  "minute_rows": 13154,
+  "port_entries": 26,
+  "position_lock": {
+    "applies": false,
+    "reason": "TaiSignalProvider is traced directly and has no position state."
+  },
+  "rows": [
+    {
+      "at": "2026-06-19T08:21:00+00:00",
+      "cause": "bar_or_stop_difference",
+      "direction": "BUY",
+      "port": {},
+      "port_entry": {
+        "entry": "30278.921",
+        "stop": "30249.203843524592"
+      },
+      "runtime_bounded": {},
+      "runtime_candidate": {
+        "entry": "29556.867",
+        "stop": "29462.963656558964332"
+      },
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-19T11:57:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "30262.32",
+        "stop": "30281.5112111378"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-21T23:30:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "30219.055",
+        "stop": "30256.351975421672"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-22T05:30:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "30240.708",
+        "stop": "30267.824759658448"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-22T15:57:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "30320.586",
+        "stop": "30377.42052887693"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-22T23:21:00+00:00",
+      "cause": "bar_or_stop_difference",
+      "direction": "BUY",
+      "port": {},
+      "port_entry": {
+        "entry": "30360.649",
+        "stop": "30334.88497838238"
+      },
+      "runtime_bounded": {},
+      "runtime_candidate": {
+        "entry": "29556.867",
+        "stop": "29462.963656558964332"
+      },
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-23T00:57:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "30266.175",
+        "stop": "30271.209335323256"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-23T02:15:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "30262.566",
+        "stop": "30311.61962030889"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-24T00:15:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29353.703",
+        "stop": "29381.041960623064"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-24T04:51:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29414.199",
+        "stop": "29469.779715014396"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-24T13:57:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29454.681",
+        "stop": "29494.675408277486"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-24T15:09:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29369.498",
+        "stop": "29500.044786382216"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-24T16:00:00+00:00",
+      "cause": "matched",
+      "direction": "BUY",
+      "port": {},
+      "port_entry": {
+        "entry": "29556.867",
+        "stop": "29462.963656558964332"
+      },
+      "runtime_bounded": {},
+      "runtime_candidate": {
+        "entry": "29556.867",
+        "stop": "29462.963656558964332"
+      },
+      "runtime_entry": {
+        "entry": "29556.867",
+        "stop": "29462.963656558964332"
+      },
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-24T23:42:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "BUY",
+      "port": {},
+      "port_entry": {
+        "entry": "29773.364",
+        "stop": "29738.88289788457"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-26T01:39:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29375.137",
+        "stop": "29435.314793981925"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-26T08:18:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "BUY",
+      "port": {},
+      "port_entry": {
+        "entry": "29193.186",
+        "stop": "29130.558000782872"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-26T15:15:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "BUY",
+      "port": {},
+      "port_entry": {
+        "entry": "29238.22",
+        "stop": "29122.427219577297"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-26T19:39:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29172.407",
+        "stop": "29228.112319150947"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-28T23:18:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "BUY",
+      "port": {},
+      "port_entry": {
+        "entry": "29212.014",
+        "stop": "29144.57730857682"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-29T01:57:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29203.164",
+        "stop": "29215.309529042534"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-29T03:21:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29191.242",
+        "stop": "29205.903371881883"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-29T05:03:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "BUY",
+      "port": {},
+      "port_entry": {
+        "entry": "29269.566",
+        "stop": "29237.358834888"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-29T15:45:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29232.271",
+        "stop": "29384.63117276517"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-30T02:36:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "BUY",
+      "port": {},
+      "port_entry": {
+        "entry": "29746.153",
+        "stop": "29688.956252852488"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-30T09:51:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29763.442",
+        "stop": "29799.556551589812"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    },
+    {
+      "at": "2026-06-30T14:27:00+00:00",
+      "cause": "missing_runtime_direction",
+      "direction": "SELL",
+      "port": {},
+      "port_entry": {
+        "entry": "29762.821",
+        "stop": "29770.751522703096"
+      },
+      "runtime_bounded": {
+        "first_failing_gate": "ha_cross"
+      },
+      "runtime_candidate": null,
+      "runtime_entry": null,
+      "runtime_unbounded": {},
+      "unbounded_entry": null
+    }
+  ],
+  "safety": {
+    "broker_calls": 0,
+    "lake_writes": false,
+    "network_access": false,
+    "order_calls": 0,
+    "redeploy": false,
+    "risk_or_gate_edits": false,
+    "sealed_holdout_read": false
+  },
+  "selected_trading_dates": [
+    "2026-06-19",
+    "2026-06-21",
+    "2026-06-22",
+    "2026-06-23",
+    "2026-06-24",
+    "2026-06-25",
+    "2026-06-26",
+    "2026-06-28",
+    "2026-06-29",
+    "2026-06-30"
+  ],
+  "status": "ok",
+  "task": "T-195",
+  "unbounded_runtime_entries": 1
+}
