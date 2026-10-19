@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 484,
+  "revision": 486,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued. Codex: no open task, do not start new work.",
+    "summary": "T-182 accepted. Historical rerun blocked (best session-anchored result 11/31 within 3 bars; gate 25/31). Bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued. Codex: no open task, do not start new work.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -154,7 +154,8 @@
         "T-178",
         "T-179",
         "T-180",
-        "T-181"
+        "T-181",
+        "T-182"
       ]
     },
     {
@@ -6019,6 +6020,38 @@
         "tests/unit/test_t180_hist_tai.py"
       ],
       "completion_note": "Window-only harness fix complete. Pod exit 0: 8/8 cells ran with warm-up and window bars reported separately, signals and trades restricted to the owner window, warm-up trades discarded, and zero-trade cells marked not exposed because the unchanged T-162 port has no entry-filter counters. Longer history was not run. Holdout refusal exited 1 before data load. No broker calls, orders, holdout reads, lake writes, production writes, tuning or secrets."
+    },
+    {
+      "id": "T-182",
+      "title": "Session-anchored 54m Heikin Ashi groups in the Tai port (diagnostic, owner window)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-181"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t182_session_anchored_ha.md exactly (anchors epoch/session_1800_ny/rth_0930_ny only, both HA modes, VWAP anchor check, verdict first, 25/31 gate not relaxed).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets. Lint with ruff check and ruff format (line length 100) without per-line noqa. One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t182_report.md",
+        "docs/evidence/t182_entries.csv",
+        "docs/evidence/t182_port.json",
+        "scripts/lab_t162_pine_port.py",
+        "tests/unit/test_t162_pine_port.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t182_report.md",
+        "docs/evidence/t182_entries.csv",
+        "docs/evidence/t182_port.json"
+      ],
+      "completion_note": "Implemented the three pre-declared HA anchors and session VWAP anchor. Pod replay covered both closed and forming modes on the owner window. Best result was session_1800_ny closed at 11/31 within 3 bars and 17/31 within 30 bars; the 25/31 gate was not met. No tuning or additional offsets were attempted."
     }
   ],
   "decisions": [
@@ -6524,6 +6557,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T04:55:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-064",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-182 accepted (V-451). It was queued by a parallel run (rev 484 branch) while another run's rev 484 on main said no new task; Codex ran it, so both are reconciled here by adding T-182 and Codex's original rev 485 entry. Result negative: best 11/31 within 3 bars, 17/31 within 30; gate 25/31 not met; historical rerun stays blocked (safe option, Q-071 open). Positive side effect: the port's replay VWAP now resets at the 18:00 New York session open as in the Pine source. No new task queued: bar-matching diagnostics are exhausted and further variants would be tuning to the owner's list. Next step needs owner input (Q-071 option C) or NQ1 futures data. Turn goes to codex only for protocol alternation; Codex should not start new work.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T05:20:00Z",
       "do_not_reopen": false
     }
   ],
@@ -15266,6 +15307,22 @@
       "validated_by": "claude",
       "date": "2026-10-19T04:55:00Z",
       "reverify_if": "The T-162 port, T-180 harness or owner-window lake data changes."
+    },
+    {
+      "id": "V-451",
+      "task_id": "T-182",
+      "subject": "Claude review of T-182 session-anchored HA diagnostic",
+      "method": "Read spec, diff and report; ruff check and ruff format --check (line length 100) on the port, new script and test (clean); confirmed the three declared anchors only, both HA modes, no sweep, 25/31 gate not relaxed, safety counters all zero. pytest not installed locally; CI quality check runs the tests.",
+      "result": "pass",
+      "checked": "Spec items met. Best anchor session_1800_ny (closed): 11/31 within 3 bars, 17/31 within 30 bars; 25/31 gate NOT met. epoch 8/31 within 3 bars, rth_0930_ny 0/31. VWAP anchor in the port corrected to the 18:00 New York session open (real fix, replay only). Result is negative: session anchoring does not explain the gap; it confirms D-054/T-172 and improves 3/31 to 11/31 within 3 bars only.",
+      "evidence": [
+        "docs/evidence/t182_report.md",
+        "docs/evidence/t182_entries.csv",
+        "docs/evidence/t182_port.json"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T05:20:00Z",
+      "reverify_if": "The T-162 port, the T-182 script or owner-window lake data changes."
     }
   ],
   "blockers": [
@@ -26221,6 +26278,45 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-181 (V-450, D-063). Gate 25/31 still not met, rerun stays blocked on Q-071. Did not queue a session-anchored HA test because T-172 already ran it (negative). No new Codex task; no broker calls. Turn is codex only because the protocol requires alternation: Codex has no open task and should not start one."
+    },
+    {
+      "revision": 485,
+      "ts": "2026-10-19T08:05:00Z",
+      "agent": "codex",
+      "action": "complete_t182_session_anchored_ha",
+      "task_ids": [
+        "T-182"
+      ],
+      "files_changed": [
+        "scripts/lab_t162_pine_port.py",
+        "scripts/lab_t182_session_anchored_ha.py",
+        "tests/unit/test_t162_pine_port.py",
+        "docs/evidence/t182_report.md",
+        "docs/evidence/t182_entries.csv",
+        "docs/evidence/t182_port.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-182 session-anchored HA diagnostic. Best anchor session_1800_ny closed is 11/31 within 3 bars and 17/31 within 30; 25/31 gate not met. Session VWAP anchor corrected; no broker, orders, holdout, lake, production, tuning or secret access. Pod ruff/pytest unavailable; local compile and diff checks pass. Turn to Claude for review."
+    },
+    {
+      "revision": 486,
+      "ts": "2026-10-19T05:20:00Z",
+      "agent": "claude",
+      "action": "accept_t182_no_new_task",
+      "task_ids": [
+        "T-182"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t182_report.md",
+        "docs/evidence/t182_entries.csv",
+        "docs/evidence/t182_port.json",
+        "docs/specs/t182_session_anchored_ha.md",
+        "scripts/lab_t162_pine_port.py",
+        "scripts/lab_t182_session_anchored_ha.py",
+        "tests/unit/test_t162_pine_port.py"
+      ],
+      "summary": "Accepted T-182 (V-451, D-064). Best 11/31 within 3 bars, 17/31 within 30; gate 25/31 not met; rerun stays blocked on Q-071. VWAP anchor fix kept. No new Codex task; no broker calls. Turn is codex only for alternation."
     }
   ],
   "project_summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued. Codex: no open task, do not start new work."
