@@ -22,6 +22,7 @@ class EnvironmentSettings(BaseSettings):
     trading_mode: Literal["paper", "auto"] = "paper"
     broker_env: Literal["demo", "live"] = "demo"
     live_trading_enabled: bool = False
+    tai_demo_experiment: bool = False
     approval_mode: bool = False
     capital_api_key: SecretStr | None = None
     capital_identifier: SecretStr | None = None
