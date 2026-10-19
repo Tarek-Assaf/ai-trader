@@ -365,7 +365,9 @@ def test_dry_run_entry_stop_after_target_one_frees_next_entry_and_alerts_flat():
         dry_run=True,
     )
     assert instance.on_bar(bar()).action == "DRY_RUN"
-    assert instance.on_bar(bar(price="100.5", high="101", low="100.5")).reason == "no_signal"
+    assert instance.on_bar(bar(price="100.5", high="101", low="100.5")).reason == (
+        "one_position_rule"
+    )
     assert instance.on_bar(bar(price="99.5", high="100", low="99.5")).reason == "no_signal"
     assert instance.on_bar(bar()).action == "DRY_RUN"
     assert any("flat" in alert and "stop_entry" in alert for alert in alerts)
