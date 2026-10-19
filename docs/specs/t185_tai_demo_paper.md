@@ -1,4 +1,4 @@
-# T-184: Tai port on the Capital.com DEMO account (owner-directed paper trading)
+# T-185: Tai port on the Capital.com DEMO account (owner-directed paper trading)
 
 ## Why
 Owner 2026-10-19 09:50 Riyadh: "Run the test on the 3m hist data and let us try paper trading for
