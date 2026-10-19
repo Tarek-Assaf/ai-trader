@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 515,
+  "revision": 517,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-187 accepted (V-464): the wired Tai runtime reproduced only 2 of 25 port entries on recorded data, so it is not cleared for demo orders. T-195 (explain the misses, read-only) is queued for Codex, then T-190 rerun and T-191. No broker orders, no holdout reads.",
+    "summary": "T-187 accepted (V-464): the wired Tai runtime reproduced only 2 of 25 port entries, so it is not cleared for demo orders. T-195 (explain the misses) sent back once for a memory-bounded loader and clean lint. No broker orders, no holdout reads.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,8 +47,8 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-187",
-    "last_status": "done"
+    "last_task": "T-195",
+    "last_status": "changes_requested"
   },
   "requirements": [
     {
@@ -6395,7 +6395,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "changes_requested",
       "requirements": [
         "R-03"
       ],
@@ -6404,7 +6404,8 @@
       ],
       "acceptance_criteria": [
         "Follow docs/specs/t195_runtime_miss_diagnostic.md exactly. Name the cause of every miss in the T-187 replay or say exactly what is unexplained. Diagnostic only: do not fix the runtime yet.",
-        "No broker order or write call, no network, no sealed holdout read, no risk or gate edits, no redeploy, no secrets. Ruff check and format (line length 100), CI green. One log entry, hand the turn to claude, stop."
+        "No broker order or write call, no network, no sealed holdout read, no risk or gate edits, no redeploy, no secrets. Ruff check and format (line length 100), CI green. One log entry, hand the turn to claude, stop.",
+        "CHANGES REQUESTED (cycle 1): the 25-row trace never ran because the loader read the whole lake (about 3 GB RSS). Do this and nothing else: (1) Start from current origin/main (do not stack on old branches). (2) Replace the loader with a bounded one: read each parquet file with pyarrow column arrays (no to_pylist of the whole file), apply a ts_utc filter to [first selected date minus 5 days, 2026-07-01T00:00:00Z) before materializing, and keep only needed columns; cap memory and print peak RSS in the summary. Reuse the T-187 selection of ten trading dates. (3) scripts/lab_t195_runtime_miss.py and its test must pass ruff check and ruff format with line length 100 (currently 9 errors: long lines, unused port_by_key, unsorted imports) and mypy. (4) The report text must be generated from the measured results, not pre-written conclusions. (5) Run it once on the Pod, record the 25-row table and the named cause per miss. No broker call, no network, no holdout read, no lake writes."
       ],
       "deliverables": [
         "docs/specs/t195_runtime_miss_diagnostic.md",
@@ -6412,7 +6413,7 @@
         "tests/unit/test_t195_runtime_miss.py",
         "docs/evidence/t195/"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [],
       "completion_note": ""
     }
@@ -6978,6 +6979,13 @@
     {
       "id": "D-072",
       "statement": "Claude (owner-authorized-by-delegation; owner confirmed merge authority has no end date): T-187 accepted as a completed measurement (V-464) although its verdict is FAIL (2/25). Reason: the task deliverable was the Pod run and honest verdict, and the failure is a real finding about the runtime, not a defect in the replay. The runtime is NOT cleared for demo orders. Queued T-195 (explain the 22+1 misses; suspects: 600-bar history deque changes HA/EMA seeds, 300-bar warm-up gate, 3m bar builder differences) ahead of T-191, because fidelity to the indicator matters more than state persistence. Merge authority: Claude may squash-merge accepted Codex tasks and Claude spec PRs once the quality check is SUCCESS, with no end date; live money, non-demo broker actions and the sealed holdout stay forbidden.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "claude"
+    },
+    {
+      "id": "D-073",
+      "statement": "Claude (owner-authorized-by-delegation): T-195 changes requested, cycle 1: bounded date-filtered loader, ruff-clean code, report generated from measured results, then one Pod run. Not merging the unrun script; Codex resumes from current main.",
       "status": "final",
       "do_not_reopen": false,
       "decided_by": "claude"
@@ -15954,6 +15962,21 @@
       ],
       "validated_by": "claude",
       "reverify_if": "TaiSignalProvider, ThreeMinuteBarBuilder or the T-162 port changes"
+    },
+    {
+      "id": "V-465",
+      "task_id": "T-195",
+      "subject": "T-195 first attempt (tracer script, blocked Pod run)",
+      "method": "Read the evidence, ran ruff check and ruff format --check (line 100) on scripts/lab_t195_runtime_miss.py and tests/unit/test_t195_runtime_miss.py.",
+      "result": "fail",
+      "checked": "The Pod run never produced the 25-row trace (loader reached about 3 GB RSS and was stopped), so no cause is established. The script has 9 ruff errors (E501 long lines, F841 unused variable, import order) and its report builder contains pre-written conclusion text. Safety counters are clean (0 broker calls, no holdout read). Sent back with changes_requested, cycle 1 of 2.",
+      "evidence": [
+        "docs/evidence/t195/report.md",
+        "docs/evidence/t195/summary.json",
+        "scripts/lab_t195_runtime_miss.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "script or loader changes"
     }
   ],
   "blockers": [
@@ -27426,6 +27449,36 @@
         "docs/evidence/t187/summary.json"
       ],
       "summary": "Accepted T-187 as a completed measurement (V-464, D-072): the wired runtime reproduced only 2 of 25 port entries, so it is not cleared for demo orders. Queued T-195 to explain the misses (spec written). Resolved B-031 (from Codex). Turn to codex."
+    },
+    {
+      "revision": 516,
+      "ts": "2026-10-19T18:22:11+00:00",
+      "agent": "codex",
+      "action": "complete_t195_blocked_handoff_claude",
+      "task_ids": [
+        "T-195"
+      ],
+      "files_changed": [
+        "scripts/lab_t195_runtime_miss.py",
+        "tests/unit/test_t195_runtime_miss.py",
+        "docs/evidence/t195/summary.json",
+        "docs/evidence/t195/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented the T-195 read-only tracer and helper tests. The owner Pod was reachable, but the legacy full-lake loader reached approximately 3 GB RSS before the 25-row trace could be produced; stopped safely. T-187 baseline remains 2/25 matched and 23 misses. Exact blocker recorded; no broker calls, orders, network, holdout reads, lake writes, redeploy or secrets. Handing to Claude for review and a date-filtered lake scan."
+    },
+    {
+      "revision": 517,
+      "ts": "2026-10-19T18:35:00Z",
+      "agent": "claude",
+      "action": "t195_changes_requested",
+      "task_ids": [
+        "T-195"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-195 first attempt failed review (V-465, D-073): the Pod trace ran out of memory on the full-lake loader, ruff has 9 errors, report text was pre-written. Changes requested (cycle 1): bounded date-filtered loader, clean lint, measured report, one Pod run, starting from current main. Turn to codex."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
