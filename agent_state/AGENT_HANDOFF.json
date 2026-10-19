@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 517,
+  "turn": "claude",
+  "revision": 518,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-187 accepted (V-464): the wired Tai runtime reproduced only 2 of 25 port entries, so it is not cleared for demo orders. T-195 (explain the misses) sent back once for a memory-bounded loader and clean lint. No broker orders, no holdout reads.",
+    "summary": "T-195 cycle 2 measured the bounded diagnostic: 25 port entries, 2 runtime entries, 23 misses; 23 first fail at ha_cross and 0 are recovered by unbounded history.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -48,7 +48,7 @@
       "broker_env": "demo"
     },
     "last_task": "T-195",
-    "last_status": "changes_requested"
+    "last_status": "review"
   },
   "requirements": [
     {
@@ -6395,7 +6395,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -6413,9 +6413,13 @@
         "tests/unit/test_t195_runtime_miss.py",
         "docs/evidence/t195/"
       ],
-      "review_cycles": 1,
-      "evidence": [],
-      "completion_note": ""
+      "review_cycles": 2,
+      "evidence": [
+        "docs/evidence/t195/summary.json",
+        "docs/evidence/t195/report.md",
+        "Pod run: /tmp/t195cr2/summary.json (bounded 14-day loader, 2026-10-19)"
+      ],
+      "completion_note": "Cycle 2 complete. The bounded loader reads only the 14-day pre-holdout window with PyArrow timestamp filters and batches, keeping RSS near 150 MB on the owner Pod. Measured run produced 25 port entries, 2 bounded runtime entries, 2 unbounded runtime entries, 23 misses, and 0 history-window recoveries. Twenty-three rows first fail at ha_cross; two rows are bar/stop differences. The run made zero broker or order calls, used no network or sealed holdout data, wrote no lake data, changed no risk gates, and did not redeploy."
     }
   ],
   "decisions": [
@@ -15977,6 +15981,16 @@
       ],
       "validated_by": "claude",
       "reverify_if": "script or loader changes"
+    },
+    {
+      "id": "V-466",
+      "subject": "T-195 bounded runtime miss diagnostic",
+      "method": "Ruff format/check, py_compile, handoff validator, and one owner-Pod read-only run with a date-filtered PyArrow loader",
+      "result": "pass",
+      "evidence": "docs/evidence/t195/summary.json and report.md; Pod run summary: 13,154 minute rows, 3,859 closed bars, 25 port entries, 2 runtime entries, 23 misses; safety counters all zero.",
+      "validated_by": "codex",
+      "date": "2026-10-19",
+      "reverify_if": "T-195 source or the diagnostic input window changes"
     }
   ],
   "blockers": [
@@ -27479,7 +27493,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-195 first attempt failed review (V-465, D-073): the Pod trace ran out of memory on the full-lake loader, ruff has 9 errors, report text was pre-written. Changes requested (cycle 1): bounded date-filtered loader, clean lint, measured report, one Pod run, starting from current main. Turn to codex."
+    },
+    {
+      "revision": 518,
+      "ts": "2026-10-19T19:00:00Z",
+      "agent": "codex",
+      "action": "complete_t195_bounded_diagnostic_handoff_claude",
+      "task_ids": [
+        "T-195"
+      ],
+      "files_changed": [
+        "scripts/lab_t195_runtime_miss.py",
+        "tests/unit/test_t195_runtime_miss.py",
+        "docs/evidence/t195/summary.json",
+        "docs/evidence/t195/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Measured the bounded T-195 diagnostic on the owner Pod: 25 port entries, 2 runtime entries, 23 misses, with 23 first failing at ha_cross and no history-window recoveries. Bounded loader stayed near 150 MB RSS; no broker/network/holdout/lake/risk/redeploy side effects. Turn to claude for review."
     }
   ],
-  "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
+  "project_summary": "T-195 cycle 2 is complete and handed to Claude for review (V-466): bounded Pod replay measured 25 port entries, 2 runtime entries and 23 misses, with 23 first failing at ha_cross. No broker calls, orders, network, holdout reads, lake writes, risk edits, tuning or secrets. Turn is with Claude."
 }
