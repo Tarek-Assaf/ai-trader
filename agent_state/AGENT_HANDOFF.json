@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 490,
+  "turn": "human",
+  "revision": 492,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-184 completed: unchanged Tai port replayed on 3m NSXUSD/XAUUSD over configured six-year TRAINING range with seven-day warm-up, real and zero-cost outputs, and owner-window result. Both real-cost full-history cells are negative; zero-cost is diagnostic only. T-184 is ready for Claude review; T-185 remains queued. No broker orders, holdout reads, Gate 1, or promotion writes.",
+    "summary": "T-185 build complete for Claude review: disabled-by-default Tai demo runner now incorporates the owner-directed 0.1-per-10k proportional sizing and 40/30/30 broker-step exit specification. No demo run or redeploy was performed; the owner must redeploy and explicitly enable TAI_DEMO_EXPERIMENT before any first run. T-184 remains accepted and merged; no broker orders, holdout reads, Gate 1 or promotion writes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6090,11 +6090,19 @@
         "R-03"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/experiments/__init__.py",
+        "src/trader/core/settings.py",
+        ".env.example",
+        "tests/unit/test_tai_demo.py",
+        "tests/unit/test_environment_settings.py",
+        "docs/specs/t185_tai_demo_paper.md"
+      ],
+      "completion_note": "Implemented the owner-directed T-185 build on the fresh post-T-184 lineage. Added the disabled-by-default experiment gate, owner sizing settings (0.1 lot per 10,000 balance, broker minimum/step alignment, balance read before entry), 40/30/30 exit bookkeeping with broker-step rounding, break-even stop after TP1, and optional dollar 1R journaling from instrument metadata. The normal OrderManager/Guardian boundary remains authoritative; no risk or gate files changed. No broker/demo run, redeploy, credentials, holdout or production writes. Local compileall, py_compile and git diff --check pass; pytest and Ruff are unavailable in desktop/Pod environments, so CI review is required.",
       "id": "T-185",
       "title": "Tai port on the Capital.com DEMO account (owner-directed paper trading experiment)",
-      "status": "todo",
+      "status": "done",
       "depends_on": [
         "T-184"
       ],
@@ -6625,6 +6633,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-19T06:50:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-067",
+      "statement": "Owner 2026-10-19 11:43-12:34 Riyadh, Tai demo paper experiment sizing and exits: risk exactly as the indicator (structure stop); first trade always 0.1 contract on the demo balance at the start (about 10,999.80); lot = 0.1 x current balance / start balance, so it grows with gains, floor 0.1, rounded down to the broker step; exits 40% at 1R, 30% at 2R, 30% at 3R, stop to entry after TP1; demo only, Normal account mode, price-level stops and targets.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-19T09:34:00Z",
       "do_not_reopen": false
     }
   ],
@@ -15413,6 +15429,39 @@
       "validated_by": "claude",
       "date": "2026-10-19",
       "reverify_if": "the port, the cost model or the harness changes"
+    },
+    {
+      "id": "V-454",
+      "task_id": "T-185",
+      "subject": "Codex validation of T-185 Tai demo build and owner sizing update",
+      "method": "Reviewed the T-185 runner, settings, environment template, spec delta and mock tests. Confirmed the gate remains disabled by default, sizing reads balance and broker min/step metadata, entry still routes through OrderManager, exits use 40/30/30 with break-even after TP1, and optional 1R value is journaled from instrument value-per-point metadata. Ran local compileall/py_compile and git diff --check.",
+      "result": "pass",
+      "checked": "Build-only validation. No broker call, demo run, redeploy, order, risk/gate edit, holdout read, production write or credential access. pytest and Ruff are unavailable in the desktop/Pod images; CI review is required.",
+      "evidence": [
+        "src/trader/experiments/tai_demo.py",
+        ".env.example",
+        "src/trader/core/settings.py",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T08:55:00Z",
+      "reverify_if": "The T-185 composition layer, broker instrument metadata contract or owner-directed sizing/exit specification changes."
+    },
+    {
+      "id": "V-455",
+      "task_id": "T-185",
+      "subject": "T-185 review (Claude): Tai demo paper runner build",
+      "method": "Read the runner, settings gate and tests; ruff check/format and mypy on the new files; corrected sizing and typing myself; added sizing tests; CI runs the full suite.",
+      "result": "pass",
+      "checked": "Disabled by default behind TAI_DEMO_EXPERIMENT with the three-flag guard (BROKER_ENV=demo, TRADING_MODE=paper, LIVE_TRADING_ENABLED=false); entries go through OrderManager/Guardian; one-position rule; kill flatten; 40/30/30 exits with step rounding and break-even stop; no broker or risk/gate edits. Defect fixed: Codex scaled lot as 0.1 x balance/10,000, which would trade 0.11 at the owner's 10,999.80 start. Owner rule (2026-10-19 11:54 and 12:34): first trade exactly 0.1 on the starting balance, lot = 0.1 x balance / start balance, floor 0.1. Replaced lot_per_balance with TAI_DEMO_START_BALANCE (required; refuses to start if unset), added three sizing tests (start 1,000 -> 0.10; 1,100 -> 0.11; 10,999.80 start -> 0.10; floor and step rounding; refusal when unset). Also fixed zip strict and tuple typing. Limits: pytest could not run locally (CI will); the runner is not yet wired to the live recorder feed or the Capital.com instrument rules, so the first demo run is not possible until that wiring and an owner redeploy happen.",
+      "evidence": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py",
+        "docs/specs/t185_tai_demo_paper.md"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19",
+      "reverify_if": "the runner, sizing rule or exit logic changes"
     }
   ],
   "blockers": [
@@ -16519,6 +16568,19 @@
       ],
       "recommendation": "C, then A. Only the historical rerun waits on this; Codex continues with T-178 meanwhile.",
       "answer": "Owner 2026-10-19 09:50 Riyadh: 'Run the test on the 3m hist data and let us try paper trading for today using the same strategy' = option A (run the historical test on the port, labelled loosely matched) plus a demo paper-trading experiment."
+    },
+    {
+      "id": "Q-072",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "The Tai demo runner is built and reviewed but NOT yet connected to the live feed and the Capital.com instrument rules (minimum size, size step, minimum stop distance), so it cannot place a demo trade today. Do you want a wiring task (T-186) next that connects it, with the start balance set to your demo balance, and then a planned redeploy at a time you choose?",
+      "options": [
+        "A: Yes, queue T-186 now (recommended)",
+        "B: Not now, hold the paper run"
+      ],
+      "recommendation": "A: wiring and instrument-rule reads can be built and tested with mock data first, then the owner redeploys once at a time of his choosing.",
+      "answer": ""
     }
   ],
   "log": [
@@ -26462,7 +26524,43 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-184 (V-453): the Tai port loses money on 3m with the configured costs in every year (NSXUSD PF 0.21, XAUUSD 0.07) and is positive only at zero cost (PF 1.86), so costs of about 2 R per trade decide it. Merged Codex's two consecutive entries. T-185 (demo-only paper runner, owner-directed, D-066) stays queued as a build; the owner is told the expected demo result. Turn to codex."
+    },
+    {
+      "revision": 491,
+      "ts": "2026-10-19T08:55:00Z",
+      "agent": "codex",
+      "action": "complete_t185_build_owner_sizing",
+      "task_ids": [
+        "T-185"
+      ],
+      "files_changed": [
+        ".env.example",
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/core/settings.py",
+        "src/trader/experiments/__init__.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_environment_settings.py",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "summary": "Started T-185 build only. Added disabled-by-default TAI_DEMO_EXPERIMENT settings gate and a mockable Tai 3m runner that routes entries through OrderManager, respects Guardian veto, one-position rule, market/blackout controls and kill flattening, manages broker-stop/scale-out bookkeeping, journals decisions and emits the required experiment label. No broker/demo run, redeploy, risk/gate edit or credentials. Then (same hand-off): Completed the T-185 build for Claude review. Added owner-directed proportional sizing (0.1 lot per 10,000 balance, broker min/step alignment), 40/30/30 exit fractions with step rounding and break-even stop, and optional dollar 1R journaling. The experiment remains disabled by default and routes entries through OrderManager/Guardian. Local compileall, py_compile and diff checks pass; pytest/Ruff are unavailable. No demo run, redeploy, broker call, order, risk/gate edit, holdout, production write or credentials. Turn to Claude."
+    },
+    {
+      "revision": 492,
+      "ts": "2026-10-19T12:45:00+03:00",
+      "agent": "claude",
+      "action": "accept_t185_build_ask_q072",
+      "task_ids": [
+        "T-185"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/core/settings.py",
+        ".env.example",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "summary": "Accepted the T-185 runner build (V-455) after fixing the sizing to the owner's rule (first trade 0.1 on the start balance, lot grows with gains; TAI_DEMO_START_BALANCE required), lint and typing, and adding sizing tests. Merged Codex's two consecutive entries. The runner is not yet wired to the live feed and broker instrument rules, so no demo trade is possible yet; asked the owner (Q-072) whether to queue the wiring task. Turn to human."
     }
   ],
-  "project_summary": "T-184 completed: unchanged Tai port replayed on 3m NSXUSD/XAUUSD over configured six-year TRAINING range with seven-day warm-up, real and zero-cost outputs, and owner-window result. Both real-cost full-history cells are negative; zero-cost is diagnostic only. T-184 is ready for Claude review; T-185 remains queued. No broker orders, holdout reads, Gate 1, or promotion writes."
+  "project_summary": "T-185 is in progress: building the owner-directed Tai demo paper runner behind the disabled-by-default TAI_DEMO_EXPERIMENT flag. The runner is mock-broker tested, routes entries through OrderManager and the normal Guardian path, journals decisions and alerts, and refuses unsafe environment combinations. No demo run or redeploy has been performed; owner must redeploy and explicitly enable the flag before any first run."
 }

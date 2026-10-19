@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import AliasChoices, Field, SecretStr
@@ -22,6 +23,9 @@ class EnvironmentSettings(BaseSettings):
     trading_mode: Literal["paper", "auto"] = "paper"
     broker_env: Literal["demo", "live"] = "demo"
     live_trading_enabled: bool = False
+    tai_demo_experiment: bool = False
+    tai_demo_base_lot: Decimal = Decimal("0.1")
+    tai_demo_start_balance: Decimal = Decimal("0")
     approval_mode: bool = False
     capital_api_key: SecretStr | None = None
     capital_identifier: SecretStr | None = None

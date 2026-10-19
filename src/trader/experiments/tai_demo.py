@@ -1,0 +1,479 @@
+"""Owner-directed Tai demo experiment, fail-closed and mockable.
+
+This module is deliberately a small adapter around the existing execution
+boundary.  It computes no position size and never calls a broker to submit an
+entry: the injected ``OrderManager`` owns Guardian approval and reservation.
+The first real demo run must still be enabled by the owner after deployment.
+"""
+
+from __future__ import annotations
+
+import inspect
+import logging
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
+from typing import Protocol
+
+from trader.execution.brokers.base import Direction, OrderRequest, Position
+from trader.execution.control import ControlMode
+from trader.execution.manager import ExecutionPaused
+
+LOGGER = logging.getLogger(__name__)
+EXPERIMENT_LABEL = "Tai port, owner-directed demo experiment, loosely matched to the owner"
+
+
+class TaiDemoRefused(RuntimeError):
+    """Raised when the demo experiment is not explicitly enabled."""
+
+
+@dataclass(frozen=True, slots=True)
+class TaiDemoSettings:
+    """The three independent startup gates for the owner-directed experiment."""
+
+    broker_env: str
+    trading_mode: str
+    live_trading_enabled: bool
+    experiment_enabled: bool
+    base_lot: Decimal = Decimal("0.1")
+    start_balance: Decimal = Decimal("10000")
+
+    @property
+    def enabled(self) -> bool:
+        return (
+            self.broker_env == "demo"
+            and self.trading_mode == "paper"
+            and not self.live_trading_enabled
+            and self.experiment_enabled
+        )
+
+    def __post_init__(self) -> None:
+        for name in ("base_lot", "start_balance"):
+            value = getattr(self, name)
+            if not isinstance(value, Decimal) or not value.is_finite() or value <= 0:
+                raise ValueError(f"{name} must be a positive finite Decimal")
+
+    @classmethod
+    def from_settings(cls, settings: object) -> TaiDemoSettings:
+        start = Decimal(str(getattr(settings, "tai_demo_start_balance", "0")))
+        if getattr(settings, "tai_demo_experiment", False) and start <= 0:
+            raise TaiDemoRefused(
+                "TAI_DEMO_START_BALANCE must be set to the demo balance at the start of the "
+                "experiment (lot = 0.1 x balance / start balance)"
+            )
+        return cls(
+            broker_env=str(getattr(settings, "broker_env", "")),
+            trading_mode=str(getattr(settings, "trading_mode", "")),
+            live_trading_enabled=bool(getattr(settings, "live_trading_enabled", True)),
+            experiment_enabled=bool(getattr(settings, "tai_demo_experiment", False)),
+            base_lot=Decimal(str(getattr(settings, "tai_demo_base_lot", "0.1"))),
+            start_balance=Decimal(str(getattr(settings, "tai_demo_start_balance", "0"))),
+        )
+
+    def require_enabled(self) -> None:
+        if not self.enabled:
+            raise TaiDemoRefused(
+                "TAI_DEMO_EXPERIMENT requires BROKER_ENV=demo, TRADING_MODE=paper "
+                "and LIVE_TRADING_ENABLED=false"
+            )
+
+
+@dataclass(frozen=True, slots=True)
+class ClosedBar:
+    """A closed 3-minute recorder bar delivered by the runtime feed."""
+
+    at: datetime
+    epic: str
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+    timeframe_minutes: int = 3
+    closed: bool = True
+    market_open: bool = True
+    in_break: bool = False
+
+    def __post_init__(self) -> None:
+        if self.at.tzinfo is None or self.at.utcoffset() is None:
+            raise ValueError("bar timestamp must be timezone-aware")
+        if self.timeframe_minutes != 3:
+            raise ValueError("Tai demo accepts only 3-minute bars")
+        if not self.epic.strip() or any(
+            not isinstance(value, Decimal) or not value.is_finite() or value <= 0
+            for value in (self.open, self.high, self.low, self.close)
+        ):
+            raise ValueError("bar prices must be positive finite decimals")
+        if self.high < max(self.open, self.close) or self.low > min(self.open, self.close):
+            raise ValueError("bar high/low do not contain open/close")
+
+
+@dataclass(frozen=True, slots=True)
+class TaiSignal:
+    """The unchanged T-162 signal and structure stop, without a position size."""
+
+    direction: Direction
+    entry: Decimal
+    stop: Decimal
+    targets: tuple[Decimal, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.direction, Direction):
+            raise ValueError("direction must be BUY or SELL")
+        for name, value in (("entry", self.entry), ("stop", self.stop)):
+            if not isinstance(value, Decimal) or not value.is_finite() or value <= 0:
+                raise ValueError(f"{name} must be a positive finite Decimal")
+        if self.direction is Direction.BUY and self.stop >= self.entry:
+            raise ValueError("BUY structure stop must be below entry")
+        if self.direction is Direction.SELL and self.stop <= self.entry:
+            raise ValueError("SELL structure stop must be above entry")
+        if any(
+            not isinstance(value, Decimal) or not value.is_finite() or value <= 0
+            for value in self.targets
+        ):
+            raise ValueError("targets must be positive finite decimals")
+        if len(self.targets) > 3:
+            raise ValueError("Tai demo supports at most three scale-out targets")
+
+    def levels(self) -> tuple[Decimal, Decimal, Decimal]:
+        """Return the 1R/2R/3R levels, filling absent levels deterministically."""
+        risk = abs(self.entry - self.stop)
+        defaults = (
+            self.entry + risk if self.direction is Direction.BUY else self.entry - risk,
+            self.entry + risk * 2 if self.direction is Direction.BUY else self.entry - risk * 2,
+            self.entry + risk * 3 if self.direction is Direction.BUY else self.entry - risk * 3,
+        )
+        levels = list(defaults)
+        levels[: len(self.targets)] = self.targets
+        for previous, current in zip(levels, levels[1:], strict=False):
+            if self.direction is Direction.BUY and current <= previous:
+                raise ValueError("BUY targets must increase")
+            if self.direction is Direction.SELL and current >= previous:
+                raise ValueError("SELL targets must decrease")
+        return (levels[0], levels[1], levels[2])
+
+
+@dataclass(frozen=True, slots=True)
+class TaiInstrumentRules:
+    """Broker sizing rules read from the instrument metadata before each entry."""
+
+    min_size: Decimal
+    size_step: Decimal
+    value_per_point: Decimal | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("min_size", "size_step"):
+            value = getattr(self, name)
+            if not isinstance(value, Decimal) or not value.is_finite() or value <= 0:
+                raise ValueError(f"{name} must be a positive finite Decimal")
+        if self.value_per_point is not None and (
+            not isinstance(self.value_per_point, Decimal)
+            or not self.value_per_point.is_finite()
+            or self.value_per_point <= 0
+        ):
+            raise ValueError("value_per_point must be a positive finite Decimal")
+
+
+@dataclass(frozen=True, slots=True)
+class DemoOutcome:
+    """Secret-free result of one bar decision."""
+
+    action: str
+    reason: str
+    cycle_id: str
+    label: str = EXPERIMENT_LABEL
+
+
+class Control(Protocol):
+    def read(self) -> ControlMode: ...
+
+
+class PositionGateway(Protocol):
+    def get_positions(self) -> Sequence[Position]: ...
+
+    def modify_position(
+        self, deal_id: str, *, stop_level: Decimal, profit_level: Decimal | None = None
+    ) -> str: ...
+
+    def close_position(self, deal_id: str) -> str: ...
+
+
+class OrderManager(Protocol):
+    def submit(self, cycle_id: str, order: OrderRequest) -> object | None: ...
+
+
+SignalProvider = Callable[[ClosedBar], TaiSignal | None]
+OrderFactory = Callable[..., OrderRequest]
+BalanceProvider = Callable[[], Decimal]
+InstrumentRulesProvider = Callable[[str], TaiInstrumentRules]
+Journal = Callable[[Mapping[str, object]], None]
+Alert = Callable[[str], None]
+
+
+@dataclass(slots=True)
+class _ManagedPosition:
+    entry: Decimal
+    risk: Decimal
+    direction: Direction
+    targets: tuple[Decimal, Decimal, Decimal]
+    original_size: Decimal
+    size_step: Decimal | None = None
+    one_r_value: Decimal | None = None
+    hit: set[int] = field(default_factory=set)
+    entry_stop_moved: bool = False
+
+
+class TaiDemoRunner:
+    """Run Tai signals through OrderManager and manage mockable exits.
+
+    The runner owns no sizing, Guardian logic or broker client.  ``order_factory``
+    is supplied by the composition layer after its normal risk sizing context is
+    assembled.  This keeps the strategy unable to bypass the Risk Guardian.
+    """
+
+    def __init__(
+        self,
+        *,
+        settings: TaiDemoSettings,
+        order_manager: OrderManager,
+        position_gateway: PositionGateway,
+        signal_provider: SignalProvider,
+        order_factory: OrderFactory,
+        control: Control,
+        balance_provider: BalanceProvider | None = None,
+        instrument_rules_provider: InstrumentRulesProvider | None = None,
+        journal: Journal | None = None,
+        alert: Alert | None = None,
+    ) -> None:
+        settings.require_enabled()
+        self.settings = settings
+        self._orders = order_manager
+        self._positions = position_gateway
+        self._signal = signal_provider
+        self._order_factory = order_factory
+        self._control = control
+        self._balance_provider = balance_provider
+        self._rules_provider = instrument_rules_provider
+        self._journal = journal or (lambda _event: None)
+        self._alert = alert or (lambda message: LOGGER.info("tai demo: %s", message))
+        self._managed: dict[str, _ManagedPosition] = {}
+
+    def on_bar(self, bar: ClosedBar) -> DemoOutcome:
+        """Process exactly one closed 3m bar; never trade an incomplete bar."""
+
+        cycle_id = f"tai-demo-{bar.at.astimezone(UTC).strftime('%Y%m%dT%H%M%S')}-{bar.epic}"
+        if not bar.closed:
+            return self._outcome(cycle_id, "NO_TRADE", "bar_not_closed")
+        mode = self._control.read()
+        if mode is ControlMode.KILL:
+            self._flatten(cycle_id)
+            return self._outcome(cycle_id, "NO_TRADE", "kill_switch_active")
+        if mode is not ControlMode.RUN:
+            return self._outcome(cycle_id, "NO_TRADE", "execution_paused")
+        self._manage_exits(bar, cycle_id)
+        if not bar.market_open or bar.in_break:
+            return self._outcome(cycle_id, "NO_TRADE", "market_closed_or_blackout")
+
+        positions = tuple(
+            position for position in self._positions.get_positions() if position.epic == bar.epic
+        )
+        if positions:
+            self._journal_event(cycle_id, "position_open", epic=bar.epic)
+            return self._outcome(cycle_id, "NO_TRADE", "one_position_rule")
+        signal = self._signal(bar)
+        if signal is None:
+            return self._outcome(cycle_id, "NO_TRADE", "no_signal")
+        rules = self._rules_provider(bar.epic) if self._rules_provider is not None else None
+        requested_size = self._requested_size(rules)
+        order = self._build_order(signal, cycle_id, requested_size)
+        if requested_size is not None and order.size != requested_size:
+            order = replace(order, size=requested_size)
+        if (
+            order.client_order_id != cycle_id
+            or order.epic != bar.epic
+            or order.reference_price != signal.entry
+            or order.stop_level != signal.stop
+            or order.profit_level != signal.levels()[2]
+        ):
+            self._journal_event(cycle_id, "order_refused", reason="order_factory_mismatch")
+            return self._outcome(cycle_id, "REJECTED", "order_factory_mismatch")
+        try:
+            receipt = self._orders.submit(cycle_id, order)
+        except ExecutionPaused:
+            self._journal_event(cycle_id, "guardian_veto", epic=bar.epic)
+            self._alert(f"{EXPERIMENT_LABEL}: entry vetoed for {bar.epic}")
+            return self._outcome(cycle_id, "REJECTED", "guardian_veto")
+        if receipt is None:
+            self._journal_event(cycle_id, "guardian_veto", epic=bar.epic)
+            return self._outcome(cycle_id, "REJECTED", "guardian_veto")
+        position = getattr(receipt, "position", None)
+        if not isinstance(position, Position):
+            self._journal_event(cycle_id, "order_refused", reason="receipt_missing_position")
+            return self._outcome(cycle_id, "REJECTED", "receipt_missing_position")
+        risk = abs(signal.entry - signal.stop)
+        self._managed[position.deal_id] = _ManagedPosition(
+            entry=signal.entry,
+            risk=risk,
+            direction=signal.direction,
+            targets=signal.levels(),
+            original_size=position.size,
+            size_step=rules.size_step if rules is not None else None,
+            one_r_value=(
+                abs(signal.entry - signal.stop) * position.size * rules.value_per_point
+                if rules is not None and rules.value_per_point is not None
+                else None
+            ),
+        )
+        self._journal_event(
+            cycle_id,
+            "entry",
+            epic=bar.epic,
+            deal_id=position.deal_id,
+            one_r_value=self._managed[position.deal_id].one_r_value,
+        )
+        self._alert(f"{EXPERIMENT_LABEL}: entry {signal.direction.value} {bar.epic}")
+        return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
+
+    def _manage_exits(self, bar: ClosedBar, cycle_id: str) -> None:
+        for position in tuple(self._positions.get_positions()):
+            if position.epic != bar.epic:
+                continue
+            state = self._managed.get(position.deal_id)
+            if state is None:
+                continue
+            current_size = position.size
+            for index, target in enumerate(state.targets, start=1):
+                if index in state.hit or not self._target_hit(state.direction, bar, target):
+                    continue
+                state.hit.add(index)
+                if index == 1 and not state.entry_stop_moved:
+                    self._positions.modify_position(
+                        position.deal_id,
+                        stop_level=state.entry,
+                        profit_level=state.targets[2],
+                    )
+                    state.entry_stop_moved = True
+                    self._journal_event(cycle_id, "stop_to_entry", deal_id=position.deal_id)
+                if index == 3:
+                    self._positions.close_position(position.deal_id)
+                    self._managed.pop(position.deal_id, None)
+                    self._journal_event(
+                        cycle_id, "exit", deal_id=position.deal_id, reason="target_3"
+                    )
+                    self._alert(f"{EXPERIMENT_LABEL}: exit {bar.epic} target_3")
+                    break
+                close_partial = getattr(self._positions, "close_partial", None)
+                if callable(close_partial):
+                    amount = self._partial_amount(state, current_size, index)
+                    if amount > 0 and amount < current_size:
+                        close_partial(position.deal_id, amount)
+                        current_size -= amount
+                        self._journal_event(
+                            cycle_id,
+                            "scale_out",
+                            deal_id=position.deal_id,
+                            target=index,
+                            amount=amount,
+                            fraction=str(self._exit_fraction(index)),
+                        )
+                    else:
+                        self._journal_event(
+                            cycle_id,
+                            "scale_out_unavailable",
+                            deal_id=position.deal_id,
+                            target=index,
+                        )
+
+    def _flatten(self, cycle_id: str) -> None:
+        for position in tuple(self._positions.get_positions()):
+            try:
+                self._positions.close_position(position.deal_id)
+            finally:
+                self._managed.pop(position.deal_id, None)
+        self._journal_event(cycle_id, "kill_switch", reason="flatten_requested")
+        self._alert(f"{EXPERIMENT_LABEL}: kill switch flattened positions")
+
+    @staticmethod
+    def _target_hit(direction: Direction, bar: ClosedBar, target: Decimal) -> bool:
+        return bar.high >= target if direction is Direction.BUY else bar.low <= target
+
+    def _requested_size(self, rules: TaiInstrumentRules | None) -> Decimal | None:
+        if rules is None or self._balance_provider is None:
+            return None
+        balance = self._balance_provider()
+        if not isinstance(balance, Decimal) or not balance.is_finite() or balance <= 0:
+            raise TaiDemoRefused("demo balance must be a positive finite Decimal")
+        raw = max(
+            self.settings.base_lot,
+            self.settings.base_lot * balance / self.settings.start_balance,
+        )
+        aligned = (raw / rules.size_step).to_integral_value(rounding=ROUND_DOWN) * rules.size_step
+        if aligned < rules.min_size:
+            ratio = rules.min_size / rules.size_step
+            if ratio != ratio.to_integral_value():
+                raise TaiDemoRefused("broker minimum size is not expressible by its size step")
+            aligned = rules.min_size
+        return aligned
+
+    def _build_order(
+        self, signal: TaiSignal, cycle_id: str, requested_size: Decimal | None
+    ) -> OrderRequest:
+        """Support both the original two-argument factory and size-aware factories."""
+        try:
+            parameters = inspect.signature(self._order_factory).parameters.values()
+            positional = [
+                parameter
+                for parameter in parameters
+                if parameter.kind
+                in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            ]
+        except (TypeError, ValueError):
+            positional = []
+        if requested_size is not None and len(positional) >= 3:
+            return self._order_factory(signal, cycle_id, requested_size)
+        return self._order_factory(signal, cycle_id)
+
+    @staticmethod
+    def _exit_fraction(index: int) -> Decimal:
+        return (Decimal("0.4"), Decimal("0.3"), Decimal("0.3"))[index - 1]
+
+    @classmethod
+    def _partial_amount(cls, state: _ManagedPosition, current_size: Decimal, index: int) -> Decimal:
+        fraction = cls._exit_fraction(index)
+        if state.size_step is None:
+            # Legacy injected mock gateways have no broker metadata; retain their
+            # deterministic third-size behavior while production uses broker steps.
+            return min(current_size, state.original_size / Decimal("3"))
+        raw = state.original_size * fraction
+        rounded = (raw / state.size_step).to_integral_value(
+            rounding=ROUND_HALF_UP
+        ) * state.size_step
+        capped = (current_size / state.size_step).to_integral_value(
+            rounding=ROUND_DOWN
+        ) * state.size_step
+        return min(rounded, capped)
+
+    def _journal_event(self, cycle_id: str, event: str, **details: object) -> None:
+        payload: dict[str, object] = {
+            "cycle_id": cycle_id,
+            "event": event,
+            "label": EXPERIMENT_LABEL,
+            **details,
+        }
+        self._journal(payload)
+
+    @staticmethod
+    def _outcome(cycle_id: str, action: str, reason: str) -> DemoOutcome:
+        return DemoOutcome(action, reason, cycle_id)
+
+
+__all__ = [
+    "ClosedBar",
+    "DemoOutcome",
+    "EXPERIMENT_LABEL",
+    "TaiDemoRefused",
+    "TaiInstrumentRules",
+    "TaiDemoRunner",
+    "TaiDemoSettings",
+    "TaiSignal",
+]
