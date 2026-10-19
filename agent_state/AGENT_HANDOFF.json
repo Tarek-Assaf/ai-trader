@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 525,
+  "turn": "human",
+  "revision": 527,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-195 accepted: 23 of 25 misses first fail at the HA cross gate, cause inside it unproven (T-196 queued). T-191 (position-state persistence) is in review cycle 2: two stop-handling bugs sent back. Runtime still not cleared for demo orders. No broker orders, no holdout reads.",
+    "summary": "T-191 failed a third review (3 CI test failures, 2 type errors); Q-074 asks the owner who fixes it. T-195 accepted. Runtime still not cleared for demo orders. No broker orders, no holdout reads.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6308,14 +6308,15 @@
         "Follow docs/specs/t191_tai_state_persistence.md exactly. Required before real demo orders.",
         "No broker order or write call, no sealed holdout read, no risk or gate edits, no secrets in code/logs. Ruff check and format (line length 100), CI green. One log entry, hand the turn to claude, stop.",
         "CHANGES REQUESTED (cycle 1, V-469): branch codex/t191-tai-state fails lint. Fix only: (1) tests/unit/test_tai_demo.py line ~309 'make = lambda: ...' (ruff E731): use a def. (2) ruff format --check fails on src/trader/experiments/tai_demo.py (line ~336): run ruff format with line length 100. Start from current origin/main (T-195 is merged), keep handoff entries, merge your consecutive log entries. pytest, ruff check on touched files, ruff format --check, mypy and CI must pass; do not change behaviour. Then hand the turn to claude.",
-        "CHANGES REQUESTED (cycle 2, last allowed, V-471): lint is fixed and persistence/reconcile/corrupt-file/unknown-position logic reads correctly. Two behaviour bugs block acceptance, both from the new 'any(state.epic == bar.epic for state in self._managed.values())' one-position check: (1) DRY-RUN: _manage_shadow_exits only handles targets, never the stop. A shadow position stopped out by the initial structure stop, or by the entry stop after TP1, stays in _managed forever, so the experiment can never enter a second dry-run trade. Add stop handling on bar low/high to the shadow path: initial stop = signal stop, after TP1 the stop is entry; keep the same ordering as the live plan and the indicator (targets first, then stop, same as T-162); on stop remove the shadow, journal exit with reason stop or stop_entry, send the DRY-RUN flat alert and persist. (2) LIVE: when a managed deal is no longer at the broker (stopped out at Capital.com), nothing removes it from _managed, so after the first stop-out the runner returns one_position_rule for every later bar. In _manage_exits, drop managed non-shadow deals for the bar epic that are absent from get_positions(), journal reconcile_closed (or exit), send the flat alert and persist; the live one-position check must use broker positions only. Tests to add: shadow stopped at the structure stop frees the next dry-run entry; shadow stopped at entry after TP1 frees it; live managed deal missing at the broker is dropped and a later signal can enter; DRY-RUN alerts on stop/flat. Do not change anything else. Start from current origin/main, keep handoff entries, merge your consecutive log entries. A third failure goes to the owner."
+        "CHANGES REQUESTED (cycle 2, last allowed, V-471): lint is fixed and persistence/reconcile/corrupt-file/unknown-position logic reads correctly. Two behaviour bugs block acceptance, both from the new 'any(state.epic == bar.epic for state in self._managed.values())' one-position check: (1) DRY-RUN: _manage_shadow_exits only handles targets, never the stop. A shadow position stopped out by the initial structure stop, or by the entry stop after TP1, stays in _managed forever, so the experiment can never enter a second dry-run trade. Add stop handling on bar low/high to the shadow path: initial stop = signal stop, after TP1 the stop is entry; keep the same ordering as the live plan and the indicator (targets first, then stop, same as T-162); on stop remove the shadow, journal exit with reason stop or stop_entry, send the DRY-RUN flat alert and persist. (2) LIVE: when a managed deal is no longer at the broker (stopped out at Capital.com), nothing removes it from _managed, so after the first stop-out the runner returns one_position_rule for every later bar. In _manage_exits, drop managed non-shadow deals for the bar epic that are absent from get_positions(), journal reconcile_closed (or exit), send the flat alert and persist; the live one-position check must use broker positions only. Tests to add: shadow stopped at the structure stop frees the next dry-run entry; shadow stopped at entry after TP1 frees it; live managed deal missing at the broker is dropped and a later signal can enter; DRY-RUN alerts on stop/flat. Do not change anything else. Start from current origin/main, keep handoff entries, merge your consecutive log entries. A third failure goes to the owner.",
+        "CYCLE 3 FAILURE (V-473, Q-074): CI quality (run 39320802176) on Codex's branch: 3 tests in tests/unit/test_tai_demo.py fail: test_scale_out_and_stop_to_entry_bookkeeping (assert [] == ['deal-1']: final target no longer closes the live deal), test_dry_run_structure_stop_frees_next_entry_and_alerts_flat and test_dry_run_entry_stop_after_target_one_frees_next_entry_and_alerts_flat (first on_bar returns SUBMITTED, not DRY_RUN: test helper/runner default). Codex could not run pytest in its desktop image, so tests were never executed. Also two mypy errors at tai_demo.py (dict | Mapping at ~line 300; loop variable 'state' retyped at ~line 570). Owner decides who fixes (Q-074)."
       ],
       "deliverables": [
         "src/trader/experiments/tai_demo.py",
         "src/trader/api/app.py",
         "tests/unit/test_tai_demo.py"
       ],
-      "review_cycles": 2,
+      "review_cycles": 3,
       "evidence": [
         "src/trader/experiments/tai_demo.py",
         "tests/unit/test_tai_demo.py"
@@ -16135,6 +16136,17 @@
       ],
       "validated_by": "claude",
       "reverify_if": "tai_demo.py changes"
+    },
+    {
+      "id": "V-473",
+      "task_id": "T-191",
+      "subject": "T-191 cycle 3 review of branch codex/t191-tai-state",
+      "method": "Read diff; ruff/format/mypy locally; inspected failed CI run 39320802176 logs.",
+      "result": "fail",
+      "checked": "CI quality (run 39320802176) on Codex's branch: 3 tests in tests/unit/test_tai_demo.py fail: test_scale_out_and_stop_to_entry_bookkeeping (assert [] == ['deal-1']: final target no longer closes the live deal), test_dry_run_structure_stop_frees_next_entry_and_alerts_flat and test_dry_run_entry_stop_after_target_one_frees_next_entry_and_alerts_flat (first on_bar returns SUBMITTED, not DRY_RUN: test helper/runner default). Codex could not run pytest in its desktop image, so tests were never executed. Also two mypy errors at tai_demo.py (dict | Mapping at ~line 300; loop variable 'state' retyped at ~line 570). Code logic for stop handling and broker-closed reconcile reads correct; PR #366 (acceptance with my mypy fixes) closed unmerged because tests fail.",
+      "evidence": "GitHub Actions run 39320802176 quality job, step Run tests: 3 failed, 819 passed",
+      "validated_by": "claude",
+      "reverify_if": "tai_demo.py or test_tai_demo.py change"
     }
   ],
   "blockers": [
@@ -17278,6 +17290,20 @@
       ],
       "recommendation": "A: it needs no redeploy and no Pod downtime. If Codex cannot transfer the file, fall back to B at the next redeploy. Meanwhile Codex works on T-191, which does not depend on T-195.",
       "answer": "A (owner, chat 2026-10-19 22:49 Riyadh): Codex copies the new script onto the running Pod through the terminal and runs it once. The owner also authorized Claude to merge acceptances and handoff PRs without asking him, after quality CI is SUCCESS."
+    },
+    {
+      "id": "Q-074",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "T-191 (Tai position-state persistence, required before any demo orders) has now failed a third review: its stop-handling code reads right, but 3 of its own tests fail in CI and 2 type-check errors remain, because Codex cannot run the tests in its environment. Who should fix it?",
+      "options": [
+        "A: Codex gets one extra fix cycle with the exact failures listed; Claude reviews and merges after CI is green (recommended if Codex can run pytest by pushing and reading CI)",
+        "B: Claude fixes the tests and type errors directly on the branch and merges after CI is green (faster, bends the Codex-writes-code split once)",
+        "C: Pause T-191 and move Codex to T-193/T-194 meanwhile"
+      ],
+      "recommendation": "B: the fix is small and Claude can read CI logs, but Codex cannot run pytest, so another Codex cycle would likely repeat the failure. T-192 and the demo-order decision wait on T-191 either way.",
+      "answer": ""
     }
   ],
   "log": [
@@ -27775,6 +27801,34 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-191 reviewed (V-471, D-078; V-470 is Codex's own pass note, not a review): lint fixed, persistence and reconcile logic read correctly, but stopped-out positions are never removed from the managed set (dry-run shadow has no stop logic; live deals closed at the broker are never dropped), so no second entry could ever happen. Changes requested, cycle 2 of 2, exact fixes and tests listed in the task. Then T-192, then T-196. Merged T-195 (#364) and closed #363. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 526,
+      "ts": "2026-10-19T20:25:00+03:00",
+      "agent": "codex",
+      "action": "complete_t191_stop_handling_handoff_claude",
+      "task_ids": [
+        "T-191"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Applied T-191 cycle-2 stop handling: dry-run shadows now exit on structure or post-TP1 entry stops after target processing, and live managed deals absent from broker positions are reconciled closed so later signals can enter. Added focused tests and flat alerts. Ruff check/format, py_compile and git diff --check pass; focused pytest and mypy are unavailable. No broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets. Turn to Claude for review."
+    },
+    {
+      "revision": 527,
+      "ts": "2026-10-19T23:55:00+03:00",
+      "agent": "claude",
+      "action": "review_t191_cycle3_question",
+      "task_ids": [
+        "T-191"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-191 cycle 3 failed in CI (V-473); acceptance PR #366 closed unmerged. Added Q-074 with options and recommendation B; turn to human."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
