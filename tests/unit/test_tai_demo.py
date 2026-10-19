@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 
 import pytest
 
@@ -84,14 +85,22 @@ def bar(price="100", *, high="100", low="100", closed=True, market_open=True, in
     )
 
 
-def runner(gateway, control=None, veto=False, journal=None, alerts=None):
+def runner(
+    gateway,
+    control=None,
+    veto=False,
+    journal=None,
+    alerts=None,
+    signal_provider=None,
+    **kwargs,
+):
     manager = Manager(gateway, veto=veto)
     signal = TaiSignal(Direction.BUY, Decimal("100"), Decimal("99"))
     return TaiDemoRunner(
         settings=TaiDemoSettings("demo", "paper", False, True),
         order_manager=manager,
         position_gateway=gateway,
-        signal_provider=lambda _bar: signal,
+        signal_provider=signal_provider or (lambda _bar: signal),
         order_factory=lambda signal, cycle_id: OrderRequest(
             cycle_id,
             "NSXUSD",
@@ -104,6 +113,7 @@ def runner(gateway, control=None, veto=False, journal=None, alerts=None):
         control=control or Control(),
         journal=journal,
         alert=(alerts.append if alerts is not None else None),
+        **kwargs,
     ), manager
 
 
@@ -233,3 +243,148 @@ def test_enabled_experiment_without_start_balance_is_refused():
 
     with pytest.raises(TaiDemoRefused):
         TaiDemoSettings.from_settings(Cfg())
+
+
+def test_persisted_position_restores_management_and_prevents_duplicate_entry(tmp_path: Path):
+    state_path = tmp_path / "state" / "tai.json"
+    gateway = Gateway()
+    first, _ = runner(gateway, state_path=state_path, epic="NSXUSD")
+    assert first.on_bar(bar()).action == "SUBMITTED"
+    restored, manager = runner(gateway, state_path=state_path, epic="NSXUSD")
+    assert restored.on_bar(bar()).reason == "one_position_rule"
+    assert manager.submits == []
+    restored.on_bar(bar(high="103"))
+    assert gateway.closed == ["deal-1"]
+
+
+def test_missing_broker_position_is_dropped_and_journaled(tmp_path: Path):
+    state_path = tmp_path / "tai.json"
+    gateway = Gateway()
+    first, _ = runner(gateway, state_path=state_path, epic="NSXUSD")
+    assert first.on_bar(bar()).action == "SUBMITTED"
+    gateway.positions.clear()
+    events = []
+    restored, manager = runner(gateway, state_path=state_path, epic="NSXUSD", journal=events.append)
+    assert any(event["event"] == "reconcile_closed" for event in events)
+    assert restored.on_bar(bar()).action == "SUBMITTED"
+    assert len(manager.submits) == 1
+
+
+def test_unknown_broker_position_refuses_entries_and_alerts(tmp_path: Path):
+    gateway = Gateway()
+    gateway.positions.append(
+        Position(
+            "unknown",
+            "NSXUSD",
+            Direction.BUY,
+            Decimal("1"),
+            Decimal("100"),
+            Decimal("99"),
+            Decimal("103"),
+        )
+    )
+    alerts = []
+    instance, manager = runner(
+        gateway, state_path=tmp_path / "tai.json", epic="NSXUSD", alerts=alerts
+    )
+    assert instance.on_bar(bar()).reason == "one_position_rule"
+    assert manager.submits == []
+    assert any("unmanaged" in alert for alert in alerts)
+
+
+def test_corrupt_state_fails_closed_without_entry(tmp_path: Path):
+    state_path = tmp_path / "tai.json"
+    state_path.write_text("not-json", encoding="utf-8")
+    alerts = []
+    instance, manager = runner(Gateway(), state_path=state_path, epic="NSXUSD", alerts=alerts)
+    assert instance.on_bar(bar()).reason == "startup_reconciliation_failed"
+    assert manager.submits == []
+    assert any("corrupt" in alert for alert in alerts)
+
+
+def test_dry_run_shadow_survives_restart_without_gateway_calls(tmp_path: Path):
+    class NoBrokerGateway(Gateway):
+        def get_positions(self):
+            raise AssertionError("dry-run must not call the broker")
+
+    state_path = tmp_path / "tai.json"
+    gateway = NoBrokerGateway()
+    manager = Manager(gateway)
+    settings = TaiDemoSettings("demo", "paper", False, True, dry_run=True)
+
+    def make():
+        return TaiDemoRunner(
+            settings=settings,
+            order_manager=manager,
+            position_gateway=gateway,
+            signal_provider=lambda _bar: TaiSignal(Direction.BUY, Decimal("100"), Decimal("99")),
+            order_factory=lambda signal, cycle_id: OrderRequest(
+                cycle_id,
+                "NSXUSD",
+                signal.direction,
+                Decimal("3"),
+                signal.entry,
+                signal.stop,
+                signal.levels()[2],
+            ),
+            control=Control(),
+            state_path=state_path,
+            epic="NSXUSD",
+        )
+
+    assert make().on_bar(bar()).action == "DRY_RUN"
+    assert make().on_bar(bar()).reason == "one_position_rule"
+    assert manager.submits == []
+
+
+def test_dry_run_structure_stop_frees_next_entry_and_alerts_flat():
+    signal = TaiSignal(Direction.BUY, Decimal("100"), Decimal("99"))
+    signals = iter((signal, None, signal))
+    alerts = []
+    instance, manager = runner(
+        Gateway(),
+        signal_provider=lambda _bar: next(signals),
+        alerts=alerts,
+    )
+    assert instance.on_bar(bar()).action == "DRY_RUN"
+    assert instance.on_bar(bar(low="98")).reason == "no_signal"
+    assert instance.on_bar(bar()).action == "DRY_RUN"
+    assert manager.submits == []
+    assert any("flat" in alert and "stop" in alert for alert in alerts)
+
+
+def test_dry_run_entry_stop_after_target_one_frees_next_entry_and_alerts_flat():
+    signal = TaiSignal(Direction.BUY, Decimal("100"), Decimal("99"))
+    signals = iter((signal, None, signal))
+    alerts = []
+    instance, _ = runner(
+        Gateway(),
+        signal_provider=lambda _bar: next(signals),
+        alerts=alerts,
+    )
+    assert instance.on_bar(bar()).action == "DRY_RUN"
+    assert instance.on_bar(bar(price="100.5", high="101", low="100.5")).reason == "no_signal"
+    assert instance.on_bar(bar(price="99.5", high="100", low="99.5")).reason == "no_signal"
+    assert instance.on_bar(bar()).action == "DRY_RUN"
+    assert any("flat" in alert and "stop_entry" in alert for alert in alerts)
+
+
+def test_live_missing_position_is_dropped_and_later_signal_can_enter():
+    signal = TaiSignal(Direction.BUY, Decimal("100"), Decimal("99"))
+    signals = iter((signal, None, signal))
+    gateway = Gateway()
+    events = []
+    alerts = []
+    instance, manager = runner(
+        gateway,
+        signal_provider=lambda _bar: next(signals),
+        journal=events.append,
+        alerts=alerts,
+    )
+    assert instance.on_bar(bar()).action == "SUBMITTED"
+    gateway.positions.clear()
+    assert instance.on_bar(bar()).reason == "no_signal"
+    assert instance.on_bar(bar()).action == "SUBMITTED"
+    assert len(manager.submits) == 2
+    assert any(event["event"] == "reconcile_closed" for event in events)
+    assert any("flat" in alert and "broker_closed" in alert for alert in alerts)
