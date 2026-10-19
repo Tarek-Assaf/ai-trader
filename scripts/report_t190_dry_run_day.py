@@ -20,8 +20,10 @@ if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 try:
     import pyarrow.parquet as pq  # type: ignore[import-untyped]
+    import pyarrow.dataset as pds  # type: ignore[import-untyped]
 except ImportError:  # pragma: no cover
     pq = None
+    pds = None
 from trader.execution.brokers.base import Direction
 from trader.experiments.tai_demo import ClosedBar
 from trader.experiments.tai_wiring import TaiMinuteBar, TaiSignalProvider, ThreeMinuteBarBuilder
@@ -109,27 +111,39 @@ def lake_paths(root: Path, epic: str) -> tuple[Path, ...]:
     return tuple(sorted(set(paths))) or tuple(sorted(root.glob("*/1m_capital/*/*.parquet")))
 
 
-def read_minutes(root: Path, epic: str, before: datetime) -> tuple[Minute, ...]:
-    if pq is None:
+def read_minutes(
+    root: Path, epic: str, before: datetime, after: datetime | None = None
+) -> tuple[Minute, ...]:
+    if pq is None or pds is None:
         raise RuntimeError("pyarrow is required to read the recorder lake")
     paired: dict[datetime, dict[str, Mapping[str, Any]]] = defaultdict(dict)
-    for path in lake_paths(root, epic):
+    paths = lake_paths(root, epic)
+    if not paths:
+        return ()
+    predicate = (pds.field("ts_utc") < before) & pds.field("side").isin(["bid", "ask"])
+    if after is not None:
+        predicate = predicate & (pds.field("ts_utc") >= after)
+    try:
+        rows = (
+            pds.dataset(list(paths), format="parquet")
+            .to_table(
+                columns=["epic", "ts_utc", "side", "open", "high", "low", "close"],
+                filter=predicate,
+            )
+            .to_pylist()
+        )
+    except (OSError, ValueError, KeyError, TypeError):
+        rows = []
+    for row in rows:
         try:
-            rows = pq.read_table(
-                path, columns=["epic", "ts_utc", "side", "open", "high", "low", "close"]
-            ).to_pylist()
-        except (OSError, ValueError, KeyError):
+            at = utc(row["ts_utc"])
+        except (KeyError, TypeError, ValueError, OverflowError):
             continue
-        for row in rows:
-            try:
-                at = utc(row["ts_utc"])
-            except (KeyError, TypeError, ValueError, OverflowError):
-                continue
-            if at >= before or row.get("side") not in {"bid", "ask"}:
-                continue
-            if row.get("epic") and row["epic"] not in {epic, "NSXUSD", "NAS100", "US100"}:
-                continue
-            paired[at][str(row["side"])] = row
+        if at >= before or row.get("side") not in {"bid", "ask"}:
+            continue
+        if row.get("epic") and row["epic"] not in {epic, "NSXUSD", "NAS100", "US100"}:
+            continue
+        paired[at][str(row["side"])] = row
     result: list[Minute] = []
     for at, sides in sorted(paired.items()):
         bid, ask = sides.get("bid"), sides.get("ask")
@@ -459,7 +473,7 @@ def main() -> int:
     args = p.parse_args()
     if args.end <= args.start or args.start_balance <= 0:
         p.error("invalid window or balance")
-    minutes = read_minutes(args.lake, args.epic, args.end)
+    minutes = read_minutes(args.lake, args.epic, args.end, args.start - timedelta(minutes=1800))
     bars = shadow_bars(minutes, args.epic)
     trades, signals = simulate(
         bars,
