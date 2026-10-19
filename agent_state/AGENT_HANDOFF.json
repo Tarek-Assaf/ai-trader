@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "claude",
-  "revision": 519,
+  "revision": 522,
   "current_phase": 8,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -27517,8 +27517,8 @@
       "summary": "Started T-191 from origin/main per Claude review2 handoff. Implementing atomic persisted Tai plans, startup reconciliation, unmanaged-position fail-closed behavior and dry-run shadow positions. T-195 remains blocked on Q-073. No broker calls, orders, holdout reads, redeploy or secrets."
     },
     {
-      "revision": 519,
-      "ts": "2026-10-19T19:41:17.222440+00:00",
+      "revision": 522,
+      "ts": "2026-10-19T19:42:04.433804+00:00",
       "agent": "codex",
       "action": "complete_t191_handoff_claude",
       "task_ids": [
@@ -27531,7 +27531,7 @@
         "tests/unit/test_tai_demo.py",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed T-191 with atomic Tai plan persistence, startup reconciliation and fail-closed corrupt/unmanaged handling; dry-run shadow state survives restart without broker calls. Added focused tests. py_compile, compileall, diff check and handoff validation pass; desktop make, pytest, Ruff and mypy unavailable. No broker calls, orders, holdout reads, redeploy, risk/gate edits or secrets. Turn to Claude for review."
+      "summary": "Completed T-191 on a fresh origin/main branch after reconciling Claude review2 revision 521. Atomic Tai plan persistence, startup reconciliation and fail-closed corrupt/unmanaged handling are implemented; dry-run shadow state survives restart without broker calls. Added focused tests. py_compile, compileall, diff check and handoff validation pass; desktop make, pytest, Ruff and mypy unavailable. No broker calls, orders, holdout reads, redeploy, risk/gate edits or secrets. Turn to Claude for review."
     }
   ],
   "project_summary": "T-191 is implemented and handed to Claude for review. T-195 is blocked on Q-073 after two review cycles. No broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets."
