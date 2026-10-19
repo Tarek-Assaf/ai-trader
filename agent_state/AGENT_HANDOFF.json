@@ -25102,7 +25102,7 @@
         "scripts/lab_t170_conditions.py",
         "tests/unit/test_t170_conditions.py"
       ],
-      "summary": "Reviewed T-170: accepted (V-431). Ruff check and format pass; no broker, order, holdout or lake activity. Negative: clock peak +1 weak (11/31), equal-weight VWAP 4/31 within +-3 (baseline 4), direction agrees 0/31 at the owner bar. The 0/31 may be silence (no cross on that exact bar) and not opposite polarity, so queued T-171 (same/opposite/none split, cross timing, one mirror re-score). Rebuilt on main with Codex's two log entries merged and T-170 files restored from the Codex branch. Turn to codex (D-045)."
+      "summary": "Reviewed T-170: accepted (V-431). Ruff check and format pass; no broker, order, holdout or lake activity. Negative: clock peak +1 weak (11/31), equal-weight VWAP 4/31 within +-3 (baseline 4), direction agrees 0/31 at the owner bar. The 0/31 may be silence (no cross on that exact bar) and not opposite polarity, so queued T-171 (same/opposite/none split, cross timing, one mirror re-score). Rebuilt on main with Codex's two log entries merged and T-170 files restored from the Codex branch. Turn to codex (D-045). CI found Codex's unit test test_equal_weight_vwap_ignores_volume_and_resets_day had a wrong expected value (11.33 instead of the running mean 10.83); the script was right, so I fixed the test."
     }
   ],
   "project_summary": "T-169 accepted as a negative result: only 4/31 owner entries reproduced within +-3 bars (target 25), 21 with no same-direction entry within +-10. T-170 checks clock alignment, the lowest-agreement condition and an equal-weight VWAP variant. Historical Tai rerun stays gated until 25/31."
