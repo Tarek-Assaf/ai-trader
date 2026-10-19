@@ -104,7 +104,13 @@ def precision(
     matched: list[dict[str, Any]] = []
     for signal in signals:
         offset = nearest_owner(signal["index"], signal["direction"], owner_indices, directions)
-        matched.append({**signal, "owner_minus_signal": offset, "matched": offset is not None and abs(offset) <= WINDOW})
+        matched.append(
+            {
+                **signal,
+                "owner_minus_signal": offset,
+                "matched": offset is not None and abs(offset) <= WINDOW,
+            }
+        )
     return {
         "matched": sum(item["matched"] for item in matched),
         "total": len(signals),
@@ -163,7 +169,8 @@ def main() -> int:
     signals = signal_payload["signals"]
     start = min(row["dt"] for row in entries) - timedelta(days=7)
     end = max(row["dt"] for row in rows) + timedelta(minutes=3)
-    bars = tuple(port.resample_ohlc(port.read_nas100_minutes(args.lake, start, end), port.TIMEFRAME))
+    minutes = port.read_nas100_minutes(args.lake, start, end)
+    bars = tuple(port.resample_ohlc(minutes, port.TIMEFRAME))
     features = port.compute_features(bars, "closed")
     owner_indices = [
         port._bar_at(bars, datetime.fromisoformat(item["entry_time"]))[0]
@@ -181,17 +188,17 @@ def main() -> int:
     ):
         if offset is not None and abs(offset) <= WINDOW:
             continue
-        any_candidates = [
-            row for row in signals if index is not None
-        ]
+        any_candidates = signals if index is not None else []
         any_signal = min(
             any_candidates,
             key=lambda row: abs(row["index"] - index),
             default=None,
-        ) if index is not None else None
+        )
         unmatched.append(
             {
-                "entry_time_ny": datetime.fromisoformat(item["entry_time"]).astimezone(NY).isoformat(),
+                "entry_time_ny": datetime.fromisoformat(item["entry_time"])
+                .astimezone(NY)
+                .isoformat(),
                 "direction": direction,
                 "same_offset_owner_minus_signal": offset,
                 "nearest_any_direction": {
@@ -206,7 +213,10 @@ def main() -> int:
     by_hour: dict[int, list[int]] = {}
     for index, bar in enumerate(bars):
         by_hour.setdefault(bar.ts_utc.astimezone(NY).hour, []).append(index)
-    owner_hours = [datetime.fromisoformat(item["entry_time"]).astimezone(NY).hour for item in owner_positions]
+    owner_hours = [
+        datetime.fromisoformat(item["entry_time"]).astimezone(NY).hour
+        for item in owner_positions
+    ]
     rng = random.Random(178)
     null_iqrs: list[float] = []
     null_signs: list[float] = []
@@ -264,13 +274,17 @@ def main() -> int:
     total = int(observed["within_30"])
     majority = Counter(condition for item in unmatched for condition in item["failed_conditions"])
     common = majority.most_common(1)[0][0] if majority else "none"
-    delay_verdict = "yes" if null["delay_iqr_p_narrow"] < 0.05 and null["positive_share_p_high"] < 0.05 else "no"
+    delay_verdict = (
+        "yes"
+        if null["delay_iqr_p_narrow"] < 0.05 and null["positive_share_p_high"] < 0.05
+        else "no"
+    )
     report = [
         "# T-178 delay structure and unmatched entries",
         "",
         (
             f"Delay structure **{delay_verdict}**: of the {total} entries within 30 bars, "
-            f"{positive} were after the signal (median +{observed['median']:.1f} bars, "
+            f"{positive} were after the signal (median {observed['median']:+.1f} bars, "
             f"IQR {observed['q1']:.1f}..{observed['q3']:.1f}); null p for consistent sign "
             f"= {null['positive_share_p_high']:.4f}, null p for a narrow IQR = "
             f"{null['delay_iqr_p_narrow']:.4f}; port-side precision {port_precision['matched']}/"
@@ -280,9 +294,15 @@ def main() -> int:
             "no stable delay supports a different script, version or settings."
         ),
         "",
-        f"Same-direction signed-offset histogram (owner minus signal, bars): {payload['offset_histogram']}",
+        (
+            "Same-direction signed-offset histogram (owner minus signal, bars): "
+            f"{payload['offset_histogram']}"
+        ),
         f"Port-side matched signals by New York day: {port_precision['per_day']}.",
-        "Unmatched entries are tabulated in the JSON with nearest any-direction signal and failed conditions.",
+        (
+            "Unmatched entries are tabulated in the JSON with nearest any-direction "
+            "signal and failed conditions."
+        ),
         "",
         "Replay only: no broker calls, orders, holdout reads, lake writes, tuning or secrets.",
     ]
