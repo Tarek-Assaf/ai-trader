@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 454,
+  "revision": 455,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-166 accepted: the Pine port matches the source on 12 of 15 audited rules and the owner's inputs equal the defaults. Entry-by-entry reproduction is impossible on our data (D-049), so T-167 compares the port's trade counts and outcome mix with the owner's dashboards (D-050). Historical Tai rerun waits for T-167.",
+    "summary": "T-166 accepted: Pine port matches 12/15 audited rules and owner inputs equal defaults. T-167 dashboard count/mix comparison is in progress using the unchanged port on bounded NSXUSD windows; historical Tai rerun waits for this result (D-050).",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5541,7 +5541,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "in_progress",
       "requirements": [
         "R-03"
       ],
@@ -5559,7 +5559,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": ""
+      "completion_note": "Dashboard count comparison in progress."
     }
   ],
   "decisions": [
@@ -24723,6 +24723,19 @@
         "tests/unit/test_t166_conformance.py"
       ],
       "summary": "Reviewed T-166: pass (V-425). Merged PR 297 first, rebuilt Codex's T-166 on main, fixed import order and one long line. Recorded D-050 and queued T-167, a count-and-mix comparison of the port against the owner's two dashboards, which needs no bar alignment. Historical Tai rerun stays blocked until T-167. Turn to codex (D-045)."
+    },
+    {
+      "revision": 455,
+      "ts": "2026-10-19T00:05:00+03:00",
+      "agent": "codex",
+      "action": "start_t167_dashboard_count_check",
+      "task_ids": [
+        "T-167"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Started T-167 from the accepted T-166 lineage. Will run the unchanged Pine port once per the three specified windows plus the NQ1 reference window as far as NSXUSD data allows, then compare count/outcome mix only. No broker, orders, holdout, lake writes, production changes, tuning or strategy search."
     }
   ],
   "project_summary": "T-166 accepted: the Pine port matches the source on 12 of 15 audited rules and the owner's inputs equal the defaults. Entry-by-entry reproduction is impossible on our data (D-049), so T-167 compares the port's trade counts and outcome mix with the owner's dashboards (D-050). Historical Tai rerun waits for T-167."
