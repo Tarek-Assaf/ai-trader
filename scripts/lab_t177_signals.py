@@ -55,6 +55,8 @@ def signal_rows(bars: Any, mode: str) -> list[dict[str, Any]]:
 
 
 def nearest(owner_index: int, direction: str, signals: list[dict[str, Any]], same_only: bool = True) -> int | None:
+    if owner_index is None:
+        return None
     candidates = [row["index"] for row in signals if not same_only or row["direction"] == direction]
     if not candidates:
         return None
@@ -94,9 +96,9 @@ def main() -> int:
     for index, bar in enumerate(bars):
         by_hour.setdefault(bar.ts_utc.astimezone(NY).hour, []).append(index)
     rng = random.Random(177); null_counts = {str(window): [] for window in WINDOWS}
-    available_hours = [bar.ts_utc.astimezone(NY).hour for bar in bars]
+    owner_hours = [datetime.fromisoformat(item["entry_time"]).astimezone(NY).hour for item in owner_positions]
     for _ in range(2000):
-        sampled = [rng.choice(by_hour.get(hour, list(range(len(bars))))) for hour in available_hours[:len(owner_indices)]]
+        sampled = [rng.choice(by_hour.get(hour, list(range(len(bars))))) for hour in owner_hours]
         result = observed(sampled, directions, signals)["counts"]
         for window in WINDOWS: null_counts[str(window)].append(result[str(window)])
     null_mean = {key: sum(values) / len(values) for key, values in null_counts.items()}
