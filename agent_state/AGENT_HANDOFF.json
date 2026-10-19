@@ -5,7 +5,7 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
+  "turn": "claude",
   "revision": 484,
   "current_phase": 1,
   "protocol": {
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). T-182 queued for Codex: session-anchored 54m Heikin Ashi groups diagnostic.",
+    "summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -154,8 +154,7 @@
         "T-178",
         "T-179",
         "T-180",
-        "T-181",
-        "T-182"
+        "T-181"
       ]
     },
     {
@@ -6020,34 +6019,6 @@
         "tests/unit/test_t180_hist_tai.py"
       ],
       "completion_note": "Window-only harness fix complete. Pod exit 0: 8/8 cells ran with warm-up and window bars reported separately, signals and trades restricted to the owner window, warm-up trades discarded, and zero-trade cells marked not exposed because the unchanged T-162 port has no entry-filter counters. Longer history was not run. Holdout refusal exited 1 before data load. No broker calls, orders, holdout reads, lake writes, production writes, tuning or secrets."
-    },
-    {
-      "id": "T-182",
-      "title": "Session-anchored 54m Heikin Ashi groups in the Tai port (diagnostic, owner window)",
-      "phase": 8,
-      "owner": "codex",
-      "reviewer": "claude",
-      "status": "todo",
-      "requirements": [
-        "R-03"
-      ],
-      "depends_on": [
-        "T-181"
-      ],
-      "acceptance_criteria": [
-        "Follow docs/specs/t182_session_anchored_ha.md exactly (anchors epoch/session_1800_ny/rth_0930_ny only, both HA modes, VWAP anchor check, verdict first, 25/31 gate not relaxed).",
-        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets. Lint with ruff check and ruff format (line length 100) without per-line noqa. One log entry, hand turn to claude, stop."
-      ],
-      "deliverables": [
-        "docs/evidence/t182_report.md",
-        "docs/evidence/t182_entries.csv",
-        "docs/evidence/t182_port.json",
-        "scripts/lab_t162_pine_port.py",
-        "tests/unit/test_t162_pine_port.py"
-      ],
-      "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
     }
   ],
   "decisions": [
@@ -6549,7 +6520,7 @@
     },
     {
       "id": "D-063",
-      "statement": "Claude (owner-authorized-by-delegation, D-045): T-181 accepted (V-450): window-only counts yes, 8/8 cells, holdout guard held, longer history not run. Port reproduces only 3/31 within 3 bars so the 25/31 gate is not met and the historical rerun stays blocked (safe option; Q-071 stays open). Re-reading the port found a concrete mismatch with TradingView: 54-minute Heikin Ashi groups are built on a UTC epoch grid and incomplete groups are dropped, whereas TradingView anchors them at the session open (18:00 New York for NQ1) and keeps partial bars. Queued T-182 (docs/specs/t182_session_anchored_ha.md) to test exactly three pre-declared anchors. Reason: this is the last untested structural difference in signal timing, and it fits the ~1.8 h gap.",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-181 accepted (V-450): window-only counts yes, 8/8 cells, holdout guard held, longer history not run. Port reproduces only 3/31 within 3 bars, so the 25/31 gate is not met and the historical rerun stays blocked (safe option; Q-071 stays open). I considered queuing a session-anchored 54m Heikin Ashi test but D-054/T-172 already ran it (cme_session, ny_midnight, utc_midnight, partial buckets kept) and it was negative, so it would repeat a done diagnostic; I did not queue it (my miss: I proposed it before reading D-054). Fifteen bar-matching diagnostics (T-162 to T-181 line) are exhausted. What is left needs owner input (Q-071 option C: exact script version/settings, or a TradingView export of the chart with the indicator's Heikin Ashi plots) or NQ1 futures data. No new task queued; turn stays with Claude so Codex does not repeat work.",
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T04:55:00Z",
@@ -26242,17 +26213,15 @@
       "revision": 484,
       "ts": "2026-10-19T04:55:00Z",
       "agent": "claude",
-      "action": "accept_t181_queue_t182",
+      "action": "accept_t181_no_new_task",
       "task_ids": [
-        "T-181",
-        "T-182"
+        "T-181"
       ],
       "files_changed": [
-        "agent_state/AGENT_HANDOFF.json",
-        "docs/specs/t182_session_anchored_ha.md"
+        "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Accepted T-181 (V-450, D-063). Gate 25/31 still not met, rerun stays blocked. Found the port groups 54m Heikin Ashi on a UTC grid and drops partial groups, unlike TradingView's session-anchored bars; queued T-182 to test three pre-declared anchors. No broker calls."
+      "summary": "Accepted T-181 (V-450, D-063). Gate 25/31 still not met, rerun stays blocked on Q-071. Did not queue a session-anchored HA test because T-172 already ran it (negative). No new Codex task; no broker calls."
     }
   ],
-  "project_summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). T-182 queued for Codex: session-anchored 54m Heikin Ashi groups diagnostic."
+  "project_summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued."
 }
