@@ -120,6 +120,14 @@ def _compact_lines(rows: Sequence[Mapping[str, object]]) -> list[str]:
     the two preceding closed bars so the evidence can be reconstructed from
     copied terminal output without inventing any values.
     """
+
+    def short(value: object) -> str:
+        if value is None:
+            return "-"
+        if isinstance(value, (int, float)):
+            return f"{value:.10g}"
+        return str(value)
+
     lines: list[str] = []
     for row in rows:
         context = row.get("context")
@@ -141,17 +149,22 @@ def _compact_lines(rows: Sequence[Mapping[str, object]]) -> list[str]:
         entry = context[-1]
         entry_port = entry.get("port") if isinstance(entry, Mapping) else None
         entry_runtime = entry.get("runtime") if isinstance(entry, Mapping) else None
-        payload = {
-            "at": row.get("at"),
-            "side": row.get("direction"),
-            "q": quantity,
-            "entry": [
-                entry_port.get(quantity) if isinstance(entry_port, Mapping) else None,
-                entry_runtime.get(quantity) if isinstance(entry_runtime, Mapping) else None,
-            ],
-            "prior": prior,
-        }
-        lines.append(json.dumps(payload, separators=(",", ":"), sort_keys=True))
+        entry_values = [
+            entry_port.get(quantity) if isinstance(entry_port, Mapping) else None,
+            entry_runtime.get(quantity) if isinstance(entry_runtime, Mapping) else None,
+        ]
+        values = [value for pair in prior for value in pair] + entry_values
+        lines.append(
+            "|".join(
+                [
+                    "T196_ROW",
+                    str(row.get("at")),
+                    str(row.get("direction")),
+                    str(quantity),
+                    *(short(value) for value in values),
+                ]
+            )
+        )
     return lines
 
 
