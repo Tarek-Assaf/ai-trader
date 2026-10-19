@@ -15141,7 +15141,7 @@
       "id": "V-446",
       "task_id": "T-179",
       "subject": "Claude review of T-179",
-      "method": "Checked spec docs/specs/t179_signal_fragility.md against report and JSON: 4 registered sds, 200 draws, seed 179, port unchanged, verdict first, all required metrics present; ruff check and format (line 100) fixed one import order in each of two files; safety counters zero.",
+      "method": "Checked spec docs/specs/t179_signal_fragility.md against report and JSON: 4 registered sds, 200 draws, seed 179, port unchanged, verdict first, all required metrics present; ruff check and format (line 100) fixed one import order in each of two files; safety counters zero. CI run 1 failed in Codex's unit test (SimpleNamespace is not a dataclass for replace()); fixed the test only, script unchanged.",
       "result": "pass",
       "checked": "Result: signals stable (86.5% same bar, 94.1% within 3 bars at sd 1). Note: the report's last sentence is worded confusingly; the correct reading is stable -> a different script, version or settings (Q-071 option C) is more likely than data noise. Caveat: sds 0.5-4 points are far below the 221-point futures/CFD basis, so this does not test the basis itself.",
       "evidence": [
@@ -26041,7 +26041,7 @@
         "scripts/lab_t179_fragility.py",
         "tests/unit/test_t179_fragility.py"
       ],
-      "summary": "Accepted T-179 (V-446, D-061): port signals stable under bar noise; 25/31 gate not relaxed; historical rerun still waits on Q-071. Queued T-180 (build and dry-check the historical harness, no history run). Lint fix: import order in two T-179 files. No broker calls."
+      "summary": "Accepted T-179 (V-446, D-061): port signals stable under bar noise; 25/31 gate not relaxed; historical rerun still waits on Q-071. Queued T-180 (build and dry-check the historical harness, no history run). Fixes: import order in two T-179 files; T-179 unit test used SimpleNamespace with dataclasses.replace (CI failure), now a dataclass bar. No broker calls."
     }
   ],
   "project_summary": "T-176 accepted as a 'partly' geometry audit: the owner CSV has broker-style tranches and market exits that the stored indicator cannot produce, so the owner likely traded by hand or ran another script. T-177 tests whether owner entries cluster around the port's signals more than chance. Historical Tai rerun stays gated until 25/31 (or an owner decision)."
