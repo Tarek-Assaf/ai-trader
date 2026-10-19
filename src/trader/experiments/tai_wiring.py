@@ -177,7 +177,7 @@ def minute_bar_from_candle(
     )
 
 
-def _rma(values: Sequence[float | None], period: int) -> tuple[float | None, ...]:
+def _rma(values: Sequence[Any], period: int) -> tuple[float | None, ...]:
     result: list[float | None] = [None] * len(values)
     valid = [index for index, value in enumerate(values) if value is not None]
     if not valid or len(values) - valid[0] < period:
@@ -206,7 +206,7 @@ def _ema(values: Sequence[float], period: int) -> tuple[float | None, ...]:
     return tuple(result)
 
 
-def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[float | None, ...] | tuple[bool, ...]]:
+def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[Any, ...]]:
     closes = [float(bar.close) for bar in bars]
     highs = [float(bar.high) for bar in bars]
     lows = [float(bar.low) for bar in bars]
@@ -241,8 +241,8 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[float | None, ...] |
         if tr <= 0:
             plus_di[index] = minus_di[index] = dx[index] = 0.0
             continue
-        p = 100.0 * float(smooth_plus[index]) / tr
-        m = 100.0 * float(smooth_minus[index]) / tr
+        p = 100.0 * float(smooth_plus[index] or 0.0) / tr
+        m = 100.0 * float(smooth_minus[index] or 0.0) / tr
         plus_di[index], minus_di[index] = p, m
         dx[index] = 0.0 if p + m <= 0 else 100.0 * abs(p - m) / (p + m)
     anchor_keys: list[datetime | None] = []
@@ -274,8 +274,8 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[float | None, ...] |
             equal_sum += typical
             equal_count += 1
             vwap.append(equal_sum / equal_count)
-    ha_open: list[float | None] = [None] * len(bars)
-    ha_close: list[float | None] = [None] * len(bars)
+    ha_open: list[Any] = [None] * len(bars)
+    ha_close: list[Any] = [None] * len(bars)
     groups: dict[tuple[datetime, int], list[int]] = defaultdict(list)
     for index, bar in enumerate(bars):
         local = bar.at.astimezone(NY)
@@ -347,7 +347,7 @@ class TaiSignalProvider:
     ) -> TaiSignalProvider:
         """Load recent 1m bid/ask mid bars and aggregate them for warm-up."""
         try:
-            import pyarrow.parquet as pq
+            import pyarrow.parquet as pq  # type: ignore[import-untyped]
         except ImportError as exc:  # pragma: no cover - supplied by the runtime image
             raise RuntimeError("pyarrow is required to warm the Tai signal provider") from exc
         by_stamp: dict[datetime, dict[str, Mapping[str, Any]]] = defaultdict(dict)

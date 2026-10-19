@@ -323,7 +323,7 @@ class RuntimeService:
             reason = "kill_switch_active" if mode is ControlMode.KILL else "execution_paused"
             return RuntimeResult.no_trade(reason, resolved_cycle_id)
         try:
-            tai_runtime = self.components.metadata.get("tai_demo_runtime")
+            tai_runtime: Any = self.components.metadata.get("tai_demo_runtime")
             event_id = getattr(cycle, "event_id", "")
             if (
                 tai_runtime is not None

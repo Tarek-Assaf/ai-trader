@@ -13,7 +13,7 @@ from collections.abc import Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from fastapi import FastAPI
 
@@ -271,8 +271,8 @@ def _build_tai_demo_runtime(
     return build_tai_demo_runtime(
         settings,
         epic=epic,
-        order_manager=components.order_manager,
-        position_gateway=components.broker,
+        order_manager=cast(Any, components.order_manager),
+        position_gateway=cast(Any, components.broker),
         control=app.state.execution_control_source,
         source=cycle_source,
         builder=ThreeMinuteBarBuilder(epic),
