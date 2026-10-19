@@ -11,7 +11,7 @@ import threading
 import traceback
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, cast
@@ -295,11 +295,18 @@ def _build_tai_demo_runtime(
     )
     if runtime_adapter is not None:
         history = getattr(signal, "history", ())
-        seed_after = history[-1].at + timedelta(minutes=2) if history else None
+        # Never replay recorded history as live bars: start after the warm-up, or
+        # after the last closed minute when there is no warm-up at all.
+        seed_after = (
+            history[-1].at + timedelta(minutes=2)
+            if history
+            else datetime.now(UTC).replace(second=0, microsecond=0) - timedelta(minutes=1)
+        )
         app.state.tai_feed_tailer = TaiLakeTailer(
             lake_root,
             epic,
             runtime_adapter,
+            market_open=_tai_market_open(capital_client, epic),
             seed_after=seed_after,
         )
         if not getattr(app.state, "tai_startup_logged", False):
@@ -315,13 +322,36 @@ def _build_tai_demo_runtime(
     return runtime_adapter
 
 
+def _tai_market_open(capital_client: Any, epic: str) -> Callable[[datetime], bool]:
+    """Broker opening hours for the stale-feed guard; unknown hours count as closed."""
+    from trader.data.market_hours import MarketHours
+
+    state: dict[str, Any] = {"hours": None, "tried": None}
+
+    def is_open(now: datetime) -> bool:
+        hours = state["hours"]
+        if hours is None:
+            tried = state["tried"]
+            if tried is not None and (now - tried) < timedelta(minutes=10):
+                return False
+            state["tried"] = now
+            try:
+                hours = MarketHours.from_market_details(capital_client.market_details(epic))
+            except Exception:  # noqa: BLE001 - unknown hours must not raise stale alerts
+                return False
+            state["hours"] = hours
+        return bool(hours.is_open(now))
+
+    return is_open
+
+
 async def _tai_feed_loop(app: FastAPI) -> None:
     """Tail the recorder lake without coupling the API to the worker stream."""
     while True:
         tailer = getattr(app.state, "tai_feed_tailer", None)
         if tailer is not None:
             try:
-                tailer.poll_once()
+                await asyncio.to_thread(tailer.poll_once)
             except Exception:  # noqa: BLE001 - a lake read must not stop the API
                 _LOG.warning("Tai lake feed poll failed", exc_info=True)
             await asyncio.sleep(tailer.interval_seconds)
@@ -334,9 +364,7 @@ def _start_tai_feed_tailer(app: FastAPI) -> None:
     tailer = getattr(app.state, "tai_feed_tailer", None)
     task = getattr(app.state, "tai_feed_task", None)
     if tailer is not None and (task is None or task.done()):
-        app.state.tai_feed_task = asyncio.create_task(
-            _tai_feed_loop(app), name="tai-lake-feed"
-        )
+        app.state.tai_feed_task = asyncio.create_task(_tai_feed_loop(app), name="tai-lake-feed")
 
 
 class _MemoryUsageLedger:

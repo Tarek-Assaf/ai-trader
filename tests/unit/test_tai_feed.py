@@ -120,3 +120,24 @@ def test_tailer_stale_alert_is_single_and_recovery_allows_feed(tmp_path: Path) -
     assert tailer.poll_once(start + timedelta(minutes=6, seconds=20)) == 1
     assert consumer.recovered_count == 1
     assert tailer.stale is False
+
+
+def test_tai_market_open_fails_closed_and_throttles_retries() -> None:
+    from trader.api.app import _tai_market_open
+
+    class Client:
+        calls = 0
+
+        def market_details(self, epic: str) -> dict[str, object]:
+            self.calls += 1
+            raise RuntimeError("unavailable")
+
+    client = Client()
+    is_open = _tai_market_open(client, "NSXUSD")
+    now = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
+
+    assert is_open(now) is False
+    assert is_open(now + timedelta(minutes=1)) is False
+    assert client.calls == 1
+    assert is_open(now + timedelta(minutes=11)) is False
+    assert client.calls == 2
