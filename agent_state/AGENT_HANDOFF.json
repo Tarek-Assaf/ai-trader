@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 464,
+  "revision": 466,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-171 accepted as a negative diagnostic: no inverted condition, but the port's HA cross is silent at all 31 owner bars (1/31 within 2 bars of a cross). Suspect: the port's 54m buckets use a UTC-epoch grid, TradingView uses the session grid. T-172 tests four anchors in both HA modes. Historical Tai rerun stays gated until 25/31.",
+    "summary": "T-172 accepted as a negative diagnostic: no 54m bucket anchor reproduces the owner entries (best 4/31 within 2 bars of a cross, goal 25/31). T-173 tests whether the owner's chart uses a different HTF multiplier than the Pine default 18. Historical Tai rerun stays gated until 25/31.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -145,7 +145,8 @@
         "T-169",
         "T-170",
         "T-171",
-        "T-172"
+        "T-172",
+        "T-173"
       ]
     },
     {
@@ -5697,7 +5698,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5713,6 +5714,38 @@
         "docs/evidence/t172_anchors.json",
         "scripts/lab_t172_htf_anchor.py",
         "tests/unit/test_t172_htf_anchor.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t172_report.md",
+        "docs/evidence/t172_anchors.json",
+        "scripts/lab_t172_htf_anchor.py",
+        "tests/unit/test_t172_htf_anchor.py"
+      ],
+      "completion_note": "Completed one bounded offline Pod replay over exactly four anchors (epoch, cme_session, ny_midnight, utc_midnight) and two HA modes. Best variant ny_midnight/forming reaches 4/31 within two bars of a same-direction cross and 5/31 within +/-2 versus baseline 1/31 and 4/31; no variant reaches 25/31. No broker, orders, holdout, lake writes, tuning or strategy search. Pod exit 0; local Ruff format/check, py_compile and diff checks pass; pytest unavailable."
+    },
+    {
+      "id": "T-173",
+      "title": "Test whether a different Heikin Ashi timeframe multiplier (tfmult) than the Pine default 18 explains the silent cross",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-172"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t173_tfmult_inputs.md exactly (port and earlier scripts unchanged; registered grid of 13 tfmult x anchors epoch/ny_midnight x closed/forming only; baseline must reproduce T-171/T-172; verdict first; small gains below 15 of 31 are noise).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning beyond the grid or secrets. Lint with ruff check and ruff format (line length 100). One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t173_report.md",
+        "docs/evidence/t173_tfmult.json",
+        "scripts/lab_t173_tfmult.py",
+        "tests/unit/test_t173_tfmult.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -14599,6 +14632,22 @@
       ],
       "validated_by": "claude",
       "date": "2026-10-19T01:35:00Z",
+      "reverify_if": "The port, the owner CSV or the lake bars change."
+    },
+    {
+      "id": "V-433",
+      "task_id": "T-172",
+      "subject": "Claude review of T-172 HTF Heikin Ashi bucket anchor test",
+      "method": "Reviewed report, JSON and script against docs/specs/t172_htf_anchor.md; ran ruff check and ruff format --check (line length 100) on the script and test (pass); checked safety counters in the JSON (broker calls 0, holdout not read) and that the port and earlier scripts are untouched. CI caught a wrong expected value in Codex's unit test (test_ny_midnight_anchor_uses_new_york_calendar expected 04:54 UTC for a 00:02 New York stamp; the correct bucket start is 05:00 UTC); Claude corrected the test to stamp 01:02 New York with expected 00:54 New York (05:54 UTC). The script was correct and no evidence number changed.",
+      "result": "pass",
+      "checked": "Spec followed: four anchors x two HA modes, baseline reproduces T-171 (1/31 within 2 bars, matches 1/3/4/4). Result is negative: anchor hypothesis does not get near the goal; best ny_midnight/forming 4/31 within 2 bars of a same-direction cross, 5/31 matched within +-2; no variant reaches 25/31.",
+      "evidence": [
+        "docs/evidence/t172_report.md",
+        "docs/evidence/t172_anchors.json",
+        "scripts/lab_t172_htf_anchor.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T01:50:00Z",
       "reverify_if": "The port, the owner CSV or the lake bars change."
     }
   ],
@@ -25193,7 +25242,44 @@
         "scripts/lab_t171_polarity.py"
       ],
       "summary": "Reviewed T-171: accepted (V-432) as negative. Ruff check and format pass; no broker, order, holdout or lake activity. No inverted condition; HA cross silent at 31/31 owner bars; 1/31 within 2 bars of a same-direction cross; mirror 0/31. Found in the port: 54m buckets use UTC-epoch grouping and skip incomplete groups, TradingView uses the session grid. Queued T-172 (four anchors x closed/forming). Rebuilt on main with Codex's log entry kept and main's corrected T-170 test kept (Codex's branch had reverted it). Turn to codex (D-045)."
+    },
+    {
+      "revision": 465,
+      "ts": "2026-10-19T01:45:00Z",
+      "agent": "codex",
+      "action": "complete_t172_htf_anchor",
+      "task_ids": [
+        "T-172"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t172_report.md",
+        "docs/evidence/t172_anchors.json",
+        "scripts/lab_t172_htf_anchor.py",
+        "tests/unit/test_t172_htf_anchor.py"
+      ],
+      "summary": "Completed one bounded offline Pod replay for four anchors x two HA modes. Epoch closed reproduces T-171 baseline 1/3/4/4 and 1/31 within two bars; ny_midnight/forming is best at 4/31 within two bars and 5/31 within +/-2, below 25/31. No broker, orders, holdout, lake writes, tuning or strategy search. Pod exit 0; local Ruff, format, py_compile and diff checks pass; pytest unavailable. Turn to Claude for review."
+    },
+    {
+      "revision": 466,
+      "ts": "2026-10-19T01:50:00Z",
+      "agent": "claude",
+      "action": "accept_t172_queue_t173",
+      "task_ids": [
+        "T-172",
+        "T-173"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t173_tfmult_inputs.md",
+        "docs/evidence/t172_report.md",
+        "docs/evidence/t172_anchors.json",
+        "scripts/lab_t172_htf_anchor.py",
+        "tests/unit/test_t172_htf_anchor.py",
+        "docs/specs/t172_htf_anchor.md"
+      ],
+      "summary": "Reviewed T-172: accepted (V-433) as negative. Ruff check and format pass; no broker, order, holdout or lake activity. No 54m bucket anchor reproduces the owner entries (best 4/31 within 2 bars of a cross, none near 25/31). Queued T-173: registered tfmult grid (13 values x 2 anchors x 2 modes) to test whether the owner's chart uses a different HTF multiplier than the Pine default 18. Rebuilt on main with Codex's log entry kept. Turn to codex (D-045)."
     }
   ],
-  "project_summary": "T-171 accepted as a negative diagnostic: no inverted condition, but the port's HA cross is silent at all 31 owner bars (1/31 within 2 bars of a cross). Suspect: the port's 54m buckets use a UTC-epoch grid, TradingView uses the session grid. T-172 tests four anchors in both HA modes. Historical Tai rerun stays gated until 25/31."
+  "project_summary": "T-172 accepted as a negative diagnostic: no 54m bucket anchor reproduces the owner entries (best 4/31 within 2 bars of a cross, goal 25/31). T-173 tests whether the owner's chart uses a different HTF multiplier than the Pine default 18. Historical Tai rerun stays gated until 25/31."
 }
