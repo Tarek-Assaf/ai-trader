@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 488,
+  "revision": 490,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-182 accepted. Historical rerun blocked (best session-anchored result 11/31 within 3 bars; gate 25/31). Bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No unblocked Codex task was available this turn; owner will queue the next two tasks after this handoff.",
+    "summary": "T-184 completed: unchanged Tai port replayed on 3m NSXUSD/XAUUSD over configured six-year TRAINING range with seven-day warm-up, real and zero-cost outputs, and owner-window result. Both real-cost full-history cells are negative; zero-cost is diagnostic only. T-184 is ready for Claude review; T-185 remains queued. No broker orders, holdout reads, Gate 1, or promotion writes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6063,11 +6063,14 @@
         "R-03"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "",
+      "evidence": [
+        "docs/evidence/t184_report.md",
+        "docs/evidence/t184_summary.json"
+      ],
+      "completion_note": "Completed unchanged scripts/lab_t180_hist_tai.py on 3m NSXUSD and XAUUSD over the configured six-year TRAINING range 2020-10-17 through 2026-10-17 (end exclusive), with the script warm-up and holdout guard retained. Full real-cost and zero-cost runs plus the owner window 2026-10-06 through 2026-10-17 all exited 0. Full real-cost 3m results are negative (NSXUSD 5,751 trades, PF 0.210, net -9,490.90R; XAUUSD 6,296 trades, PF 0.066, net -22,223.48R); zero-cost outputs are diagnostic only (PF 1.860/1.873; net +1,898/+2,078R). Owner window produced 22 NSXUSD trades (real PF 1.936, net +10.32R; zero-cost PF 5.4, net +22R) and no exposed XAUUSD trades. All outputs carry the required loose-match label. SHA256 hashes and per-year/overall metrics are recorded in the deliverables. Safety counters stayed at zero: no broker calls, orders, sealed holdout reads, lake writes, production writes, tuning, Gate 1 evaluation or promotion. Ready for Claude review; T-185 remains queued.",
       "id": "T-184",
       "title": "Historical test of the Tai port on 3m lake history (labelled loosely matched; diagnostic)",
-      "status": "todo",
+      "status": "done",
       "depends_on": [
         "T-180"
       ],
@@ -15380,6 +15383,36 @@
       "validated_by": "claude",
       "date": "2026-10-19T05:20:00Z",
       "reverify_if": "The T-162 port, the T-182 script or owner-window lake data changes."
+    },
+    {
+      "id": "V-452",
+      "task_id": "T-184",
+      "subject": "Codex validation of T-184 historical 3m diagnostic",
+      "method": "Ran the unchanged historical Tai replay four times on the Pod: full TRAINING real-cost, full TRAINING zero-cost, owner-window real-cost, and owner-window zero-cost. Confirmed exit code 0, required loose-match label, per-year and overall metrics, owner-window output, holdout guard and zero safety counters; reviewed the generated report and summary hashes.",
+      "result": "pass",
+      "checked": "Full 3m NSXUSD/XAUUSD cells completed for 2020-10-17 through 2026-10-17; owner window covered 2026-10-06 through 2026-10-17. Real-cost full-history cells were negative; zero-cost run is diagnostic only. No broker calls, orders, sealed holdout reads, lake writes, production writes, tuning, Gate 1 evaluation or promotion writes.",
+      "evidence": [
+        "docs/evidence/t184_report.md",
+        "docs/evidence/t184_summary.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T08:00:00Z",
+      "reverify_if": "The T-162 Tai port, scripts/lab_t180_hist_tai.py, the lake data, Strategy Lab cost model or holdout boundary changes."
+    },
+    {
+      "id": "V-453",
+      "task_id": "T-184",
+      "subject": "T-184 review (Claude): historical 3m diagnostic of the Tai port",
+      "method": "Read the report and summary; ruff check and format on all scripts and tests; merged Codex's two consecutive log entries and resolved the handoff conflict with main.",
+      "result": "pass",
+      "checked": "The unchanged port was replayed on 3m over the 2020-10-17..2026-10-17 training range for NSXUSD (5,751 trades) and XAUUSD (6,296 trades) with the label, holdout guard and zero safety counters. With the configured costs both lose in every year (NSXUSD overall win rate 19.2%, avg R -1.65, profit factor 0.21; XAUUSD 13.5%, avg R -3.53, PF 0.07). Zero-cost counterfactual is positive (NSXUSD avg R +0.33, PF 1.86; XAUUSD +0.33, PF 1.87), so costs of roughly 2 R per trade decide the result: the 3m stop distance is small compared with the assumed costs (4 pts NSXUSD, 1.6 XAUUSD vs recorded median spreads 1.8 and 0.5). Owner window: NSXUSD 22 trades. Diagnostic only, not a Gate 1 pass.",
+      "evidence": [
+        "docs/evidence/t184_report.md",
+        "docs/evidence/t184_summary.json"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19",
+      "reverify_if": "the port, the cost model or the harness changes"
     }
   ],
   "blockers": [
@@ -26400,7 +26433,36 @@
         "docs/specs/t185_tai_demo_paper.md"
       ],
       "summary": "Owner answered Q-071 (option A) and asked for a demo paper-trading run today. Recorded D-066. Queued T-184 (historical 3m test of the Tai port, labelled loosely matched, diagnostic) then T-185 (demo-only Tai paper runner behind TAI_DEMO_EXPERIMENT, normal Risk Guardian path; spec written). No tfmult sweep (owner screenshots show 18). First demo run needs an owner redeploy with advance notice. 25/31 gate not relaxed. Turn to codex."
+    },
+    {
+      "revision": 489,
+      "ts": "2026-10-19T08:00:00Z",
+      "agent": "codex",
+      "action": "complete_t184_hist_3m",
+      "task_ids": [
+        "T-184"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t184_report.md",
+        "docs/evidence/t184_summary.json"
+      ],
+      "summary": "Started T-184 from the authoritative origin/main lineage. The queued diagnostic will run the unchanged Tai port on full TRAINING 3m lake history for NSXUSD and XAUUSD, with cost and zero-cost reports, owner-window comparison, explicit loose-match labeling, holdout refusal and bounded execution. T-185 remains queued after T-184. No broker orders or live/demo trading. Then (same hand-off): Completed T-184 historical Tai 3m diagnostic: full TRAINING and owner-window real-cost plus zero-cost runs exited 0; real-cost full history was negative and zero-cost is diagnostic only. Required metrics, hashes and safety counters are recorded. No broker calls, orders, holdout reads, promotion writes or tuning. T-184 is ready for Claude review; T-185 remains queued. Turn to Claude."
+    },
+    {
+      "revision": 490,
+      "ts": "2026-10-19T11:30:00+03:00",
+      "agent": "claude",
+      "action": "accept_t184_queue_continues_t185",
+      "task_ids": [
+        "T-184",
+        "T-185"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-184 (V-453): the Tai port loses money on 3m with the configured costs in every year (NSXUSD PF 0.21, XAUUSD 0.07) and is positive only at zero cost (PF 1.86), so costs of about 2 R per trade decide it. Merged Codex's two consecutive entries. T-185 (demo-only paper runner, owner-directed, D-066) stays queued as a build; the owner is told the expected demo result. Turn to codex."
     }
   ],
-  "project_summary": "T-182 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No unblocked Codex task was available this turn; owner will queue the next two tasks after this handoff. Turn is Claude's."
+  "project_summary": "T-184 completed: unchanged Tai port replayed on 3m NSXUSD/XAUUSD over configured six-year TRAINING range with seven-day warm-up, real and zero-cost outputs, and owner-window result. Both real-cost full-history cells are negative; zero-cost is diagnostic only. T-184 is ready for Claude review; T-185 remains queued. No broker orders, holdout reads, Gate 1, or promotion writes."
 }
