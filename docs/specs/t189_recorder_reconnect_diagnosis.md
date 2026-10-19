@@ -35,3 +35,26 @@ steps the owner must run, if any.
 ## Acceptance
 Reconnect paths documented with log lines; gap tool and tests; a written conclusion naming the most
 likely cause with evidence; CI green (ruff 0.9.6 line 100, mypy, pytest). One log entry, hand to claude.
+
+## New evidence added 2026-10-19 17:15 (owner pasted api.err.log tail from the Pod)
+- `ERROR runtime alert: runtime_dependency_unavailable` then `runtime_recovered` repeat about every
+  6 minutes (14:03:31 -> recovered 14:03:38, 14:09:23 -> recovered 14:09:30 Riyadh-pod UTC log time).
+  Each outage lasts about 7 seconds. Each recovery re-runs the runtime composition, which re-loads the
+  Tai warm-up from the lake and rebuilds the tailer.
+- `telegram getUpdates ConnectError` also seen (14:06:56): possible network blips on the Pod.
+- The recorder reconnects about every 3 minutes (ConnectionClosedError). Same period family.
+- Start-up line was present: `Tai demo startup experiment=on dry_run=on epic=US100 warmup_bars=300`.
+  No `tai demo heartbeat` line has been confirmed yet.
+
+Extra questions T-189 must answer from the code and logs:
+(f) Which dependency is unavailable (composition raises RuntimeDependencyUnavailable: capital client,
+    cycle source, instrument mapper, others) and why every ~6 minutes. Does the API process log in to
+    Capital.com again on that cadence (session expiry, 10 minute inactivity, re-login)?
+(g) Hypothesis to test: the API-process Capital login (instrument mapper, rules, balance, client
+    refresh) and the recorder worker's login share one Capital.com session or key, and a new login in
+    one process invalidates the WebSocket tokens of the other, causing the recorder's
+    ConnectionClosedError. Compare timestamps of API re-logins with recorder reconnects. If confirmed,
+    propose one shared session or token owner, or a login throttle; do not change risk or order paths.
+(h) Does each runtime recovery reset the Tai runner state (open position tracking, last bar, warm-up)?
+    A rebuild while a demo position is open must never lose track of it or double-enter; report and fix
+    with a test. Heartbeat absence: show whether any 3m bar was emitted, and if not, why.
