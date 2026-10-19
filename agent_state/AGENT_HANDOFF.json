@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 478,
+  "turn": "claude",
+  "revision": 479,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-178 accepted: no stable positive delay between owner entries and port signals (p=0.81); port precision 25/45 vs 12.79 null (p=0.008). Historical rerun still blocked on Q-071 (gate 25/31 not relaxed). T-179 (signal fragility under bar noise) is queued for Codex.",
+    "summary": "T-179 completed: signal fragility replay is stable under registered bar noise (sd 1.0 exact 86.5%, +/-3 bars 94.1%, +/-30 bars 98.6%; 3.98 new signals/draw); bar-exact mismatch remains unfair. Evidence and script are ready for Claude review. Historical rerun remains gated by Q-071.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5928,7 +5928,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -5946,8 +5946,13 @@
         "tests/unit/test_t179_fragility.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t179_report.md",
+        "docs/evidence/t179_fragility.json",
+        "scripts/lab_t179_fragility.py",
+        "tests/unit/test_t179_fragility.py"
+      ],
+      "completion_note": "Completed one bounded offline NSXUSD 3-minute replay with 45 baseline signals, registered Gaussian OHLC noise sds 0.5/1/2/4 index points, 200 draws each, seed 179. Median consecutive close difference was 6.20 points versus the 221.05-point owner/CFD basis reference; sd 1.0 was the selected comparison. At sd 1.0, exact same-bar mean was 38.905/45 (86.5%), within +/-3 bars 42.33/45 (94.1%), within +/-30 bars 44.38/45, new signals 3.98/draw, owner matches 3.845/31 within +/-3 and 15.325/31 within +/-30. Verdict: stable under the registered perturbations (no fragility support); bar-exact mismatch remains unfair. No broker, orders, holdout, lake writes, tuning or secrets. Turn to Claude for review."
     }
   ],
   "decisions": [
@@ -15078,6 +15083,23 @@
       "validated_by": "claude",
       "date": "2026-10-19T03:50:00Z",
       "reverify_if": "The T-177 signals, owner CSV or NSXUSD lake bars change."
+    },
+    {
+      "id": "V-445",
+      "task_id": "T-179",
+      "subject": "T-179 signal fragility under seeded bar noise",
+      "method": "Ran one bounded offline replay in the owner-provided Pod using the unchanged T-162 port, owner CSV, NSXUSD 3-minute full-warmup lake and baseline docs/evidence/t177_signals.json. Perturbed each OHLC bar independently with repaired consistency, registered sds 0.5/1/2/4 index points, 200 draws each and seed 179. Pod exit 0. Artifact SHA-256: t179_fragility.json 4036DF76F575D10065C1CF515DFE3783244B150CB6F7252E4B5E34165D1DBCD7; t179_report.md 13B47277A18E1D3127A526E20753A55BB81EF621AB33F62F059515F8A943EBA1. Ran py_compile and git diff --check locally; pytest and Ruff were unavailable on the desktop.",
+      "result": "pass",
+      "checked": "Spec followed: 45 baseline signals, exact/same-direction matches at same bar and +/-3/+/-30 bars, new signals, owner +/-3/+/-30 matches, median consecutive-close difference and owner/CFD basis comparison. Safety counters were zero; no broker, orders, holdout, lake writes, tuning or secrets. Verdict at sd 1.0 is stable/no fragility support.",
+      "evidence": [
+        "docs/evidence/t179_report.md",
+        "docs/evidence/t179_fragility.json",
+        "scripts/lab_t179_fragility.py",
+        "tests/unit/test_t179_fragility.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T03:45:00Z",
+      "reverify_if": "The owner CSV, T-162 Pine port, T-177 baseline signals or NSXUSD 3-minute lake bars change."
     }
   ],
   "blockers": [
@@ -25935,7 +25957,24 @@
         "scripts/lab_t178_delay.py"
       ],
       "summary": "Accepted T-178 (V-444, D-060): no stable positive delay between owner entries and port signals; port-side precision 25/45 vs null 12.79; 16 unmatched entries fail on the HA cross. 25/31 gate not relaxed; historical rerun still waits on Q-071. Queued T-179 (signal fragility under seeded bar noise). Lint fix: one import order in the T-178 script. No broker calls."
+    },
+    {
+      "revision": 479,
+      "ts": "2026-10-19T03:45:00Z",
+      "agent": "codex",
+      "action": "complete_t179_signal_fragility",
+      "task_ids": [
+        "T-179"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t179_report.md",
+        "docs/evidence/t179_fragility.json",
+        "scripts/lab_t179_fragility.py",
+        "tests/unit/test_t179_fragility.py"
+      ],
+      "summary": "Completed one bounded offline Pod replay of seeded OHLC bar noise. With 45 baseline signals and sds 0.5/1/2/4 (200 draws each, seed 179), selected sd 1.0 because the 221.05-point owner/CFD basis exceeded all registered sds. Exact same-bar mean 38.905/45 (86.5%), +/-3 mean 42.33/45 (94.1%), +/-30 mean 44.38/45, new signals 3.98/draw; owner +/-3 3.845/31 and +/-30 15.325/31. Median consecutive close difference was 6.20 points. Verdict stable/no fragility support; bar-exact mismatch remains unfair. Pod exit 0; hashes and local py_compile/diff checks recorded in V-445. No broker, orders, holdout, lake writes, tuning or secrets. Turn to Claude for review."
     }
   ],
-  "project_summary": "T-176 accepted as a 'partly' geometry audit: the owner CSV has broker-style tranches and market exits that the stored indicator cannot produce, so the owner likely traded by hand or ran another script. T-177 tests whether owner entries cluster around the port's signals more than chance. Historical Tai rerun stays gated until 25/31 (or an owner decision)."
+  "project_summary": "T-179 completed the seeded signal-fragility diagnostic: perturbing NSXUSD 3-minute OHLC bars at sd 0.5/1/2/4 index points did not materially destabilize signals (selected sd 1.0: 86.5% same-bar and 94.1% within +/-3 bars). The median consecutive close difference (6.20 points) is far below the 221.05-point owner/CFD basis reference, so the result supports stable signals and that bar-exact mismatch can be unfair. Claude review is next; the historical rerun remains gated by Q-071."
 }
