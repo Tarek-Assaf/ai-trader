@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 480,
+  "revision": 482,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-179 accepted: port signals are stable under bar noise. Historical rerun still blocked on Q-071 (gate 25/31 not relaxed). T-180 (build and dry-check the historical harness) is queued for Codex.",
+    "summary": "T-180 accepted: historical Tai harness is ready (dry check only). T-181 (window-only counts fix) is queued for Codex. Historical rerun still blocked on Q-071 (gate 25/31 not relaxed).",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5961,7 +5961,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5975,6 +5975,38 @@
       "deliverables": [
         "docs/evidence/t180_report.md",
         "docs/evidence/t180_dry_check.json",
+        "scripts/lab_t180_hist_tai.py",
+        "tests/unit/test_t180_hist_tai.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t180_report.md",
+        "docs/evidence/t180_dry_check.json",
+        "scripts/lab_t180_hist_tai.py",
+        "tests/unit/test_t180_hist_tai.py"
+      ],
+      "completion_note": "Harness and owner-window dry check complete. Pod exit 0: 8/8 cells ran (NSXUSD 1m/3m/5m/60m and XAUUSD 1m/3m/5m/60m), with verdict first, seven-day warmup, configured pessimistic cost model, entry/exit/side/R trade rows and per-year summaries. Longer history was not run. Holdout guard refused a window ending after the holdout boundary before data load. No broker calls, orders, holdout reads, lake writes, production writes, tuning or secrets."
+    },
+    {
+      "id": "T-181",
+      "title": "Harness window-only counts and zero-trade reasons (owner window dry check only)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-180"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t181_harness_window_counts.md exactly (signals, bars and trades counted only inside the window, warm-up reported separately, zero-trade reasons, owner window only, longer history NOT run; verdict first).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets. T-162 port unchanged. Lint with ruff check and ruff format (line length 100) without per-line noqa. One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t181_report.md",
+        "docs/evidence/t181_dry_check.json",
         "scripts/lab_t180_hist_tai.py",
         "tests/unit/test_t180_hist_tai.py"
       ],
@@ -6470,6 +6502,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T04:05:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-062",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-180 accepted (V-448): harness ready, 8/8 cells, holdout guard tested, longer history not run. Its counts include warm-up, so queued T-181 (docs/specs/t181_harness_window_counts.md), a small fix limited to the owner-window dry check. The historical rerun still waits on Q-071 (25/31 gate not relaxed; safe option). Reason: the rerun must start from trustworthy counts the moment the owner answers.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T04:40:00Z",
       "do_not_reopen": false
     }
   ],
@@ -15151,6 +15191,37 @@
       "validated_by": "claude",
       "date": "2026-10-19T04:05:00Z",
       "reverify_if": "The T-162 port or the T-177 baseline signals change."
+    },
+    {
+      "id": "V-447",
+      "task_id": "T-180",
+      "subject": "T-180 historical Tai harness dry check",
+      "method": "Built the bounded harness around the unchanged T-162 port. It discovers the NSXUSD recent NAS100 alias and reads only owner-window month files plus seven days warmup; XAUUSD uses the existing instrument tree. Ran one owner-window dry check in the owner-provided Pod with start 2026-10-06 New York midnight, end 2026-10-17 New York midnight and holdout start 2026-10-17T04:00Z. Pod exit 0; 8/8 cells returned ok. JSON SHA-256 C394DF3A20174985BE81832B9D0083D3EB6A6BE07F04F07E6C8D0B0E6F3E5D50; report SHA-256 BA8E12A4365266B71E6CB94929E4CC8D43F5988B02277FFE3026B48ACB65702A. Local py_compile and git diff --check pass; Ruff and pytest unavailable on the desktop/Pod image.",
+      "result": "pass",
+      "checked": "Verdict first and required label present. NSXUSD rows/bars: 12414/12414 at 1m, 4070 at 3m, 2407 at 5m, 148 at 60m; XAUUSD rows/bars: 10215, 3216, 1830, 49 respectively. Trade counts: 39, 31, 0, 0 for NSXUSD and zero for XAUUSD. Holdout guard tested; longer history not run. Safety counters are all zero.",
+      "evidence": [
+        "docs/evidence/t180_report.md",
+        "docs/evidence/t180_dry_check.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T04:00:00Z",
+      "reverify_if": "The T-162 port, strategy-lab cost model or owner-window lake data changes."
+    },
+    {
+      "id": "V-448",
+      "task_id": "T-180",
+      "subject": "Claude review of T-180 historical Tai harness",
+      "method": "Read spec, report, JSON, script and tests. Checked: port imported unchanged, holdout guard runs before data read, label in every cell, no broker/order/secret/lake-write path (only report and JSON file writes), safety counters all zero, 8/8 cells ok, longer history not run. Fixed 3 import-order errors and 2 format diffs with ruff (line length 100). Rebuilt on main with Codex's single log entry kept.",
+      "result": "pass",
+      "checked": "Harness ready yes, 8/8 cells, holdout guard tested. Caveat found: signal, bar and trade counts include the seven days of warm-up and keep trades entered during warm-up, so zero-trade cells (NSXUSD 5m, all XAUUSD) cannot be read; this does not change the readiness verdict but must be fixed before the rerun (T-181). pytest not available locally; CI runs the tests.",
+      "evidence": [
+        "docs/evidence/t180_report.md",
+        "docs/evidence/t180_dry_check.json",
+        "scripts/lab_t180_hist_tai.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T04:40:00Z",
+      "reverify_if": "The T-162 port, strategy-lab cost model or lake data changes."
     }
   ],
   "blockers": [
@@ -26042,7 +26113,41 @@
         "tests/unit/test_t179_fragility.py"
       ],
       "summary": "Accepted T-179 (V-446, D-061): port signals stable under bar noise; 25/31 gate not relaxed; historical rerun still waits on Q-071. Queued T-180 (build and dry-check the historical harness, no history run). Fixes: import order in two T-179 files; T-179 unit test used SimpleNamespace with dataclasses.replace (CI failure), now a dataclass bar. No broker calls."
+    },
+    {
+      "revision": 481,
+      "ts": "2026-10-19T04:00:00Z",
+      "agent": "codex",
+      "action": "complete_t180_hist_tai",
+      "task_ids": [
+        "T-180"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t180_report.md",
+        "docs/evidence/t180_dry_check.json",
+        "scripts/lab_t180_hist_tai.py",
+        "tests/unit/test_t180_hist_tai.py"
+      ],
+      "summary": "Completed T-180 harness and one bounded owner-window dry check. Pod exit 0 ran all 8 cells across NSXUSD/XAUUSD and 1m/3m/5m/60m; no longer history run. NSXUSD produced 39 trades at 1m and 31 at 3m; all other cells had zero trades while returning ok. Holdout refusal, label, costs, per-year summary and trade rows are present. Safety counters zero; no broker, orders, holdout, lake writes, tuning or secrets. Turn to Claude for review."
+    },
+    {
+      "revision": 482,
+      "ts": "2026-10-19T04:40:00Z",
+      "agent": "claude",
+      "action": "accept_t180_queue_t181",
+      "task_ids": [
+        "T-180",
+        "T-181"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t181_harness_window_counts.md",
+        "scripts/lab_t180_hist_tai.py",
+        "tests/unit/test_t180_hist_tai.py"
+      ],
+      "summary": "Accepted T-180 (V-448, D-062): harness ready, 8/8 cells, holdout guard tested. Fixes: import order and formatting. Found that counts include warm-up; queued T-181 to report window-only counts and zero-trade reasons. Historical rerun still waits on Q-071. No broker calls."
     }
   ],
-  "project_summary": "T-176 accepted as a 'partly' geometry audit: the owner CSV has broker-style tranches and market exits that the stored indicator cannot produce, so the owner likely traded by hand or ran another script. T-177 tests whether owner entries cluster around the port's signals more than chance. Historical Tai rerun stays gated until 25/31 (or an owner decision)."
+  "project_summary": "T-180 complete and ready for Claude review: bounded historical Tai harness built and owner-window dry check passed all 8 cells with zero safety side effects; longer history remains intentionally unrun. Historical Tai rerun stays gated until 25/31 or an owner decision."
 }
