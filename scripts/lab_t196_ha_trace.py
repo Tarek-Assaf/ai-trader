@@ -198,9 +198,14 @@ def run(
         stamps = [comparison_bars[item].at for item in range(max(0, index - 2), index + 1)]
         windows.append((entry, stamps))
         targets.update(stamps)
-    _, trace, _ = t195._runtime_trace(bars, selected, targets, unbounded=False)
+    runtime_entries, trace, _ = t195._runtime_trace(bars, selected, targets, unbounded=False)
+    runtime_by_key = {(item.at.isoformat(), item.direction) for item in runtime_entries}
     rows: list[dict[str, object]] = []
     for entry, stamps in windows:
+        if (entry.at.isoformat(), entry.direction) in runtime_by_key:
+            # T-195 classifies exact-time runtime entries as matched or
+            # bar/stop differences, so they are outside the 23 HA-cross miss set.
+            continue
         context: list[dict[str, object]] = []
         for stamp in stamps:
             p_index = port_index[stamp]
