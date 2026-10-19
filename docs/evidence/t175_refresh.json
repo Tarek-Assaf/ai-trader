@@ -1,0 +1,3935 @@
+{
+  "bars": 4178,
+  "best_mode": "closed",
+  "end": "2026-10-17T00:00:00+00:00",
+  "modes": {
+    "closed": {
+      "class_counts": {
+        "first": 1,
+        "refresh": 30
+      },
+      "condition_passes": {
+        "first": {
+          "adx_di": 0,
+          "cooldown": 0,
+          "direction": 0,
+          "ema": 0,
+          "location": 0,
+          "risk": 0,
+          "vwap_side": 0
+        },
+        "refresh": {
+          "adx_di": 107,
+          "cooldown": 136,
+          "direction": 150,
+          "ema": 134,
+          "location": 56,
+          "risk": 90,
+          "vwap_side": 104
+        }
+      },
+      "first_cross_timing": {
+        "histogram": {},
+        "median_age": null,
+        "within_2": 0
+      },
+      "lowest_passing_condition": {
+        "first": [
+          "direction",
+          0
+        ],
+        "refresh": [
+          "location",
+          56
+        ]
+      },
+      "mode": "closed",
+      "owner_count": 31,
+      "reproduced": {
+        "first": 0,
+        "overall": 7,
+        "refresh": 7
+      },
+      "rows": [
+        {
+          "bar_index": 598,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-06T20:03:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 651,
+          "bars_since_same_direction_exit": 14,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-06T22:45:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 702,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-07T01:18:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 888,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-07T22:21:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 958,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-08T01:51:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1211,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-08T14:45:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1219,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-08T15:09:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1376,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-08T23:03:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1685,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-09T14:30:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1725,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-09T16:30:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": null,
+          "bars_since_same_direction_exit": null,
+          "class": "first",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": false,
+          "owner": "2026-10-11T22:18:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1853,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-12T00:27:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1894,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-12T02:30:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2542,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-13T11:00:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2621,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-13T14:57:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2674,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-13T17:36:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2689,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-13T18:21:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2909,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T05:24:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2979,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T08:54:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3007,
+          "bars_since_same_direction_exit": 13,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T10:18:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 3047,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T12:18:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3247,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T22:24:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3369,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-15T04:30:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3388,
+          "bars_since_same_direction_exit": 12,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-15T05:27:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 3534,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-15T12:45:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3553,
+          "bars_since_same_direction_exit": 18,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-15T13:42:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 3777,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T00:57:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3962,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T10:12:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3979,
+          "bars_since_same_direction_exit": 14,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T11:03:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 4024,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T13:18:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 4052,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T14:42:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        }
+      ]
+    },
+    "forming": {
+      "class_counts": {
+        "first": 1,
+        "refresh": 30
+      },
+      "condition_passes": {
+        "first": {
+          "adx_di": 0,
+          "cooldown": 0,
+          "direction": 0,
+          "ema": 0,
+          "location": 0,
+          "risk": 0,
+          "vwap_side": 0
+        },
+        "refresh": {
+          "adx_di": 107,
+          "cooldown": 136,
+          "direction": 150,
+          "ema": 134,
+          "location": 56,
+          "risk": 90,
+          "vwap_side": 104
+        }
+      },
+      "first_cross_timing": {
+        "histogram": {},
+        "median_age": null,
+        "within_2": 0
+      },
+      "lowest_passing_condition": {
+        "first": [
+          "direction",
+          0
+        ],
+        "refresh": [
+          "location",
+          56
+        ]
+      },
+      "mode": "forming",
+      "owner_count": 31,
+      "reproduced": {
+        "first": 0,
+        "overall": 7,
+        "refresh": 7
+      },
+      "rows": [
+        {
+          "bar_index": 598,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-06T20:03:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 651,
+          "bars_since_same_direction_exit": 14,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-06T22:45:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 702,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-07T01:18:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 888,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-07T22:21:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 958,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-08T01:51:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1211,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-08T14:45:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1219,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-08T15:09:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1376,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-08T23:03:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1685,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-09T14:30:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1725,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-09T16:30:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": null,
+          "bars_since_same_direction_exit": null,
+          "class": "first",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": false,
+              "direction": false,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": false,
+          "owner": "2026-10-11T22:18:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1853,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-12T00:27:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 1894,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-12T02:30:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2542,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-13T11:00:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2621,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-13T14:57:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2674,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": false,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": false,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-13T17:36:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2689,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-13T18:21:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2909,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T05:24:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 2979,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T08:54:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3007,
+          "bars_since_same_direction_exit": 13,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T10:18:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 3047,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T12:18:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3247,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-14T22:24:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3369,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": false
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": false
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-15T04:30:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3388,
+          "bars_since_same_direction_exit": 12,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": false
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-15T05:27:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 3534,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-15T12:45:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3553,
+          "bars_since_same_direction_exit": 18,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-15T13:42:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 3777,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "long",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": false,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T00:57:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3962,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T10:12:00+00:00",
+          "reproduced": true,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 3979,
+          "bars_since_same_direction_exit": 14,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": true,
+              "risk": false,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T11:03:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": true
+        },
+        {
+          "bar_index": 4024,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T13:18:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        },
+        {
+          "bar_index": 4052,
+          "bars_since_same_direction_exit": null,
+          "class": "refresh",
+          "direction": "short",
+          "offsets": {
+            "-1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "-2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": false,
+              "vwap_side": true
+            },
+            "0": {
+              "adx_di": true,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "1": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            },
+            "2": {
+              "adx_di": false,
+              "cooldown": true,
+              "direction": true,
+              "ema": true,
+              "location": false,
+              "risk": true,
+              "vwap_side": true
+            }
+          },
+          "open_owner_position_same_direction": true,
+          "owner": "2026-10-16T14:42:00+00:00",
+          "reproduced": false,
+          "same_direction_exit_within_20": false
+        }
+      ]
+    }
+  },
+  "owner_classification": [
+    {
+      "bar_index": 598,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-06T20:03:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 651,
+      "bars_since_same_direction_exit": 14,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-06T22:45:00+00:00",
+      "same_direction_exit_within_20": true
+    },
+    {
+      "bar_index": 702,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-07T01:18:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 888,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "long",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-07T22:21:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 958,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "long",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-08T01:51:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 1211,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "long",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-08T14:45:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 1219,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-08T15:09:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 1376,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-08T23:03:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 1685,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-09T14:30:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 1725,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "long",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-09T16:30:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": null,
+      "bars_since_same_direction_exit": null,
+      "class": "first",
+      "direction": "long",
+      "open_owner_position_same_direction": false,
+      "owner": "2026-10-11T22:18:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 1853,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "long",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-12T00:27:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 1894,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "long",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-12T02:30:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 2542,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-13T11:00:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 2621,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-13T14:57:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 2674,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-13T17:36:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 2689,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "long",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-13T18:21:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 2909,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-14T05:24:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 2979,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-14T08:54:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 3007,
+      "bars_since_same_direction_exit": 13,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-14T10:18:00+00:00",
+      "same_direction_exit_within_20": true
+    },
+    {
+      "bar_index": 3047,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "long",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-14T12:18:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 3247,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-14T22:24:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 3369,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-15T04:30:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 3388,
+      "bars_since_same_direction_exit": 12,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-15T05:27:00+00:00",
+      "same_direction_exit_within_20": true
+    },
+    {
+      "bar_index": 3534,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-15T12:45:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 3553,
+      "bars_since_same_direction_exit": 18,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-15T13:42:00+00:00",
+      "same_direction_exit_within_20": true
+    },
+    {
+      "bar_index": 3777,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "long",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-16T00:57:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 3962,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-16T10:12:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 3979,
+      "bars_since_same_direction_exit": 14,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-16T11:03:00+00:00",
+      "same_direction_exit_within_20": true
+    },
+    {
+      "bar_index": 4024,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-16T13:18:00+00:00",
+      "same_direction_exit_within_20": false
+    },
+    {
+      "bar_index": 4052,
+      "bars_since_same_direction_exit": null,
+      "class": "refresh",
+      "direction": "short",
+      "open_owner_position_same_direction": true,
+      "owner": "2026-10-16T14:42:00+00:00",
+      "same_direction_exit_within_20": false
+    }
+  ],
+  "owner_entries": 31,
+  "owner_exits": 54,
+  "safety": {
+    "broker_calls": 0,
+    "holdout_reads": 0,
+    "lake_writes": 0,
+    "orders": 0,
+    "secrets": false,
+    "tuning": false
+  },
+  "task": "T-175",
+  "verdict": "not_reproduced",
+  "warmup_start": "2026-09-29T20:03:00+00:00"
+}
