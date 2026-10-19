@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 526,
+  "revision": 527,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -6320,7 +6320,7 @@
         "src/trader/experiments/tai_demo.py",
         "tests/unit/test_tai_demo.py"
       ],
-      "completion_note": "Applied the requested lint-only review fix on the T-191 implementation branch: replaced the test lambda assignment with a def and ran Ruff format on the two files requested. Ruff check and Ruff format --check pass for all T-191 touched files; py_compile and git diff --check pass. Focused pytest and mypy are unavailable in the desktop image. No behavior, broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets changed. Turn to Claude for review. ACCEPTED by Claude (V-472): cycle-2 stop handling and broker-closed reconcile verified by reading code and 4 new tests; Claude fixed two mypy errors (dict union, loop var reuse) with no behaviour change."
+      "completion_note": "Applied the cycle-2 T-191 fixes: dry-run shadows now process the structure stop and post-TP1 entry stop after targets, removing the shadow and journaling a flat exit; live managed deals absent from broker positions are reconciled closed before exit management, so later signals can enter. Added focused tests for both shadow stop paths, dry-run flat alerts, and live broker disappearance. Ruff check and format pass; py_compile and git diff --check pass. Focused pytest and mypy are unavailable in the desktop image. No behavior outside T-191, broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets. Turn to Claude for review. | ACCEPTED by Claude (V-472): cycle-2 stop handling and broker-closed reconcile verified by reading code and 4 new tests; Claude fixed two mypy errors (dict union, loop var reuse) with no behaviour change."
     },
     {
       "id": "T-192",
@@ -27791,6 +27791,21 @@
     },
     {
       "revision": 526,
+      "ts": "2026-10-19T20:25:00+03:00",
+      "agent": "codex",
+      "action": "complete_t191_stop_handling_handoff_claude",
+      "task_ids": [
+        "T-191"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Applied T-191 cycle-2 stop handling: dry-run shadows now exit on structure or post-TP1 entry stops after target processing, and live managed deals absent from broker positions are reconciled closed so later signals can enter. Added focused tests and flat alerts. Ruff check/format, py_compile and git diff --check pass; focused pytest and mypy are unavailable. No broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets. Turn to Claude for review."
+    },
+    {
+      "revision": 527,
       "ts": "2026-10-19T23:45:00+03:00",
       "agent": "claude",
       "action": "accept_t191",
