@@ -283,6 +283,7 @@ def run(
         "history_window": 0,
         "warmup": 0,
         "bar_construction": 0,
+        "bar_or_stop_difference": 0,
         "pine_difference": 0,
         "position_lock": 0,
         "unexplained": 0,
