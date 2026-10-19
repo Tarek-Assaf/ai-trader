@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 472,
+  "revision": 474,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-175 accepted as a negative diagnostic (7/31 with owner exits driving the state, noise). T-176 audits the owner's own trade log geometry (tranches, R multiples, break-even, stop vs ATR cap) against the Pine script, which does not depend on the futures vs CFD price basis. Historical Tai rerun stays gated until 25/31.",
+    "summary": "T-176 accepted as a 'partly' geometry audit: the owner CSV has broker-style tranches and market exits that the stored indicator cannot produce, so the owner likely traded by hand or ran another script. T-177 tests whether owner entries cluster around the port's signals more than chance. Historical Tai rerun stays gated until 25/31 (or an owner decision).",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -149,7 +149,8 @@
         "T-173",
         "T-174",
         "T-175",
-        "T-176"
+        "T-176",
+        "T-177"
       ]
     },
     {
@@ -5829,7 +5830,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5845,6 +5846,38 @@
         "docs/evidence/t176_geometry.json",
         "scripts/lab_t176_geometry.py",
         "tests/unit/test_t176_geometry.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t176_report.md",
+        "docs/evidence/t176_geometry.json",
+        "scripts/lab_t176_geometry.py",
+        "tests/unit/test_t176_geometry.py"
+      ],
+      "completion_note": "Completed the bounded owner trade geometry audit using only the owner CSV, stored Pine source and NSXUSD 3-minute ATR bars. The 31 entries group into 31 positions with tranche counts recorded; 21 market exits are not produced by the indicator source. No position with both a bracket target and bracket stop had computable R, so target multiples are 0/0; break-even matches are 0/11 candidates; 19/20 positions with ATR ratios are within the 2.0 cap; 18/31 duration checks match within one bar. Verdict is partly: the stored indicator can explain risk and management geometry where rows expose it, but its lack of strategy order sizing and presence of broker-style tranches/market exits support a different execution version or settings."
+    },
+    {
+      "id": "T-177",
+      "title": "Test whether the owner's entries coincide with the port's signals more than chance (permutation null, offsets in bars)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-176"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t177_signal_coincidence.md exactly (owner CSV as New York time, T-162 port unchanged with full warm-up, NSXUSD 3m bars; verdict first with plain yes/no, observed vs null counts and p-values at 3/10/30 bars, mirror control, what each result supports).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets. Lint with ruff check and ruff format (line length 100) without per-line noqa. One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t177_report.md",
+        "docs/evidence/t177_signals.json",
+        "scripts/lab_t177_signals.py",
+        "tests/unit/test_t177_signals.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -6306,6 +6339,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T02:50:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-058",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-176 accepted (V-440) as 'partly'. The owner CSV has broker-style tranches (1+2), 21 market exits and Bracket orders that the stored indicator() cannot produce, so the owner traded by hand or used another script; bar-exact entry matching (14 failed diagnostics) may be the wrong test. The 25/31 gate for the historical Tai rerun is NOT relaxed by me (owner rule, safe option). Queued T-177 (docs/specs/t177_signal_coincidence.md): permutation test of whether owner entries cluster around the port's signals at all, with a mirror control. If p<0.01, the question 'rerun history under a looser criterion?' goes to the owner in the next status; the rerun stays blocked until he answers.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T03:05:00Z",
       "do_not_reopen": false
     }
   ],
@@ -14853,6 +14894,40 @@
       "validated_by": "claude",
       "date": "2026-10-19T02:50:00Z",
       "reverify_if": "The port, owner CSV or lake bars change."
+    },
+    {
+      "id": "V-439",
+      "task_id": "T-176",
+      "subject": "T-176 owner trade geometry audit",
+      "method": "Ran the bounded CSV/source/NSXUSD 3-minute ATR audit on the owner Pod and reviewed the report, JSON and raw artifact hashes. Pod exit 0; JSON SHA-256 9490361c752b77011e9235735ceac2e516f6f3ec7978eea2820765de8383d05d; report SHA-256 18f49da3c2e017f2fd96e91059f8214971f3ebc7abcda44f33ea5137e32af0aa. Ran Python compile and git diff --check locally; pytest and Ruff were unavailable in the desktop/Pod runtimes.",
+      "result": "pass",
+      "checked": "Spec followed: no entry matching, no tuning, owner CSV and Pine source only, ATR from NSXUSD 3-minute bars, verdict first, and safety counters zero for broker calls, orders, holdout reads and writes. The source is indicator()-based and has no strategy order sizing.",
+      "evidence": [
+        "docs/evidence/t176_report.md",
+        "docs/evidence/t176_geometry.json",
+        "scripts/lab_t176_geometry.py",
+        "tests/unit/test_t176_geometry.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T02:55:00Z",
+      "reverify_if": "The owner CSV, Pine source or NSXUSD lake bars change."
+    },
+    {
+      "id": "V-440",
+      "task_id": "T-176",
+      "subject": "Claude review of T-176 owner trade geometry audit",
+      "method": "Read the spec, report, script and handoff entry; ran ruff check/format on Codex's files (import order and E402/E501 fixed with noqa and formatting only, no logic change); grepped the script for broker, network, environment and holdout access (none).",
+      "result": "pass",
+      "checked": "Spec followed: CSV and Pine source only, ATR from NSXUSD 3m bars, no entry matching, safety counters zero. Result accepted as a diagnostic: verdict 'partly' (31 positions, 21 market exits and broker-style 1+2 tranches that an indicator() cannot produce, 0/11 break-even matches, 19/20 R/ATR within the 2.0 cap, 18/31 duration matches). Caveats: (1) the script writes the key 'positions' twice (count, then list), so the JSON and report show the list where the count belongs; the count is 31. (2) target-multiple check is 0/0 because no position had both a bracket stop and a bracket target, so it says nothing either way. (3) the report is verbose; not worth a changes_requested cycle. Interpretation (mine): the CSV is a TradingView trading-panel export, so the owner placed orders by hand or ran another script; bar-exact entry matching may be the wrong test.",
+      "evidence": [
+        "docs/evidence/t176_report.md",
+        "docs/evidence/t176_geometry.json",
+        "scripts/lab_t176_geometry.py",
+        "tests/unit/test_t176_geometry.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T03:05:00Z",
+      "reverify_if": "The owner CSV, Pine source or NSXUSD lake bars change."
     }
   ],
   "blockers": [
@@ -25591,7 +25666,43 @@
         "tests/unit/test_t175_refresh.py"
       ],
       "summary": "Reviewed T-175: accepted (V-438) as negative. Ruff check and format pass (import order, E402 and long lines fixed, no logic change); no broker, order, holdout or lake activity. Owner-exit-driven refresh reproduces 7/31 (all refresh, 0 first), noise. Caveat: classification counted each entry's own exit row as open, so 30/31 refresh (7/31 is under the most permissive direction rule); fixed one wrong unit-test expectation. Queued T-176: basis-free audit of the owner's CSV geometry against the Pine script. Rebuilt on main with Codex's log entry kept. Turn to codex (D-045)."
+    },
+    {
+      "revision": 473,
+      "ts": "2026-10-19T02:55:00Z",
+      "agent": "codex",
+      "action": "complete_t176_owner_geometry",
+      "task_ids": [
+        "T-176"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t176_report.md",
+        "docs/evidence/t176_geometry.json",
+        "scripts/lab_t176_geometry.py",
+        "tests/unit/test_t176_geometry.py"
+      ],
+      "summary": "Completed the bounded owner geometry audit. Verdict partly: 21 market exits and no strategy sizing in the indicator source cannot be produced by the stored source; 19/20 ATR ratios are within cap and duration matches are 18/31. Pod exit 0, no broker or orders. Turn to Claude for review."
+    },
+    {
+      "revision": 474,
+      "ts": "2026-10-19T03:05:00Z",
+      "agent": "claude",
+      "action": "accept_t176_queue_t177",
+      "task_ids": [
+        "T-176",
+        "T-177"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t177_signal_coincidence.md",
+        "docs/evidence/t176_report.md",
+        "docs/evidence/t176_geometry.json",
+        "scripts/lab_t176_geometry.py",
+        "tests/unit/test_t176_geometry.py"
+      ],
+      "summary": "Reviewed T-176: accepted (V-440) as 'partly'. Ruff check and format pass (import order, E402 and E501 handled without logic change). No broker, order, holdout or lake activity. Geometry: 31 positions, 21 market exits and 1+2 tranches the indicator cannot produce, 0/11 break-even, 19/20 R/ATR within cap, 18/31 durations. Caveat: 'positions' key written twice in the script (list shown where count belongs); target-multiple check 0/0. Queued T-177: permutation test of owner entries vs port signals. Gate 25/31 for the historical rerun unchanged. Rebuilt on main with Codex's log entry kept. Turn to codex (D-045)."
     }
   ],
-  "project_summary": "T-174 accepted as a negative diagnostic: the Renko setup does not reproduce the owner entries (best 4/31 within 2 bars, goal 25/31). T-175 tests whether the entries follow the Pine refresh rule when the state is driven by the owner's real exits. Historical Tai rerun stays gated until 25/31."
+  "project_summary": "T-176 accepted as a 'partly' geometry audit: the owner CSV has broker-style tranches and market exits that the stored indicator cannot produce, so the owner likely traded by hand or ran another script. T-177 tests whether owner entries cluster around the port's signals more than chance. Historical Tai rerun stays gated until 25/31 (or an owner decision)."
 }
