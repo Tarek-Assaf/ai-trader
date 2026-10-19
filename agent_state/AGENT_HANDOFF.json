@@ -14487,7 +14487,19 @@
       "id": "V-430",
       "task_id": "T-170",
       "result": "pass",
-      "summary": "Pod replay exited 0 with 4,013 bars; required clock/condition/equal-weight VWAP diagnostics are recorded. Local Ruff check/format, py_compile, JSON parse and diff-check pass; pytest unavailable in desktop and Pod environments."
+      "summary": "Pod replay exited 0 with 4,013 bars; required clock/condition/equal-weight VWAP diagnostics are recorded. Local Ruff check/format, py_compile, JSON parse and diff-check pass; pytest unavailable in desktop and Pod environments.",
+      "subject": "T-170 owner-bar clock and condition diagnosis",
+      "validated_by": "codex",
+      "date": "2026-10-19T01:10:00+03:00",
+      "method": "Ran the bounded Pod replay against the full-warm-up NSXUSD 3-minute lake and owner CSV; reviewed report, compact JSON summary and raw Pod hashes; ran local Ruff check/format, py_compile, JSON parse and git diff --check. Focused pytest was unavailable in desktop and Pod environments.",
+      "checked": "Acceptance met as a negative diagnostic: +1-bar containment peak is weak (11/31), owner-bar direction agrees 0/31, and equal-weight VWAP remains 4/31 within +/-3, so no correction or historical rerun is justified.",
+      "evidence": [
+        "docs/evidence/t170_report.md",
+        "docs/evidence/t170_conditions.json",
+        "scripts/lab_t170_conditions.py",
+        "tests/unit/test_t170_conditions.py"
+      ],
+      "reverify_if": "script or evidence files change"
     }
   ],
   "blockers": [
