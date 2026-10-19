@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 525,
+  "revision": 526,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-195 accepted: 23 of 25 misses first fail at the HA cross gate, cause inside it unproven (T-196 queued). T-191 (position-state persistence) is in review cycle 2: two stop-handling bugs sent back. Runtime still not cleared for demo orders. No broker orders, no holdout reads.",
+    "summary": "T-191 (position-state persistence) accepted. Next: T-192 pre-enable audit, then T-196. Runtime still not cleared for demo orders; owner decides after T-192. No broker orders, no holdout reads.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6297,7 +6297,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6320,7 +6320,7 @@
         "src/trader/experiments/tai_demo.py",
         "tests/unit/test_tai_demo.py"
       ],
-      "completion_note": "Applied the requested lint-only review fix on the T-191 implementation branch: replaced the test lambda assignment with a def and ran Ruff format on the two files requested. Ruff check and Ruff format --check pass for all T-191 touched files; py_compile and git diff --check pass. Focused pytest and mypy are unavailable in the desktop image. No behavior, broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets changed. Turn to Claude for review."
+      "completion_note": "Applied the requested lint-only review fix on the T-191 implementation branch: replaced the test lambda assignment with a def and ran Ruff format on the two files requested. Ruff check and Ruff format --check pass for all T-191 touched files; py_compile and git diff --check pass. Focused pytest and mypy are unavailable in the desktop image. No behavior, broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets changed. Turn to Claude for review. ACCEPTED by Claude (V-472): cycle-2 stop handling and broker-closed reconcile verified by reading code and 4 new tests; Claude fixed two mypy errors (dict union, loop var reuse) with no behaviour change."
     },
     {
       "id": "T-192",
@@ -16135,6 +16135,18 @@
       ],
       "validated_by": "claude",
       "reverify_if": "tai_demo.py changes"
+    },
+    {
+      "id": "V-472",
+      "task_id": "T-191",
+      "result": "pass",
+      "ts": "2026-10-19T23:45:00+03:00",
+      "agent": "claude",
+      "reverify_if": "tai_demo.py behaviour changes",
+      "subject": "T-191 cycle 2 acceptance of branch codex/t191-tai-state",
+      "method": "Read the diff of tai_demo.py, tai_wiring.py, app.py and tests; ruff check/format (line 100); mypy on tai_demo.py (found and fixed two typing errors); CI mypy failure root-caused.",
+      "validated_by": "claude",
+      "checked": "Read tai_demo.py diff: shadow stop/stop_entry exits after targets, flat alert and persist; live managed deals absent from get_positions dropped with reconcile_closed. Tests for structure stop, entry stop after TP1, live missing deal then re-entry, alerts present. ruff check/format clean; mypy clean for tai_demo.py after two typing fixes. No broker writes, holdout reads, risk/gate edits."
     }
   ],
   "blockers": [
@@ -27775,6 +27787,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-191 reviewed (V-471, D-078; V-470 is Codex's own pass note, not a review): lint fixed, persistence and reconcile logic read correctly, but stopped-out positions are never removed from the managed set (dry-run shadow has no stop logic; live deals closed at the broker are never dropped), so no second entry could ever happen. Changes requested, cycle 2 of 2, exact fixes and tests listed in the task. Then T-192, then T-196. Merged T-195 (#364) and closed #363. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 526,
+      "ts": "2026-10-19T23:45:00+03:00",
+      "agent": "claude",
+      "action": "accept_t191",
+      "task_ids": [
+        "T-191"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_tai_demo.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-191 accepted (V-472) after fixing two mypy errors in Codex's branch; Codex's code merged via this PR. T-192 is next for Codex."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."

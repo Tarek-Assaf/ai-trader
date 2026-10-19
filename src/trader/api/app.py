@@ -322,6 +322,7 @@ def _build_tai_demo_runtime(
         pending_bars=pending_bars,
         journal=journal if callable(append_audit) else None,
         alert=alert,
+        state_path=workspace / "state" / "tai_demo_positions.json",
     )
     if runtime_adapter is not None:
         app.state.tai_demo_runtime = runtime_adapter

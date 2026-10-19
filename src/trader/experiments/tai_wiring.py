@@ -687,6 +687,7 @@ def build_tai_demo_runtime(
     alert: Callable[[str], None] | None = None,
     managed_state: Mapping[str, _ManagedPosition] | None = None,
     pending_bars: Mapping[str, ClosedBar] | None = None,
+    state_path: Path | None = None,
 ) -> TaiDemoRuntimeAdapter | None:
     """Compose the guarded T-186 runtime only when the explicit experiment is on."""
     demo_settings = TaiDemoSettings.from_settings(settings)
@@ -716,6 +717,8 @@ def build_tai_demo_runtime(
         journal=journal,
         alert=alert,
         managed_state=managed_state,
+        state_path=state_path,
+        epic=epic,
     )
     return TaiDemoRuntimeAdapter(
         runner,
