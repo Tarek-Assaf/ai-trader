@@ -347,9 +347,7 @@ def run(
         trace = bounded_trace.get(expected.at.isoformat(), {})
         runtime_candidate = _nearest_entry(expected, bounded)
         port_index = next((i for i, bar in enumerate(comparison_bars) if bar.at == expected.at), -1)
-        runtime_index = next(
-            (i for i, bar in enumerate(bars) if bar.at == expected.at), -1
-        )
+        runtime_index = next((i for i, bar in enumerate(bars) if bar.at == expected.at), -1)
         cause = _classify_cause(
             expected=expected,
             runtime=runtime,

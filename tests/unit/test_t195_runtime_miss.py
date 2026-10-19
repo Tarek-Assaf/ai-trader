@@ -59,7 +59,5 @@ def test_classify_cause_names_the_first_runtime_gate() -> None:
 def test_nearest_entry_preserves_port_side_for_runtime_evidence() -> None:
     stamp = datetime(2026, 6, 1, tzinfo=UTC)
     expected = replay.RuntimeEntry(stamp, "SELL", Decimal("100"), Decimal("101"))
-    candidate = replay.RuntimeEntry(
-        stamp.replace(minute=3), "SELL", Decimal("99"), Decimal("102")
-    )
+    candidate = replay.RuntimeEntry(stamp.replace(minute=3), "SELL", Decimal("99"), Decimal("102"))
     assert _nearest_entry(expected, (candidate,)) == candidate
