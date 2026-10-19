@@ -8,11 +8,11 @@ second, unconnected recorder instance.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Callable, Mapping, Protocol
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 from trader.experiments.tai_wiring import TaiMinuteBar
 
