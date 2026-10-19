@@ -1,0 +1,60 @@
+{
+  "task": "T-170",
+  "pod": {
+    "command_exit": 0,
+    "conditions_json_sha256": "e88a93cdd3945cc9dfb8ca041e7451ae37e4567d9800694922b409d27fb97e5c",
+    "report_sha256": "b48d92ddefa1f80e0c9e24cbf3df0a7927a43c04afb3158fec1673069b982abc",
+    "note": "The full per-entry replay artifact was generated in the Pod; this committed summary records its hash and all requested aggregate results."
+  },
+  "warmup_start": "2026-09-29T20:03:00+00:00",
+  "end": "2026-10-17T00:00:00+00:00",
+  "bars": 4013,
+  "owner_entries": 31,
+  "clock_alignment": {
+    "peak_offset_bars": 1,
+    "peak_count": 11,
+    "overall_median_basis_owner_minus_bar_close": 235.8,
+    "containment_counts_after_overall_median_basis_subtraction": {
+      "-10": 3, "-9": 2, "-8": 3, "-7": 9, "-6": 9, "-5": 7,
+      "-4": 5, "-3": 9, "-2": 8, "-1": 9, "0": 8, "1": 11,
+      "2": 6, "3": 8, "4": 10, "5": 9, "6": 6, "7": 7,
+      "8": 7, "9": 5, "10": 5
+    },
+    "per_ny_day_median_basis": {
+      "2026-10-06": 249.6, "2026-10-07": 243.125, "2026-10-08": 237.9,
+      "2026-10-09": 244.45, "2026-10-11": 238.65, "2026-10-13": 224.45,
+      "2026-10-14": 223.3, "2026-10-15": 233.55, "2026-10-16": 197.9
+    }
+  },
+  "baseline": {
+    "port_closed_trades": 33,
+    "within_0": 1,
+    "within_1": 3,
+    "within_2": 4,
+    "within_3": 4,
+    "owner_no_same_direction_within_10": 21
+  },
+  "condition_alignment_agree_with_owner_direction": {
+    "-1": {"direction": 0, "ha_state": 8, "vwap_side": 6, "ema_filter": 25, "adx_di": 20, "risk": 13, "cooldown": 24},
+    "0": {"direction": 0, "ha_state": 8, "vwap_side": 5, "ema_filter": 24, "adx_di": 19, "risk": 19, "cooldown": 23},
+    "1": {"direction": 0, "ha_state": 8, "vwap_side": 5, "ema_filter": 25, "adx_di": 21, "risk": 21, "cooldown": 23}
+  },
+  "equal_weight_vwap_variant": {
+    "vwap": "equal_weight_hlc3",
+    "trades": 33,
+    "within_0": 1,
+    "within_1": 3,
+    "within_2": 4,
+    "within_3": 4,
+    "owner_no_same_direction_within_10": 21
+  },
+  "safety": {
+    "broker_calls": 0,
+    "orders": 0,
+    "sealed_holdout_read": false,
+    "lake_writes": 0,
+    "production_state_writes": 0,
+    "tuning": false,
+    "strategy_search": false
+  }
+}

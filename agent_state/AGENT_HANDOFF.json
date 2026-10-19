@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 461,
+  "turn": "claude",
+  "revision": 462,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -5634,7 +5634,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "in_progress",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -5651,8 +5651,13 @@
         "scripts/lab_t170_conditions.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t170_report.md",
+        "docs/evidence/t170_conditions.json",
+        "scripts/lab_t170_conditions.py",
+        "tests/unit/test_t170_conditions.py"
+      ],
+      "completion_note": "Completed one bounded Pod replay with full warm-up and the registered equal-weight VWAP variant. Clock containment peaks at +1 bar with 11/31, offset 0 has 8/31; direction agrees with 0/31 owner directions at the owner bar, lowest condition. Equal-weight VWAP remains 4/31 within +/-3, equal to baseline. The moving 197.90-249.60 point basis is material. No broker, orders, holdout, lake writes, tuning or strategy search. Pod pytest was unavailable; local Ruff, format, py_compile and diff checks pass."
     }
   ],
   "decisions": [
@@ -14477,6 +14482,12 @@
       "validated_by": "claude",
       "date": "2026-10-19T00:55:00Z",
       "reverify_if": "The port, the owner CSV or the lake bars change."
+    },
+    {
+      "id": "V-430",
+      "task_id": "T-170",
+      "result": "pass",
+      "summary": "Pod replay exited 0 with 4,013 bars; required clock/condition/equal-weight VWAP diagnostics are recorded. Local Ruff check/format, py_compile, JSON parse and diff-check pass; pytest unavailable in desktop and Pod environments."
     }
   ],
   "blockers": [
@@ -25013,7 +25024,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Started T-170 from the accepted T-169 lineage. Will run one bounded offline NSXUSD full-warm-up owner-bar clock/condition diagnostic and one registered equal-weight VWAP comparison; no broker, orders, holdout, lake writes, tuning or strategy search."
+    },
+    {
+      "revision": 462,
+      "ts": "2026-10-19T01:10:00Z",
+      "agent": "codex",
+      "action": "complete_t170_owner_bar_conditions",
+      "task_ids": [
+        "T-170"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t170_report.md",
+        "docs/evidence/t170_conditions.json",
+        "scripts/lab_t170_conditions.py",
+        "tests/unit/test_t170_conditions.py"
+      ],
+      "summary": "Completed T-170 one bounded offline Pod replay. Clock containment peaks at +1 bar (11/31), not a clear correction; offset-0 direction agrees with 0/31 owner directions and is the lowest condition; equal-weight VWAP gives 4/31 within +/-3, unchanged from baseline. Basis medians move 197.90-249.60 by NY day. No broker, orders, holdout, lake writes, tuning or strategy search. Pod pytest unavailable; local Ruff, format, py_compile, JSON and diff checks pass. Turn to Claude for review."
     }
   ],
-  "project_summary": "T-169 accepted as a negative diagnostic: 4/31 owner entries within +/-3 bars; historical Tai rerun remains gated. T-170 diagnoses clock, condition agreement and one equal-weight VWAP variant."
+  "project_summary": "T-170 is a negative diagnostic: +1-bar containment peak is weak, direction is 0/31 at owner bars, equal-weight VWAP does not improve the 4/31 match, and the price basis moves by NY day. Historical Tai rerun remains gated."
 }
