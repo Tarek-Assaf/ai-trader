@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 511,
+  "revision": 513,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -6163,7 +6163,7 @@
       "title": "Offline replay of the wired Tai demo runtime against the closed T-162 port (dry-run proof)",
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "phase": 8,
       "requirements": [
         "R-03"
@@ -6171,9 +6171,10 @@
       "depends_on": [
         "T-186"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "acceptance_criteria": [
-        "Follow docs/specs/t187_tai_demo_offline_replay.md exactly. Read-only: no broker call, no network, no holdout read, no redeploy, no risk or gate edits. 100 percent of port entries reproduced by the runtime path or the cause explained."
+        "Follow docs/specs/t187_tai_demo_offline_replay.md exactly. Read-only: no broker call, no network, no holdout read, no redeploy, no risk or gate edits. 100 percent of port entries reproduced by the runtime path or the cause explained.",
+        "CHANGES REQUESTED (cycle 1): the code is built but the bounded Pod replay never ran. The owner confirmed the Pod terminal is reachable (root@...:/app). Run scripts/lab_t187_runtime_replay.py once on the Pod per docs/specs/t187_tai_demo_offline_replay.md and report the verdict line, matches/extras/misses vs the closed T-162 port at session_1800_ny, and zero order calls. Do not rebuild the script."
       ],
       "deliverables": [
         "docs/specs/t187_tai_demo_offline_replay.md",
@@ -6255,7 +6256,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6272,8 +6273,15 @@
         "docs/evidence/t190/"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "scripts/report_t190_dry_run_day.py",
+        "tests/unit/test_t190_dry_run_report.py",
+        "docs/evidence/t190/report.md",
+        "docs/evidence/t190/summary.json",
+        "docs/evidence/t190/trades.csv",
+        "docs/evidence/t190/equity.png"
+      ],
+      "completion_note": "Implemented the read-only T-190 replay and known-answer fixture tests. The bounded Pod run from 2026-10-19T15:00Z to 17:23Z on US100 loaded the recorder lake, found 0 shadow signals/trades, 0 matching dry_run_would_submit journal lines, 2 missing minutes, and no broker/order/network/holdout/lake writes. USD is unavailable because no value-per-point was recorded. Ruff and compile checks pass; desktop pytest is unavailable."
     },
     {
       "id": "T-191",
@@ -6922,6 +6930,13 @@
     {
       "id": "D-070",
       "statement": "Owner 2026-10-19 (chat): watch the Tai dry run today, get a trades-and-P&L report late today, redeploy and fix what is needed to start real DEMO trading, and run tests that do not need the demo account in parallel. ORDER. Lane A (path to demo, do in this order): T-187 (run its already-built Pod replay), T-190 (dry-run day report, due today), T-191 (persist and reconcile position state), T-192 (pre-enable audit). Lane B (parallel, no demo account): T-193 (recorder gap measurement) and T-194 (historical Tai test on 1m/5m/60m). Codex takes Lane A first; Lane B only while Lane A waits on the owner (redeploy, Pod) or Claude review. Switching dry-run off stays the owner's decision after T-192. Parked items (Q-022, Q-057, T-152, T-154) stay parked. T-183 spec withdrawn: T-173 already tested tfmult.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "claude"
+    },
+    {
+      "id": "D-071",
+      "statement": "Claude: T-190 accepted (V-463). First report 15:00-17:23 UTC has 0 signals, consistent with the live dry run logging none; it is a valid empty result, not a failure. USD needs value-per-point (follow-up for the late-today rerun). T-187 sent back with changes requested only to run its already-built Pod replay, since the owner confirmed the Pod terminal is reachable. Next for Codex: T-187 Pod run, a T-190 rerun late today, then T-191.",
       "status": "final",
       "do_not_reopen": false,
       "decided_by": "claude"
@@ -15868,6 +15883,22 @@
         "tests/unit/test_tai_demo.py"
       ],
       "validated_by": "claude"
+    },
+    {
+      "id": "V-463",
+      "task_id": "T-190",
+      "subject": "T-190 dry-run day report script and first report",
+      "method": "Read the report script, tests and generated report; ruff check and ruff format --check (line 100) clean; CI runs pytest/mypy on the PR. Confirmed zero broker/order calls and no network in the script, holdout flag false, window is today only.",
+      "result": "pass",
+      "checked": "Replay uses the real ThreeMinuteBarBuilder, TaiSignalProvider and runtime path with a shadow broker; fills at bid/ask. First run (US100, 15:00-17:23 UTC): 0 signals, 0 shadow trades, 0 journal lines, cross-check agrees 0 of 0, 2 missing minutes. USD is not available because value-per-point is not recorded; rerun late today for the full day. Follow-up: supply value-per-point (the runtime rules provider has it) so USD can be shown.",
+      "evidence": [
+        "docs/evidence/t190/report.md",
+        "docs/evidence/t190/summary.json",
+        "scripts/report_t190_dry_run_day.py",
+        "tests/unit/test_t190_dry_run_report.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "report logic or runtime path changes"
     }
   ],
   "blockers": [
@@ -27270,6 +27301,42 @@
         "docs/specs/t194_tai_history_all_timeframes.md"
       ],
       "summary": "Owner asked for a dry-run trades/P&L report today and the path to real demo trading (D-070). Lane A in order: T-187 Pod run, T-190 report (due today), T-191 state persistence, T-192 pre-enable audit. Lane B in parallel: T-193 gap measurement, T-194 historical test 1m/5m/60m. No broker calls. Turn to codex."
+    },
+    {
+      "revision": 512,
+      "ts": "2026-10-19T17:32:00Z",
+      "agent": "codex",
+      "action": "complete_t190_dry_run_day_report",
+      "task_ids": [
+        "T-190"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t190/",
+        "scripts/report_t190_dry_run_day.py",
+        "tests/unit/test_t190_dry_run_report.py"
+      ],
+      "summary": "Started T-190 on the authoritative claude/t190-queue branch. Implementing the real builder/provider replay with recorded bid/ask shadow fills, known-answer fixture tests and report outputs. No broker calls, orders, holdout reads, lake writes, redeploy or secrets; Pod run still required. | Completed T-190 read-only shadow replay/report and known-answer fixture tests. Bounded Pod run (US100, 2026-10-19T15:00Z–17:23Z) loaded the lake and produced 0 signals/trades, 0 journal matches, 2 missing minutes; no broker calls, orders, network, holdout or lake writes. USD unavailable without recorded value-per-point. Ruff and compile checks pass; desktop pytest unavailable. Turn to Claude for review."
+    },
+    {
+      "revision": 513,
+      "ts": "2026-10-19T17:50:00Z",
+      "agent": "claude",
+      "action": "accept_t190_request_t187_run",
+      "task_ids": [
+        "T-190",
+        "T-187"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/report_t190_dry_run_day.py",
+        "tests/unit/test_t190_dry_run_report.py",
+        "docs/evidence/t190/report.md",
+        "docs/evidence/t190/summary.json",
+        "docs/evidence/t190/trades.csv",
+        "docs/evidence/t190/equity.png"
+      ],
+      "summary": "Accepted T-190 (V-463, D-071): ruff clean, no broker calls; first report empty (0 signals, 15:00-17:23 UTC). T-187 changes requested to run its Pod replay now that the terminal is reachable. Then T-190 rerun late today, then T-191. Turn to codex."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
