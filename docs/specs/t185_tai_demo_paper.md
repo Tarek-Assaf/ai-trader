@@ -12,17 +12,24 @@ label "Tai port, owner-directed demo experiment, loosely matched to the owner".
    computes the unchanged T-162 port signal (session-anchored VWAP as corrected in T-182) and
    sends at most ONE order intent through the normal path: OrderManager -> Risk Guardian ->
    Capital.com DEMO adapter, with a broker-side stop. No second position while one is open.
-2. Exits follow the port management: stop from the structure rule, scale-out thirds at 1R/2R/3R
-   and stop to entry after TP1, where the broker supports partial closes; otherwise the nearest
-   safe equivalent (a bracket with stop and a 3R limit, plus a software scale-out), documented.
-3. Sizing (owner, 2026-10-19 11:39 Riyadh, answered in chat): fixed 0.1 lot/contract per trade,
-   whatever the stop distance. Implement as an explicit setting TAI_DEMO_SIZE=0.1 used only by this
-   experiment; do not edit config/risk.yaml or any gate file. The size still goes through the Risk
-   Guardian, which can lower it or veto, and the broker minimum/step is respected (read it from the
-   instrument rules, do not assume). With 0.1 the 1R/2R/3R thirds cannot be split: if the broker
-   step does not allow 3 partial closes, use a bracket (structure stop + 3R limit) and record in
-   the journal that scale-out was not possible. Report the dollar value of 1 R per trade in the
-   journal so results can be converted to money.
+2. Exits: see item 3 (40/30/30 at 1R/2R/3R, stop to entry after TP1).
+3. Sizing and exits (owner, 2026-10-19 11:43 Riyadh, in chat):
+   - Risk per trade is exactly the indicator's: entry at the signal bar close, stop from the Pine
+     structure rule (5-bar swing +/- 0.2 ATR, rejected above 2 ATR), no other stop logic.
+   - Lot size: 0.1 contract per 10,000 of demo balance, proportional, floor 0.1, rounded down to the
+     broker size step (read the minimum and step from the instrument rules, never assume). Examples:
+     10,000 -> 0.10, 15,000 -> 0.15, 20,000 -> 0.20. The balance is read before each entry, so the
+     size grows with gains and shrinks with losses (never below 0.1). Settings live in this
+     experiment only (TAI_DEMO_BASE_LOT=0.1, TAI_DEMO_LOT_PER_BALANCE=10000); do not edit
+     config/risk.yaml or any gate file. The size still goes through the Risk Guardian, which can
+     lower it or veto.
+   - Exits: TP1 at 1R closes 40% of the position, TP2 at 2R closes 30%, TP3 at 3R closes the last
+     30%. When TP1 is hit the stop moves to entry (break-even). Split each partial to the broker step;
+     if the step cannot express 40/30/30 at the current size (for example 0.1 with a 0.1 step), round
+     partials to the nearest allowed sizes (never open more than the position), record the actual
+     split in the journal, and if only one size step exists use a stop plus a 3R limit for the whole
+     position and say so. Do not widen the stop at any time.
+   - Journal the dollar value of 1 R per trade so results can be converted to money.
 4. Market hours respected (no entries when the market is closed or inside the roll/spread
    blackout the Guardian already uses). Kill switch and /stop commands must stop new entries and
    flatten, tested with a mock broker.
