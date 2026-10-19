@@ -333,9 +333,7 @@ class TaiDemoRunner:
                     targets=(targets[0], targets[1], targets[2]),
                     original_size=Decimal(str(raw["original_size"])),
                     size_step=(
-                        Decimal(str(raw["size_step"]))
-                        if raw.get("size_step") is not None
-                        else None
+                        Decimal(str(raw["size_step"])) if raw.get("size_step") is not None else None
                     ),
                     one_r_value=(
                         Decimal(str(raw["one_r_value"]))

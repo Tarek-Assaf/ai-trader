@@ -256,9 +256,7 @@ def test_missing_broker_position_is_dropped_and_journaled(tmp_path: Path):
     assert first.on_bar(bar()).action == "SUBMITTED"
     gateway.positions.clear()
     events = []
-    restored, manager = runner(
-        gateway, state_path=state_path, epic="NSXUSD", journal=events.append
-    )
+    restored, manager = runner(gateway, state_path=state_path, epic="NSXUSD", journal=events.append)
     assert any(event["event"] == "reconcile_closed" for event in events)
     assert restored.on_bar(bar()).action == "SUBMITTED"
     assert len(manager.submits) == 1
@@ -290,9 +288,7 @@ def test_corrupt_state_fails_closed_without_entry(tmp_path: Path):
     state_path = tmp_path / "tai.json"
     state_path.write_text("not-json", encoding="utf-8")
     alerts = []
-    instance, manager = runner(
-        Gateway(), state_path=state_path, epic="NSXUSD", alerts=alerts
-    )
+    instance, manager = runner(Gateway(), state_path=state_path, epic="NSXUSD", alerts=alerts)
     assert instance.on_bar(bar()).reason == "startup_reconciliation_failed"
     assert manager.submits == []
     assert any("corrupt" in alert for alert in alerts)
@@ -307,24 +303,27 @@ def test_dry_run_shadow_survives_restart_without_gateway_calls(tmp_path: Path):
     gateway = NoBrokerGateway()
     manager = Manager(gateway)
     settings = TaiDemoSettings("demo", "paper", False, True, dry_run=True)
-    make = lambda: TaiDemoRunner(
-        settings=settings,
-        order_manager=manager,
-        position_gateway=gateway,
-        signal_provider=lambda _bar: TaiSignal(Direction.BUY, Decimal("100"), Decimal("99")),
-        order_factory=lambda signal, cycle_id: OrderRequest(
-            cycle_id,
-            "NSXUSD",
-            signal.direction,
-            Decimal("3"),
-            signal.entry,
-            signal.stop,
-            signal.levels()[2],
-        ),
-        control=Control(),
-        state_path=state_path,
-        epic="NSXUSD",
-    )
+
+    def make():
+        return TaiDemoRunner(
+            settings=settings,
+            order_manager=manager,
+            position_gateway=gateway,
+            signal_provider=lambda _bar: TaiSignal(Direction.BUY, Decimal("100"), Decimal("99")),
+            order_factory=lambda signal, cycle_id: OrderRequest(
+                cycle_id,
+                "NSXUSD",
+                signal.direction,
+                Decimal("3"),
+                signal.entry,
+                signal.stop,
+                signal.levels()[2],
+            ),
+            control=Control(),
+            state_path=state_path,
+            epic="NSXUSD",
+        )
+
     assert make().on_bar(bar()).action == "DRY_RUN"
     assert make().on_bar(bar()).reason == "one_position_rule"
     assert manager.submits == []
