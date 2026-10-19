@@ -19,8 +19,8 @@ from typing import Any
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 try:
-    import pyarrow.parquet as pq  # type: ignore[import-untyped]
     import pyarrow.dataset as pds  # type: ignore[import-untyped]
+    import pyarrow.parquet as pq  # type: ignore[import-untyped]
 except ImportError:  # pragma: no cover
     pq = None
     pds = None
