@@ -11,8 +11,8 @@ def test_utc_midnight_anchor_restarts_daily() -> None:
 
 
 def test_ny_midnight_anchor_uses_new_york_calendar() -> None:
-    stamp = datetime(2026, 1, 2, 5, 2, tzinfo=UTC)
-    assert _bucket_start(stamp, "ny_midnight") == datetime(2026, 1, 2, 4, 54, tzinfo=UTC)
+    stamp = datetime(2026, 1, 2, 6, 2, tzinfo=UTC)  # 01:02 New York
+    assert _bucket_start(stamp, "ny_midnight") == datetime(2026, 1, 2, 5, 54, tzinfo=UTC)
 
 
 def test_cme_session_anchor_has_partial_last_bucket() -> None:

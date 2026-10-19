@@ -14638,7 +14638,7 @@
       "id": "V-433",
       "task_id": "T-172",
       "subject": "Claude review of T-172 HTF Heikin Ashi bucket anchor test",
-      "method": "Reviewed report, JSON and script against docs/specs/t172_htf_anchor.md; ran ruff check and ruff format --check (line length 100) on the script and test (pass); checked safety counters in the JSON (broker calls 0, holdout not read) and that the port and earlier scripts are untouched.",
+      "method": "Reviewed report, JSON and script against docs/specs/t172_htf_anchor.md; ran ruff check and ruff format --check (line length 100) on the script and test (pass); checked safety counters in the JSON (broker calls 0, holdout not read) and that the port and earlier scripts are untouched. CI caught a wrong expected value in Codex's unit test (test_ny_midnight_anchor_uses_new_york_calendar expected 04:54 UTC for a 00:02 New York stamp; the correct bucket start is 05:00 UTC); Claude corrected the test to stamp 01:02 New York with expected 00:54 New York (05:54 UTC). The script was correct and no evidence number changed.",
       "result": "pass",
       "checked": "Spec followed: four anchors x two HA modes, baseline reproduces T-171 (1/31 within 2 bars, matches 1/3/4/4). Result is negative: anchor hypothesis does not get near the goal; best ny_midnight/forming 4/31 within 2 bars of a same-direction cross, 5/31 matched within +-2; no variant reaches 25/31.",
       "evidence": [
