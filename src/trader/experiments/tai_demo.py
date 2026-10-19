@@ -714,8 +714,10 @@ class TaiDemoRunner:
         return bar.low <= stop if direction is Direction.BUY else bar.high >= stop
 
     def _requested_size(self, rules: TaiInstrumentRules | None) -> Decimal | None:
-        if rules is None or self._balance_provider is None:
+        if rules is None:
             return None
+        if self._balance_provider is None:
+            raise TaiDemoRefused("demo balance provider is required")
         balance = self._balance_provider()
         if not isinstance(balance, Decimal) or not balance.is_finite() or balance <= 0:
             raise TaiDemoRefused("demo balance must be a positive finite Decimal")
@@ -725,10 +727,7 @@ class TaiDemoRunner:
         )
         aligned = (raw / rules.size_step).to_integral_value(rounding=ROUND_DOWN) * rules.size_step
         if aligned < rules.min_size:
-            ratio = rules.min_size / rules.size_step
-            if ratio != ratio.to_integral_value():
-                raise TaiDemoRefused("broker minimum size is not expressible by its size step")
-            aligned = rules.min_size
+            raise TaiDemoRefused("requested demo size is below the broker minimum size")
         return aligned
 
     def _build_order(

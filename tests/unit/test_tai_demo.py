@@ -232,6 +232,18 @@ def test_lot_never_below_base_and_rounds_down_to_step():
     assert _sizing_runner("1500")._requested_size(rules) == Decimal("0.15")
 
 
+def test_lot_below_broker_minimum_is_refused():
+    rules = TaiInstrumentRules(Decimal("0.2"), Decimal("0.1"))
+    with pytest.raises(TaiDemoRefused, match="below the broker minimum"):
+        _sizing_runner("1000")._requested_size(rules)
+
+
+def test_missing_balance_provider_is_refused_when_rules_are_available():
+    instance, _ = runner(Gateway())
+    with pytest.raises(TaiDemoRefused, match="balance provider is required"):
+        instance._requested_size(TaiInstrumentRules(Decimal("0.1"), Decimal("0.1")))
+
+
 def test_enabled_experiment_without_start_balance_is_refused():
     class Cfg:
         broker_env = "demo"
