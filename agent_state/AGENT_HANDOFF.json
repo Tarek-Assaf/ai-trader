@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 466,
+  "revision": 468,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-172 accepted as a negative diagnostic: no 54m bucket anchor reproduces the owner entries (best 4/31 within 2 bars of a cross, goal 25/31). T-173 tests whether the owner's chart uses a different HTF multiplier than the Pine default 18. Historical Tai rerun stays gated until 25/31.",
+    "summary": "T-173 accepted as a negative diagnostic: no HA timeframe multiplier reproduces the owner entries (best 6/31 within 2 bars, goal 25/31). T-174 tests whether the owner runs the Renko setup instead of Open/Close. Historical Tai rerun stays gated until 25/31.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -146,7 +146,8 @@
         "T-170",
         "T-171",
         "T-172",
-        "T-173"
+        "T-173",
+        "T-174"
       ]
     },
     {
@@ -5730,7 +5731,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5746,6 +5747,38 @@
         "docs/evidence/t173_tfmult.json",
         "scripts/lab_t173_tfmult.py",
         "tests/unit/test_t173_tfmult.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t173_report.md",
+        "docs/evidence/t173_tfmult.json",
+        "scripts/lab_t173_tfmult.py",
+        "tests/unit/test_t173_tfmult.py"
+      ],
+      "completion_note": "Completed the registered 13 tfmult x 2 anchor x 2 mode grid with full warm-up in the owner Pod. The Pine-default tfmult=18 epoch/closed baseline reproduces T-171/T-172 at 1/3/4/4 matches and 1/31 within two bars of a same-direction cross. The best variant is tfmult=9, epoch, closed: 6/31 within two bars of a cross and 1/4/5/5 exact/+-1/+-2/+-3 matches. This is below the 15/31 noise cutoff and far below the 25/31 goal, so a different tfmult does not explain the owner chart. The report points to Renko/setupType, NQ1 futures versus NSXUSD CFD data, or Pine version as the next likely causes. Pod exit 0; all safety counters are zero/false; no broker, orders, holdout, lake writes, production changes, tuning, strategy search or secrets were used."
+    },
+    {
+      "id": "T-174",
+      "title": "Test whether the owner runs the Renko trading setup (setupType Renko) instead of Open/Close",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-173"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t174_renko_setup.md exactly (port and earlier scripts unchanged; Renko path built inside the new script; registered grid of ATR source timeframe {54m,3m} x anchor {epoch, ny_midnight} x mode {closed, forming} = 8 variants only; verdict first; gains below 15 of 31 are noise; the explains-flag is true only when a variant reaches 25 of 31 within +-2).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning beyond the grid or secrets. Lint with ruff check and ruff format (line length 100). One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t174_report.md",
+        "docs/evidence/t174_renko.json",
+        "scripts/lab_t174_renko.py",
+        "tests/unit/test_t174_renko.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -6183,6 +6216,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T01:35:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-055",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-173 accepted (V-434) as a negative diagnostic: no Heikin Ashi timeframe multiplier (13 values, two anchors, two modes) reproduces the owner entries (best 6/31 within 2 bars of a cross, noise at this grid size). The Open/Close cross stays silent at the owner's bars in every HA variant, so the next narrowest untested branch of the Pine source is the Renko setup (setupType input, Renko EMA 2/10 cross). Queued T-174 (8 registered variants, spec docs/specs/t174_renko_setup.md). The historical Tai rerun stays blocked until some run reaches 25 of 31. Remaining candidates after T-174, to be queued only from its numbers: refresh-entry timing from the owner's real exits, NQ1 futures versus NSXUSD CFD data, Pine version.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T02:10:00Z",
       "do_not_reopen": false
     }
   ],
@@ -14648,6 +14689,22 @@
       ],
       "validated_by": "claude",
       "date": "2026-10-19T01:50:00Z",
+      "reverify_if": "The port, the owner CSV or the lake bars change."
+    },
+    {
+      "id": "V-434",
+      "task_id": "T-173",
+      "subject": "Claude review of T-173 Heikin Ashi timeframe multiplier grid",
+      "method": "Reviewed report, JSON and script against docs/specs/t173_tfmult_inputs.md; ran ruff check and ruff format --check (line length 100) on the script and test (pass); checked safety counters in the JSON (broker calls 0, orders 0, holdout not read, lake and production writes 0) and that the port and earlier scripts are untouched. Corrected one reviewer finding: the script set different_tfmult_explains to yes whenever the best variant beat the baseline, so the report said 'explains it yes' for a 6/31 result; the flag now means 'a variant reaches 25 of 31 within +-2' (script, JSON and report line corrected; no number changed). Kept main's corrected T-172 unit test (Codex's branch had reverted it again).",
+      "result": "pass",
+      "checked": "Spec followed: 13 tfmult x 2 anchors x 2 modes = 52 variants, baseline tfmult 18 epoch closed reproduces 1/3/4/4 and 1/31 within 2 bars. Result is negative: best tfmult 9 epoch closed gets 6/31 within 2 bars of a same-direction cross and 1/4/5/5 matched, below the 15/31 noise cutoff and far from 25/31; no variant reaches 25/31.",
+      "evidence": [
+        "docs/evidence/t173_report.md",
+        "docs/evidence/t173_tfmult.json",
+        "scripts/lab_t173_tfmult.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T02:10:00Z",
       "reverify_if": "The port, the owner CSV or the lake bars change."
     }
   ],
@@ -25279,6 +25336,42 @@
         "docs/specs/t172_htf_anchor.md"
       ],
       "summary": "Reviewed T-172: accepted (V-433) as negative. Ruff check and format pass; no broker, order, holdout or lake activity. No 54m bucket anchor reproduces the owner entries (best 4/31 within 2 bars of a cross, none near 25/31). Queued T-173: registered tfmult grid (13 values x 2 anchors x 2 modes) to test whether the owner's chart uses a different HTF multiplier than the Pine default 18. Rebuilt on main with Codex's log entry kept. Turn to codex (D-045)."
+    },
+    {
+      "revision": 467,
+      "ts": "2026-10-19T01:33:00Z",
+      "agent": "codex",
+      "action": "complete_t173_tfmult",
+      "task_ids": [
+        "T-173"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t173_report.md",
+        "docs/evidence/t173_tfmult.json",
+        "scripts/lab_t173_tfmult.py",
+        "tests/unit/test_t173_tfmult.py"
+      ],
+      "summary": "Completed the bounded offline 52-variant tfmult grid in the owner Pod. The tfmult=18 epoch/closed baseline reproduces 1/3/4/4; best tfmult=9 epoch/closed reaches 5/31 within two bars (6/31 cross timing), below the 15/31 noise cutoff and 25/31 goal. The hypothesis is negative; likely next causes are Renko/setupType, futures versus CFD data, or Pine version. Pod exit 0, no broker or orders. Turn to Claude for review."
+    },
+    {
+      "revision": 468,
+      "ts": "2026-10-19T02:10:00Z",
+      "agent": "claude",
+      "action": "accept_t173_queue_t174",
+      "task_ids": [
+        "T-173",
+        "T-174"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t174_renko_setup.md",
+        "docs/evidence/t173_report.md",
+        "docs/evidence/t173_tfmult.json",
+        "scripts/lab_t173_tfmult.py",
+        "tests/unit/test_t173_tfmult.py"
+      ],
+      "summary": "Reviewed T-173: accepted (V-434) as negative. Ruff check and format pass; no broker, order, holdout or lake activity. No tfmult reproduces the owner entries (best 6/31 within 2 bars of a cross, below the 15/31 noise cutoff). Fixed the explains-flag in the script, JSON and report (it said yes for a 6/31 result). Queued T-174: Renko setupType path, 8 registered variants. Rebuilt on main with Codex's log entry kept and main's corrected T-172 test kept (Codex's branch reverted it again). Turn to codex (D-045)."
     }
   ],
   "project_summary": "T-172 accepted as a negative diagnostic: no 54m bucket anchor reproduces the owner entries (best 4/31 within 2 bars of a cross, goal 25/31). T-173 tests whether the owner's chart uses a different HTF multiplier than the Pine default 18. Historical Tai rerun stays gated until 25/31."
