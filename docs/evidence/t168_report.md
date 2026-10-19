@@ -4,8 +4,8 @@
 
 | Window | Trades | SL | TP1 | TP2 | TP3 | BE | Win rate (completed) | Total R | Trades/day |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| ny_midnight_13_15 | 10 | 4 | 0 | 0 | 3 | 3 | 30.00% | 5.00 | 0.91 |
-| utc_midnight_13_15 | 11 | 3 | 0 | 0 | 3 | 5 | 27.27% | 6.00 | 1.00 |
+| ny_midnight_13_15 | 10 | 4 | 0 | 0 | 3 | 3 | 30.00% | 5.00 | 5.00 |
+| utc_midnight_13_15 | 11 | 3 | 0 | 0 | 3 | 5 | 27.27% | 6.00 | 5.50 |
 | owner_trade_window | 33 | 14 | 0 | 0 | 7 | 12 | 21.21% | 7.00 | 3.00 |
 | nq1_reference_window | 33 | 14 | 0 | 0 | 7 | 12 | 21.21% | 7.00 | 3.00 |
 
@@ -22,6 +22,6 @@ The forming mode still produced zero trades over the full range. Of 4,013 bars, 
 
 Pod command exited 0: `timeout 1200s /app/.venv/bin/python scripts/lab_t168_counts.py --lake /workspace/data/lake --owner-file docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv --output /tmp/t168_counts.json --report /tmp/t168_report.md`.
 
-Pod artifact SHA-256: counts `e8027d280352c8a7e2287f95c6b225f8ccd825232ff646e06250e853767bbae1`; report `5736381cf9a7eaaba67947601616979f51f4967dc3f7a9090f14b0dd3e2f95bc`.
+Pod artifact SHA-256: counts `3fc095ff76aa727c26430db07627df2f1229cac66b8a3ea69b0c0100a6201ac3`; report `3a3c36b00036ef4ff396259c3331b87284d7862785e5e4f911a30986614a3ab2`.
 
 Safety counters are all zero/false: no broker calls, orders, sealed holdout read, lake writes, production-state writes, tuning, or strategy search.

@@ -38,7 +38,7 @@
             "win_rate_completed_excluding_be": 0.3,
             "total_r": 5.0,
             "mix_denominator": 10,
-            "trades_per_day": 0.9090909090909091
+            "trades_per_day": 5.0
           }
         },
         "utc_midnight_13_15": {
@@ -56,7 +56,7 @@
             "win_rate_completed_excluding_be": 0.2727272727272727,
             "total_r": 6.0,
             "mix_denominator": 11,
-            "trades_per_day": 1.0
+            "trades_per_day": 5.5
           }
         },
         "owner_trade_window": {
@@ -97,6 +97,34 @@
         }
       },
       "per_ny_day": {
+        "2026-10-05": {
+          "trades": 0,
+          "completed": 0,
+          "open_at_end": 0,
+          "sl": 0,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 0,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": 0,
+          "mix_denominator": 0,
+          "trades_per_day": 0.0
+        },
+        "2026-10-06": {
+          "trades": 0,
+          "completed": 0,
+          "open_at_end": 0,
+          "sl": 0,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 0,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": 0,
+          "mix_denominator": 0,
+          "trades_per_day": 0.0
+        },
         "2026-10-07": {
           "trades": 3,
           "completed": 3,
@@ -138,6 +166,20 @@
           "total_r": 3.0,
           "mix_denominator": 1,
           "trades_per_day": 0.09090909090909091
+        },
+        "2026-10-10": {
+          "trades": 0,
+          "completed": 0,
+          "open_at_end": 0,
+          "sl": 0,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 0,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": 0,
+          "mix_denominator": 0,
+          "trades_per_day": 0.0
         },
         "2026-10-11": {
           "trades": 3,
@@ -301,7 +343,50 @@
           }
         }
       },
-      "per_ny_day": {},
+      "per_ny_day": {
+        "2026-10-05": {
+          "trades": 0,
+          "completed": 0,
+          "open_at_end": 0,
+          "sl": 0,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 0,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": 0,
+          "mix_denominator": 0,
+          "trades_per_day": 0.0
+        },
+        "2026-10-06": {
+          "trades": 0,
+          "completed": 0,
+          "open_at_end": 0,
+          "sl": 0,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 0,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": 0,
+          "mix_denominator": 0,
+          "trades_per_day": 0.0
+        },
+        "2026-10-10": {
+          "trades": 0,
+          "completed": 0,
+          "open_at_end": 0,
+          "sl": 0,
+          "tp1": 0,
+          "tp2": 0,
+          "tp3": 0,
+          "be": 0,
+          "win_rate_completed_excluding_be": 0.0,
+          "total_r": 0,
+          "mix_denominator": 0,
+          "trades_per_day": 0.0
+        }
+      },
       "forming_condition_diagnostics": {
         "mode": "forming",
         "bars": 4013,
@@ -334,7 +419,7 @@
     "tuning": false
   },
   "pod_artifact_sha256": {
-    "counts": "e8027d280352c8a7e2287f95c6b225f8ccd825232ff646e06250e853767bbae1",
-    "report": "5736381cf9a7eaaba67947601616979f51f4967dc3f7a9090f14b0dd3e2f95bc"
+    "counts": "3fc095ff76aa727c26430db07627df2f1229cac66b8a3ea69b0c0100a6201ac3",
+    "report": "3a3c36b00036ef4ff396259c3331b87284d7862785e5e4f911a30986614a3ab2"
   }
 }
