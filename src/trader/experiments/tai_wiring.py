@@ -289,10 +289,17 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[Any, ...]]:
         groups[(origin, elapsed // 54)].append(index)
     previous: tuple[float, float] | None = None
     for indices in groups.values():
-        if len(indices) != GROUP_BARS or any(
-            bars[a].at + timedelta(minutes=3) != bars[b].at
-            for a, b in zip(indices, indices[1:], strict=False)
-        ):
+        complete = len(indices) == GROUP_BARS and all(
+            bars[a].at + timedelta(minutes=3) == bars[b].at
+            for a, b in zip(indices[:-1], indices[1:], strict=True)
+        )
+        # The closed T-162/T-182 series exposes the completed prior 54m HA
+        # value on every bar of the current group, including a still-forming
+        # live group, so there is no look-ahead into the group itself.
+        if previous is not None:
+            for index in indices:
+                ha_open[index], ha_close[index] = previous
+        if not complete:
             continue
         raw_open, raw_close = float(bars[indices[0]].open), float(bars[indices[-1]].close)
         final_close = (
@@ -304,12 +311,6 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[Any, ...]]:
         open_price = (
             (raw_open + raw_close) / 2.0 if previous is None else (previous[0] + previous[1]) / 2.0
         )
-        # The closed T-162/T-182 series exposes the completed prior 54m HA
-        # value on the current group, avoiding look-ahead into this group.
-        exposed = previous
-        for index in indices:
-            if exposed is not None:
-                ha_open[index], ha_close[index] = exposed
         previous = open_price, final_close
     buy = [False] * len(bars)
     sell = [False] * len(bars)

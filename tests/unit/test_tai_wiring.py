@@ -256,7 +256,7 @@ def test_signal_features_match_t162_closed_fixture_with_buy_and_sell() -> None:
         )
         for item in bars
     )
-    expected = port.compute_features(candles, "closed")
+    expected = port.compute_features(candles, "closed", "session_1800_ny")
     for name in ("ema", "atr", "adx", "plus_di", "minus_di", "vwap"):
         actual = ours[name]
         reference = getattr(expected, name)
