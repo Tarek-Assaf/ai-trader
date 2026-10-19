@@ -48,6 +48,9 @@ MAX_RISK_ATR = 2.0
 VWAP_DISTANCE_ATR = 1.5
 START_DATE = datetime(2023, 1, 1, tzinfo=UTC)
 OWNER_ZONE = ZoneInfo("America/New_York")
+HA_ANCHORS = ("epoch", "session_1800_ny", "rth_0930_ny")
+SESSION_ANCHORS = {"session_1800_ny": (18, 0), "rth_0930_ny": (9, 30)}
+GROUP_BARS = HIGHER_MINUTES // TIMEFRAME
 
 
 @dataclass(frozen=True, slots=True)
@@ -164,7 +167,25 @@ def _dmi(bars: Sequence[Candle], period: int = PERIOD) -> tuple[tuple[float | No
     return tuple(adx), tuple(plus_di), tuple(minus_di)
 
 
-def _vwap(bars: Sequence[Candle]) -> tuple[float | None, ...]:
+def _session_start(ts: datetime, anchor: str) -> datetime | None:
+    if anchor == "utc_midnight":
+        return ts.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+    if anchor not in SESSION_ANCHORS:
+        raise ValueError(f"unknown VWAP anchor: {anchor}")
+    local = ts.astimezone(OWNER_ZONE)
+    hour, minute = SESSION_ANCHORS[anchor]
+    start = datetime(local.year, local.month, local.day, hour, minute, tzinfo=OWNER_ZONE)
+    if anchor == "session_1800_ny":
+        if local.hour < 17:
+            start -= timedelta(days=1)
+        elif local.hour == 17:
+            return None
+    elif local < start:
+        return None
+    return start.astimezone(UTC)
+
+
+def _vwap(bars: Sequence[Candle], anchor: str = "utc_midnight") -> tuple[float | None, ...]:
     result: list[float | None] = []
     current_day: object = None
     weighted = 0.0
@@ -172,8 +193,9 @@ def _vwap(bars: Sequence[Candle]) -> tuple[float | None, ...]:
     equal_sum = 0.0
     equal_count = 0
     for bar in bars:
-        if bar.ts_utc.date() != current_day:
-            current_day = bar.ts_utc.date()
+        key = _session_start(bar.ts_utc, anchor)
+        if key != current_day:
+            current_day = key
             weighted = volume = equal_sum = 0.0
             equal_count = 0
         typical = (bar.high + bar.low + bar.close) / 3.0
@@ -191,16 +213,55 @@ def _vwap(bars: Sequence[Candle]) -> tuple[float | None, ...]:
     return tuple(result)
 
 
-def _ha_complete(bars: Sequence[Candle]) -> tuple[dict[int, tuple[float, float]], ...]:
-    """Return complete 54m HA values keyed by chart-bar index within each group."""
-    groups: dict[int, list[int]] = defaultdict(list)
+def _group_indices(bars: Sequence[Candle], anchor: str) -> list[list[int]]:
+    if anchor not in HA_ANCHORS:
+        raise ValueError(f"unknown HA anchor: {anchor}")
+    if anchor == "epoch":
+        buckets: dict[int, list[int]] = defaultdict(list)
+        for i, bar in enumerate(bars):
+            epoch = int(bar.ts_utc.timestamp() // 60)
+            buckets[epoch - epoch % HIGHER_MINUTES].append(i)
+        return [indices for _, indices in sorted(buckets.items())]
+    groups: dict[tuple[datetime, int], list[int]] = defaultdict(list)
     for i, bar in enumerate(bars):
-        epoch = int(bar.ts_utc.timestamp() // 60)
-        groups[epoch - epoch % HIGHER_MINUTES].append(i)
+        local = bar.ts_utc.astimezone(OWNER_ZONE)
+        if anchor == "session_1800_ny":
+            if local.hour == 17:
+                continue
+            session_date = local.date() if local.hour >= 18 else local.date() - timedelta(days=1)
+            origin = datetime(
+                session_date.year, session_date.month, session_date.day, 18, tzinfo=OWNER_ZONE
+            ).astimezone(UTC)
+        else:
+            if (local.hour, local.minute) < (9, 30) or (local.hour, local.minute) >= (16, 0):
+                continue
+            origin = datetime(
+                local.year, local.month, local.day, 9, 30, tzinfo=OWNER_ZONE
+            ).astimezone(UTC)
+        elapsed = max(0, int((bar.ts_utc - origin).total_seconds() // 60))
+        bucket = elapsed // HIGHER_MINUTES
+        groups[(origin, bucket)].append(i)
+    output: list[list[int]] = []
+    for _, indices in sorted(groups.items()):
+        segment: list[int] = []
+        for index in indices:
+            if segment and bars[index].ts_utc - bars[segment[-1]].ts_utc != timedelta(minutes=TIMEFRAME):
+                output.append(segment)
+                segment = []
+            segment.append(index)
+        if segment:
+            output.append(segment)
+    return output
+
+
+def _ha_complete(
+    bars: Sequence[Candle], anchor: str = "epoch"
+) -> tuple[dict[int, tuple[float, float]], ...]:
+    """Return complete 54m HA values keyed by chart-bar index within each group."""
     result: list[dict[int, tuple[float, float]]] = [dict() for _ in bars]
     previous: tuple[float, float] | None = None
-    for _, indices in sorted(groups.items()):
-        if len(indices) != HIGHER_MINUTES // TIMEFRAME:
+    for indices in _group_indices(bars, anchor):
+        if len(indices) != GROUP_BARS:
             continue
         first, last = indices[0], indices[-1]
         if any(
@@ -226,88 +287,46 @@ def _ha_complete(bars: Sequence[Candle]) -> tuple[dict[int, tuple[float, float]]
 
 
 def _ha_series(
-    bars: Sequence[Candle], mode: str
+    bars: Sequence[Candle], mode: str, anchor: str = "epoch"
 ) -> tuple[tuple[float | None, ...], tuple[float | None, ...]]:
     if mode not in {"closed", "forming"}:
         raise ValueError("mode must be closed or forming")
-    groups: dict[int, list[int]] = defaultdict(list)
-    for i, bar in enumerate(bars):
-        epoch = int(bar.ts_utc.timestamp() // 60)
-        groups[epoch - epoch % HIGHER_MINUTES].append(i)
-    ordered = sorted(groups.items())
-    complete: list[tuple[int, list[int], tuple[float, float]]] = []
-    previous: tuple[float, float] | None = None
-    for bucket, indices in ordered:
-        if len(indices) != HIGHER_MINUTES // TIMEFRAME:
-            continue
-        if any(
-            bars[a].ts_utc + timedelta(minutes=TIMEFRAME) != bars[b].ts_utc
-            for a, b in zip(indices[:-1], indices[1:], strict=True)
-        ):
+    opens: list[float | None] = [None] * len(bars)
+    closes: list[float | None] = [None] * len(bars)
+    previous_complete: tuple[float, float] | None = None
+    for indices in _group_indices(bars, anchor):
+        if anchor == "epoch" and len(indices) != GROUP_BARS:
             continue
         raw_open = bars[indices[0]].open
         raw_close = bars[indices[-1]].close
-        close = (
+        final_close = (
             raw_open
             + max(bars[i].high for i in indices)
             + min(bars[i].low for i in indices)
             + raw_close
         ) / 4.0
-        open_price = (
-            (raw_open + raw_close) / 2.0 if previous is None else (previous[0] + previous[1]) / 2.0
+        group_open = (
+            (raw_open + raw_close) / 2.0
+            if previous_complete is None
+            else (previous_complete[0] + previous_complete[1]) / 2.0
         )
-        previous = (open_price, close)
-        complete.append((bucket, indices, (open_price, close)))
-    opens: list[float | None] = [None] * len(bars)
-    closes: list[float | None] = [None] * len(bars)
-    complete_by_bucket = {bucket: (indices, value) for bucket, indices, value in complete}
-    previous_complete: tuple[float, float] | None = None
-    for bucket, indices in ordered:
-        if bucket in complete_by_bucket:
-            full_indices, value = complete_by_bucket[bucket]
-            if mode == "closed":
-                # lookahead_off exposes the last confirmed HTF value through the current group.
+        if mode == "closed":
+            if previous_complete is not None:
                 for i in indices:
-                    if previous_complete is not None:
-                        opens[i], closes[i] = previous_complete
-                previous_complete = value
-            else:
-                for i in full_indices:
-                    prefix = [j for j in indices if j <= i]
-                    raw_open = bars[prefix[0]].open
-                    raw_close = bars[prefix[-1]].close
-                    close = (
-                        raw_open
-                        + max(bars[j].high for j in prefix)
-                        + min(bars[j].low for j in prefix)
-                        + raw_close
-                    ) / 4.0
-                    open_price = (
-                        (raw_open + raw_close) / 2.0
-                        if previous_complete is None
-                        else (previous_complete[0] + previous_complete[1]) / 2.0
-                    )
-                    opens[i], closes[i] = open_price, close
-                previous_complete = value
-        elif mode == "forming":
-            if not indices:
-                continue
-            for i in indices:
-                prefix = [j for j in indices if j <= i]
-                raw_open = bars[prefix[0]].open
-                raw_close = bars[prefix[-1]].close
+                    opens[i], closes[i] = previous_complete
+        else:
+            for end, i in enumerate(indices, 1):
+                prefix = indices[:end]
+                raw_prefix_open = bars[prefix[0]].open
+                raw_prefix_close = bars[prefix[-1]].close
                 close = (
-                    raw_open
+                    raw_prefix_open
                     + max(bars[j].high for j in prefix)
                     + min(bars[j].low for j in prefix)
-                    + raw_close
+                    + raw_prefix_close
                 ) / 4.0
-                open_price = (
-                    (raw_open + raw_close) / 2.0
-                    if previous_complete is None
-                    else (previous_complete[0] + previous_complete[1]) / 2.0
-                )
-                opens[i], closes[i] = open_price, close
+                opens[i], closes[i] = group_open, close
+        previous_complete = (group_open, final_close)
     return tuple(opens), tuple(closes)
 
 
@@ -325,12 +344,17 @@ def _crosses(
     return tuple(buy), tuple(sell)
 
 
-def compute_features(bars: Sequence[Candle], mode: str) -> Features:
+def compute_features(
+    bars: Sequence[Candle],
+    mode: str,
+    ha_anchor: str = "epoch",
+    vwap_anchor: str = "session_1800_ny",
+) -> Features:
     ema = _ema([b.close for b in bars], EMA_PERIOD)
     atr = _atr(bars)
     adx, plus, minus = _dmi(bars)
-    vwap = _vwap(bars)
-    ha_open, ha_close = _ha_series(bars, mode)
+    vwap = _vwap(bars, vwap_anchor)
+    ha_open, ha_close = _ha_series(bars, mode, ha_anchor)
     buy, sell = _crosses(ha_open, ha_close)
     return Features(ema, atr, adx, plus, minus, vwap, ha_open, ha_close, buy, sell)
 
@@ -373,8 +397,16 @@ def _smart_ok(bars: Sequence[Candle], features: Features, i: int, direction: str
     return trend and directional and side and location
 
 
-def replay(bars: Sequence[Candle], mode: str) -> tuple[tuple[PortTrade, ...], Features]:
-    features = compute_features(bars, mode)
+def replay(
+    bars: Sequence[Candle],
+    mode: str,
+    ha_anchor: str = "epoch",
+    vwap_anchor: str = "session_1800_ny",
+) -> tuple[tuple[PortTrade, ...], Features]:
+    if ha_anchor == "epoch" and vwap_anchor == "session_1800_ny":
+        features = compute_features(bars, mode)
+    else:
+        features = compute_features(bars, mode, ha_anchor, vwap_anchor)
     trades: list[PortTrade] = []
     active: dict[str, Any] | None = None
     last_exit: int | None = None
