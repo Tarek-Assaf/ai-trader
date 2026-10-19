@@ -5,7 +5,7 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
+  "turn": "codex",
   "revision": 484,
   "current_phase": 1,
   "protocol": {
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued.",
+    "summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued. Codex: no open task, do not start new work.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -26220,8 +26220,8 @@
       "files_changed": [
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Accepted T-181 (V-450, D-063). Gate 25/31 still not met, rerun stays blocked on Q-071. Did not queue a session-anchored HA test because T-172 already ran it (negative). No new Codex task; no broker calls."
+      "summary": "Accepted T-181 (V-450, D-063). Gate 25/31 still not met, rerun stays blocked on Q-071. Did not queue a session-anchored HA test because T-172 already ran it (negative). No new Codex task; no broker calls. Turn is codex only because the protocol requires alternation: Codex has no open task and should not start one."
     }
   ],
-  "project_summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued."
+  "project_summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued. Codex: no open task, do not start new work."
 }
