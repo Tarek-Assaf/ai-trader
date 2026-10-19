@@ -1,6 +1,7 @@
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
+from scripts import lab_t162_pine_port as port
 from scripts.lab_t151_owner_trades import OwnerEntry
 from scripts.lab_t162_pine_port import OwnerExit
 from scripts.lab_t175_refresh import classify, condition_values
@@ -19,16 +20,18 @@ def _bars(count=30):
 def test_classify_marks_recent_exit_as_refresh():
     bars = _bars()
     owners = (
-        OwnerEntry(bars[5].ts_utc, "long", 100, 1),
+        OwnerEntry(bars[2].ts_utc, "long", 100, 1),
         OwnerEntry(bars[15].ts_utc, "long", 100, 1),
     )
     exits = (OwnerExit("1", "long", bars[3].ts_utc, bars[10].ts_utc, "target"),)
     states = classify(owners, exits, bars)
     assert [row["class"] for row in states] == ["first", "refresh"]
     assert states[1]["bars_since_same_direction_exit"] == 5
+    assert states[0]["bar_index"] == 2
 
 
-def test_first_direction_uses_cross_and_refresh_does_not():
+def test_first_direction_uses_cross_and_refresh_does_not(monkeypatch):
+    monkeypatch.setattr(port, "_risk", lambda *args: (True, 1.0))
     bars = _bars()
     features = SimpleNamespace(
         ema=(100.0,) * len(bars),
