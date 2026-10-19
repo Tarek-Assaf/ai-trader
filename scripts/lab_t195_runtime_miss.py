@@ -12,7 +12,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections import deque
+from collections import Counter, deque
 from collections.abc import Mapping, Sequence
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -26,6 +26,7 @@ except ModuleNotFoundError:
     from scripts import lab_t162_pine_port as port
     from scripts import lab_t187_runtime_replay as replay
 
+from trader.data.resample import resample_ohlc
 from trader.experiments import tai_wiring
 from trader.experiments.tai_demo import ClosedBar
 
@@ -246,6 +247,64 @@ def _entry_by_key(
     return {(entry.at.isoformat(), entry.direction): entry for entry in entries}
 
 
+def _nearest_entry(
+    expected: replay.RuntimeEntry, entries: Sequence[replay.RuntimeEntry]
+) -> replay.RuntimeEntry | None:
+    """Return the closest same-direction runtime candidate for evidence."""
+    candidates = [item for item in entries if item.direction == expected.direction]
+    return (
+        min(candidates, key=lambda item: abs((item.at - expected.at).total_seconds()))
+        if candidates
+        else None
+    )
+
+
+def _classify_cause(
+    *,
+    expected: replay.RuntimeEntry,
+    runtime: replay.RuntimeEntry | None,
+    unbounded_match: replay.RuntimeEntry | None,
+    trace: Mapping[str, object],
+    bar_index: int,
+) -> str:
+    """Name the first observed cause instead of collapsing misses into a default label."""
+    if unbounded_match is not None and runtime is None:
+        return "history_window"
+    if bar_index >= 0 and bar_index < MINIMUM_HISTORY:
+        return "warmup"
+    if runtime is not None:
+        if runtime.at == expected.at and abs(runtime.stop - expected.stop) <= replay.DEFAULT_TICK:
+            return "matched"
+        return "bar_or_stop_difference"
+    first_gate = trace.get("first_failing_gate")
+    if isinstance(first_gate, str) and first_gate:
+        return f"runtime_gate_{first_gate}"
+    if trace:
+        return "runtime_no_signal_after_all_gates"
+    return "runtime_trace_missing"
+
+
+def _independent_bars(minutes: Sequence[replay.Candle], epic: str) -> tuple[ClosedBar, ...]:
+    """Build comparison bars through the historical UTC resampler, independently."""
+    return tuple(
+        ClosedBar(
+            at=bar.ts_utc,
+            epic=epic,
+            open=Decimal(str(bar.open)),
+            high=Decimal(str(bar.high)),
+            low=Decimal(str(bar.low)),
+            close=Decimal(str(bar.close)),
+            timeframe_minutes=3,
+            closed=True,
+            market_open=True,
+            in_break=False,
+            volume=Decimal(str(bar.volume)),
+        )
+        for bar in resample_ohlc(minutes, 3)
+        if bar.complete
+    )
+
+
 def _bar_diff(left: Sequence[ClosedBar], right: Sequence[ClosedBar]) -> dict[str, object]:
     if len(left) != len(right):
         return {"same": False, "reason": "count", "left": len(left), "right": len(right)}
@@ -268,8 +327,9 @@ def run(
     selected_dates = replay._selected_dates(minutes, days)
     selected = set(selected_dates)
     bars = replay._closed_bars(minutes, selected_dates, epic)
-    port_entries = replay._port_entries(bars, selected, ha_anchor="session_1800_ny")
-    port_candles = tuple(_candle(bar) for bar in bars)
+    comparison_bars = _independent_bars(minutes, epic)
+    port_entries = replay._port_entries(comparison_bars, selected, ha_anchor="session_1800_ny")
+    port_candles = tuple(_candle(bar) for bar in comparison_bars)
     _, port_features = port.replay(
         port_candles, "closed", ha_anchor="session_1800_ny", vwap_anchor="session_1800_ny"
     )
@@ -279,31 +339,25 @@ def run(
     bounded_by_key = _entry_by_key(bounded)
     unbounded_by_key = _entry_by_key(unbounded)
     rows: list[dict[str, object]] = []
-    explained = {
-        "history_window": 0,
-        "warmup": 0,
-        "bar_construction": 0,
-        "bar_or_stop_difference": 0,
-        "pine_difference": 0,
-        "position_lock": 0,
-        "unexplained": 0,
-    }
+    explained: Counter[str] = Counter()
     for expected in port_entries:
         key = (expected.at.isoformat(), expected.direction)
         runtime = bounded_by_key.get(key)
         unbounded_match = unbounded_by_key.get(key)
         trace = bounded_trace.get(expected.at.isoformat(), {})
-        index = next((i for i, bar in enumerate(bars) if bar.at == expected.at), -1)
-        if unbounded_match is not None and runtime is None:
-            cause = "history_window"
-        elif index >= 0 and index < MINIMUM_HISTORY:
-            cause = "warmup"
-        elif runtime is not None:
-            cause = "bar_or_stop_difference"
-        else:
-            cause = "pine_difference_or_unexplained"
-        explained[cause.split("_or_")[0] if cause.startswith("pine_difference_or_") else cause] += 1
-        port_index = index
+        runtime_candidate = _nearest_entry(expected, bounded)
+        port_index = next((i for i, bar in enumerate(comparison_bars) if bar.at == expected.at), -1)
+        runtime_index = next(
+            (i for i, bar in enumerate(bars) if bar.at == expected.at), -1
+        )
+        cause = _classify_cause(
+            expected=expected,
+            runtime=runtime,
+            unbounded_match=unbounded_match,
+            trace=trace,
+            bar_index=runtime_index,
+        )
+        explained[cause] += 1
         port_row = {
             "ha_open_54m": _value(port_features.ha_open[port_index]) if port_index >= 0 else None,
             "ha_close_54m": _value(port_features.ha_close[port_index]) if port_index >= 0 else None,
@@ -332,12 +386,17 @@ def run(
             if port_index >= 0
             else {},
         }
+        runtime_row = trace if isinstance(trace, Mapping) else {}
         rows.append(
             {
                 "at": expected.at.isoformat(),
                 "direction": expected.direction,
+                "port_entry": replay._entry_payload(expected),
+                "runtime_candidate": replay._entry_payload(runtime_candidate)
+                if runtime_candidate
+                else None,
                 "port": port_row,
-                "runtime_bounded": trace,
+                "runtime_bounded": runtime_row,
                 "runtime_unbounded": unbounded_trace.get(expected.at.isoformat(), {}),
                 "cause": cause,
                 "runtime_entry": replay._entry_payload(runtime) if runtime else None,
@@ -361,7 +420,7 @@ def run(
         "unbounded_runtime_entries": len(unbounded),
         "comparison": comparison,
         "hypothesis_counts": explained,
-        "bar_construction": _bar_diff(bars, bars),
+        "bar_construction": _bar_diff(bars, comparison_bars),
         "position_lock": {
             "applies": False,
             "reason": "TaiSignalProvider is traced directly and has no position state.",
@@ -399,28 +458,39 @@ def _write_outputs(payload: Mapping[str, object], output_dir: Path) -> None:
         *(f"- {name}: {value}" for name, value in counts.items()),
         "",
         (
-            "The bounded provider's 600-bar history is the named cause for every miss that "
-            "the unbounded replay recovers; remaining rows retain the first failing runtime "
-            "gate or explicitly remain unexplained."
+            "Each miss is classified from the measured bounded trace: history-window recovery, "
+            "warm-up, bar/stop mismatch, the first named runtime gate, or a missing trace. "
+            "The JSON records the port and nearest runtime entry values and indicator rows."
         ),
         "",
         (
             "Position lock does not apply because this diagnostic traces the pure signal "
-            "provider directly. Bar construction is identical by construction: both paths "
-            "consume the same closed 3M bars."
+            "provider directly. Bar construction compares the runtime builder with an "
+            "independent UTC resampler over the same minute input."
         ),
         "",
         "## Per-entry rows",
         "",
-        "| Timestamp | Side | Cause | First failing bounded gate | Bounded history |",
-        "|---|---:|---|---|---:|",
+        "| Timestamp | Side | Cause | Port entry/stop | Runtime candidate entry/stop | "
+        "First failing bounded gate | Bounded history |",
+        "|---|---:|---|---|---|---|---:|",
     ]
     for row in rows:
         bounded = row["runtime_bounded"]
         assert isinstance(bounded, Mapping)
+        port_entry = row["port_entry"]
+        runtime_candidate = row["runtime_candidate"]
+        assert isinstance(port_entry, Mapping)
+        port_values = f"{port_entry['entry']} / {port_entry['stop']}"
+        runtime_values = (
+            f"{runtime_candidate['entry']} / {runtime_candidate['stop']}"
+            if isinstance(runtime_candidate, Mapping)
+            else "—"
+        )
         report.append(
             f"| {row['at']} | {row['direction']} | {row['cause']} | "
-            f"{bounded.get('first_failing_gate')} | {bounded.get('history_bars')} |"
+            f"{port_values} | {runtime_values} | {bounded.get('first_failing_gate')} | "
+            f"{bounded.get('history_bars')} |"
         )
     report.extend(
         [
