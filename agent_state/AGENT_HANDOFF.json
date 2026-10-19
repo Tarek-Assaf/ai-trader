@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 527,
+  "turn": "codex",
+  "revision": 528,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-195 accepted: 23 of 25 misses first fail at the HA cross gate (T-196 queued). T-191 (position-state persistence) failed review cycle 2 on CI; waiting for the owner's choice (Q-074). Runtime still not cleared for demo orders. No broker orders, no holdout reads.",
+    "summary": "T-191 accepted: Tai demo position state is saved and reconciled at startup (dry-run default stays on). T-195 found 23 of 25 misses fail first at the HA cross gate; T-196 traces it. Next T-192 audit. Runtime still not cleared for real demo orders. No broker orders, no holdout reads.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6297,7 +6297,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "blocked",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6321,7 +6321,7 @@
         "src/trader/experiments/tai_demo.py",
         "tests/unit/test_tai_demo.py"
       ],
-      "completion_note": "Applied the cycle-2 T-191 fixes: dry-run shadows now process the structure stop and post-TP1 entry stop after targets, removing the shadow and journaling a flat exit; live managed deals absent from broker positions are reconciled closed before exit management, so later signals can enter. Added focused tests for both shadow stop paths, dry-run flat alerts, and live broker disappearance. Ruff check and format pass; py_compile and git diff --check pass. Focused pytest and mypy are unavailable in the desktop image. No behavior outside T-191, broker calls, orders, holdout reads, risk/gate edits, redeploy or secrets. Turn to Claude for review."
+      "completion_note": "Accepted after Claude fixes on Codex's code (owner Q-074=A): removed an unrequested synthetic stop check from the live _manage_exits path and added dry_run=True to two new dry-run tests; two earlier mypy fixes kept. Merged only after quality CI was green."
     },
     {
       "id": "T-192",
@@ -7069,6 +7069,13 @@
       "status": "final",
       "do_not_reopen": false,
       "decided_by": "claude"
+    },
+    {
+      "id": "D-080",
+      "statement": "Owner 2026-10-20 (Q-074=A): Claude fixed T-191 directly on Codex's code and accepted it after green CI. Redeploy of the new image is the owner's decision and timing; TAI_DEMO_DRY_RUN stays true. Next: T-192 (pre-enable audit), then T-196.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "owner"
     }
   ],
   "validations": [
@@ -16171,6 +16178,20 @@
       ],
       "validated_by": "claude",
       "reverify_if": "tai_demo.py or test_tai_demo.py changes"
+    },
+    {
+      "id": "V-474",
+      "task_id": "T-191",
+      "subject": "T-191 accepted after Claude fixes (owner Q-074=A)",
+      "method": "Re-read the full diff; removed the live-path synthetic stop block and added dry_run=True to the two failing new tests; ruff check and format (line 100) clean; merged only after the quality CI check (ruff, mypy, full pytest, validate_handoff) was SUCCESS on the PR.",
+      "result": "pass",
+      "checked": "State file written atomically; corrupt file fails closed; unknown broker position refuses entries and alerts; restart restores management; dry-run shadow survives restart, exits on structure stop or entry stop after TP1, frees the next entry and sends DRY-RUN flat alerts; live deals absent at the broker are dropped (reconcile_closed) so later signals can enter; live path no longer invents stops. Dry-run stays true; no broker calls added.",
+      "evidence": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "tai_demo.py changes"
     }
   ],
   "blockers": [
@@ -17319,7 +17340,7 @@
       "id": "Q-074",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "T-191 (saving the Tai demo position so a restart does not lose it) has used both review cycles and its tests still fail in CI: two new dry-run tests are missing a setting, and Codex added an unrequested stop check to the live path that would make the runner stop managing a position that is still open. Both fixes are a few lines. How do you want to finish it?",
       "options": [
         "A: Claude makes the two small fixes directly on Codex's branch (remove the live synthetic stop check, add dry_run=True to the two tests), waits for green CI, then accepts T-191 (recommended)",
@@ -17327,7 +17348,7 @@
         "C: Park T-191 and move Codex on to T-196 and T-192 first"
       ],
       "recommendation": "A: it is the fastest, the changes are tiny and fully specified, and a Claude-made fix to Codex's branch has precedent in this project (mypy fixes). CI must be green before acceptance.",
-      "answer": ""
+      "answer": "A (owner, chat 2026-10-20 00:02 Riyadh): Claude makes the two small fixes on Codex branch, waits for green CI, then accepts T-191."
     }
   ],
   "log": [
@@ -27853,6 +27874,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-191 cycle 2 reviewed (V-473, D-079): quality CI fails 3 tests: two new dry-run tests lack dry_run=True and an unrequested synthetic stop check in the live path would end management of a still-open broker position. The scheduled-run acceptance (V-472, PR #366) was invalid because CI had not finished; closed unmerged. Both review cycles are used, so the question went to the owner (Q-074, recommendation A: Claude makes the two small fixes). Turn human. No broker calls, orders, holdout reads, redeploy or secrets."
+    },
+    {
+      "revision": 528,
+      "ts": "2026-10-20T00:20:00+03:00",
+      "agent": "claude",
+      "action": "accept_t191_after_owner_choice",
+      "task_ids": [
+        "T-191",
+        "T-192"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/api/app.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-191 accepted (owner chose Q-074=A). I removed the unrequested synthetic stop check from the live path and added dry_run=True to the two failing tests, kept the earlier mypy fixes, and merged only on green CI. Codex: next is T-192 (docs/specs/t192_tai_pre_enable_audit.md, read-only audit with a final ready-to-enable yes/no line), then T-196. Start from current main. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
     }
   ],
   "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
