@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 532,
+  "turn": "claude",
+  "revision": 539,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-191 accepted; T-192 audit says ready to enable: no (4 blockers, T-197 queued). T-195: 23 of 25 misses fail first at the HA cross gate; T-196 (trace the values) sent back once. Q-075 (spread limit) awaits the owner. Dry-run stays on. No broker orders, no holdout reads.",
+    "summary": "T-193 is blocked on absent Pod script and market-details JSON; observed-side parquet counts, redacted recorder health, and reconnect log correlation are documented for Claude review. T-197 accepted (V-482); Q-075 spread ceiling remains open; Tai stays disabled/dry-run.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,8 +47,8 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-191",
-    "last_status": "review"
+    "last_task": "T-193",
+    "last_status": "blocked"
   },
   "requirements": [
     {
@@ -6358,7 +6358,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-03"
       ],
@@ -6373,8 +6373,10 @@
         "docs/evidence/t193/report.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t193/report.md"
+      ],
+      "completion_note": "Pod parquet and health/log evidence were captured read-only, but exact T-193 script execution is blocked because /app/scripts/lab_t189_minute_gaps.py and market-details JSON are absent from the reachable Pod. Report preserves observed-side counts and reconnect correlation for Claude review."
     },
     {
       "id": "T-194",
@@ -6442,7 +6444,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6457,12 +6459,13 @@
         "docs/evidence/t196/summary.json",
         "docs/evidence/t196/report.md"
       ],
-      "review_cycles": 1,
+      "review_cycles": 2,
       "evidence": [
         "docs/evidence/t196/summary.json",
         "docs/evidence/t196/report.md"
       ],
-      "completion_note": "Runner and partial entry-bar trace are committed. The complete two-prior-bar output could not be transferred from the Pod terminal in this turn, so the task is blocked pending one fresh Pod run or output transfer."
+      "completion_note": "Ran the bounded read-only Pod trace once. The compact terminal transfer recorded 23 HA-cross rows with HA open/close, colour, previous colour, cross flag, EMA200, ADX, DI and VWAP for the entry and two prior closed bars. At copied precision, 22 rows first differ in ema200 and one in ha_open_54m. The full JSON was written to /workspace/state/t196/summary.json and the 28,275-byte compact output was saved to /workspace/state/t196/compact.txt. The report states that the quoted runtime/Pine assignments are the same and leaves the remaining gate cause explicitly unknown. No broker calls, orders, holdout reads, lake writes, redeploy, risk/gate edits or secrets.",
+      "changes_requested": "Cycle 2 of 2 (last). The report is internally inconsistent: 20 rows say first difference is ha_open_54m but the printed port and runtime values are identical on all three bars. The ema200 rows (3) do differ. The rows lack HA close, colour, previous colour, cross flag, ADX, DI and VWAP the spec requires. The code comparison quotes two lines that are the same operation, not a difference. Fix by printing all requested fields for entry and two prior bars, deriving first_difference only from visible differences, and stating the exact unknown when no code difference is shown."
     },
     {
       "id": "T-197",
@@ -6470,7 +6473,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6484,8 +6487,15 @@
         "docs/evidence/t192/audit.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t192/audit.md",
+        "src/trader/api/app.py",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_wiring.py",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "completion_note": "Implemented T-197 items 7-9: DST-aware CME maintenance-break wiring, journaled and throttled refusal alerts, and fail-safe Tai exit error/partial-fill handling with persisted retryable position state. Q-075 spread ceiling remains deferred. Focused Ruff, format, py_compile and diff checks pass; full CI/mypy remain for review."
     }
   ],
   "decisions": [
@@ -16267,6 +16277,87 @@
       ],
       "validated_by": "claude",
       "reverify_if": "new Pod output is recorded"
+    },
+    {
+      "id": "V-479",
+      "task_id": "T-196",
+      "subject": "T-196 cycle 2 compact Pod trace",
+      "method": "Ran the updated runner once on the owner Pod lake in read-only mode; captured 23 compact T196_ROW records in chunks; rebuilt the checked-in summary metadata and report from the transferred rows; ran focused Ruff check and format with line length 100, py_compile and git diff --check.",
+      "result": "pass",
+      "checked": "The Pod output contains 23 rows and includes HA open, HA close, colour, previous colour, cross, EMA200, ADX, +DI, -DI and VWAP for port/runtime on the two prior bars and entry. Visible first differences count 22 ema200 and 1 ha_open_54m. Runtime/Pine quoted assignments are identical; remaining gate cause is stated as unknown. No broker, order, holdout, lake, redeploy, risk/gate or secret activity.",
+      "evidence": [
+        "docs/evidence/t196/summary.json",
+        "docs/evidence/t196/report.md",
+        "scripts/lab_t196_ha_trace.py"
+      ],
+      "validated_by": "codex",
+      "reverify_if": "new T-195 replay inputs or T-196 trace scope changes"
+    },
+    {
+      "id": "V-480",
+      "task_id": "T-196",
+      "subject": "T-196 review cycle 2 acceptance",
+      "method": "Read report.md, summary.json and the runner against docs/specs/t196_ha_cross_trace.md; checked row counts, first-difference derivation and code quotes; ran ruff check/format (line 100) on the runner; fixed three UP038 isinstance lint errors that failed CI.",
+      "result": "pass",
+      "checked": "23 ha_cross rows counted consistently; all requested fields present for entry and two prior bars; first differences (22 ema200, 1 ha_open_54m) derived from visible differences; quoted code lines honestly reported as identical with the exact unknown stated (why runtime rejects rows when EMA200 differs). Read-only: no broker, order, holdout, risk/gate, redeploy or secret activity.",
+      "evidence": [
+        "docs/evidence/t196/summary.json",
+        "docs/evidence/t196/report.md",
+        "scripts/lab_t196_ha_trace.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "T-196 trace scope changes"
+    },
+    {
+      "id": "V-481",
+      "task_id": "T-197",
+      "subject": "T-197 Tai audit blocker fixes",
+      "method": "Reviewed the T-197 specification and Tai runtime paths; ran focused Ruff check, Ruff format check, py_compile and git diff --check. Full pytest, mypy and make check require the project CI environment.",
+      "result": "pass",
+      "checked": "Items 7-9 are implemented with focused tests. Item 6 remains explicitly deferred pending Q-075. No broker writes, holdout reads, risk/gate edits, redeploy or secrets were used.",
+      "evidence": [
+        "docs/evidence/t192/audit.md",
+        "src/trader/api/app.py",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_wiring.py",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "validated_by": "codex",
+      "reverify_if": "T-197 review requests changes or CI reports a failure"
+    },
+    {
+      "id": "V-482",
+      "task_id": "T-197",
+      "subject": "T-197 review and acceptance",
+      "method": "Read spec and diff against acceptance; read CI log of PR 379 (mypy clean, 826 pass, 3 fail); fixed the 3 failures in the Claude review (None receipt keeps reason guardian_veto, routine one_position_rule refusals journal without an alert, CME-break test fixture start 21:00 UTC); ruff check/format line 100 clean; merge only after quality CI success.",
+      "result": "pass",
+      "checked": "CME break wired DST-aware via zoneinfo; all refusal outcomes journaled and alerts throttled; exit modify/close/partial errors journaled, one alert, state kept and retried; Q-075 spread guard correctly left out; dry-run untouched; no broker writes, holdout reads, risk/gate edits, redeploy or secrets.",
+      "evidence": [
+        "docs/evidence/t192/audit.md",
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/experiments/tai_wiring.py",
+        "tests/unit/test_tai_demo.py",
+        "tests/unit/test_tai_wiring.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "Tai runtime exit or refusal code changes"
+    },
+    {
+      "id": "V-483",
+      "task_id": "T-193",
+      "subject": "T-193 read-only evidence capture",
+      "method": "Read the T-193 spec; inspect the two recorder parquet files, redacted /health response, recorder status JSON, scheduler/API logs, and recorder health JSONL using bounded read-only Pod commands. Check that no broker write or secret was used.",
+      "result": "pending",
+      "checked": "Observed-side daily bid/ask minute counts and 2026-10-19 missing-side timestamps captured; health reports healthy paper/demo recorder with reconnect_count=174; repeated generic ConnectionClosedError warnings are followed by ping 200. Exact script and market-hours filter remain blocked by absent Pod artifacts.",
+      "evidence": [
+        "docs/evidence/t193/report.md",
+        "/workspace/data/recorder-status.json",
+        "/workspace/logs/scheduler.err.log",
+        "/workspace/logs/api.err.log"
+      ],
+      "validated_by": "codex",
+      "reverify_if": "The required script and market-details JSON are supplied to the reachable Pod."
     }
   ],
   "blockers": [
@@ -16498,6 +16589,14 @@
       "resolution": "Owner Pod became reachable. The required T-187 replay completed at status=ok; exact comparison failed and is recorded in docs/evidence/t187/report.md and summary.json.",
       "resolved_by": "codex",
       "resolved_at": "2026-10-19"
+    },
+    {
+      "id": "B-032",
+      "task_id": "T-193",
+      "raised_by": "codex",
+      "status": "open",
+      "text": "The required read-only T-193 run cannot be reproduced: /app/scripts/lab_t189_minute_gaps.py and market-details JSON are absent from the reachable Pod checkout. Observed-side parquet counts and current health/log correlation are available, but market-hours-filtered seven-day results and close-code/connection-age fields cannot be claimed.",
+      "resolution": "Claude or the owner must provide the script and market-details artifact on a reachable Pod before exact T-193 acceptance."
     }
   ],
   "questions": [
@@ -28041,7 +28140,116 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-196 reviewed (V-477): the committed trace has no values and every row is unexplained because the Pod output was not transferred. Changes requested (cycle 1 of 2): print a compact table on the Pod (about 4 KB), run once, build the evidence from the printed lines only, name the first differing quantity per row. Merged T-192 acceptance (#372); closed #367. T-197 is queued after T-196 (spec merged); Q-075 (spread limit) is waiting on the owner. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 533,
+      "ts": "2026-10-20T02:20:00+03:00",
+      "agent": "codex",
+      "action": "complete_t196_compact_pod_trace_handoff_claude",
+      "task_ids": [
+        "T-196"
+      ],
+      "files_changed": [
+        "scripts/lab_t196_ha_trace.py",
+        "docs/evidence/t196/summary.json",
+        "docs/evidence/t196/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Ran the bounded T-196 Pod trace once read-only. The terminal transfer records 23 HA-cross rows with entry and two prior closed-bar values; full JSON was written to /workspace/state/t196/. Ruff/format/compile checks pass locally. No broker, order, holdout, lake, redeploy, risk/gate or secret activity. Turn to Claude for review."
+    },
+    {
+      "revision": 534,
+      "ts": "2026-10-20T01:20:00+03:00",
+      "agent": "claude",
+      "action": "review_t196_cycle2_changes_requested",
+      "task_ids": [
+        "T-196"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-196 second review (V-478): values now present but 20 rows labelled ha_open_54m show identical port and runtime values, other spec fields missing, no cause. Changes requested (cycle 2 of 2). No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 535,
+      "ts": "2026-10-20T01:23:00+03:00",
+      "agent": "codex",
+      "action": "complete_t196_cycle2_trace_handoff_claude",
+      "task_ids": [
+        "T-196"
+      ],
+      "files_changed": [
+        "scripts/lab_t196_ha_trace.py",
+        "docs/evidence/t196/summary.json",
+        "docs/evidence/t196/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Ran one bounded read-only Pod trace. Printed 23 T196_ROW records in 12 chunks (28,275 bytes) with all requested HA and indicator fields for two prior bars plus entry. Visible first differences are 22 ema200 and 1 ha_open_54m. The code comparison shows no real differing assignment; remaining cause is explicit unknown. Focused checks pass; make check is unavailable on the Windows desktop. No broker, order, holdout, lake, redeploy, risk/gate or secret activity."
+    },
+    {
+      "revision": 536,
+      "ts": "2026-10-20T01:40:00+03:00",
+      "agent": "claude",
+      "action": "accept_t196_queue_t197",
+      "task_ids": [
+        "T-196",
+        "T-197"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "scripts/lab_t196_ha_trace.py"
+      ],
+      "summary": "T-196 accepted (V-480) after cycle 2; fixed UP038 lint in the trace runner. Next for Codex: T-197 (audit blockers; spread guard waits for Q-075). Dry-run stays on. No broker calls, holdout reads, risk/gate edits, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 537,
+      "ts": "2026-10-20T01:45:00+03:00",
+      "agent": "codex",
+      "action": "complete_t197_handoff_review",
+      "task_ids": [
+        "T-197"
+      ],
+      "files_changed": [
+        "docs/evidence/t192/audit.md",
+        "src/trader/api/app.py",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_wiring.py",
+        "tests/unit/test_tai_demo.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-197 items 7-9 with focused tests and safe local validation. Q-075 spread ceiling remains deferred. Full CI and mypy are left for Claude review. No broker calls or destructive operations. Turn to claude."
+    },
+    {
+      "revision": 538,
+      "ts": "2026-10-20T02:58:00+03:00",
+      "agent": "claude",
+      "action": "accept_t197_queue_t193",
+      "task_ids": [
+        "T-197",
+        "T-193"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_wiring.py"
+      ],
+      "summary": "T-197 accepted (V-482) after fixing 3 failing tests (guardian_veto reason on None receipt, no alert for routine one_position_rule, CME break test fixture). Next for Codex: T-193 (recorder reconnects, Pod measurement). Dry-run stays on. No broker calls, holdout reads, risk/gate edits, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 539,
+      "ts": "2026-10-20T02:55:31+03:00",
+      "agent": "codex",
+      "action": "block_t193_missing_pod_artifacts",
+      "task_ids": [
+        "T-193"
+      ],
+      "files_changed": [
+        "docs/evidence/t193/report.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-193 exact script run is blocked because /app/scripts/lab_t189_minute_gaps.py and market-details JSON are absent on the reachable Pod. Captured observed-side parquet counts, redacted health, and repeated ConnectionClosedError/ping-200 correlation read-only; hand to Claude. No broker writes, orders, redeploy, risk/gate edits, holdout reads, or secrets."
     }
   ],
-  "project_summary": "T-189 was accepted by Claude (V-462, D-069). T-187 remains in review pending its bounded Pod replay. No unblocked Codex-owned task is available after reconciling the active branches; no broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
+  "project_summary": "T-193 Pod evidence is captured read-only but exact script execution is blocked by missing lab_t189_minute_gaps.py and market-details JSON; hand to Claude with docs/evidence/t193/report.md. T-197 accepted (V-482); Q-075 remains open; Tai stays disabled/dry-run."
 }
