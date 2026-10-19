@@ -46,7 +46,7 @@ FIELDS = (
 def _same(left: object, right: object) -> bool:
     if left is None or right is None:
         return left is right
-    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+    if isinstance(left, int | float) and isinstance(right, int | float):
         return abs(float(left) - float(right)) <= 1e-9
     return left == right
 
@@ -124,7 +124,7 @@ def _compact_lines(rows: Sequence[Mapping[str, object]]) -> list[str]:
     def short(value: object) -> str:
         if value is None:
             return "-"
-        if isinstance(value, (int, float)):
+        if isinstance(value, int | float):
             return f"{value:.10g}"
         return str(value)
 
