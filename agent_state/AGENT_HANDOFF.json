@@ -5,7 +5,7 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
+  "turn": "human",
   "revision": 492,
   "current_phase": 1,
   "protocol": {
@@ -1146,7 +1146,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط·آ´أ¢â€¢ع¾ط·آ´ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¢آ¤ط·آ¬ط·آ¸ط¸â‚¬ط·آ²ط·آ¸ط¸â‚¬ط¸â‚¬ط·آ¸ط¢آ¤ط¢آ£ط·آ¸ط¸â‚¬ط£آ¹ط·آ¸ط¢آ¤ط·طŒأ¢â€‌ع©ط¸â€™1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b4\u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00b4\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b2\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b8\u0637\u00b8\u00e2\u201a\u00ac\u0637\u00a3\u0622\u00b9\u0637\u00b7\u0622\u00b8\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0637\u0152\u0623\u00a2\u00e2\u20ac\u200c\u0639\u00a9\u0637\u00b8\u00e2\u20ac\u21221 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -5250,7 +5250,7 @@
         "docs/evidence/t157_rule_by_rule.csv",
         "docs/evidence/t157_report.md"
       ],
-      "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in ±3 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in ±3 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
+      "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in \u00b13 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in \u00b13 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
     },
     {
       "id": "T-158",
@@ -6102,7 +6102,7 @@
       "completion_note": "Implemented the owner-directed T-185 build on the fresh post-T-184 lineage. Added the disabled-by-default experiment gate, owner sizing settings (0.1 lot per 10,000 balance, broker minimum/step alignment, balance read before entry), 40/30/30 exit bookkeeping with broker-step rounding, break-even stop after TP1, and optional dollar 1R journaling from instrument metadata. The normal OrderManager/Guardian boundary remains authoritative; no risk or gate files changed. No broker/demo run, redeploy, credentials, holdout or production writes. Local compileall, py_compile and git diff --check pass; pytest and Ruff are unavailable in desktop/Pod environments, so CI review is required.",
       "id": "T-185",
       "title": "Tai port on the Capital.com DEMO account (owner-directed paper trading experiment)",
-      "status": "review",
+      "status": "done",
       "depends_on": [
         "T-184"
       ],
@@ -6633,6 +6633,14 @@
       "status": "final",
       "decided_by": "owner",
       "date": "2026-10-19T06:50:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-067",
+      "statement": "Owner 2026-10-19 11:43-12:34 Riyadh, Tai demo paper experiment sizing and exits: risk exactly as the indicator (structure stop); first trade always 0.1 contract on the demo balance at the start (about 10,999.80); lot = 0.1 x current balance / start balance, so it grows with gains, floor 0.1, rounded down to the broker step; exits 40% at 1R, 30% at 2R, 30% at 3R, stop to entry after TP1; demo only, Normal account mode, price-level stops and targets.",
+      "status": "final",
+      "decided_by": "owner",
+      "date": "2026-10-19T09:34:00Z",
       "do_not_reopen": false
     }
   ],
@@ -7432,7 +7440,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives أ¢â€¢ع¾ط·آ«ط·آ¸ط¢â‚¬ط¢آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0623\u00a2\u00e2\u20ac\u00a2\u0639\u00be\u0637\u00b7\u0622\u00ab\u0637\u00b7\u0622\u00b8\u0637\u00a2\u00e2\u201a\u00ac\u0637\u00a2\u0622\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -14590,7 +14598,7 @@
       "subject": "T-151 owner-trade forming-candle replay and Pod evidence",
       "method": "Read docs/specs/t151_owner_trades_comparison.md, reviewed the script and CI-importable unit tests, ran ruff format/check, py_compile and git diff --check locally, then ran the script read-only in the reachable owner-provided Pod against the NAS100 Capital.com 1m lake and owner CSV.",
       "result": "pass",
-      "checked": "Pod run completed with 31 owner entries, 9 groups, 0 same-direction hits at ±1/±2/±5 for every group, forming variant extra-signal counts of 5–12, price basis matched_entries=27/missing_entry_minutes=4, and safety flags showing zero broker calls/orders and no holdout/gate/cost/ledger writes. Primary owner endpoint remained ERR_BLOCKED_BY_CLIENT; alternate owner endpoint supplied in the task was used.",
+      "checked": "Pod run completed with 31 owner entries, 9 groups, 0 same-direction hits at \u00b11/\u00b12/\u00b15 for every group, forming variant extra-signal counts of 5\u201312, price basis matched_entries=27/missing_entry_minutes=4, and safety flags showing zero broker calls/orders and no holdout/gate/cost/ledger writes. Primary owner endpoint remained ERR_BLOCKED_BY_CLIENT; alternate owner endpoint supplied in the task was used.",
       "evidence": [
         "scripts/lab_t151_owner_trades.py",
         "tests/unit/test_t151_owner_trades.py",
@@ -14721,7 +14729,7 @@
       "subject": "T-157 rule-by-rule replay and timing switches",
       "method": "Ran scripts/lab_t157_rule_by_rule.py on the owner-provided Pod with the NAS100 lake and owner CSV; inspected the report and artifact hashes; ran py_compile and git diff --check; verified the script has no broker, holdout or production-state access.",
       "result": "pass",
-      "checked": "Pod run exited 0 with 31 entries, 5,103 data rows plus header, mid/bid/ask bases and nine registered switches. The forming-Wilder-SMA-EMA UTC baseline passed 0/31 at center and in ±3 bars; the best registered switch passed 1/31 in ±3 bars, below the 20/31 stop threshold. Baseline first-failure counts were ha_state 20, ema_side 3, adx_di 3, dont_chase 1 and four missing bars. Pod CSV SHA-256 b365f36b34199c1b21a2806f4fd541e98c04ff3236bc2aa2fdb82f97230e81a1; report SHA-256 d22698d39eef079f25c1e50d0561496c7dee2d4fc762bb64a3a03f16e53756df. No broker calls, orders, sealed holdout reads, gate, cost, ledger, promotion or lake writes.",
+      "checked": "Pod run exited 0 with 31 entries, 5,103 data rows plus header, mid/bid/ask bases and nine registered switches. The forming-Wilder-SMA-EMA UTC baseline passed 0/31 at center and in \u00b13 bars; the best registered switch passed 1/31 in \u00b13 bars, below the 20/31 stop threshold. Baseline first-failure counts were ha_state 20, ema_side 3, adx_di 3, dont_chase 1 and four missing bars. Pod CSV SHA-256 b365f36b34199c1b21a2806f4fd541e98c04ff3236bc2aa2fdb82f97230e81a1; report SHA-256 d22698d39eef079f25c1e50d0561496c7dee2d4fc762bb64a3a03f16e53756df. No broker calls, orders, sealed holdout reads, gate, cost, ledger, promotion or lake writes.",
       "evidence": [
         "scripts/lab_t157_rule_by_rule.py",
         "docs/evidence/t157_rule_by_rule.csv",
@@ -14831,7 +14839,7 @@
         "docs/evidence/t162_report.md",
         "docs/evidence/t162_port.json",
         "docs/evidence/t162_entries.csv",
-        "pass with stop: closed 1/31 exact/آ±1/آ±2 and forming 0/31 exact/آ±1/آ±2; the 25/31 bar was not met. Pod exited 0; broker calls, orders, sealed-holdout reads, lake writes, production-state writes and gate evaluation were all zero/false; 54 owner exit rows parsed."
+        "pass with stop: closed 1/31 exact/\u0622\u00b11/\u0622\u00b12 and forming 0/31 exact/\u0622\u00b11/\u0622\u00b12; the 25/31 bar was not met. Pod exited 0; broker calls, orders, sealed-holdout reads, lake writes, production-state writes and gate evaluation were all zero/false; 54 owner exit rows parsed."
       ],
       "reverify_if": "The owner supplies a corrected Pine/TradingView alignment or requests a reviewed replay change."
     },
@@ -15438,6 +15446,22 @@
       "validated_by": "codex",
       "date": "2026-10-19T08:55:00Z",
       "reverify_if": "The T-185 composition layer, broker instrument metadata contract or owner-directed sizing/exit specification changes."
+    },
+    {
+      "id": "V-455",
+      "task_id": "T-185",
+      "subject": "T-185 review (Claude): Tai demo paper runner build",
+      "method": "Read the runner, settings gate and tests; ruff check/format and mypy on the new files; corrected sizing and typing myself; added sizing tests; CI runs the full suite.",
+      "result": "pass",
+      "checked": "Disabled by default behind TAI_DEMO_EXPERIMENT with the three-flag guard (BROKER_ENV=demo, TRADING_MODE=paper, LIVE_TRADING_ENABLED=false); entries go through OrderManager/Guardian; one-position rule; kill flatten; 40/30/30 exits with step rounding and break-even stop; no broker or risk/gate edits. Defect fixed: Codex scaled lot as 0.1 x balance/10,000, which would trade 0.11 at the owner's 10,999.80 start. Owner rule (2026-10-19 11:54 and 12:34): first trade exactly 0.1 on the starting balance, lot = 0.1 x balance / start balance, floor 0.1. Replaced lot_per_balance with TAI_DEMO_START_BALANCE (required; refuses to start if unset), added three sizing tests (start 1,000 -> 0.10; 1,100 -> 0.11; 10,999.80 start -> 0.10; floor and step rounding; refusal when unset). Also fixed zip strict and tuple typing. Limits: pytest could not run locally (CI will); the runner is not yet wired to the live recorder feed or the Capital.com instrument rules, so the first demo run is not possible until that wiring and an owner redeploy happen.",
+      "evidence": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py",
+        "docs/specs/t185_tai_demo_paper.md"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19",
+      "reverify_if": "the runner, sizing rule or exit logic changes"
     }
   ],
   "blockers": [
@@ -16544,6 +16568,19 @@
       ],
       "recommendation": "C, then A. Only the historical rerun waits on this; Codex continues with T-178 meanwhile.",
       "answer": "Owner 2026-10-19 09:50 Riyadh: 'Run the test on the 3m hist data and let us try paper trading for today using the same strategy' = option A (run the historical test on the port, labelled loosely matched) plus a demo paper-trading experiment."
+    },
+    {
+      "id": "Q-072",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "The Tai demo runner is built and reviewed but NOT yet connected to the live feed and the Capital.com instrument rules (minimum size, size step, minimum stop distance), so it cannot place a demo trade today. Do you want a wiring task (T-186) next that connects it, with the start balance set to your demo balance, and then a planned redeploy at a time you choose?",
+      "options": [
+        "A: Yes, queue T-186 now (recommended)",
+        "B: Not now, hold the paper run"
+      ],
+      "recommendation": "A: wiring and instrument-rule reads can be built and tested with mock data first, then the owner redeploys once at a time of his choosing.",
+      "answer": ""
     }
   ],
   "log": [
@@ -17667,7 +17704,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -25338,7 +25375,7 @@
         "docs/evidence/t151_owner_trades_summary.json",
         "docs/evidence/t151_owner_trades_report.md"
       ],
-      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity. Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at ±1/±2/±5, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
+      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity. Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at \u00b11/\u00b12/\u00b15, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
     },
     {
       "revision": 421,
@@ -25486,7 +25523,7 @@
         "docs/evidence/t156_entry_feature_dump.csv",
         "docs/evidence/t156_report.md"
       ],
-      "summary": "Completed T-156 from the accepted T-155 dependency. The read-only Pod diagnostic generated raw feature windows for all 31 owner entries, condition shortfalls and sign counts, 1m coverage diagnostics, and bid/ask/mid sensitivity. The committed CSV is a compact center-bar index and the script regenerates the full ±3 window JSON. Pod output exited 0 with zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. Handed T-156 to Claude for review."
+      "summary": "Completed T-156 from the accepted T-155 dependency. The read-only Pod diagnostic generated raw feature windows for all 31 owner entries, condition shortfalls and sign counts, 1m coverage diagnostics, and bid/ask/mid sensitivity. The committed CSV is a compact center-bar index and the script regenerates the full \u00b13 window JSON. Pod output exited 0 with zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. Handed T-156 to Claude for review."
     },
     {
       "revision": 431,
@@ -25529,7 +25566,7 @@
         "docs/evidence/t157_rule_by_rule.csv",
         "docs/evidence/t157_report.md"
       ],
-      "summary": "Completed T-157 from accepted T-156. Read-only Pod replay evaluated each Tai rule for all 31 owner entries across ±3 bars and mid/bid/ask bases, tested nine registered HA/VWAP/ADX/DI/EMA/timestamp switches, and stopped under the 20/31 threshold. Baseline first failures: HA 20, EMA 3, ADX/DI 3, dont-chase 1, four missing bars; baseline and all price bases pass 0/31, best switch passes 1/31 in ±3. Pod artifact hashes and compact-index caveat are recorded. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
+      "summary": "Completed T-157 from accepted T-156. Read-only Pod replay evaluated each Tai rule for all 31 owner entries across \u00b13 bars and mid/bid/ask bases, tested nine registered HA/VWAP/ADX/DI/EMA/timestamp switches, and stopped under the 20/31 threshold. Baseline first failures: HA 20, EMA 3, ADX/DI 3, dont-chase 1, four missing bars; baseline and all price bases pass 0/31, best switch passes 1/31 in \u00b13. Pod artifact hashes and compact-index caveat are recorded. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
     },
     {
       "revision": 434,
@@ -26490,25 +26527,6 @@
     },
     {
       "revision": 491,
-      "ts": "2026-10-19T08:20:00Z",
-      "agent": "codex",
-      "action": "start_t185_tai_demo_runner",
-      "task_ids": [
-        "T-185"
-      ],
-      "files_changed": [
-        "src/trader/experiments/tai_demo.py",
-        "src/trader/experiments/__init__.py",
-        "src/trader/core/settings.py",
-        ".env.example",
-        "tests/unit/test_tai_demo.py",
-        "tests/unit/test_environment_settings.py",
-        "agent_state/AGENT_HANDOFF.json"
-      ],
-      "summary": "Started T-185 build only. Added disabled-by-default TAI_DEMO_EXPERIMENT settings gate and a mockable Tai 3m runner that routes entries through OrderManager, respects Guardian veto, one-position rule, market/blackout controls and kill flattening, manages broker-stop/scale-out bookkeeping, journals decisions and emits the required experiment label. No broker/demo run, redeploy, risk/gate edit or credentials."
-    },
-    {
-      "revision": 492,
       "ts": "2026-10-19T08:55:00Z",
       "agent": "codex",
       "action": "complete_t185_build_owner_sizing",
@@ -26516,13 +26534,32 @@
         "T-185"
       ],
       "files_changed": [
-        "src/trader/experiments/tai_demo.py",
+        ".env.example",
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/core/settings.py",
         "src/trader/experiments/__init__.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_environment_settings.py",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "summary": "Started T-185 build only. Added disabled-by-default TAI_DEMO_EXPERIMENT settings gate and a mockable Tai 3m runner that routes entries through OrderManager, respects Guardian veto, one-position rule, market/blackout controls and kill flattening, manages broker-stop/scale-out bookkeeping, journals decisions and emits the required experiment label. No broker/demo run, redeploy, risk/gate edit or credentials. Then (same hand-off): Completed the T-185 build for Claude review. Added owner-directed proportional sizing (0.1 lot per 10,000 balance, broker min/step alignment), 40/30/30 exit fractions with step rounding and break-even stop, and optional dollar 1R journaling. The experiment remains disabled by default and routes entries through OrderManager/Guardian. Local compileall, py_compile and diff checks pass; pytest/Ruff are unavailable. No demo run, redeploy, broker call, order, risk/gate edit, holdout, production write or credentials. Turn to Claude."
+    },
+    {
+      "revision": 492,
+      "ts": "2026-10-19T12:45:00+03:00",
+      "agent": "claude",
+      "action": "accept_t185_build_ask_q072",
+      "task_ids": [
+        "T-185"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/experiments/tai_demo.py",
         "src/trader/core/settings.py",
         ".env.example",
-        "agent_state/AGENT_HANDOFF.json"
+        "tests/unit/test_tai_demo.py"
       ],
-      "summary": "Completed the T-185 build for Claude review. Added owner-directed proportional sizing (0.1 lot per 10,000 balance, broker min/step alignment), 40/30/30 exit fractions with step rounding and break-even stop, and optional dollar 1R journaling. The experiment remains disabled by default and routes entries through OrderManager/Guardian. Local compileall, py_compile and diff checks pass; pytest/Ruff are unavailable. No demo run, redeploy, broker call, order, risk/gate edit, holdout, production write or credentials. Turn to Claude."
+      "summary": "Accepted the T-185 runner build (V-455) after fixing the sizing to the owner's rule (first trade 0.1 on the start balance, lot grows with gains; TAI_DEMO_START_BALANCE required), lint and typing, and adding sizing tests. Merged Codex's two consecutive entries. The runner is not yet wired to the live feed and broker instrument rules, so no demo trade is possible yet; asked the owner (Q-072) whether to queue the wiring task. Turn to human."
     }
   ],
   "project_summary": "T-185 is in progress: building the owner-directed Tai demo paper runner behind the disabled-by-default TAI_DEMO_EXPERIMENT flag. The runner is mock-broker tested, routes entries through OrderManager and the normal Guardian path, journals decisions and alerts, and refuses unsafe environment combinations. No demo run or redeploy has been performed; owner must redeploy and explicitly enable the flag before any first run."
