@@ -11,7 +11,7 @@ Delegated decision (owner away, window to 2026-10-19 06:10 UTC): queue this as t
    for the most recent 10 trading days available BEFORE the sealed holdout start, feeds them minute by
    minute through `ThreeMinuteBarBuilder` -> `TaiSignalProvider` (T-186 code, not scripts/), and records
    every signal (time, direction, close, stop).
-2. Run the closed T-162 port (`scripts/lab_t162_pine_port.py`) on the same 3m bars and list its entries.
+2. Run the closed T-162 port (`scripts/lab_t162_pine_port.py`) on the same 3m bars with the same HA and VWAP anchor the wiring uses (session_1800_ny, D-066/T-182) and list its entries. Also report, as information only, the entries with the port default epoch HA anchor.
 3. Compare: same bar, direction and stop for every entry. Report matches, extras and misses, with the
    first differing bar and reason for each difference.
 4. Run the runner in dry-run against a mock gateway on the same stream and count journal lines
