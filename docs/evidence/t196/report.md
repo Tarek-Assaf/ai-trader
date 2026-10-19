@@ -1,40 +1,44 @@
 # T-196 Tai HA-cross trace
 
-- Port entries in the bounded replay: **26**
-- HA-cross miss rows recorded from the compact Pod output: **23**
-- First differing quantities: **20 `ha_open_54m`**, **3 `ema200`**.
+- Port entries traced: **26**
+- Accepted `ha_cross` miss rows: **23**
+- First visible differences: **22 `ema200`**, **1 `ha_open_54m`**.
 
-The runner excluded the one exact match and two `bar_or_stop_difference` rows from the T-195 comparison, leaving the accepted 23-row HA-cross miss set. The Pod runner wrote the full trace to `/workspace/state/t196/summary.json`; the checked-in evidence is reconstructed only from the printed `T196_ROW` records. Numeric values below use the terminal transfer precision (10 significant digits).
+The read-only Pod run printed 23 `T196_ROW` records. Each record contains port/runtime HA open, HA close, colour, previous colour, cross flag, EMA200, ADX, +DI, -DI and VWAP for the two prior closed bars and the entry bar. The full JSON was written to `/workspace/state/t196/summary.json`; the compact records were saved to `/workspace/state/t196/compact.txt`.
 
-## Compact transferred rows
+## First visible difference
 
-| Entry | Side | First difference | Prior 1 (port/runtime) | Prior 2 (port/runtime) | Entry (port/runtime) |
-|---|---|---|---|---|---|
-| 2026-06-19T11:57:00+00:00 | SELL | `ema200` | 30272.48546 / 30272.33679 | 30272.39879 / 30272.2447 | 30272.2985 / 30272.13913 |
-| 2026-06-21T23:30:00+00:00 | SELL | `ha_open_54m` | 30365.09397 / 30365.09397 | 30365.09397 / 30365.09397 | 30365.09397 / 30365.09397 |
-| 2026-06-22T05:30:00+00:00 | SELL | `ha_open_54m` | 30277.77829 / 30277.77829 | 30277.77829 / 30277.77829 | 30277.77829 / 30277.77829 |
-| 2026-06-22T15:57:00+00:00 | SELL | `ha_open_54m` | 30470.2348 / 30470.2348 | 30470.2348 / 30470.2348 | 30470.2348 / 30470.2348 |
-| 2026-06-23T00:57:00+00:00 | SELL | `ha_open_54m` | 30303.3324 / 30303.3324 | 30303.3324 / 30303.3324 | 30303.3324 / 30303.3324 |
-| 2026-06-23T02:15:00+00:00 | SELL | `ha_open_54m` | 30282.4532 / 30282.4532 | 30282.4532 / 30282.4532 | 30282.4532 / 30282.4532 |
-| 2026-06-24T00:15:00+00:00 | SELL | `ha_open_54m` | 29412.01233 / 29412.01233 | 29412.01233 / 29412.01233 | 29412.01233 / 29412.01233 |
-| 2026-06-24T04:51:00+00:00 | SELL | `ha_open_54m` | 29481.08724 / 29481.08724 | 29481.08724 / 29481.08724 | 29481.08724 / 29481.08724 |
-| 2026-06-24T13:57:00+00:00 | SELL | `ha_open_54m` | 29490.48262 / 29490.48262 | 29490.48262 / 29490.48262 | 29490.48262 / 29490.48262 |
-| 2026-06-24T15:09:00+00:00 | SELL | `ha_open_54m` | 29492.85431 / 29492.85431 | 29484.86065 / 29484.86065 | 29484.86065 / 29484.86065 |
-| 2026-06-24T23:42:00+00:00 | BUY | `ha_open_54m` | 29177.71735 / 29177.71735 | 29177.71735 / 29177.71735 | 29177.71735 / 29177.71735 |
-| 2026-06-26T01:39:00+00:00 | SELL | `ema200` | 29476.29027 / 29474.84868 | 29475.22068 / 29473.77465 | 29474.22483 / 29472.77493 |
-| 2026-06-26T08:18:00+00:00 | BUY | `ha_open_54m` | 29033.61165 / 29033.61165 | 29033.61165 / 29033.61165 | 29033.61165 / 29033.61165 |
-| 2026-06-26T15:15:00+00:00 | BUY | `ha_open_54m` | 29074.56427 / 29074.56427 | 29074.56427 / 29074.56427 | 29074.56427 / 29074.56427 |
-| 2026-06-26T19:39:00+00:00 | SELL | `ema200` | 29205.94436 / 29206.34772 | 29205.67489 / 29206.05634 | 29205.34386 / 29205.70379 |
-| 2026-06-28T23:18:00+00:00 | BUY | `ha_open_54m` | 29207.63992 / 29207.63992 | 29207.63992 / 29207.63992 | 29207.63992 / 29207.63992 |
-| 2026-06-29T01:57:00+00:00 | SELL | `ha_open_54m` | 29245.43243 / 29245.43243 | 29245.43243 / 29245.43243 | 29245.43243 / 29245.43243 |
-| 2026-06-29T03:21:00+00:00 | SELL | `ha_open_54m` | 29239.32384 / 29239.32384 | 29239.32384 / 29239.32384 | 29239.32384 / 29239.32384 |
-| 2026-06-29T05:03:00+00:00 | BUY | `ha_open_54m` | 29182.5734 / 29182.5734 | 29182.5734 / 29182.5734 | 29182.5734 / 29182.5734 |
-| 2026-06-29T15:45:00+00:00 | SELL | `ha_open_54m` | 29416.14876 / 29416.14877 | 29416.14876 / 29416.14877 | 29416.14876 / 29416.14877 |
-| 2026-06-30T02:36:00+00:00 | BUY | `ha_open_54m` | 29736.43652 / 29736.43652 | 29736.43652 / 29736.43652 | 29736.43652 / 29736.43652 |
-| 2026-06-30T09:51:00+00:00 | SELL | `ha_open_54m` | 29847.76507 / 29847.76507 | 29847.76507 / 29847.76507 | 29847.76507 / 29847.76507 |
-| 2026-06-30T14:27:00+00:00 | SELL | `ha_open_54m` | 29827.84871 / 29827.84871 | 29827.84871 / 29827.84871 | 29827.84871 / 29827.84871 |
+| Entry timestamp | Side | First visible difference |
+|---|---:|---|
+| 2026-06-19T11:57:00+00:00 | SELL | ema200 |
+| 2026-06-21T23:30:00+00:00 | SELL | ema200 |
+| 2026-06-22T05:30:00+00:00 | SELL | ema200 |
+| 2026-06-22T15:57:00+00:00 | SELL | ema200 |
+| 2026-06-23T00:57:00+00:00 | SELL | ema200 |
+| 2026-06-23T02:15:00+00:00 | SELL | ema200 |
+| 2026-06-24T00:15:00+00:00 | SELL | ema200 |
+| 2026-06-24T04:51:00+00:00 | SELL | ema200 |
+| 2026-06-24T13:57:00+00:00 | SELL | ema200 |
+| 2026-06-24T15:09:00+00:00 | SELL | ema200 |
+| 2026-06-24T23:42:00+00:00 | BUY | ema200 |
+| 2026-06-26T01:39:00+00:00 | SELL | ema200 |
+| 2026-06-26T08:18:00+00:00 | BUY | ema200 |
+| 2026-06-26T15:15:00+00:00 | BUY | ema200 |
+| 2026-06-26T19:39:00+00:00 | SELL | ema200 |
+| 2026-06-28T23:18:00+00:00 | BUY | ema200 |
+| 2026-06-29T01:57:00+00:00 | SELL | ema200 |
+| 2026-06-29T03:21:00+00:00 | SELL | ema200 |
+| 2026-06-29T05:03:00+00:00 | BUY | ema200 |
+| 2026-06-29T15:45:00+00:00 | SELL | ha_open_54m |
+| 2026-06-30T02:36:00+00:00 | BUY | ema200 |
+| 2026-06-30T09:51:00+00:00 | SELL | ema200 |
+| 2026-06-30T14:27:00+00:00 | SELL | ema200 |
 
-## Code comparison
+## Cause
+
+The first visible difference is EMA200 on 22 rows and HA open on one row at the copied 10-significant-digit precision. The 23 rows therefore have a named visible difference; the trace does not prove that the visible indicator drift is the runtime gate cause, and it does not identify any additional HA state difference.
+
+## Code comparison and minimal fix
 
 Runtime HA assignment (`src/trader/experiments/tai_wiring.py:304):
 
@@ -44,4 +48,4 @@ Pine port closed-series assignment (`scripts/lab_t162_pine_port.py:337):
 
 > `opens[i], closes[i] = previous_complete`
 
-The minimal candidate fix is to align the runtime and Pine closed-series grouping and prior-value assignment after review. T-196 makes no production or gate change.
+These quoted lines perform the same previous-group assignment, so no real differing code line was found in this run. The exact remaining unknown is why the runtime rejects the rows when its EMA200 or HA-open value differs at the copied precision. The minimal fix is to add a bounded runtime trace at the gate rejection point and align only the state proven to differ; T-196 makes no production or gate change.

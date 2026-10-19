@@ -1,8 +1,8 @@
 {
   "epic": "NSXUSD",
   "first_difference_counts": {
-    "ema200": 3,
-    "ha_open_54m": 20
+    "ema200": 22,
+    "ha_open_54m": 1
   },
   "ha_cross_miss_rows": 23,
   "holdout_start": "2026-07-01T00:00:00+00:00",
@@ -16,461 +16,162 @@
       "at": "2026-06-19T11:57:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "30272.2985",
-        "30272.13913"
-      ],
       "first_difference": "ema200",
-      "prior": [
-        [
-          "30272.48546",
-          "30272.33679"
-        ],
-        [
-          "30272.39879",
-          "30272.2447"
-        ]
-      ]
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-21T23:30:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "30365.09397",
-        "30365.09397"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "30365.09397",
-          "30365.09397"
-        ],
-        [
-          "30365.09397",
-          "30365.09397"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-22T05:30:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "30277.77829",
-        "30277.77829"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "30277.77829",
-          "30277.77829"
-        ],
-        [
-          "30277.77829",
-          "30277.77829"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-22T15:57:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "30470.2348",
-        "30470.2348"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "30470.2348",
-          "30470.2348"
-        ],
-        [
-          "30470.2348",
-          "30470.2348"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-23T00:57:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "30303.3324",
-        "30303.3324"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "30303.3324",
-          "30303.3324"
-        ],
-        [
-          "30303.3324",
-          "30303.3324"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-23T02:15:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "30282.4532",
-        "30282.4532"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "30282.4532",
-          "30282.4532"
-        ],
-        [
-          "30282.4532",
-          "30282.4532"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-24T00:15:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29412.01233",
-        "29412.01233"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29412.01233",
-          "29412.01233"
-        ],
-        [
-          "29412.01233",
-          "29412.01233"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-24T04:51:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29481.08724",
-        "29481.08724"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29481.08724",
-          "29481.08724"
-        ],
-        [
-          "29481.08724",
-          "29481.08724"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-24T13:57:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29490.48262",
-        "29490.48262"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29490.48262",
-          "29490.48262"
-        ],
-        [
-          "29490.48262",
-          "29490.48262"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-24T15:09:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29484.86065",
-        "29484.86065"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29492.85431",
-          "29492.85431"
-        ],
-        [
-          "29484.86065",
-          "29484.86065"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-24T23:42:00+00:00",
       "direction": "BUY",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29177.71735",
-        "29177.71735"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29177.71735",
-          "29177.71735"
-        ],
-        [
-          "29177.71735",
-          "29177.71735"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-26T01:39:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29474.22483",
-        "29472.77493"
-      ],
       "first_difference": "ema200",
-      "prior": [
-        [
-          "29476.29027",
-          "29474.84868"
-        ],
-        [
-          "29475.22068",
-          "29473.77465"
-        ]
-      ]
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-26T08:18:00+00:00",
       "direction": "BUY",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29033.61165",
-        "29033.61165"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29033.61165",
-          "29033.61165"
-        ],
-        [
-          "29033.61165",
-          "29033.61165"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-26T15:15:00+00:00",
       "direction": "BUY",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29074.56427",
-        "29074.56427"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29074.56427",
-          "29074.56427"
-        ],
-        [
-          "29074.56427",
-          "29074.56427"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-26T19:39:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29205.34386",
-        "29205.70379"
-      ],
       "first_difference": "ema200",
-      "prior": [
-        [
-          "29205.94436",
-          "29206.34772"
-        ],
-        [
-          "29205.67489",
-          "29206.05634"
-        ]
-      ]
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-28T23:18:00+00:00",
       "direction": "BUY",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29207.63992",
-        "29207.63992"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29207.63992",
-          "29207.63992"
-        ],
-        [
-          "29207.63992",
-          "29207.63992"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-29T01:57:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29245.43243",
-        "29245.43243"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29245.43243",
-          "29245.43243"
-        ],
-        [
-          "29245.43243",
-          "29245.43243"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-29T03:21:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29239.32384",
-        "29239.32384"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29239.32384",
-          "29239.32384"
-        ],
-        [
-          "29239.32384",
-          "29239.32384"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-29T05:03:00+00:00",
       "direction": "BUY",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29182.5734",
-        "29182.5734"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29182.5734",
-          "29182.5734"
-        ],
-        [
-          "29182.5734",
-          "29182.5734"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-29T15:45:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29416.14876",
-        "29416.14877"
-      ],
       "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29416.14876",
-          "29416.14877"
-        ],
-        [
-          "29416.14876",
-          "29416.14877"
-        ]
-      ]
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-30T02:36:00+00:00",
       "direction": "BUY",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29736.43652",
-        "29736.43652"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29736.43652",
-          "29736.43652"
-        ],
-        [
-          "29736.43652",
-          "29736.43652"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-30T09:51:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29847.76507",
-        "29847.76507"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29847.76507",
-          "29847.76507"
-        ],
-        [
-          "29847.76507",
-          "29847.76507"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     },
     {
       "at": "2026-06-30T14:27:00+00:00",
       "direction": "SELL",
       "display_precision": "10 significant digits",
-      "entry": [
-        "29827.84871",
-        "29827.84871"
-      ],
-      "first_difference": "ha_open_54m",
-      "prior": [
-        [
-          "29827.84871",
-          "29827.84871"
-        ],
-        [
-          "29827.84871",
-          "29827.84871"
-        ]
-      ]
+      "first_difference": "ema200",
+      "values_source": "/workspace/state/t196/compact.txt (Pod T196_ROW output)"
     }
   ],
   "safety": {
@@ -490,5 +191,23 @@
     "t195_script": "scripts/lab_t195_runtime_miss.py"
   },
   "status": "ok",
-  "task": "T-196"
+  "task": "T-196",
+  "transfer": {
+    "display_precision": "10 significant digits",
+    "fields": [
+      "ha_open_54m",
+      "ha_close_54m",
+      "ha_colour",
+      "ha_prev_colour",
+      "ha_cross",
+      "ema200",
+      "adx14",
+      "plus_di14",
+      "minus_di14",
+      "vwap"
+    ],
+    "format": "T196_ROW pipe records; each row has port/runtime values for entry and two prior bars",
+    "full_json_path": "/workspace/state/t196/summary.json",
+    "pod_run": "2026-10-20T02:20Z read-only run"
+  }
 }
