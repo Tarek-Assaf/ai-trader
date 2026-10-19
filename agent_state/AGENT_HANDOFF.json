@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 504,
+  "turn": "codex",
+  "revision": 505,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -162,7 +162,8 @@
         "T-185",
         "T-186",
         "T-187",
-        "T-188"
+        "T-188",
+        "T-189"
       ]
     },
     {
@@ -6209,6 +6210,29 @@
       ],
       "deliverables": [
         "docs/specs/t188_tai_demo_bar_feed.md"
+      ]
+    },
+    {
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "requirements": [
+        "R-03"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "id": "T-189",
+      "title": "Diagnose the recorder reconnect storm and measure missing minutes (read-only)",
+      "status": "todo",
+      "depends_on": [
+        "T-188"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t189_recorder_reconnect_diagnosis.md exactly. Read-only: no order or broker write call, no redeploy, no risk or gate edits, no secrets in logs."
+      ],
+      "deliverables": [
+        "docs/specs/t189_recorder_reconnect_diagnosis.md"
       ]
     }
   ],
@@ -26944,6 +26968,20 @@
         "tests/unit/test_tai_feed.py"
       ],
       "summary": "Reviewed T-188 (merged main, merged Codex's two consecutive entries into rev 503). Accepted after three fixes by Claude: (1) the lake poll ran synchronously inside the API event loop, now runs in a worker thread; (2) with no warm-up the tailer would have replayed all recorded history as live bars, now it starts after the last closed minute; (3) the stale-feed guard had no market hours, so it would alert every night and weekend, now uses the broker opening hours and fails closed. Added a test for (3). Not yet exercised on the real lake. Redeploy and enabling stay the owner's call. Turn to human."
+    },
+    {
+      "revision": 505,
+      "ts": "2026-10-19T16:55:00+03:00",
+      "agent": "claude",
+      "action": "queue_t189_reconnect_diagnosis",
+      "task_ids": [
+        "T-189"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t189_recorder_reconnect_diagnosis.md"
+      ],
+      "summary": "Queued T-189. Owner health output on the new Pod (image 1bdd99b) shows reconnect_count 0 -> 9 in about 30 minutes, all ConnectionClosedError, recorder degraded, and the owner confirms it is the only Pod running with these credentials. T-189: document reconnect paths, add a reconnect log line, check ping handling, measure missing minutes in the lake, name the most likely cause. Read-only; no redeploy. Turn to codex."
     }
   ],
   "project_summary": "T-186 accepted; T-044 cannot start because T-017 remains blocked on B-007 missing Capital.com recorder overlap data. No safe unblocked Codex task is available."
