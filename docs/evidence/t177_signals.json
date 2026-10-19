@@ -1,0 +1,461 @@
+{
+  "bars": 4055,
+  "mirror": {
+    "any_offsets": [
+      347,
+      294,
+      243,
+      57,
+      -13,
+      -2,
+      -10,
+      26,
+      128,
+      88,
+      null,
+      -5,
+      -46,
+      9,
+      16,
+      -36,
+      -51,
+      77,
+      7,
+      -21,
+      -61,
+      37,
+      26,
+      7,
+      0,
+      6,
+      -8,
+      2,
+      -14,
+      -59,
+      -87
+    ],
+    "counts": {
+      "10": 2,
+      "3": 0,
+      "30": 3
+    },
+    "median_abs": 195,
+    "same_offsets": [
+      378,
+      325,
+      274,
+      57,
+      -13,
+      191,
+      -10,
+      -167,
+      128,
+      -303,
+      null,
+      -431,
+      435,
+      274,
+      195,
+      142,
+      -51,
+      -93,
+      -163,
+      -191,
+      -61,
+      -431,
+      417,
+      398,
+      252,
+      233,
+      -8,
+      -176,
+      -193,
+      -238,
+      -266
+    ]
+  },
+  "owner": {
+    "any_offsets": [
+      347,
+      294,
+      243,
+      57,
+      -13,
+      -2,
+      -10,
+      26,
+      128,
+      88,
+      null,
+      -5,
+      -46,
+      9,
+      16,
+      -36,
+      -51,
+      77,
+      7,
+      -21,
+      -61,
+      37,
+      26,
+      7,
+      0,
+      6,
+      -8,
+      2,
+      -14,
+      -59,
+      -87
+    ],
+    "counts": {
+      "10": 9,
+      "3": 3,
+      "30": 15
+    },
+    "median_abs": 36,
+    "same_offsets": [
+      347,
+      294,
+      243,
+      88,
+      18,
+      -2,
+      183,
+      26,
+      -263,
+      88,
+      null,
+      -5,
+      -46,
+      9,
+      16,
+      -36,
+      127,
+      77,
+      7,
+      -21,
+      -231,
+      37,
+      26,
+      7,
+      0,
+      6,
+      9,
+      2,
+      -14,
+      -59,
+      -87
+    ]
+  },
+  "permutation": {
+    "draws": 2000,
+    "mirror_p_values": {
+      "10": 0.7901049475262368,
+      "3": 1.0,
+      "30": 0.9875062468765617
+    },
+    "null_mean": {
+      "10": 2.775,
+      "3": 1.0655,
+      "30": 6.896
+    },
+    "p_values": {
+      "10": 0.001999000499750125,
+      "3": 0.09545227386306847,
+      "30": 0.0004997501249375312
+    },
+    "seed": 177
+  },
+  "safety": {
+    "broker_calls": 0,
+    "holdout_reads": 0,
+    "lake_writes": 0,
+    "orders": 0,
+    "secrets": false,
+    "tuning": false
+  },
+  "signal_count": 45,
+  "signal_counts_by_day": {
+    "2026-10-08": 5,
+    "2026-10-09": 5,
+    "2026-10-12": 2,
+    "2026-10-13": 13,
+    "2026-10-14": 3,
+    "2026-10-15": 13,
+    "2026-10-16": 4
+  },
+  "signals": [
+    {
+      "direction": "short",
+      "index": 945,
+      "kind": "first",
+      "time": "2026-10-08T01:12:00+00:00"
+    },
+    {
+      "direction": "long",
+      "index": 976,
+      "kind": "refresh",
+      "time": "2026-10-08T02:45:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 989,
+      "kind": "refresh",
+      "time": "2026-10-08T03:27:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 990,
+      "kind": "refresh",
+      "time": "2026-10-08T03:30:00+00:00"
+    },
+    {
+      "direction": "long",
+      "index": 1209,
+      "kind": "refresh",
+      "time": "2026-10-08T14:39:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 1402,
+      "kind": "refresh",
+      "time": "2026-10-09T00:21:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 1403,
+      "kind": "refresh",
+      "time": "2026-10-09T00:24:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 1421,
+      "kind": "refresh",
+      "time": "2026-10-09T01:18:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 1422,
+      "kind": "refresh",
+      "time": "2026-10-09T01:21:00+00:00"
+    },
+    {
+      "direction": "long",
+      "index": 1813,
+      "kind": "refresh",
+      "time": "2026-10-09T20:54:00+00:00"
+    },
+    {
+      "direction": "long",
+      "index": 1846,
+      "kind": "refresh",
+      "time": "2026-10-12T00:06:00+00:00"
+    },
+    {
+      "direction": "long",
+      "index": 1848,
+      "kind": "refresh",
+      "time": "2026-10-12T00:12:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2329,
+      "kind": "refresh",
+      "time": "2026-10-13T00:21:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2330,
+      "kind": "refresh",
+      "time": "2026-10-13T00:24:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2331,
+      "kind": "refresh",
+      "time": "2026-10-13T00:27:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2333,
+      "kind": "refresh",
+      "time": "2026-10-13T00:33:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2348,
+      "kind": "refresh",
+      "time": "2026-10-13T01:18:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2349,
+      "kind": "refresh",
+      "time": "2026-10-13T01:21:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2449,
+      "kind": "refresh",
+      "time": "2026-10-13T06:21:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2551,
+      "kind": "refresh",
+      "time": "2026-10-13T11:27:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2552,
+      "kind": "refresh",
+      "time": "2026-10-13T11:30:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2556,
+      "kind": "first",
+      "time": "2026-10-13T11:42:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2573,
+      "kind": "refresh",
+      "time": "2026-10-13T12:33:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2637,
+      "kind": "refresh",
+      "time": "2026-10-13T15:45:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2638,
+      "kind": "refresh",
+      "time": "2026-10-13T15:48:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2802,
+      "kind": "refresh",
+      "time": "2026-10-14T00:03:00+00:00"
+    },
+    {
+      "direction": "long",
+      "index": 2816,
+      "kind": "refresh",
+      "time": "2026-10-14T00:45:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 2986,
+      "kind": "refresh",
+      "time": "2026-10-14T09:15:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3284,
+      "kind": "refresh",
+      "time": "2026-10-15T00:15:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3319,
+      "kind": "refresh",
+      "time": "2026-10-15T02:00:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3320,
+      "kind": "refresh",
+      "time": "2026-10-15T02:03:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3395,
+      "kind": "refresh",
+      "time": "2026-10-15T05:48:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3396,
+      "kind": "refresh",
+      "time": "2026-10-15T05:51:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3398,
+      "kind": "refresh",
+      "time": "2026-10-15T05:57:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3399,
+      "kind": "refresh",
+      "time": "2026-10-15T06:00:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3400,
+      "kind": "refresh",
+      "time": "2026-10-15T06:03:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3529,
+      "kind": "refresh",
+      "time": "2026-10-15T12:30:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3532,
+      "kind": "refresh",
+      "time": "2026-10-15T12:39:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3533,
+      "kind": "refresh",
+      "time": "2026-10-15T12:42:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3534,
+      "kind": "refresh",
+      "time": "2026-10-15T12:45:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3559,
+      "kind": "refresh",
+      "time": "2026-10-15T14:00:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3769,
+      "kind": "refresh",
+      "time": "2026-10-16T00:33:00+00:00"
+    },
+    {
+      "direction": "long",
+      "index": 3786,
+      "kind": "refresh",
+      "time": "2026-10-16T01:24:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3964,
+      "kind": "refresh",
+      "time": "2026-10-16T10:18:00+00:00"
+    },
+    {
+      "direction": "short",
+      "index": 3965,
+      "kind": "refresh",
+      "time": "2026-10-16T10:21:00+00:00"
+    }
+  ],
+  "task": "T-177"
+}
