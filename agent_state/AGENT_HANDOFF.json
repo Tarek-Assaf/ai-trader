@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 474,
+  "revision": 476,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-176 accepted as a 'partly' geometry audit: the owner CSV has broker-style tranches and market exits that the stored indicator cannot produce, so the owner likely traded by hand or ran another script. T-177 tests whether owner entries cluster around the port's signals more than chance. Historical Tai rerun stays gated until 25/31 (or an owner decision).",
+    "summary": "T-177 accepted: owner entries cluster around the port's signals at 10/30 bars (p<0.01) but not at 3 bars, median offset 36 bars. Q-071 asks the owner whether a loose-criterion historical rerun is acceptable (gate 25/31 not relaxed). T-178 (delay structure and unmatched entries) is queued for Codex.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -150,7 +150,8 @@
         "T-174",
         "T-175",
         "T-176",
-        "T-177"
+        "T-177",
+        "T-178"
       ]
     },
     {
@@ -5862,7 +5863,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5878,6 +5879,38 @@
         "docs/evidence/t177_signals.json",
         "scripts/lab_t177_signals.py",
         "tests/unit/test_t177_signals.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t177_report.md",
+        "docs/evidence/t177_signals.json",
+        "scripts/lab_t177_signals.py",
+        "tests/unit/test_t177_signals.py"
+      ],
+      "completion_note": "Completed one bounded offline Pod replay using the owner CSV as New York time, the unchanged T-162 port and full-warm-up NSXUSD 3-minute bars. It emitted 45 signals across 7 days. Of 31 owner entries, 3/9/15 had a same-direction signal within +/-3/10/30 bars; the 2,000-draw same-hour permutation null means were 1.07/2.77/6.90 with one-sided p-values 0.0955/0.0020/0.0005. The mirror control was 0/2/3 with p-values 1.0000/0.7901/0.9875. Median absolute same-direction offset was 36 bars. Verdict: yes at 10 and 30 bars, supporting the port signal family with manual entry delay; 3 bars is not significant. Pod exit 0; no broker, orders, holdout, lake writes, tuning or secrets. Desktop/Pod pytest and Ruff were unavailable; py_compile and diff checks pass."
+    },
+    {
+      "id": "T-178",
+      "title": "Delay structure of owner entries vs port signals and why 16 owner entries are unmatched",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-177"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t178_delay_and_unmatched.md exactly (signed-offset histogram, permutation null for consistent delay with seed 178, port-side precision, table of the 16 unmatched entries; verdict first with plain yes/no).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets. Lint with ruff check and ruff format (line length 100) without per-line noqa. One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t178_report.md",
+        "docs/evidence/t178_delay.json",
+        "scripts/lab_t178_delay.py",
+        "tests/unit/test_t178_delay.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -6347,6 +6380,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T03:05:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-059",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-177 accepted (V-442). Owner entries cluster around the port's same-direction signals at 10 and 30 bars (p 0.0020, 0.0005) but not at 3 bars, with a median offset of 36 bars. Per D-058 the question 'may the historical Tai rerun use a looser criterion?' is put to the owner (Q-071). I do not relax the 25/31 gate myself (safe option), so the rerun stays blocked. Queued T-178 (docs/specs/t178_delay_and_unmatched.md): tests whether the coincidence has a stable delay or is only same-day clustering, and lists why the 16 unmatched entries fail.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T03:30:00Z",
       "do_not_reopen": false
     }
   ],
@@ -14928,6 +14969,40 @@
       "validated_by": "claude",
       "date": "2026-10-19T03:05:00Z",
       "reverify_if": "The owner CSV, Pine source or NSXUSD lake bars change."
+    },
+    {
+      "id": "V-441",
+      "task_id": "T-177",
+      "subject": "T-177 signal coincidence permutation replay",
+      "method": "Ran the bounded offline replay on the owner Pod with the owner CSV, T-162 Pine port and NSXUSD 3-minute lake; copied raw JSON/report artifacts. Pod exit 0; JSON SHA-256 CC50A3C9B25B1ECA473BE1B6A876B57055ADF3C27B26F572D072C6E68E6AC079; report SHA-256 36FCD06AA48DCEAC46EBA70B496F44D4B83ABC631E223BD769455A63E3025DD4. Ran py_compile and git diff --check locally; pytest and Ruff were unavailable.",
+      "result": "pass",
+      "checked": "Spec followed: New York owner times, full warmup, unchanged port, all signals/day, nearest same/any-direction offsets, 2,000 same-hour draws with seed 177, mirror control, verdict first, and zero safety counters.",
+      "evidence": [
+        "docs/evidence/t177_report.md",
+        "docs/evidence/t177_signals.json",
+        "scripts/lab_t177_signals.py",
+        "tests/unit/test_t177_signals.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T03:05:00Z",
+      "reverify_if": "The owner CSV, Pine source or NSXUSD lake bars change."
+    },
+    {
+      "id": "V-442",
+      "task_id": "T-177",
+      "subject": "Claude review of T-177 signal coincidence",
+      "method": "Read the script, report, JSON and spec; ruff check and format (line length 100) and py_compile on the rebuilt branch; checked the permutation design (same-hour resample, seed 177, 2,000 draws, +1 one-sided p) against the spec and the safety counters.",
+      "result": "pass",
+      "checked": "Spec followed. Observed 3/9/15 of 31 within 3/10/30 bars; null means 1.07/2.77/6.90; p 0.0955/0.0020/0.0005; mirror p 1.0000/0.7901/0.9875. Verdict yes at 10/30 (p<0.01), no at 3. Caveats: median absolute offset is 36 bars (about 1.8 hours), so the cluster is broad rather than a short delay; the null resamples from the same hour only, so it does not control for signal density in busy hours. Ruff needed import-order/E402, zip strict and line-length fixes (no logic change). Pod and CI ran the tests (Codex had no pytest). No broker, orders, holdout or lake writes.",
+      "evidence": [
+        "docs/evidence/t177_report.md",
+        "docs/evidence/t177_signals.json",
+        "scripts/lab_t177_signals.py",
+        "tests/unit/test_t177_signals.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T03:30:00Z",
+      "reverify_if": "The owner CSV, Pine source or NSXUSD lake bars change."
     }
   ],
   "blockers": [
@@ -16020,6 +16095,20 @@
       ],
       "recommendation": "B is the likely answer from the numbers. The fix would only change how we read your trade list in the comparison; our recorder, parser and bar building are already correct UTC and stay untouched.",
       "answer": "Owner 2026-10-18: the export is New York time, UTC-4 (option B). Claude queued T-160: read the owner trade list as New York time and rerun the 31-trade replay."
+    },
+    {
+      "id": "Q-071",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "Plain version: your 31 trades sit near our port's signals more often than luck would give (15 of 31 within 30 bars, which is 90 minutes), but not close enough to match bar by bar (3 of 31 within 3 bars). The typical gap is about 1.8 hours. Question: should we run the long historical test on the port's signals even though it does not reproduce your trades exactly (we would label the result 'port of the stored indicator, loosely matched to the owner')?",
+      "options": [
+        "A: Yes, run the historical test on the port, labelled as loosely matched to the owner",
+        "B: No, wait until the real script or settings are found",
+        "C: First send the exact indicator version, settings and chart used"
+      ],
+      "recommendation": "C, then A. Only the historical rerun waits on this; Codex continues with T-178 meanwhile.",
+      "answer": ""
     }
   ],
   "log": [
@@ -25702,6 +25791,42 @@
         "tests/unit/test_t176_geometry.py"
       ],
       "summary": "Reviewed T-176: accepted (V-440) as 'partly'. Ruff check and format pass (import order, E402 and E501 handled without logic change). CI caught that both unit tests crashed (fixture rows lacked 'Date and time'; Codex had no pytest); fixed in the test fixture only. No broker, order, holdout or lake activity. Geometry: 31 positions, 21 market exits and 1+2 tranches the indicator cannot produce, 0/11 break-even, 19/20 R/ATR within cap, 18/31 durations. Caveat: 'positions' key written twice in the script (list shown where count belongs); target-multiple check 0/0. Queued T-177: permutation test of owner entries vs port signals. Gate 25/31 for the historical rerun unchanged. Rebuilt on main with Codex's log entry kept. Turn to codex (D-045)."
+    },
+    {
+      "revision": 475,
+      "ts": "2026-10-19T03:05:00Z",
+      "agent": "codex",
+      "action": "complete_t177_signal_coincidence",
+      "task_ids": [
+        "T-177"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t177_report.md",
+        "docs/evidence/t177_signals.json",
+        "scripts/lab_t177_signals.py",
+        "tests/unit/test_t177_signals.py"
+      ],
+      "summary": "Completed one bounded offline Pod replay. Owner entries were within +/-3/10/30 bars of same-direction port signals for 3/9/15 of 31, with same-hour null means 1.07/2.77/6.90 and p-values 0.0955/0.0020/0.0005; mirror p-values 1.0000/0.7901/0.9875. Median absolute offset 36 bars. Verdict yes at 10/30 bars, no at 3. Pod exit 0, no broker or orders. Turn to Claude for review."
+    },
+    {
+      "revision": 476,
+      "ts": "2026-10-19T03:30:00Z",
+      "agent": "claude",
+      "action": "accept_t177_queue_t178",
+      "task_ids": [
+        "T-177",
+        "T-178"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t178_delay_and_unmatched.md",
+        "docs/evidence/t177_report.md",
+        "docs/evidence/t177_signals.json",
+        "scripts/lab_t177_signals.py",
+        "tests/unit/test_t177_signals.py"
+      ],
+      "summary": "Reviewed T-177: accepted (V-442). 3/9/15 of 31 owner entries within 3/10/30 bars of same-direction port signals; same-hour null means 1.07/2.77/6.90; p 0.0955/0.0020/0.0005; mirror control not significant. Verdict yes at 10/30, no at 3; median offset 36 bars so the cluster is broad. Ruff check/format fixed without logic change. No broker, order, holdout or lake activity. Gate 25/31 not relaxed; Q-071 asks the owner about a loose-criterion rerun (non-blocking). Queued T-178. Rebuilt on main without Codex's re-encoded handoff text (its handoff rewrote non-ASCII characters). Turn to codex (D-045)."
     }
   ],
   "project_summary": "T-176 accepted as a 'partly' geometry audit: the owner CSV has broker-style tranches and market exits that the stored indicator cannot produce, so the owner likely traded by hand or ran another script. T-177 tests whether owner entries cluster around the port's signals more than chance. Historical Tai rerun stays gated until 25/31 (or an owner decision)."
