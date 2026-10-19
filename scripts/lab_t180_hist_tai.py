@@ -20,11 +20,11 @@ from zoneinfo import ZoneInfo
 
 try:
     from scripts import lab_t162_pine_port as port
-    from trader.lab.runner import _parquet_files, _path_month, pessimistic_cost_model
+    from trader.lab.runner import _path_month, pessimistic_cost_model
 except ModuleNotFoundError:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from scripts import lab_t162_pine_port as port
-    from trader.lab.runner import _parquet_files, _path_month, pessimistic_cost_model
+    from trader.lab.runner import _path_month, pessimistic_cost_model
 
 
 NY = ZoneInfo("America/New_York")
@@ -43,6 +43,20 @@ WARMUP = timedelta(days=7)
 # 1-minute source once per instrument so each cell only filters and resamples
 # the already loaded rows; no data is written to the lake.
 _SOURCE_CACHE: dict[Path, dict[str, tuple[Any, ...]]] = {}
+
+
+def _source_files(lake: Path, instrument: str) -> tuple[Path, ...]:
+    roots = [lake / instrument / "1m", lake / instrument / "1m_capital"]
+    if instrument == "NSXUSD":
+        roots.extend(
+            lake / symbol / timeframe
+            for symbol, timeframe in (
+                ("NAS100", "1m_capital"),
+                ("NAS100", "1m"),
+                ("US100", "1m"),
+            )
+        )
+    return tuple(sorted({path for root in roots for path in root.glob("**/*.parquet")}))
 
 
 def parse_date(value: str) -> datetime:
@@ -80,7 +94,7 @@ def _load_window_source(
     except ImportError as exc:  # pragma: no cover - project image supplies pyarrow
         raise RuntimeError("pyarrow is required for Strategy Lab data") from exc
     rows: dict[datetime, Any] = {}
-    for path in _parquet_files(lake, instrument):
+    for path in _source_files(lake, instrument):
         month = _path_month(path)
         if month is not None:
             month_start = datetime(month[0], month[1], 1, tzinfo=UTC)
