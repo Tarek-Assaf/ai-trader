@@ -55,3 +55,66 @@ The safe next step is to run the minute-gap tool against the recorder lake with
 the matching market-details JSON and status file, then correlate each gap with
 the new reconnect INFO fields. A tiny reconnect behavior change is not
 justified until close codes/reasons and the gap timeline are available.
+
+## Questions from the 17:15 review block
+
+### (f) Runtime dependency and the six-minute repetition
+
+The supplied Pod line is only the redacted health label
+`runtime_dependency_unavailable`; it does not include the dependency detail or
+the traceback needed to name one failing service. The composition code checks
+the runtime dependencies in this order: Redis, database, paper broker,
+control channel, Guardian, instrument mapper/sizing limits, P&L guard and
+settings service. The Tai wiring itself then requires a cycle source and the
+Capital client. Therefore the current line cannot distinguish (for example)
+missing Redis from a missing control channel; the next read-only check must
+capture the full `runtime alert: dependencies unavailable (...)` line or the
+health detail. The code does not silently convert a missing dependency into a
+healthy runtime.
+
+The repetition interval is explained by `_runtime_retry_loop`: it waits 30,
+60, 120, 240, then 300 seconds, adding bounded jitter, before retrying the
+same composition. The observed roughly six-minute cadence is therefore the
+backoff cap plus jitter, not a Capital.com session-expiry timer. The API
+Capital client is created once during lifespan and passed into each retry; a
+retry does not construct a new client or deliberately log in again.
+
+### (g) API and recorder Capital.com sessions
+
+The API process and `trader.workers.recorder` each construct a
+`CapitalComClient`, using the same configured demo key but in separate
+processes. The module-level session cache is process-local, so the two clients
+do **not** share a token. Each client lazily opens its own session; the API
+client sends a keepalive ping after 300 seconds and only opens a new session
+after a 401/invalidation. The recorder worker owns the stream login and
+reconnect loop. Consequently the six-minute runtime retries do not cause API
+logins, but the two independent clients may still be competing server-side
+session owners if Capital.com permits only one active session per key. The
+safe design conclusion is one process/session owner or a shared session/token
+service plus login throttling; this diagnosis makes no risk or order-path
+change.
+
+### (h) Tai state, warm-up and heartbeat
+
+Before this review fix, `_build_tai_demo_runtime` created a fresh
+`TaiDemoRunner` on every successful runtime retry. That reset the runner's
+`_managed` open-position map, the adapter's queued closed bars and the
+three-minute builder's pending minutes. The new composition path snapshots and
+restores the runner state, queued bars and builder object; it also keeps the
+existing signal provider when the rebuild is in-process. The runner still
+enforces the broker-side one-position rule from `get_positions()`, so an open
+position cannot create a second entry while the runtime is recovering. On a
+fresh process start, Tai signal warm-up is loaded from the lake, and the tailer
+seeds after the last warm-up minute rather than replaying history as live bars.
+A unit test covers a rebuild with an open position and verifies that the
+restored runner blocks a duplicate entry and continues to manage the existing
+target exit.
+
+The supplied Pod evidence contains the startup line with `warmup_bars=300`,
+but no `tai demo heartbeat` line. That means this capture proves the runtime
+loaded warm-up but does not prove that a closed 3-minute bar was emitted. The
+lake check found only the recently modified NAS100 and XAUUSD monthly Parquet
+files; no minute-gap counts were available in the supplied output, so this
+report intentionally claims no numeric gap result. Run the existing
+read-only `scripts/lab_t189_minute_gaps.py` command against the Pod lake to
+fill in the counts and correlate them with the reconnect timestamps.

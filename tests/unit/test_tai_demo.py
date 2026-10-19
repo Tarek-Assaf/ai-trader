@@ -170,6 +170,27 @@ def test_scale_out_and_stop_to_entry_bookkeeping():
     assert gateway.closed == ["deal-1"]
 
 
+def test_runtime_rebuild_restores_open_position_management():
+    gateway = Gateway()
+    first, _ = runner(gateway)
+    assert first.on_bar(bar()).action == "SUBMITTED"
+
+    second, manager = runner(gateway)
+    restored = TaiDemoRunner(
+        settings=second.settings,
+        order_manager=manager,
+        position_gateway=gateway,
+        signal_provider=second._signal,
+        order_factory=second._order_factory,
+        control=second._control,
+        managed_state=first.snapshot_state(),
+    )
+    assert restored.on_bar(bar()).reason == "one_position_rule"
+    assert manager.submits == []
+    restored.on_bar(bar(high="103"))
+    assert gateway.closed == ["deal-1"]
+
+
 def _sizing_runner(balance, start="1000"):
     gateway = Gateway()
     manager = Manager(gateway)
