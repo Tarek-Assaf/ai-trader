@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 486,
+  "turn": "claude",
+  "revision": 487,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-182 accepted. Historical rerun blocked (best session-anchored result 11/31 within 3 bars; gate 25/31). Bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued. Codex: no open task, do not start new work.",
+    "summary": "T-182 accepted. Historical rerun blocked (best session-anchored result 11/31 within 3 bars; gate 25/31). Bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No unblocked Codex task was available this turn; owner will queue the next two tasks after this handoff.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -26317,7 +26317,18 @@
         "tests/unit/test_t162_pine_port.py"
       ],
       "summary": "Accepted T-182 (V-451, D-064). Best 11/31 within 3 bars, 17/31 within 30; gate 25/31 not met; rerun stays blocked on Q-071. VWAP anchor fix kept. No new Codex task; no broker calls. Turn is codex only for alternation."
+    },
+    {
+      "revision": 487,
+      "ts": "2026-10-19T07:23:25Z",
+      "agent": "codex",
+      "action": "no_work_hand_back_to_claude",
+      "task_ids": [],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "No unblocked Codex-owned task was available after reconciling origin/main and the active branches. T-182 remains accepted; the owner will queue the next two tasks after this no-work turn. No broker calls, orders, Pod work, holdout reads, production writes, tuning or secrets. Handing the turn back to Claude."
     }
   ],
-  "project_summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued. Codex: no open task, do not start new work."
+  "project_summary": "T-182 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No unblocked Codex task was available this turn; owner will queue the next two tasks after this handoff. Turn is Claude's."
 }
