@@ -7,6 +7,7 @@ from trader.experiments.tai_demo import (
     TaiDemoRefused,
     TaiDemoRunner,
     TaiDemoSettings,
+    TaiInstrumentRules,
     TaiSignal,
 )
 
@@ -17,5 +18,6 @@ __all__ = [
     "TaiDemoRefused",
     "TaiDemoRunner",
     "TaiDemoSettings",
+    "TaiInstrumentRules",
     "TaiSignal",
 ]

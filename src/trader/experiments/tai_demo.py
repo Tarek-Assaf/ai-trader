@@ -8,11 +8,12 @@ The first real demo run must still be enabled by the owner after deployment.
 
 from __future__ import annotations
 
+import inspect
 import logging
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from typing import Protocol
 
 from trader.execution.brokers.base import Direction, OrderRequest, Position
@@ -35,6 +36,8 @@ class TaiDemoSettings:
     trading_mode: str
     live_trading_enabled: bool
     experiment_enabled: bool
+    base_lot: Decimal = Decimal("0.1")
+    lot_per_balance: Decimal = Decimal("10000")
 
     @property
     def enabled(self) -> bool:
@@ -45,6 +48,12 @@ class TaiDemoSettings:
             and self.experiment_enabled
         )
 
+    def __post_init__(self) -> None:
+        for name in ("base_lot", "lot_per_balance"):
+            value = getattr(self, name)
+            if not isinstance(value, Decimal) or not value.is_finite() or value <= 0:
+                raise ValueError(f"{name} must be a positive finite Decimal")
+
     @classmethod
     def from_settings(cls, settings: object) -> TaiDemoSettings:
         return cls(
@@ -52,6 +61,10 @@ class TaiDemoSettings:
             trading_mode=str(getattr(settings, "trading_mode", "")),
             live_trading_enabled=bool(getattr(settings, "live_trading_enabled", True)),
             experiment_enabled=bool(getattr(settings, "tai_demo_experiment", False)),
+            base_lot=Decimal(str(getattr(settings, "tai_demo_base_lot", "0.1"))),
+            lot_per_balance=Decimal(
+                str(getattr(settings, "tai_demo_lot_per_balance", "10000"))
+            ),
         )
 
     def require_enabled(self) -> None:
@@ -137,6 +150,27 @@ class TaiSignal:
 
 
 @dataclass(frozen=True, slots=True)
+class TaiInstrumentRules:
+    """Broker sizing rules read from the instrument metadata before each entry."""
+
+    min_size: Decimal
+    size_step: Decimal
+    value_per_point: Decimal | None = None
+
+    def __post_init__(self) -> None:
+        for name in ("min_size", "size_step"):
+            value = getattr(self, name)
+            if not isinstance(value, Decimal) or not value.is_finite() or value <= 0:
+                raise ValueError(f"{name} must be a positive finite Decimal")
+        if self.value_per_point is not None and (
+            not isinstance(self.value_per_point, Decimal)
+            or not self.value_per_point.is_finite()
+            or self.value_per_point <= 0
+        ):
+            raise ValueError("value_per_point must be a positive finite Decimal")
+
+
+@dataclass(frozen=True, slots=True)
 class DemoOutcome:
     """Secret-free result of one bar decision."""
 
@@ -165,7 +199,9 @@ class OrderManager(Protocol):
 
 
 SignalProvider = Callable[[ClosedBar], TaiSignal | None]
-OrderFactory = Callable[[TaiSignal, str], OrderRequest]
+OrderFactory = Callable[..., OrderRequest]
+BalanceProvider = Callable[[], Decimal]
+InstrumentRulesProvider = Callable[[str], TaiInstrumentRules]
 Journal = Callable[[Mapping[str, object]], None]
 Alert = Callable[[str], None]
 
@@ -177,6 +213,8 @@ class _ManagedPosition:
     direction: Direction
     targets: tuple[Decimal, Decimal, Decimal]
     original_size: Decimal
+    size_step: Decimal | None = None
+    one_r_value: Decimal | None = None
     hit: set[int] = field(default_factory=set)
     entry_stop_moved: bool = False
 
@@ -198,6 +236,8 @@ class TaiDemoRunner:
         signal_provider: SignalProvider,
         order_factory: OrderFactory,
         control: Control,
+        balance_provider: BalanceProvider | None = None,
+        instrument_rules_provider: InstrumentRulesProvider | None = None,
         journal: Journal | None = None,
         alert: Alert | None = None,
     ) -> None:
@@ -208,6 +248,8 @@ class TaiDemoRunner:
         self._signal = signal_provider
         self._order_factory = order_factory
         self._control = control
+        self._balance_provider = balance_provider
+        self._rules_provider = instrument_rules_provider
         self._journal = journal or (lambda _event: None)
         self._alert = alert or (lambda message: LOGGER.info("tai demo: %s", message))
         self._managed: dict[str, _ManagedPosition] = {}
@@ -237,7 +279,11 @@ class TaiDemoRunner:
         signal = self._signal(bar)
         if signal is None:
             return self._outcome(cycle_id, "NO_TRADE", "no_signal")
-        order = self._order_factory(signal, cycle_id)
+        rules = self._rules_provider(bar.epic) if self._rules_provider is not None else None
+        requested_size = self._requested_size(rules)
+        order = self._build_order(signal, cycle_id, requested_size)
+        if requested_size is not None and order.size != requested_size:
+            order = replace(order, size=requested_size)
         if (
             order.client_order_id != cycle_id
             or order.epic != bar.epic
@@ -267,8 +313,20 @@ class TaiDemoRunner:
             direction=signal.direction,
             targets=signal.levels(),
             original_size=position.size,
+            size_step=rules.size_step if rules is not None else None,
+            one_r_value=(
+                abs(signal.entry - signal.stop) * position.size * rules.value_per_point
+                if rules is not None and rules.value_per_point is not None
+                else None
+            ),
         )
-        self._journal_event(cycle_id, "entry", epic=bar.epic, deal_id=position.deal_id)
+        self._journal_event(
+            cycle_id,
+            "entry",
+            epic=bar.epic,
+            deal_id=position.deal_id,
+            one_r_value=self._managed[position.deal_id].one_r_value,
+        )
         self._alert(f"{EXPERIMENT_LABEL}: entry {signal.direction.value} {bar.epic}")
         return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
 
@@ -279,6 +337,7 @@ class TaiDemoRunner:
             state = self._managed.get(position.deal_id)
             if state is None:
                 continue
+            current_size = position.size
             for index, target in enumerate(state.targets, start=1):
                 if index in state.hit or not self._target_hit(state.direction, bar, target):
                     continue
@@ -301,12 +360,17 @@ class TaiDemoRunner:
                     break
                 close_partial = getattr(self._positions, "close_partial", None)
                 if callable(close_partial):
-                    current_size = position.size
-                    amount = min(current_size, state.original_size / Decimal("3"))
+                    amount = self._partial_amount(state, current_size, index)
                     if amount > 0 and amount < current_size:
                         close_partial(position.deal_id, amount)
+                        current_size -= amount
                         self._journal_event(
-                            cycle_id, "scale_out", deal_id=position.deal_id, target=index
+                            cycle_id,
+                            "scale_out",
+                            deal_id=position.deal_id,
+                            target=index,
+                            amount=amount,
+                            fraction=str(self._exit_fraction(index)),
                         )
                     else:
                         self._journal_event(
@@ -329,6 +393,66 @@ class TaiDemoRunner:
     def _target_hit(direction: Direction, bar: ClosedBar, target: Decimal) -> bool:
         return bar.high >= target if direction is Direction.BUY else bar.low <= target
 
+    def _requested_size(self, rules: TaiInstrumentRules | None) -> Decimal | None:
+        if rules is None or self._balance_provider is None:
+            return None
+        balance = self._balance_provider()
+        if not isinstance(balance, Decimal) or not balance.is_finite() or balance <= 0:
+            raise TaiDemoRefused("demo balance must be a positive finite Decimal")
+        raw = max(
+            self.settings.base_lot,
+            self.settings.base_lot * balance / self.settings.lot_per_balance,
+        )
+        aligned = (raw / rules.size_step).to_integral_value(rounding=ROUND_DOWN) * rules.size_step
+        if aligned < rules.min_size:
+            ratio = rules.min_size / rules.size_step
+            if ratio != ratio.to_integral_value():
+                raise TaiDemoRefused("broker minimum size is not expressible by its size step")
+            aligned = rules.min_size
+        return aligned
+
+    def _build_order(
+        self, signal: TaiSignal, cycle_id: str, requested_size: Decimal | None
+    ) -> OrderRequest:
+        """Support both the original two-argument factory and size-aware factories."""
+        try:
+            parameters = inspect.signature(self._order_factory).parameters.values()
+            positional = [
+                parameter
+                for parameter in parameters
+                if parameter.kind
+                in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            ]
+        except (TypeError, ValueError):
+            positional = []
+        if requested_size is not None and len(positional) >= 3:
+            return self._order_factory(signal, cycle_id, requested_size)
+        return self._order_factory(signal, cycle_id)
+
+    @staticmethod
+    def _exit_fraction(index: int) -> Decimal:
+        return (Decimal("0.4"), Decimal("0.3"), Decimal("0.3"))[index - 1]
+
+    @classmethod
+    def _partial_amount(
+        cls, state: _ManagedPosition, current_size: Decimal, index: int
+    ) -> Decimal:
+        fraction = cls._exit_fraction(index)
+        if state.size_step is None:
+            # Legacy injected mock gateways have no broker metadata; retain their
+            # deterministic third-size behavior while production uses broker steps.
+            return min(current_size, state.original_size / Decimal("3"))
+        raw = state.original_size * fraction
+        rounded = (
+            (raw / state.size_step).to_integral_value(rounding=ROUND_HALF_UP)
+            * state.size_step
+        )
+        capped = (
+            (current_size / state.size_step).to_integral_value(rounding=ROUND_DOWN)
+            * state.size_step
+        )
+        return min(rounded, capped)
+
     def _journal_event(self, cycle_id: str, event: str, **details: object) -> None:
         payload: dict[str, object] = {
             "cycle_id": cycle_id,
@@ -348,6 +472,7 @@ __all__ = [
     "DemoOutcome",
     "EXPERIMENT_LABEL",
     "TaiDemoRefused",
+    "TaiInstrumentRules",
     "TaiDemoRunner",
     "TaiDemoSettings",
     "TaiSignal",
