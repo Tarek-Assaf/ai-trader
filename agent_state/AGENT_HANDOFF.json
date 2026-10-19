@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 458,
+  "revision": 460,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-168 accepted: with full warm-up the port gives 33 trades in the owner window vs the owner's 31 entries; dashboard totals have unknown ranges (D-052). T-169 matches port entries to the 31 owner entries (target 25). Historical Tai rerun waits for T-169.",
+    "summary": "T-169 accepted as a negative result: only 4/31 owner entries reproduced within +-3 bars (target 25), 21 with no same-direction entry within +-10. T-170 checks clock alignment, the lowest-agreement condition and an equal-weight VWAP variant. Historical Tai rerun stays gated until 25/31.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -142,7 +142,8 @@
         "T-166",
         "T-167",
         "T-168",
-        "T-169"
+        "T-169",
+        "T-170"
       ]
     },
     {
@@ -5603,7 +5604,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5618,6 +5619,36 @@
         "docs/evidence/t169_report.md",
         "docs/evidence/t169_match.json",
         "scripts/lab_t169_match.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t169_report.md",
+        "docs/evidence/t169_match.json",
+        "scripts/lab_t169_match.py"
+      ],
+      "completion_note": "Full-warm-up closed-mode matching completed in the owner Pod. Of 31 owner entries, 1 matched exactly, 3 within +/-1 bar, 4 within +/-2, and 4 within +/-3 (target 25); 21 had no same-direction port entry within +/-10 bars. Median port-minus-owner price difference among +/-3 matches was -222.05. Direction, VWAP and HA-state failures recur in unmatched rows, with some EMA, ADX/DI, risk and cooldown failures. Historical Tai rerun remains gated."
+    },
+    {
+      "id": "T-170",
+      "title": "Per-condition agreement at the owner's bars: clock alignment, lowest-agreement condition, equal-weight VWAP variant",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-169"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t170_owner_bar_conditions.md exactly (port and T-168/T-169 scripts unchanged; clock alignment by price containment over offsets -10..+10; per-condition agreement at the owner bars; exactly one equal-weight VWAP diagnostic variant; verdict first).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets. Lint with ruff check and ruff format (line length 100). One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t170_report.md",
+        "docs/evidence/t170_conditions.json",
+        "scripts/lab_t170_conditions.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -6039,6 +6070,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T00:45:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-053",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-169 accepted (V-429) as a negative result: 4 of 31 owner entries reproduced within +-3 bars (target 25). It is not a small timing shift (21 owner entries have no same-direction port entry within +-10 bars). The -222 point price difference is the NQ1 futures vs NSXUSD CFD basis. The Pine VWAP is volume weighted and our CFD bars carry tick volume, and VWAP, direction and HA state fail most often. Queued T-170: check clock alignment by price containment, per-condition agreement at the owner bars, and exactly one equal-weight VWAP diagnostic variant. The historical Tai rerun stays blocked until some run reaches 25 of 31.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T00:55:00Z",
       "do_not_reopen": false
     }
   ],
@@ -14406,6 +14445,38 @@
       "validated_by": "claude",
       "date": "2026-10-19T00:40:00Z",
       "reverify_if": "The owner supplies matching NSXUSD/Pine dashboard rows, changes the port contract, or requests another warm-up window."
+    },
+    {
+      "id": "V-428",
+      "task_id": "T-169",
+      "subject": "T-169 full-warm-up owner entry matching",
+      "method": "Ran scripts/lab_t169_match.py in the owner Pod over the full-warm-up NSXUSD 3-minute lake and owner replay CSV; reviewed match counts, signed offset histogram, median price difference and first ten unmatched condition diagnostics. Ran local Ruff check/format, py_compile, handoff validation and git diff --check.",
+      "result": "pass",
+      "checked": "Acceptance met as a negative match: 1/31 exact, 3/31 within +/-1, 4/31 within +/-2, 4/31 within +/-3 against target 25; 21 owner entries lack a same-direction port entry within +/-10 bars and 27 port trades lack an owner entry within +/-3 bars. Median port-minus-owner price difference for +/-3 matches is -222.05. Direction, VWAP and HA-state failures recur; EMA, ADX/DI, risk and cooldown also block some rows. This points to condition/price-basis mismatch from the numbers alone; no rerun approved. Pod exit 0; safety counters zero/false.",
+      "evidence": [
+        "docs/evidence/t169_report.md",
+        "docs/evidence/t169_match.json",
+        "scripts/lab_t169_match.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T04:10:00+03:00",
+      "reverify_if": "The owner supplies aligned chart bars/Pine settings or changes the port contract."
+    },
+    {
+      "id": "V-429",
+      "task_id": "T-169",
+      "subject": "Claude review of T-169 owner entry matching",
+      "method": "Reviewed report, match JSON and script against docs/specs/t169_owner_entry_match.md; ran ruff check and ruff format --check (line length 100); confirmed safety counters zero and that the port and T-168 script are untouched.",
+      "result": "pass",
+      "checked": "Spec followed: verdict first, offset histogram, median price difference, first ten unmatched diagnostics. Result is a negative match (4 of 31 within +-3, target 25; 21 with no same-direction entry within +-10). Accepted as a valid diagnostic; the historical rerun stays gated.",
+      "evidence": [
+        "docs/evidence/t169_report.md",
+        "docs/evidence/t169_match.json",
+        "scripts/lab_t169_match.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T00:55:00Z",
+      "reverify_if": "The port, the owner CSV or the lake bars change."
     }
   ],
   "blockers": [
@@ -24898,7 +24969,38 @@
         "docs/specs/t169_owner_entry_match.md"
       ],
       "summary": "Reviewed T-168: accepted (V-427). Ruff check and format pass; no broker, order, holdout or lake activity. With full warm-up the port gives 33 trades in the owner window vs the owner's 31 entries; the two-day windows (10/11) cannot be compared with dashboards of unknown range (D-052). Rebuilt on main with Codex's two log entries merged. Queued T-169 (entry-by-entry match against the 31 owner entries, target 25). Turn to codex (D-045)."
+    },
+    {
+      "revision": 459,
+      "ts": "2026-10-19T03:50:00+03:00",
+      "agent": "codex",
+      "action": "complete_t169_owner_entry_match",
+      "task_ids": [
+        "T-169"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t169_report.md",
+        "docs/evidence/t169_match.json",
+        "scripts/lab_t169_match.py"
+      ],
+      "summary": "Completed T-169 full-warm-up owner-entry matching in the owner Pod. Of 31 owner entries, 1 matched exactly and 4 matched within +/-3 bars versus target 25; 21 lacked same-direction port entries within +/-10 bars, and 27 port trades lacked an owner entry within +/-3. Median port-minus-owner price difference among +/-3 matches was -222.05. Direction, VWAP and HA-state failures recur in unmatched rows, with some EMA, ADX/DI, risk and cooldown failures. Pod exit 0; no broker, orders, holdout, lake, production, tuning or strategy-search activity. Turn to Claude for review."
+    },
+    {
+      "revision": 460,
+      "ts": "2026-10-19T00:55:00Z",
+      "agent": "claude",
+      "action": "accept_t169_queue_t170",
+      "task_ids": [
+        "T-169",
+        "T-170"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t170_owner_bar_conditions.md"
+      ],
+      "summary": "Reviewed T-169: accepted (V-429). Ruff check and format pass; no broker, order, holdout or lake activity. Result is negative: 4 of 31 owner entries within +-3 bars (target 25), 21 with no same-direction port entry within +-10; the -222 point difference is the futures vs CFD basis (D-053). Rebuilt on main with Codex's two log entries merged. Queued T-170 (clock alignment by price containment, per-condition agreement at owner bars, one equal-weight VWAP variant). Turn to codex (D-045)."
     }
   ],
-  "project_summary": "T-168 accepted: with full warm-up the port gives 33 trades in the owner window vs the owner's 31 entries; dashboard totals have unknown ranges (D-052). T-169 matches port entries to the 31 owner entries (target 25). Historical Tai rerun waits for T-169."
+  "project_summary": "T-169 accepted as a negative result: only 4/31 owner entries reproduced within +-3 bars (target 25), 21 with no same-direction entry within +-10. T-170 checks clock alignment, the lowest-agreement condition and an equal-weight VWAP variant. Historical Tai rerun stays gated until 25/31."
 }
