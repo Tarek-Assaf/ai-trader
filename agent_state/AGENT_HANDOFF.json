@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 454,
+  "revision": 456,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-166 accepted: the Pine port matches the source on 12 of 15 audited rules and the owner's inputs equal the defaults. Entry-by-entry reproduction is impossible on our data (D-049), so T-167 compares the port's trade counts and outcome mix with the owner's dashboards (D-050). Historical Tai rerun waits for T-167.",
+    "summary": "T-167 accepted as a confounded negative: the count script cut the port's warm-up, so 0/33 trades are not reliable (D-051). T-168 reruns the dashboard count with full warm-up and shows what blocks forming mode. Historical Tai rerun waits for T-168.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -140,7 +140,8 @@
         "T-164",
         "T-165",
         "T-166",
-        "T-167"
+        "T-167",
+        "T-168"
       ]
     },
     {
@@ -5541,7 +5542,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5556,6 +5557,36 @@
         "docs/evidence/t167_report.md",
         "docs/evidence/t167_counts.json",
         "scripts/lab_t167_counts.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t167_report.md",
+        "docs/evidence/t167_counts.json",
+        "scripts/lab_t167_counts.py"
+      ],
+      "completion_note": "Pod run completed with no safety activity. The unchanged NSXUSD port produced 0 trades in both Oct 13-15 windows and 33 closed trades in the Oct 6-16 owner window (14 SL, 7 TP3, 12 BE, 21.21% win rate excluding BE, +21R), materially below the CFD (53) and NQ1 (115) dashboard counts; historical Tai rerun remains gated pending review."
+    },
+    {
+      "id": "T-168",
+      "title": "Dashboard count rerun with full warm-up (T-167 cut the warm-up) and forming-mode zero-trade diagnosis",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-167"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t168_warmup_count_rerun.md exactly (port unchanged; run over all lake bars with warm-up, filter trades into windows; per-day counts; forming-mode per-condition pass counts; verdict first).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets. Lint with ruff check and ruff format (line length 100). One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t168_report.md",
+        "docs/evidence/t168_counts.json",
+        "scripts/lab_t168_counts.py"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -5961,6 +5992,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T03:20:00+03:00",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-051",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-167 is accepted as a negative but confounded result. The count script cut the input bars to each window, so the port ran with no warm-up and gave 0 trades in the two-day windows, 33 in the 6-16 Oct window and 0 in forming mode. These counts cannot show whether the port matches the owner's dashboards (53 CFD, 115 NQ1). Queued T-168 to rerun with full warm-up and to show which entry condition blocks forming mode. The historical Tai rerun stays blocked until T-168 gives a usable count. The flaw was in my T-167 spec, not in Codex's work.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T00:50:00Z",
       "do_not_reopen": false
     }
   ],
@@ -14296,6 +14335,22 @@
       "reverify_if": "script or evidence files change",
       "validated_by": "claude",
       "date": "2026-10-19T03:20:00+03:00"
+    },
+    {
+      "id": "V-426",
+      "task_id": "T-167",
+      "subject": "T-167 dashboard count and outcome-mix comparison",
+      "method": "Ran the unchanged scripts/lab_t167_counts.py in the owner Pod clone against /workspace/data/lake and the owner replay CSV for NY-midnight Oct 13-15, UTC-midnight Oct 13-15, owner trade window Oct 6-16 NY, and the NQ1 reference window. Reviewed the report and counts JSON; ran py_compile, handoff validation and git diff --check.",
+      "result": "pass",
+      "checked": "Accepted as a negative, confounded comparison. Counts were 0 / 0 / 33 trades, but the script cut the input bars to each window so the port had no warm-up (EMA200, 54m Heikin Ashi, ADX, VWAP cold); 'forming' gave 0 trades everywhere. Safety counters zero/false: no broker calls, orders, sealed holdout read, lake writes, production writes, tuning. The reliability of the counts is limited; T-168 reruns with full warm-up. Original Codex check: Acceptance met as a negative comparison. Both two-day windows yielded zero NSXUSD trades; the owner/NQ1 window yielded 33 closed trades (14 SL, 7 TP3, 12 BE, 21.21% win rate excluding BE, +21R), materially below the 53-trade CFD and 115-trade NQ1 references. No count or outcome-mix equivalence is claimed and the historical Tai rerun remains gated. Safety counters are zero/false: no broker calls, orders, sealed holdout read, lake writes, production writes, tuning or strategy search.",
+      "evidence": [
+        "docs/evidence/t167_report.md",
+        "docs/evidence/t167_counts.json",
+        "scripts/lab_t167_counts.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T00:50:00Z",
+      "reverify_if": "The owner supplies matching NSXUSD/Pine dashboard rows, changes the port contract, or requests a rerun."
     }
   ],
   "blockers": [
@@ -24723,7 +24778,41 @@
         "tests/unit/test_t166_conformance.py"
       ],
       "summary": "Reviewed T-166: pass (V-425). Merged PR 297 first, rebuilt Codex's T-166 on main, fixed import order and one long line, and corrected three of Codex's new tests that failed in CI (helper put 0.0 in the close field; 54-minute test bars were not epoch-aligned). No port code changed. Recorded D-050 and queued T-167, a count-and-mix comparison of the port against the owner's two dashboards, which needs no bar alignment. Historical Tai rerun stays blocked until T-167. Turn to codex (D-045)."
+    },
+    {
+      "revision": 455,
+      "ts": "2026-10-19T03:05:00+03:00",
+      "agent": "codex",
+      "action": "complete_t167_dashboard_count_check",
+      "task_ids": [
+        "T-167"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t167_report.md",
+        "docs/evidence/t167_counts.json",
+        "scripts/lab_t167_counts.py"
+      ],
+      "summary": "Started T-167 from the accepted T-166 lineage. Will run the unchanged Pine port once per the three specified windows plus the NQ1 reference window as far as NSXUSD data allows, then compare count/outcome mix only. No broker, orders, holdout, lake writes, production changes, tuning or strategy search. Completed T-167 using the unchanged Pine port in the owner Pod. The NSXUSD port yielded zero trades in both Oct 13-15 windows and 33 closed trades in the Oct 6-16 owner window (14 SL, 7 TP3, 12 BE, 21.21% win rate excluding BE, +21R), materially below the owner dashboard references of 53 CFD trades and 115 NQ1 trades. Historical Tai rerun remains gated. Pod exit 0; no broker, orders, holdout, lake, production, tuning or strategy-search activity. Turn to Claude for review."
+    },
+    {
+      "revision": 456,
+      "ts": "2026-10-19T03:50:00+03:00",
+      "agent": "claude",
+      "action": "accept_t167_queue_t168",
+      "task_ids": [
+        "T-167",
+        "T-168"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t167_report.md",
+        "docs/evidence/t167_counts.json",
+        "scripts/lab_t167_counts.py",
+        "docs/specs/t168_warmup_count_rerun.md"
+      ],
+      "summary": "Reviewed T-167: accepted as a negative but confounded result (V-426). The count script cut the port's input to each window, so no warm-up: 0 trades in both two-day windows, 33 in 6-16 Oct, 0 in forming mode. My T-167 spec did not require warm-up. Rebuilt on main (kept main's fixed T-166 tests), recorded D-051 and queued T-168 (full warm-up rerun and forming-mode blocker diagnosis). Historical Tai rerun stays blocked. Turn to codex (D-045)."
     }
   ],
-  "project_summary": "T-166 accepted: the Pine port matches the source on 12 of 15 audited rules and the owner's inputs equal the defaults. Entry-by-entry reproduction is impossible on our data (D-049), so T-167 compares the port's trade counts and outcome mix with the owner's dashboards (D-050). Historical Tai rerun waits for T-167."
+  "project_summary": "T-167 accepted as a confounded negative: the count script cut the port's warm-up, so 0/33 trades are not reliable (D-051). T-168 reruns the dashboard count with full warm-up and shows what blocks forming mode. Historical Tai rerun waits for T-168."
 }
