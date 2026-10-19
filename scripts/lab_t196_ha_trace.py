@@ -59,7 +59,7 @@ DISPLAY_FIELDS = (
 def _same(left: object, right: object) -> bool:
     if left is None or right is None:
         return left is right
-    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+    if isinstance(left, int | float) and isinstance(right, int | float):
         return abs(float(left) - float(right)) <= 1e-9
     return left == right
 
@@ -68,7 +68,7 @@ def _display(value: object) -> str:
     """Use the same bounded representation that is transferred from the Pod."""
     if value is None:
         return "-"
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return f"{value:.10g}"
     return str(value)
 
