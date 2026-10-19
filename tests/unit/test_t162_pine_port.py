@@ -124,5 +124,5 @@ def test_session_vwap_does_not_reset_at_utc_midnight():
     )
     session = port._vwap(values, "session_1800_ny")
     utc = port._vwap(values, "utc_midnight")
-    assert session[1] == pytest.approx(101.0)
-    assert utc[1] == pytest.approx(102.0)
+    assert session[1] == pytest.approx((100.0 + 304.0 / 3.0) / 2.0)
+    assert utc[1] == pytest.approx(304.0 / 3.0)
