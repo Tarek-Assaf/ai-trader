@@ -8,7 +8,9 @@ from collections import Counter
 from datetime import UTC, datetime, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
+import sys
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from scripts import lab_t162_pine_port as port
 
 NY = ZoneInfo("America/New_York")
