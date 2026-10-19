@@ -7,6 +7,7 @@ def row(kind, number, stamp, signal, price, qty=1):
     return {
         "Type": kind,
         "Trade number": str(number),
+        "Date and time": stamp,
         "dt": datetime.fromisoformat(stamp).replace(tzinfo=UTC),
         "Signal": signal,
         "price": price,
