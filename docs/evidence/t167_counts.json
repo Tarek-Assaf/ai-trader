@@ -1,0 +1,14 @@
+{
+  "task": "T-167",
+  "reference": {
+    "cf": {"trades": 53, "sl": 12, "tp1": 15, "tp2": 9, "tp3": 17},
+    "nq1": {"trades": 115, "sl": 38, "tp2": 12, "tp3": 32}
+  },
+  "windows": {
+    "ny_midnight_13_15": {"start": "2026-10-13T04:00:00+00:00", "end": "2026-10-15T04:00:00+00:00", "modes": {"closed": {"trades": 0, "completed": 0, "open_at_end": 0, "sl": 0, "tp1": 0, "tp2": 0, "tp3": 0, "be": 0, "win_rate_completed_excluding_be": 0.0, "total_r": 0, "mix_denominator": 0}, "forming": {"trades": 0, "completed": 0, "open_at_end": 0, "sl": 0, "tp1": 0, "tp2": 0, "tp3": 0, "be": 0, "win_rate_completed_excluding_be": 0.0, "total_r": 0, "mix_denominator": 0}}},
+    "utc_midnight_13_15": {"start": "2026-10-13T00:00:00+00:00", "end": "2026-10-15T00:00:00+00:00", "modes": {"closed": {"trades": 0, "completed": 0, "open_at_end": 0, "sl": 0, "tp1": 0, "tp2": 0, "tp3": 0, "be": 0, "win_rate_completed_excluding_be": 0.0, "total_r": 0, "mix_denominator": 0}, "forming": {"trades": 0, "completed": 0, "open_at_end": 0, "sl": 0, "tp1": 0, "tp2": 0, "tp3": 0, "be": 0, "win_rate_completed_excluding_be": 0.0, "total_r": 0, "mix_denominator": 0}}},
+    "owner_trade_window": {"start": "2026-10-06T04:00:00+00:00", "end": "2026-10-17T04:00:00+00:00", "modes": {"closed": {"trades": 33, "completed": 33, "open_at_end": 0, "sl": 14, "tp1": 0, "tp2": 0, "tp3": 7, "be": 12, "win_rate_completed_excluding_be": 0.21212121212121213, "total_r": 21.0, "mix_denominator": 33}, "forming": {"trades": 0, "completed": 0, "open_at_end": 0, "sl": 0, "tp1": 0, "tp2": 0, "tp3": 0, "be": 0, "win_rate_completed_excluding_be": 0.0, "total_r": 0, "mix_denominator": 0}}},
+    "nq1_reference_window": {"start": "2026-10-06T04:00:00+00:00", "end": "2026-10-17T04:00:00+00:00", "modes": {"closed": {"trades": 33, "completed": 33, "open_at_end": 0, "sl": 14, "tp1": 0, "tp2": 0, "tp3": 7, "be": 12, "win_rate_completed_excluding_be": 0.21212121212121213, "total_r": 21.0, "mix_denominator": 33}, "forming": {"trades": 0, "completed": 0, "open_at_end": 0, "sl": 0, "tp1": 0, "tp2": 0, "tp3": 0, "be": 0, "win_rate_completed_excluding_be": 0.0, "total_r": 0, "mix_denominator": 0}}}
+  },
+  "safety": {"broker_calls": 0, "orders": 0, "sealed_holdout_read": false, "lake_writes": 0, "production_state_writes": 0, "tuning": false}
+}
