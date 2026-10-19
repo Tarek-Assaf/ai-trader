@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 492,
+  "turn": "codex",
+  "revision": 493,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -157,7 +157,8 @@
         "T-181",
         "T-182",
         "T-184",
-        "T-185"
+        "T-185",
+        "T-186"
       ]
     },
     {
@@ -6111,6 +6112,29 @@
       ],
       "deliverables": [
         "docs/specs/t185_tai_demo_paper.md"
+      ]
+    },
+    {
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "requirements": [
+        "R-03"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "",
+      "id": "T-186",
+      "title": "Connect the Tai demo runner to the live 3m feed, signal and Capital.com instrument rules (dry-run first)",
+      "status": "todo",
+      "depends_on": [
+        "T-185"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t186_tai_demo_wiring.md exactly. Build and mock tests only; no redeploy, no broker call in tests, no risk or gate edits. Dry-run flag TAI_DEMO_DRY_RUN defaults to true."
+      ],
+      "deliverables": [
+        "docs/specs/t186_tai_demo_wiring.md"
       ]
     }
   ],
@@ -16573,14 +16597,14 @@
       "id": "Q-072",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "The Tai demo runner is built and reviewed but NOT yet connected to the live feed and the Capital.com instrument rules (minimum size, size step, minimum stop distance), so it cannot place a demo trade today. Do you want a wiring task (T-186) next that connects it, with the start balance set to your demo balance, and then a planned redeploy at a time you choose?",
       "options": [
         "A: Yes, queue T-186 now (recommended)",
         "B: Not now, hold the paper run"
       ],
       "recommendation": "A: wiring and instrument-rule reads can be built and tested with mock data first, then the owner redeploys once at a time of his choosing.",
-      "answer": ""
+      "answer": "Owner 2026-10-19 12:49 Riyadh asked 'how to fix it?' about the runner not being connected to the feed and broker rules; the fix is the wiring task, so option A (queue T-186) was carried out. The owner can still hold the redeploy."
     }
   ],
   "log": [
@@ -26560,6 +26584,20 @@
         "tests/unit/test_tai_demo.py"
       ],
       "summary": "Accepted the T-185 runner build (V-455) after fixing the sizing to the owner's rule (first trade 0.1 on the start balance, lot grows with gains; TAI_DEMO_START_BALANCE required), lint and typing, and adding sizing tests. Merged Codex's two consecutive entries. The runner is not yet wired to the live feed and broker instrument rules, so no demo trade is possible yet; asked the owner (Q-072) whether to queue the wiring task. Turn to human."
+    },
+    {
+      "revision": 493,
+      "ts": "2026-10-19T12:55:00+03:00",
+      "agent": "claude",
+      "action": "queue_t186_demo_wiring",
+      "task_ids": [
+        "T-186"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t186_tai_demo_wiring.md"
+      ],
+      "summary": "Queued T-186 (wire the Tai demo runner to the live 3m bar feed, the port signal, Capital.com instrument rules and balance, with a dry-run flag that defaults to true) after the owner asked how to fix the missing connections. Q-072 answered. Build and mock tests only; no redeploy. Turn to codex."
     }
   ],
   "project_summary": "T-185 is in progress: building the owner-directed Tai demo paper runner behind the disabled-by-default TAI_DEMO_EXPERIMENT flag. The runner is mock-broker tested, routes entries through OrderManager and the normal Guardian path, journals decisions and alerts, and refuses unsafe environment combinations. No demo run or redeploy has been performed; owner must redeploy and explicitly enable the flag before any first run."
