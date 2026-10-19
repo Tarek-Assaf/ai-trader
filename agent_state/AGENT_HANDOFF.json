@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 483,
+  "turn": "codex",
+  "revision": 484,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-181 complete and ready for Claude review: historical Tai harness now reports owner-window only counts and zero-trade reasons without changing the T-162 port; dry check passed 8/8 cells with zero safety side effects. Longer history remains gated until Q-071 and 25/31 or an owner decision.",
+    "summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). T-182 queued for Codex: session-anchored 54m Heikin Ashi groups diagnostic.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -154,7 +154,8 @@
         "T-178",
         "T-179",
         "T-180",
-        "T-181"
+        "T-181",
+        "T-182"
       ]
     },
     {
@@ -5994,7 +5995,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6019,6 +6020,34 @@
         "tests/unit/test_t180_hist_tai.py"
       ],
       "completion_note": "Window-only harness fix complete. Pod exit 0: 8/8 cells ran with warm-up and window bars reported separately, signals and trades restricted to the owner window, warm-up trades discarded, and zero-trade cells marked not exposed because the unchanged T-162 port has no entry-filter counters. Longer history was not run. Holdout refusal exited 1 before data load. No broker calls, orders, holdout reads, lake writes, production writes, tuning or secrets."
+    },
+    {
+      "id": "T-182",
+      "title": "Session-anchored 54m Heikin Ashi groups in the Tai port (diagnostic, owner window)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-181"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t182_session_anchored_ha.md exactly (anchors epoch/session_1800_ny/rth_0930_ny only, both HA modes, VWAP anchor check, verdict first, 25/31 gate not relaxed).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning or secrets. Lint with ruff check and ruff format (line length 100) without per-line noqa. One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t182_report.md",
+        "docs/evidence/t182_entries.csv",
+        "docs/evidence/t182_port.json",
+        "scripts/lab_t162_pine_port.py",
+        "tests/unit/test_t162_pine_port.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -6516,6 +6545,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T04:40:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-063",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-181 accepted (V-450): window-only counts yes, 8/8 cells, holdout guard held, longer history not run. Port reproduces only 3/31 within 3 bars so the 25/31 gate is not met and the historical rerun stays blocked (safe option; Q-071 stays open). Re-reading the port found a concrete mismatch with TradingView: 54-minute Heikin Ashi groups are built on a UTC epoch grid and incomplete groups are dropped, whereas TradingView anchors them at the session open (18:00 New York for NQ1) and keeps partial bars. Queued T-182 (docs/specs/t182_session_anchored_ha.md) to test exactly three pre-declared anchors. Reason: this is the last untested structural difference in signal timing, and it fits the ~1.8 h gap.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T04:55:00Z",
       "do_not_reopen": false
     }
   ],
@@ -15242,6 +15279,21 @@
       ],
       "validated_by": "codex",
       "date": "2026-10-19T04:40:00Z",
+      "reverify_if": "The T-162 port, T-180 harness or owner-window lake data changes."
+    },
+    {
+      "id": "V-450",
+      "task_id": "T-181",
+      "subject": "Claude review of T-181 window-only harness",
+      "method": "Read the diff, spec and report; ruff check and ruff format --check (line length 100) on the harness and test; confirmed T-162 port file unchanged in the diff; checked safety counters and holdout refusal in the report. pytest not installed locally; CI quality check runs the tests.",
+      "result": "pass",
+      "checked": "Spec items 1-4 met: warm-up/window bars separate, discarded warm-up trades counted, zero-trade reasons 'not exposed' (port has no counters), 8/8 cells, safety counters zero. Note: NSXUSD 3m shows 31 trades from 29 signals because refresh entries need no signal.",
+      "evidence": [
+        "docs/evidence/t181_report.md",
+        "docs/evidence/t181_dry_check.json"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T04:55:00Z",
       "reverify_if": "The T-162 port, T-180 harness or owner-window lake data changes."
     }
   ],
@@ -26185,7 +26237,22 @@
         "tests/unit/test_t180_hist_tai.py"
       ],
       "summary": "Completed T-181 window-only counts and zero-trade reason reporting. Pod exit 0 ran all 8 cells with zero safety counters; holdout refusal exited before data load; longer history not run. Turn to Claude for review."
+    },
+    {
+      "revision": 484,
+      "ts": "2026-10-19T04:55:00Z",
+      "agent": "claude",
+      "action": "accept_t181_queue_t182",
+      "task_ids": [
+        "T-181",
+        "T-182"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t182_session_anchored_ha.md"
+      ],
+      "summary": "Accepted T-181 (V-450, D-063). Gate 25/31 still not met, rerun stays blocked. Found the port groups 54m Heikin Ashi on a UTC grid and drops partial groups, unlike TradingView's session-anchored bars; queued T-182 to test three pre-declared anchors. No broker calls."
     }
   ],
-  "project_summary": "T-181 complete and ready for Claude review: historical Tai harness now reports owner-window-only counts and zero-trade reasons without changing the T-162 port; dry check passed all 8 cells with zero safety side effects. Longer history remains gated until Q-071 and 25/31 or an owner decision."
+  "project_summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). T-182 queued for Codex: session-anchored 54m Heikin Ashi groups diagnostic."
 }
