@@ -223,6 +223,13 @@ def _build_tai_demo_runtime(
     capital_client: Any,
 ) -> Any:
     """Attach the opt-in Tai runner to the shared guarded cycle runtime."""
+    previous_tai_runtime = getattr(app.state, "tai_demo_runtime", None)
+    previous_state = (
+        previous_tai_runtime.snapshot_state()
+        if previous_tai_runtime is not None
+        and callable(getattr(previous_tai_runtime, "snapshot_state", None))
+        else None
+    )
     app.state.tai_feed_tailer = None
     if not bool(getattr(settings, "tai_demo_experiment", False)):
         if not getattr(app.state, "tai_startup_logged", False):
@@ -261,7 +268,28 @@ def _build_tai_demo_runtime(
     )
     workspace = Path(os.getenv("WORKSPACE_DIR", "/workspace"))
     lake_root = Path(os.getenv("DATA_LAKE_DIR", str(workspace / "data" / "lake")))
-    signal = TaiSignalProvider.from_lake(lake_root, epic)
+    previous_signal = (
+        getattr(getattr(previous_tai_runtime, "runner", None), "_signal", None)
+        if previous_tai_runtime is not None
+        else None
+    )
+    signal = (
+        previous_signal
+        if isinstance(previous_signal, TaiSignalProvider)
+        else TaiSignalProvider.from_lake(lake_root, epic)
+    )
+    previous_builder = getattr(previous_tai_runtime, "builder", None)
+    builder = (
+        previous_builder
+        if isinstance(previous_builder, ThreeMinuteBarBuilder)
+        else ThreeMinuteBarBuilder(epic)
+    )
+    pending_bars = (
+        previous_tai_runtime.pending_bars()
+        if previous_tai_runtime is not None
+        and callable(getattr(previous_tai_runtime, "pending_bars", None))
+        else None
+    )
     journal_object = (getattr(app.state, "runtime_services", None) or {}).get("journal")
     append_audit = getattr(journal_object, "append", None)
 
@@ -286,14 +314,17 @@ def _build_tai_demo_runtime(
         position_gateway=cast(Any, components.broker),
         control=app.state.execution_control_source,
         source=cycle_source,
-        builder=ThreeMinuteBarBuilder(epic),
+        builder=builder,
         balance_provider=CapitalBalanceProvider(capital_client),
         rules_provider=CapitalInstrumentRulesProvider(capital_client, epic),
         signal_provider=signal,
+        managed_state=previous_state,
+        pending_bars=pending_bars,
         journal=journal if callable(append_audit) else None,
         alert=alert,
     )
     if runtime_adapter is not None:
+        app.state.tai_demo_runtime = runtime_adapter
         history = getattr(signal, "history", ())
         # Never replay recorded history as live bars: start after the warm-up, or
         # after the last closed minute when there is no warm-up at all.
@@ -580,6 +611,7 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime_feed_adapters = None
     _app.state.tai_feed_tailer = None
     _app.state.tai_feed_task = None
+    _app.state.tai_demo_runtime = None
     _app.state.tai_startup_logged = False
     _app.state.runtime_services = None
     _app.state.runtime_service_overrides = None

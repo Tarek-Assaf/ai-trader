@@ -264,6 +264,7 @@ class TaiDemoRunner:
         dry_run: bool | None = None,
         journal: Journal | None = None,
         alert: Alert | None = None,
+        managed_state: Mapping[str, _ManagedPosition] | None = None,
     ) -> None:
         settings.require_enabled()
         self.settings = settings
@@ -277,7 +278,19 @@ class TaiDemoRunner:
         self._dry_run = settings.dry_run if dry_run is None else dry_run
         self._journal = journal or (lambda _event: None)
         self._alert = alert or (lambda message: LOGGER.info("tai demo: %s", message))
-        self._managed: dict[str, _ManagedPosition] = {}
+        # Runtime composition may be retried after a dependency outage. Keep
+        # Tai position bookkeeping across that retry so an open demo position
+        # remains managed and cannot trigger a duplicate entry.
+        self._managed = {
+            deal_id: replace(state, hit=set(state.hit))
+            for deal_id, state in (managed_state or {}).items()
+        }
+
+    def snapshot_state(self) -> dict[str, _ManagedPosition]:
+        """Return detached state for an in-process runtime composition retry."""
+        return {
+            deal_id: replace(state, hit=set(state.hit)) for deal_id, state in self._managed.items()
+        }
 
     def on_bar(self, bar: ClosedBar) -> DemoOutcome:
         """Process exactly one closed 3m bar; never trade an incomplete bar."""

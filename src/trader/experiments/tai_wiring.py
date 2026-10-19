@@ -35,6 +35,7 @@ from trader.experiments.tai_demo import (
     TaiDemoSettings,
     TaiInstrumentRules,
     TaiSignal,
+    _ManagedPosition,
 )
 
 NY = ZoneInfo("America/New_York")
@@ -599,6 +600,7 @@ class TaiDemoRuntimeAdapter:
         *,
         journal: Journal | None = None,
         alert: Alert | None = None,
+        pending_bars: Mapping[str, ClosedBar] | None = None,
     ) -> None:
         self.runner = runner
         self.source = source
@@ -606,11 +608,19 @@ class TaiDemoRuntimeAdapter:
         self._journal = journal or (lambda _event: None)
         self._alert = alert or (lambda message: LOGGER.info("tai demo: %s", message))
         self._feed_stale = False
-        self._bars: dict[str, ClosedBar] = {}
+        self._bars = dict(pending_bars or {})
 
     @property
     def feed_stale(self) -> bool:
         return self._feed_stale
+
+    def snapshot_state(self) -> dict[str, _ManagedPosition]:
+        """Return runner state for an in-process runtime composition retry."""
+        return self.runner.snapshot_state()
+
+    def pending_bars(self) -> dict[str, ClosedBar]:
+        """Return queued closed bars that have not reached the cycle runtime."""
+        return dict(self._bars)
 
     def mark_feed_stale(self) -> None:
         """Fail closed and emit one bounded stale-feed alert per outage."""
@@ -675,6 +685,8 @@ def build_tai_demo_runtime(
     signal_provider: Callable[[ClosedBar], TaiSignal | None] | None = None,
     journal: Callable[[Mapping[str, object]], None] | None = None,
     alert: Callable[[str], None] | None = None,
+    managed_state: Mapping[str, _ManagedPosition] | None = None,
+    pending_bars: Mapping[str, ClosedBar] | None = None,
 ) -> TaiDemoRuntimeAdapter | None:
     """Compose the guarded T-186 runtime only when the explicit experiment is on."""
     demo_settings = TaiDemoSettings.from_settings(settings)
@@ -703,8 +715,16 @@ def build_tai_demo_runtime(
         dry_run=demo_settings.dry_run,
         journal=journal,
         alert=alert,
+        managed_state=managed_state,
     )
-    return TaiDemoRuntimeAdapter(runner, source, builder, journal=journal, alert=alert)
+    return TaiDemoRuntimeAdapter(
+        runner,
+        source,
+        builder,
+        journal=journal,
+        alert=alert,
+        pending_bars=pending_bars,
+    )
 
 
 __all__ = [
