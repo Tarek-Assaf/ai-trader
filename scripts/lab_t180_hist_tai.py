@@ -20,11 +20,11 @@ from zoneinfo import ZoneInfo
 
 try:
     from scripts import lab_t162_pine_port as port
-    from trader.lab.runner import load_histdata_candles, pessimistic_cost_model
+    from trader.lab.runner import _parquet_files, _path_month, pessimistic_cost_model
 except ModuleNotFoundError:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from scripts import lab_t162_pine_port as port
-    from trader.lab.runner import load_histdata_candles, pessimistic_cost_model
+    from trader.lab.runner import _parquet_files, _path_month, pessimistic_cost_model
 
 
 NY = ZoneInfo("America/New_York")
@@ -71,6 +71,50 @@ def guard_window(start: datetime, end: datetime, holdout_start: datetime) -> Non
         )
 
 
+def _load_window_source(
+    lake: Path, instrument: str, start: datetime, end: datetime
+) -> tuple[Any, ...]:
+    """Read only owner-window month files into the unchanged Candle type."""
+    try:
+        import pyarrow.parquet as pq
+    except ImportError as exc:  # pragma: no cover - project image supplies pyarrow
+        raise RuntimeError("pyarrow is required for Strategy Lab data") from exc
+    rows: dict[datetime, Any] = {}
+    for path in _parquet_files(lake, instrument):
+        month = _path_month(path)
+        if month is not None:
+            month_start = datetime(month[0], month[1], 1, tzinfo=UTC)
+            next_year = month[0] + (1 if month[1] == 12 else 0)
+            next_month = 1 if month[1] == 12 else month[1] + 1
+            month_end = datetime(next_year, next_month, 1, tzinfo=UTC)
+            if month_start >= end or month_end <= start:
+                continue
+        try:
+            available = set(pq.ParquetFile(path).schema.names)
+            required = {"ts_utc", "open", "high", "low", "close"}
+            if not required.issubset(available):
+                continue
+            names = sorted(required | ({"volume"} if "volume" in available else set()))
+            table = pq.read_table(path, columns=names)
+            for row in table.to_pylist():
+                stamp = datetime.fromisoformat(str(row["ts_utc"]).replace("Z", "+00:00"))
+                if stamp.tzinfo is None or stamp.utcoffset() is None:
+                    stamp = stamp.replace(tzinfo=UTC)
+                stamp = stamp.astimezone(UTC)
+                if not start <= stamp < end:
+                    continue
+                values = tuple(
+                    float(row[name] or 0.0) for name in ("open", "high", "low", "close")
+                )
+                volume = float(row.get("volume") or 0.0)
+                rows[stamp] = port.Candle(
+                    stamp, *values, volume, (instrument, "histdata"), True, 1
+                )
+        except (OSError, KeyError, TypeError, ValueError, OverflowError):
+            continue
+    return tuple(rows[key] for key in sorted(rows))
+
+
 def _bars_for_window(
     lake: Path, instrument: str, timeframe: int, start: datetime, end: datetime
 ) -> tuple[Any, ...]:
@@ -78,12 +122,10 @@ def _bars_for_window(
     source_by_instrument = _SOURCE_CACHE.setdefault(lake_key, {})
     source = source_by_instrument.get(instrument)
     if source is None:
-        source = tuple(load_histdata_candles(lake, instrument, 1))
+        source = _load_window_source(lake, instrument, start - WARMUP, end)
         source_by_instrument[instrument] = source
-    warm = start - WARMUP
-    minutes = tuple(item for item in source if warm <= item.ts_utc < end)
-    bars = tuple(item for item in port.resample_ohlc(minutes, timeframe) if item.complete)
-    return tuple(item for item in bars if warm <= item.ts_utc < end)
+    bars = tuple(item for item in port.resample_ohlc(source, timeframe) if item.complete)
+    return tuple(item for item in bars if start - WARMUP <= item.ts_utc < end)
 
 
 def _replay(bars: tuple[Any, ...], timeframe: int) -> tuple[tuple[Any, ...], Any]:
