@@ -1,0 +1,25 @@
+{
+  "task": "T-195",
+  "status": "blocked",
+  "epic": "NSXUSD",
+  "source": "T-187 Pod replay evidence",
+  "port_entries": 25,
+  "bounded_runtime_entries": 2,
+  "comparison": {
+    "matched": 2,
+    "extras": 0,
+    "misses": 23,
+    "missing_runtime_direction": 22,
+    "bar_or_stop_difference": 1
+  },
+  "diagnostic_rows": [],
+  "blocker": "The Pod diagnostic process exhausted roughly 3 GB RSS while materializing the lake through the legacy replay loader and was stopped before producing the required 25-row side-by-side trace.",
+  "safety": {
+    "broker_calls": 0,
+    "order_calls": 0,
+    "network_access": false,
+    "sealed_holdout_read": false,
+    "lake_writes": false,
+    "redeploy": false
+  }
+}
