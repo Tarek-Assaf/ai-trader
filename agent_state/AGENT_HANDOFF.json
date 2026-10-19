@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 482,
+  "revision": 484,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-180 accepted: historical Tai harness is ready (dry check only). T-181 (window-only counts fix) is queued for Codex. Historical rerun still blocked on Q-071 (gate 25/31 not relaxed).",
+    "summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued. Codex: no open task, do not start new work.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5994,7 +5994,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6012,8 +6012,13 @@
         "tests/unit/test_t180_hist_tai.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t181_report.md",
+        "docs/evidence/t181_dry_check.json",
+        "scripts/lab_t180_hist_tai.py",
+        "tests/unit/test_t180_hist_tai.py"
+      ],
+      "completion_note": "Window-only harness fix complete. Pod exit 0: 8/8 cells ran with warm-up and window bars reported separately, signals and trades restricted to the owner window, warm-up trades discarded, and zero-trade cells marked not exposed because the unchanged T-162 port has no entry-filter counters. Longer history was not run. Holdout refusal exited 1 before data load. No broker calls, orders, holdout reads, lake writes, production writes, tuning or secrets."
     }
   ],
   "decisions": [
@@ -6511,6 +6516,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T04:40:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-063",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-181 accepted (V-450): window-only counts yes, 8/8 cells, holdout guard held, longer history not run. Port reproduces only 3/31 within 3 bars, so the 25/31 gate is not met and the historical rerun stays blocked (safe option; Q-071 stays open). I considered queuing a session-anchored 54m Heikin Ashi test but D-054/T-172 already ran it (cme_session, ny_midnight, utc_midnight, partial buckets kept) and it was negative, so it would repeat a done diagnostic; I did not queue it (my miss: I proposed it before reading D-054). Fifteen bar-matching diagnostics (T-162 to T-181 line) are exhausted. What is left needs owner input (Q-071 option C: exact script version/settings, or a TradingView export of the chart with the indicator's Heikin Ashi plots) or NQ1 futures data. No new task queued; turn stays with Claude so Codex does not repeat work.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T04:55:00Z",
       "do_not_reopen": false
     }
   ],
@@ -15223,6 +15236,36 @@
       "validated_by": "claude",
       "date": "2026-10-19T04:40:00Z",
       "reverify_if": "The T-162 port, strategy-lab cost model or lake data changes."
+    },
+    {
+      "id": "V-449",
+      "task_id": "T-181",
+      "subject": "T-181 historical Tai harness window-only dry check",
+      "method": "Updated the T-180 harness without touching the T-162 port: warm-up and owner-window bar counts are separate; signals and trades are filtered to the requested window; warm-up trades are counted as discarded; zero-trade reasons report not exposed when the port does not expose filter counters. Ran the owner-provided Pod dry check for NSXUSD/XAUUSD at 1m/3m/5m/60m over 2026-10-06 through 2026-10-17 end exclusive. Pod exit 0; JSON SHA-256 D0152544BC2BB23D7D4E8C97AC435C66B580C974C17F0DBCA6EC92F292068D59; report SHA-256 C0EC796E5135E7336E323F6019188598AFDFCBACC2B500059719FC004AEBED45. Holdout guard probe with end 2026-10-18 exited 1 before data load. Local py_compile and git diff --check pass; Ruff and pytest unavailable in the desktop/Pod image.",
+      "result": "pass",
+      "checked": "Window-only counts: NSXUSD signals/trades 118/39, 29/31, 18/0, 0/0; XAUUSD 71/0, 6/0, 2/0, 0/0 at 1m/3m/5m/60m. Four zero-trade cells are marked not exposed. Warm-up bars are 963/311/181/9 and 515/157/87/0. Safety counters are all zero; longer history not run.",
+      "evidence": [
+        "docs/evidence/t181_report.md",
+        "docs/evidence/t181_dry_check.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T04:40:00Z",
+      "reverify_if": "The T-162 port, T-180 harness or owner-window lake data changes."
+    },
+    {
+      "id": "V-450",
+      "task_id": "T-181",
+      "subject": "Claude review of T-181 window-only harness",
+      "method": "Read the diff, spec and report; ruff check and ruff format --check (line length 100) on the harness and test; confirmed T-162 port file unchanged in the diff; checked safety counters and holdout refusal in the report. pytest not installed locally; CI quality check runs the tests.",
+      "result": "pass",
+      "checked": "Spec items 1-4 met: warm-up/window bars separate, discarded warm-up trades counted, zero-trade reasons 'not exposed' (port has no counters), 8/8 cells, safety counters zero. Note: NSXUSD 3m shows 31 trades from 29 signals because refresh entries need no signal.",
+      "evidence": [
+        "docs/evidence/t181_report.md",
+        "docs/evidence/t181_dry_check.json"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T04:55:00Z",
+      "reverify_if": "The T-162 port, T-180 harness or owner-window lake data changes."
     }
   ],
   "blockers": [
@@ -26148,7 +26191,37 @@
         "tests/unit/test_t180_hist_tai.py"
       ],
       "summary": "Accepted T-180 (V-448, D-062): harness ready, 8/8 cells, holdout guard tested. Fixes: import order and formatting. Found that counts include warm-up; queued T-181 to report window-only counts and zero-trade reasons. Historical rerun still waits on Q-071. No broker calls."
+    },
+    {
+      "revision": 483,
+      "ts": "2026-10-19T04:40:00Z",
+      "agent": "codex",
+      "action": "complete_t181_window_counts",
+      "task_ids": [
+        "T-181"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t181_report.md",
+        "docs/evidence/t181_dry_check.json",
+        "scripts/lab_t180_hist_tai.py",
+        "tests/unit/test_t180_hist_tai.py"
+      ],
+      "summary": "Completed T-181 window-only counts and zero-trade reason reporting. Pod exit 0 ran all 8 cells with zero safety counters; holdout refusal exited before data load; longer history not run. Turn to Claude for review."
+    },
+    {
+      "revision": 484,
+      "ts": "2026-10-19T04:55:00Z",
+      "agent": "claude",
+      "action": "accept_t181_no_new_task",
+      "task_ids": [
+        "T-181"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-181 (V-450, D-063). Gate 25/31 still not met, rerun stays blocked on Q-071. Did not queue a session-anchored HA test because T-172 already ran it (negative). No new Codex task; no broker calls. Turn is codex only because the protocol requires alternation: Codex has no open task and should not start one."
     }
   ],
-  "project_summary": "T-180 complete and ready for Claude review: bounded historical Tai harness built and owner-window dry check passed all 8 cells with zero safety side effects; longer history remains intentionally unrun. Historical Tai rerun stays gated until 25/31 or an owner decision."
+  "project_summary": "T-181 accepted. Historical rerun blocked (port reproduces 3/31 within 3 bars; gate 25/31). All narrow bar-matching diagnostics exhausted; waiting on owner input via Q-071 (exact script version/settings or TradingView chart export). No Codex task queued. Codex: no open task, do not start new work."
 }
