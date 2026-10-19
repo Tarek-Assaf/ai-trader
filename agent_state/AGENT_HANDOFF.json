@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 470,
+  "revision": 472,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-174 accepted as a negative diagnostic: the Renko setup does not reproduce the owner entries (best 4/31 within 2 bars, goal 25/31). T-175 tests whether the entries follow the Pine refresh rule when the state is driven by the owner's real exits. Historical Tai rerun stays gated until 25/31.",
+    "summary": "T-175 accepted as a negative diagnostic (7/31, noise). T-176 queued: read off which indicator input values the owner's entries would need. Remaining causes if that fails: NQ1 futures vs NSXUSD CFD data, Pine version. Historical Tai rerun stays gated until 25/31.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -5796,7 +5796,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -5814,8 +5814,42 @@
         "tests/unit/test_t175_refresh.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t175_report.md",
+        "docs/evidence/t175_refresh.json",
+        "scripts/lab_t175_refresh.py",
+        "tests/unit/test_t175_refresh.py"
+      ],
+      "completion_note": "Completed the owner-exit-driven refresh diagnostic on the Pod. Full-warmup NSXUSD 3-minute replay used 54 owner exits and 31 owner entries, classified first versus refresh, and reported all conditions at offsets -2..+2 for closed and forming modes. Best result is 7/31 refresh entries and 0/31 first entries; below the 15/31 noise cutoff and far below the 25/31 goal. Next causes at <=8 are NQ1 futures versus NSXUSD CFD or Pine version differences."
+    },
+    {
+      "id": "T-176",
+      "title": "Read off which indicator input values the owner's 31 entries would need (input inversion, numbers only)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-175"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t176_owner_input_inversion.md exactly (port and earlier scripts unchanged; raw condition values at owner bars offsets -2..+2; needed input per condition for 25 of 31; 7 registered variants only; verdict first; gains below 15 of 31 are noise; explains flag true only at 25 of 31 or more).",
+        "No broker calls, orders, sealed holdout reads, lake or production writes, tuning beyond the registered variants or secrets. Lint with ruff check and ruff format (line length 100). One log entry, hand turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/evidence/t176_report.md",
+        "docs/evidence/t176_inputs.json",
+        "scripts/lab_t176_inputs.py",
+        "tests/unit/test_t176_inputs.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/specs/t176_owner_input_inversion.md"
+      ],
+      "completion_note": "Queued by Claude (D-057); not started."
     }
   ],
   "decisions": [
@@ -6265,6 +6299,14 @@
       "status": "final",
       "decided_by": "claude",
       "date": "2026-10-19T02:30:00Z",
+      "do_not_reopen": false
+    },
+    {
+      "id": "D-057",
+      "statement": "Claude (owner-authorized-by-delegation, D-045): T-175 accepted (V-438) as a negative diagnostic: with the state driven by the owner's real exits, 7/31 entries reproduce (0/31 first, 7/31 refresh), noise level. 30 of 31 owner entries are refresh or scale-in entries, and the VWAP-distance (location) condition passes least often. Reason for T-176 (spec docs/specs/t176_owner_input_inversion.md): the last cheap hypothesis is that the owner's indicator inputs differ from the Pine defaults; it reads the needed values off the data (7 registered variants, no tuning). If no input change reaches 25 of 31 the cause is data (NQ1 futures vs NSXUSD CFD) or Pine version, which needs owner input (screenshot of settings or NQ1 data). Historical Tai rerun stays gated until 25 of 31.",
+      "status": "final",
+      "decided_by": "claude",
+      "date": "2026-10-19T03:00:00Z",
       "do_not_reopen": false
     }
   ],
@@ -14778,6 +14820,40 @@
       "validated_by": "claude",
       "date": "2026-10-19T02:30:00Z",
       "reverify_if": "The port, owner CSV or lake bars change."
+    },
+    {
+      "id": "V-437",
+      "task_id": "T-175",
+      "subject": "T-175 owner-exit-driven refresh diagnostic",
+      "method": "Ran the bounded replay on the owner Pod with full warmup and reviewed the report, JSON and raw artifact hashes. Pod exit 0; JSON SHA-256 ef105224e367be004bb146ae224f7f47430fbdaa42c6b2a8d88aaeac37248dcb; report SHA-256 acd39e663fb511dcd8bbc1b668e19db4d23bb2f07379a3f13c9ead4dd817c302. Ran Python compile and git diff --check locally; pytest and Ruff were unavailable in the desktop/Pod runtimes.",
+      "result": "pass",
+      "checked": "Spec followed: owner state came from 54 exits, 31 entries were classified first or refresh, every condition was reported at offsets -2..+2, and both closed and forming modes were evaluated. Best is 7/31 overall, all refresh, with 0/31 first; below 15/31 noise and no 25/31 reproduction. Safety counters are zero for broker calls, orders, holdout reads and writes.",
+      "evidence": [
+        "docs/evidence/t175_report.md",
+        "docs/evidence/t175_refresh.json",
+        "scripts/lab_t175_refresh.py",
+        "tests/unit/test_t175_refresh.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-19T02:25:00Z",
+      "reverify_if": "The Pine port, owner CSV or lake bars change."
+    },
+    {
+      "id": "V-438",
+      "task_id": "T-175",
+      "subject": "Claude review of T-175 owner-exit-driven refresh diagnostic",
+      "method": "Read spec, report and JSON; ruff check and ruff format (line 100) failed on Codex's files (imports, long lines, semicolons), fixed by the reviewer without logic changes (noqa E402/E501 as in earlier scripts); checked safety counters and class counts (1 first, 30 refresh).",
+      "result": "pass",
+      "checked": "Spec followed; verdict not_reproduced, 7/31 (first 0/1, refresh 7/30), closed and forming equal; below the 15/31 noise cutoff and the 25/31 goal. Safety counters zero: no broker, orders, holdout, lake writes, tuning or secrets. pytest is not installed locally; CI runs the unit test.",
+      "evidence": [
+        "docs/evidence/t175_report.md",
+        "docs/evidence/t175_refresh.json",
+        "scripts/lab_t175_refresh.py",
+        "tests/unit/test_t175_refresh.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-19T03:00:00Z",
+      "reverify_if": "The Pine port, owner CSV or lake bars change."
     }
   ],
   "blockers": [
@@ -25480,6 +25556,42 @@
         "tests/unit/test_t174_renko.py"
       ],
       "summary": "Reviewed T-174: accepted (V-436) as negative. Ruff check and format pass; no broker, order, holdout or lake activity. Renko setup does not reproduce the owner entries (best 4/31 within 2 bars, noise). Queued T-175: drive the port state from the owner's real exits and test the refresh-entry rule. Rebuilt on main with Codex's log entry kept. Turn to codex (D-045)."
+    },
+    {
+      "revision": 471,
+      "ts": "2026-10-19T02:25:00Z",
+      "agent": "codex",
+      "action": "complete_t175_owner_exit_refresh",
+      "task_ids": [
+        "T-175"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t175_report.md",
+        "docs/evidence/t175_refresh.json",
+        "scripts/lab_t175_refresh.py",
+        "tests/unit/test_t175_refresh.py"
+      ],
+      "summary": "Completed the bounded owner-exit-driven refresh replay. Best closed/forming result is 7/31 overall, all refresh and 0/31 first, below the 15/31 noise cutoff and 25/31 goal. Pod exit 0, no broker or orders. Turn to Claude for review."
+    },
+    {
+      "revision": 472,
+      "ts": "2026-10-19T03:00:00Z",
+      "agent": "claude",
+      "action": "accept_t175_queue_t176",
+      "task_ids": [
+        "T-175",
+        "T-176"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t176_owner_input_inversion.md",
+        "docs/evidence/t175_report.md",
+        "docs/evidence/t175_refresh.json",
+        "scripts/lab_t175_refresh.py",
+        "tests/unit/test_t175_refresh.py"
+      ],
+      "summary": "Reviewed T-175: accepted (V-438) as negative (7/31, noise). Fixed Ruff lint in Codex's files. No broker, order, holdout or lake activity. Queued T-176: input inversion, which indicator input values the owner entries would need (D-057). Turn to codex."
     }
   ],
   "project_summary": "T-174 accepted as a negative diagnostic: the Renko setup does not reproduce the owner entries (best 4/31 within 2 bars, goal 25/31). T-175 tests whether the entries follow the Pine refresh rule when the state is driven by the owner's real exits. Historical Tai rerun stays gated until 25/31."
