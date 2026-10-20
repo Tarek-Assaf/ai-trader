@@ -17,6 +17,7 @@ from typing import Any
 import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
+from trader.data.market_hours import MarketHours
 from trader.integrations.capital_com.stream import OhlcUpdate
 
 _LOG = logging.getLogger(__name__)
@@ -221,6 +222,7 @@ class CapitalDataRecorder:
         closed_minute_callback: Callable[[str, datetime, float, float, float, float], None]
         | None = None,
         on_alert: Callable[[str], None] | None = None,
+        market_hours_by_epic: dict[str, MarketHours | None] | None = None,
     ) -> None:
         self._store = store
         self._symbols = dict(symbols_by_epic)
@@ -229,6 +231,7 @@ class CapitalDataRecorder:
         self._feed_adapters = feed_adapters
         self._closed_minute_callback = closed_minute_callback
         self._on_alert = on_alert
+        self._market_hours_by_epic = dict(market_hours_by_epic or {})
         self._closed_mid_pending: dict[tuple[str, datetime], dict[str, OhlcUpdate]] = {}
         self._pending: dict[tuple[str, datetime, str], _BufferedUpdate] = {}
         self._last_tick_by_epic: dict[str, datetime] = {}
@@ -315,7 +318,8 @@ class CapitalDataRecorder:
         )
         self._last_closed_bar_at = latest_closed
         self._status["last_closed_bar_at"] = latest_closed.isoformat()
-        if self._feed_stalled:
+        in_maintenance_break = self._suppress_stall_alerts_if_break(self._clock().astimezone(UTC))
+        if self._feed_stalled and not in_maintenance_break:
             self._feed_stalled = False
             self._stall_since = None
             self._last_stall_alert_at = None
@@ -489,6 +493,7 @@ class CapitalDataRecorder:
         expected_open_by_epic: dict[str, bool | None] | None = None,
         market_status_source: str = "broker",
         stale_after_seconds_by_epic: dict[str, float] | None = None,
+        market_hours_by_epic: dict[str, MarketHours | None] | None = None,
     ) -> None:
         """Flag stale prices only for epics currently expected to publish updates."""
         if not market_status or len(market_status) > 40:
@@ -521,6 +526,8 @@ class CapitalDataRecorder:
             self._status["expected_open"] = expected_open
             self._status["stale_epics"] = sorted(stale_epics)
             self._status["last_liveness_at"] = now.isoformat()
+            if market_hours_by_epic is not None:
+                self._market_hours_by_epic = dict(market_hours_by_epic)
             self._update_feed_stall(now, market_status, expected)
             self._status["status"] = (
                 "healthy"
@@ -545,6 +552,8 @@ class CapitalDataRecorder:
         )
         age_seconds = max(0.0, age_seconds)
         self._status["minutes_since_last_bar"] = round(age_seconds / 60.0, 1)
+        if self._suppress_stall_alerts_if_break(now):
+            return
         stalled = feed_expected and age_seconds >= _STALL_AFTER_SECONDS
         was_stalled = self._feed_stalled
         self._feed_stalled = stalled
@@ -569,6 +578,20 @@ class CapitalDataRecorder:
                     f"Capital.com feed stalled since {stall_time} UTC, "
                     f"last bar {last_bar.isoformat() if last_bar else 'never'}"
                 )
+
+    def _suppress_stall_alerts_if_break(self, now: datetime) -> bool:
+        """Treat the scheduled market-hours break as expected feed silence."""
+        schedules = self._market_hours_by_epic
+        in_break = bool(schedules) and all(
+            schedule is not None and schedule.is_break(now) for schedule in schedules.values()
+        )
+        if not in_break:
+            return False
+        self._feed_stalled = False
+        self._stall_since = None
+        self._last_stall_alert_at = None
+        self._status["feed_stalled"] = False
+        return True
 
     def watermarks(self) -> dict[tuple[str, str], datetime]:
         """Return persisted side watermarks for stream reconnect REST backfill."""
