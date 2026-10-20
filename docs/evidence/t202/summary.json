@@ -1,0 +1,615 @@
+{
+  "bounded_runtime_entries": 1,
+  "comparison": {
+    "cause": "runtime_gate_ha_cross was the prior label; all ten inspected entries are refresh entries, not HA crosses",
+    "exact": false,
+    "matched": 1,
+    "port_count": 26,
+    "remaining_misses": 25,
+    "runtime_count": 1
+  },
+  "ema_seed_analysis": {
+    "period": 200,
+    "port": {
+      "algorithm": "SMA of first 200 closes, then alpha=2/(200+1) recursive EMA",
+      "seed_bar": "2026-06-17T09:57:00+00:00",
+      "seed_index": 199,
+      "seed_value": 30125.183525,
+      "series_start": "2026-06-17T00:00:00+00:00"
+    },
+    "recomputed_with_port_seed": {
+      "algorithm": "port EMA state at first runtime bar, then recurse over runtime closes",
+      "result": "all ten inspected deltas are 0.0",
+      "sample_deltas": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "series_start": "2026-06-18T04:00:00+00:00"
+    },
+    "runtime_bounded": {
+      "algorithm": "tai_wiring._features over the bounded deque window",
+      "seed_index": 199,
+      "seed_value": 30087.069945,
+      "series_start": "2026-06-18T04:00:00+00:00"
+    },
+    "runtime_unbounded": {
+      "algorithm": "tai_wiring._features over the selected runtime window",
+      "seed_index": 199,
+      "seed_value": 30087.069945,
+      "series_start": "2026-06-18T04:00:00+00:00"
+    }
+  },
+  "epic": "NSXUSD",
+  "focus_rows": [
+    {
+      "at": "2026-06-19T08:21:00+00:00",
+      "direction": "BUY",
+      "ema200_deltas": {
+        "port_minus_bounded": 0.26217460732732434,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 30200.175,
+        "open": 30171.31907516966,
+        "previous_close": 30200.175,
+        "previous_open": 30171.31907516966,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 30241.5510512159,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 30200.175,
+        "ha_close_previous_54m": 30200.175,
+        "ha_open_54m": 30171.31907516966,
+        "ha_open_previous_54m": 30171.31907516966,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 30241.288876608574,
+        "ha_close_54m": 30200.175,
+        "ha_close_previous_54m": 30200.175,
+        "ha_open_54m": 30171.319075208143,
+        "ha_open_previous_54m": 30171.319075208143,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 30200.175,
+        "open": 30171.319075208143,
+        "previous_close": 30200.175,
+        "previous_open": 30171.319075208143,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 30241.288876608574,
+        "ha_close_54m": 30200.175,
+        "ha_close_previous_54m": 30200.175,
+        "ha_open_54m": 30171.319075208143,
+        "ha_open_previous_54m": 30171.319075208143,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 30241.5510512159
+    },
+    {
+      "at": "2026-06-19T11:57:00+00:00",
+      "direction": "SELL",
+      "ema200_deltas": {
+        "port_minus_bounded": 0.15937127507277182,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 30296.42425,
+        "open": 30300.240692198102,
+        "previous_close": 30296.42425,
+        "previous_open": 30300.240692198102,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 30272.29850231012,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 30296.42425,
+        "ha_close_previous_54m": 30296.42425,
+        "ha_open_54m": 30300.240692198102,
+        "ha_open_previous_54m": 30300.240692198102,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 30272.13913103505,
+        "ha_close_54m": 30296.42425,
+        "ha_close_previous_54m": 30296.42425,
+        "ha_open_54m": 30300.24069219809,
+        "ha_open_previous_54m": 30300.24069219809,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 30296.42425,
+        "open": 30300.24069219809,
+        "previous_close": 30296.42425,
+        "previous_open": 30300.24069219809,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 30272.13913103505,
+        "ha_close_54m": 30296.42425,
+        "ha_close_previous_54m": 30296.42425,
+        "ha_open_54m": 30300.24069219809,
+        "ha_open_previous_54m": 30300.24069219809,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 30272.29850231012
+    },
+    {
+      "at": "2026-06-21T23:30:00+00:00",
+      "direction": "SELL",
+      "ema200_deltas": {
+        "port_minus_bounded": 0.3976940905668016,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 30359.90325,
+        "open": 30365.093968524212,
+        "previous_close": 30359.90325,
+        "previous_open": 30365.093968524212,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 30312.022663035947,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 30359.90325,
+        "ha_close_previous_54m": 30359.90325,
+        "ha_open_54m": 30365.093968524212,
+        "ha_open_previous_54m": 30365.093968524212,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 30311.62496894538,
+        "ha_close_54m": 30359.90325,
+        "ha_close_previous_54m": 30359.90325,
+        "ha_open_54m": 30365.093968530673,
+        "ha_open_previous_54m": 30365.093968530673,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 30359.90325,
+        "open": 30365.093968530673,
+        "previous_close": 30359.90325,
+        "previous_open": 30365.093968530673,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 30311.62496894538,
+        "ha_close_54m": 30359.90325,
+        "ha_close_previous_54m": 30359.90325,
+        "ha_open_54m": 30365.093968530673,
+        "ha_open_previous_54m": 30365.093968530673,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 30312.022663035947
+    },
+    {
+      "at": "2026-06-22T05:30:00+00:00",
+      "direction": "SELL",
+      "ema200_deltas": {
+        "port_minus_bounded": -0.7610692332236795,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 30266.08125,
+        "open": 30277.778290769722,
+        "previous_close": 30266.08125,
+        "previous_open": 30277.778290769722,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 30272.167073908815,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 30266.08125,
+        "ha_close_previous_54m": 30266.08125,
+        "ha_open_54m": 30277.778290769722,
+        "ha_open_previous_54m": 30277.778290769722,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 30272.92814314204,
+        "ha_close_54m": 30266.08125,
+        "ha_close_previous_54m": 30266.08125,
+        "ha_open_54m": 30277.778290770904,
+        "ha_open_previous_54m": 30277.778290770904,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 30266.08125,
+        "open": 30277.778290770904,
+        "previous_close": 30266.08125,
+        "previous_open": 30277.778290770904,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 30272.92814314204,
+        "ha_close_54m": 30266.08125,
+        "ha_close_previous_54m": 30266.08125,
+        "ha_open_54m": 30277.778290770904,
+        "ha_open_previous_54m": 30277.778290770904,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 30272.167073908815
+    },
+    {
+      "at": "2026-06-22T15:57:00+00:00",
+      "direction": "SELL",
+      "ema200_deltas": {
+        "port_minus_bounded": 0.4821964206385019,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 30558.648999999998,
+        "open": 30470.234795185923,
+        "previous_close": 30558.648999999998,
+        "previous_open": 30470.234795185923,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 30428.367246202906,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 30558.648999999998,
+        "ha_close_previous_54m": 30558.648999999998,
+        "ha_open_54m": 30470.234795185923,
+        "ha_open_previous_54m": 30470.234795185923,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 30427.885049782268,
+        "ha_close_54m": 30558.648999999998,
+        "ha_close_previous_54m": 30558.648999999998,
+        "ha_open_54m": 30470.23479517311,
+        "ha_open_previous_54m": 30470.23479517311,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 30558.648999999998,
+        "open": 30470.23479517311,
+        "previous_close": 30558.648999999998,
+        "previous_open": 30470.23479517311,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 30427.885049782268,
+        "ha_close_54m": 30558.648999999998,
+        "ha_close_previous_54m": 30558.648999999998,
+        "ha_open_54m": 30470.23479517311,
+        "ha_open_previous_54m": 30470.23479517311,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 30428.367246202906
+    },
+    {
+      "at": "2026-06-22T23:21:00+00:00",
+      "direction": "BUY",
+      "ema200_deltas": {
+        "port_minus_bounded": -0.41071054319036193,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 30298.04,
+        "open": 30284.37009996239,
+        "previous_close": 30298.04,
+        "previous_open": 30284.37009996239,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 30337.343404807452,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 30298.04,
+        "ha_close_previous_54m": 30298.04,
+        "ha_open_54m": 30284.37009996239,
+        "ha_open_previous_54m": 30284.37009996239,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 30337.754115350643,
+        "ha_close_54m": 30298.04,
+        "ha_close_previous_54m": 30298.04,
+        "ha_open_54m": 30284.37009996183,
+        "ha_open_previous_54m": 30284.37009996183,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 30298.04,
+        "open": 30284.37009996183,
+        "previous_close": 30298.04,
+        "previous_open": 30284.37009996183,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 30337.754115350643,
+        "ha_close_54m": 30298.04,
+        "ha_close_previous_54m": 30298.04,
+        "ha_open_54m": 30284.37009996183,
+        "ha_open_previous_54m": 30284.37009996183,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 30337.343404807452
+    },
+    {
+      "at": "2026-06-23T00:57:00+00:00",
+      "direction": "SELL",
+      "ema200_deltas": {
+        "port_minus_bounded": -0.24096936684509274,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 30261.574,
+        "open": 30303.3323999906,
+        "previous_close": 30261.574,
+        "previous_open": 30303.3323999906,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 30318.047087296283,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 30261.574,
+        "ha_close_previous_54m": 30261.574,
+        "ha_open_54m": 30303.3323999906,
+        "ha_open_previous_54m": 30303.3323999906,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 30318.28805666313,
+        "ha_close_54m": 30261.574,
+        "ha_close_previous_54m": 30261.574,
+        "ha_open_54m": 30303.332399987805,
+        "ha_open_previous_54m": 30303.332399987805,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 30261.574,
+        "open": 30303.332399987805,
+        "previous_close": 30261.574,
+        "previous_open": 30303.332399987805,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 30318.28805666313,
+        "ha_close_54m": 30261.574,
+        "ha_close_previous_54m": 30261.574,
+        "ha_open_54m": 30303.332399987805,
+        "ha_open_previous_54m": 30303.332399987805,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 30318.047087296283
+    },
+    {
+      "at": "2026-06-23T02:15:00+00:00",
+      "direction": "SELL",
+      "ema200_deltas": {
+        "port_minus_bounded": -0.2614480506381369,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 30227.91925,
+        "open": 30282.4531999953,
+        "previous_close": 30227.91925,
+        "previous_open": 30282.4531999953,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 30303.60220296744,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 30227.91925,
+        "ha_close_previous_54m": 30227.91925,
+        "ha_open_54m": 30282.4531999953,
+        "ha_open_previous_54m": 30282.4531999953,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 30303.863651018077,
+        "ha_close_54m": 30227.91925,
+        "ha_close_previous_54m": 30227.91925,
+        "ha_open_54m": 30282.45319999823,
+        "ha_open_previous_54m": 30282.45319999823,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 30227.91925,
+        "open": 30282.45319999823,
+        "previous_close": 30227.91925,
+        "previous_open": 30282.45319999823,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 30303.863651018077,
+        "ha_close_54m": 30227.91925,
+        "ha_close_previous_54m": 30227.91925,
+        "ha_open_54m": 30282.45319999823,
+        "ha_open_previous_54m": 30282.45319999823,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 30303.60220296744
+    },
+    {
+      "at": "2026-06-24T00:15:00+00:00",
+      "direction": "SELL",
+      "ema200_deltas": {
+        "port_minus_bounded": -0.004855883304117015,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 29409.8515,
+        "open": 29412.01233440911,
+        "previous_close": 29409.8515,
+        "previous_open": 29412.01233440911,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 29485.634679449377,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 29409.8515,
+        "ha_close_previous_54m": 29409.8515,
+        "ha_open_54m": 29412.01233440911,
+        "ha_open_previous_54m": 29412.01233440911,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 29485.63953533268,
+        "ha_close_54m": 29409.8515,
+        "ha_close_previous_54m": 29409.8515,
+        "ha_open_54m": 29412.01233442623,
+        "ha_open_previous_54m": 29412.01233442623,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 29409.8515,
+        "open": 29412.01233442623,
+        "previous_close": 29409.8515,
+        "previous_open": 29412.01233442623,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 29485.63953533268,
+        "ha_close_54m": 29409.8515,
+        "ha_close_previous_54m": 29409.8515,
+        "ha_open_54m": 29412.01233442623,
+        "ha_open_previous_54m": 29412.01233442623,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 29485.634679449377
+    },
+    {
+      "at": "2026-06-24T04:51:00+00:00",
+      "direction": "SELL",
+      "ema200_deltas": {
+        "port_minus_bounded": -0.7991112362760759,
+        "port_minus_seed_aligned": 0.0
+      },
+      "entry_trigger": "refresh",
+      "ha": {
+        "buy": false,
+        "close": 29413.57975,
+        "open": 29481.087244825285,
+        "previous_close": 29413.57975,
+        "previous_open": 29481.087244825285,
+        "sell": false
+      },
+      "port": {
+        "buy_flag": false,
+        "ema200": 29468.477243112073,
+        "entry_trigger": "refresh",
+        "ha_close_54m": 29413.57975,
+        "ha_close_previous_54m": 29413.57975,
+        "ha_open_54m": 29481.087244825285,
+        "ha_open_previous_54m": 29481.087244825285,
+        "sell_flag": false
+      },
+      "runtime_bounded": {
+        "buy_flag": false,
+        "ema200": 29469.27635434835,
+        "ha_close_54m": 29413.57975,
+        "ha_close_previous_54m": 29413.57975,
+        "ha_open_54m": 29481.087244832015,
+        "ha_open_previous_54m": 29481.087244832015,
+        "sell_flag": false
+      },
+      "runtime_ha": {
+        "buy": false,
+        "close": 29413.57975,
+        "open": 29481.087244832015,
+        "previous_close": 29413.57975,
+        "previous_open": 29481.087244832015,
+        "sell": false
+      },
+      "runtime_unbounded": {
+        "buy_flag": false,
+        "ema200": 29469.27635434835,
+        "ha_close_54m": 29413.57975,
+        "ha_close_previous_54m": 29413.57975,
+        "ha_open_54m": 29481.087244832015,
+        "ha_open_previous_54m": 29481.087244832015,
+        "sell_flag": false
+      },
+      "seed_aligned_runtime_ema200": 29468.477243112073
+    }
+  ],
+  "holdout_start": "2026-07-01T00:00:00+00:00",
+  "hypothesis_counts": {
+    "matched": 1,
+    "refresh_entry_trigger": 25
+  },
+  "port_entries": 26,
+  "safety": {
+    "broker_calls": 0,
+    "lake_writes": false,
+    "network_access": false,
+    "order_calls": 0,
+    "redeploy": false,
+    "risk_or_gate_edits": false,
+    "sealed_holdout_read": false
+  },
+  "selected_trading_dates": [
+    "2026-06-19",
+    "2026-06-22",
+    "2026-06-23",
+    "2026-06-24",
+    "2026-06-26",
+    "2026-06-28",
+    "2026-06-29",
+    "2026-06-30"
+  ],
+  "source": "Pod https://pbkmi8nx193x3w-19123.proxy.runpod.net/gt00f7em302mcpp6gezy1e5nzxyeph5r/, read-only bounded run; compact artifact mirrors /workspace/t202_run3/summary.json",
+  "status": "ok",
+  "task": "T-202",
+  "unbounded_runtime_entries": 1
+}
