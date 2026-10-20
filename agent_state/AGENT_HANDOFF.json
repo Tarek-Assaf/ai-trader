@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 563,
+  "turn": "codex",
+  "revision": 564,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Tai agent matches the closed port on 25/26 reference entries; audit blockers resolved, so it can be enabled on the Capital.com demo account (owner sets TAI_DEMO_DRY_RUN=false). Costs make every backtest negative (T-201), so the demo run tests the machinery and live behaviour, not a proven edge.",
+    "summary": "Tai agent running with demo orders enabled by the owner (2026-10-20, image bfb1193). T-206 watches the first session and compares entries with the port. Costs make backtests negative (T-201), so results test machinery and live behaviour, not a proven edge.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -179,7 +179,8 @@
         "T-202",
         "T-203",
         "T-204",
-        "T-205"
+        "T-205",
+        "T-206"
       ]
     },
     {
@@ -6754,6 +6755,30 @@
         "docs/evidence/t205/summary.json"
       ],
       "completion_note": "Pod replay names the first differing quantity: callback ordering/state, not stop inputs. The port refresh uses the prior 10:09Z exit; the harness applies the same-bar 14:27Z exit before evaluating, so last_exit_at age is 0 and no refresh signal is emitted. Same-bar ATR/swing stop inputs match. No src change proposed."
+    },
+    {
+      "id": "T-206",
+      "title": "Watch the first Tai demo session and compare entries with the port",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-205"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t206_demo_watch.md exactly. Read-only on the Pod; no config, code, risk/gate edits, redeploy or secrets. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t206_demo_watch.md",
+        "docs/evidence/t206/"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Queued by Claude; not started."
     }
   ],
   "decisions": [
@@ -29215,6 +29240,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner chose to keep Tai and test it on the demo account. Added an addendum to the T-192 audit: all listed blockers are resolved (T-197, T-199..T-205), so the audit now reads ready to enable on demo only, as the owner's decision, by setting TAI_DEMO_DRY_RUN=false and restarting on the same volume. Costs caveat from T-201 recorded. No code, config, broker or secret changes. Turn to human."
+    },
+    {
+      "revision": 564,
+      "ts": "2026-10-20T15:45:00+03:00",
+      "agent": "claude",
+      "action": "demo_enabled_by_owner_queue_t206",
+      "task_ids": [
+        "T-206"
+      ],
+      "files_changed": [
+        "docs/specs/t206_demo_watch.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner reports TAI_DEMO_DRY_RUN=false on the Pod (health: version bfb1193, paper, demo, live_enabled false, feed healthy); the startup line itself is not yet seen. Demo orders are enabled by the owner's decision. Queued T-206: read-only watch of the first session and comparison with the port. Codex: do T-206. No config, code, risk/gate, redeploy or secret changes."
     }
   ],
   "project_summary": "Owner Pod T-204 replay: production provider exit callbacks reproduced 25/26 port entries with no extras; the remaining miss is named in docs/evidence/t204/report.md. Dry-run stays on."
