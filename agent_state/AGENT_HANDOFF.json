@@ -6657,9 +6657,12 @@
         "docs/specs/t203_refresh_trigger_parity.md",
         "src/trader/experiments/tai_wiring.py",
         "src/trader/experiments/tai_demo.py",
-        "tests/unit/test_tai_wiring.py"
+        "scripts/lab_t195_runtime_miss.py",
+        "tests/unit/test_tai_wiring.py",
+        "docs/evidence/t203/report.md",
+        "docs/evidence/t203/summary.json"
       ],
-      "completion_note": "Added REFRESH_BARS post-exit trigger, persisted last_exit_at state, and unit coverage; Pod T-199 replay remains to be run. Awaiting Claude review and CI."
+      "completion_note": "Added REFRESH_BARS post-exit trigger, persisted last_exit_at state, and unit coverage. Pod replay completed 1/26; the next first difference remains the runtime ha_cross gate because the provider-only harness cannot supply exit callbacks. Awaiting Claude review and CI."
     },
     {
       "id": "T-202",
@@ -16722,12 +16725,14 @@
       "id": "V-496",
       "task_id": "T-203",
       "subject": "T-203 refresh trigger implementation",
-      "method": "Ran Python compilation and git diff --check; pytest and make are unavailable in the Windows checkout.",
+      "method": "Ran Pod T-199 replay after the refresh-aware harness update; it completed read-only at 1/26 with the first differing quantity named in docs/evidence/t203/report.md. Also ran Python compilation, git diff --check and handoff validation; pytest and make are unavailable in the Windows checkout.",
       "result": "pass",
       "evidence": [
+        "docs/evidence/t203/report.md",
+        "docs/evidence/t203/summary.json",
         "src/trader/experiments/tai_wiring.py",
         "src/trader/experiments/tai_demo.py",
-        "tests/unit/test_tai_wiring.py"
+        "scripts/lab_t195_runtime_miss.py"
       ],
       "validated_by": "codex",
       "date": "2026-10-20",
