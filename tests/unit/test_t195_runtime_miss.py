@@ -79,7 +79,7 @@ def test_provider_trace_replays_exit_callbacks(monkeypatch) -> None:
         last_exit_at = datetime(2026, 6, 1, 0, 0, tzinfo=UTC)
 
         def __init__(self, **_kwargs: object) -> None:
-            pass
+            self._bars: list[ClosedBar] = []
 
         def note_exit(self, at: datetime) -> None:
             exits.append(at)
