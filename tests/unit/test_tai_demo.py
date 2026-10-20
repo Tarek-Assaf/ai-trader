@@ -135,6 +135,89 @@ def test_three_flag_guard_refuses_every_unsafe_combination():
             )
 
 
+def _spread_rules(*, bid: str | None, ask: str | None, tick: str = "1") -> TaiInstrumentRules:
+    return TaiInstrumentRules(
+        Decimal("0.1"),
+        Decimal("0.1"),
+        Decimal("1"),
+        Decimal(tick),
+        Decimal("1"),
+        Decimal("1"),
+        bid=Decimal(bid) if bid is not None else None,
+        ask=Decimal(ask) if ask is not None else None,
+    )
+
+
+def test_spread_guard_refuses_wide_quote_and_throttles_alert() -> None:
+    gateway = Gateway()
+    journal = []
+    alerts = []
+    tai, manager = runner(
+        gateway,
+        journal=journal.append,
+        alerts=alerts,
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="103"),
+    )
+    first = tai.on_bar(bar())
+    second = tai.on_bar(bar())
+    assert first.action == second.action == "REJECTED"
+    assert first.reason == second.reason == "spread_too_wide"
+    assert manager.submits == []
+    refusal = [event for event in journal if event.get("event") == "order_refused"]
+    assert refusal[0]["spread"] == Decimal("3")
+    assert refusal[0]["spread_limit"] == Decimal("2")
+    assert len(alerts) == 1
+
+
+def test_spread_guard_allows_exact_limit() -> None:
+    gateway = Gateway()
+    tai, manager = runner(
+        gateway,
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="102"),
+    )
+    result = tai.on_bar(bar())
+    assert result.action == "SUBMITTED"
+    assert manager.submits
+
+
+def test_spread_guard_refuses_missing_quote() -> None:
+    gateway = Gateway()
+    journal = []
+    alerts = []
+    tai, manager = runner(
+        gateway,
+        journal=journal.append,
+        alerts=alerts,
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid=None, ask=None),
+    )
+    result = tai.on_bar(bar())
+    assert result.action == "REJECTED"
+    assert result.reason == "spread_quote_unavailable"
+    assert manager.submits == []
+    assert any(event.get("reason") == "spread_quote_unavailable" for event in journal)
+    assert len(alerts) == 1
+
+
+def test_spread_guard_records_dry_run_refusal() -> None:
+    gateway = Gateway()
+    journal = []
+    tai, manager = runner(
+        gateway,
+        journal=journal.append,
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="103"),
+        dry_run=True,
+    )
+    result = tai.on_bar(bar())
+    assert result.action == "REJECTED"
+    assert result.reason == "spread_too_wide"
+    assert manager.submits == []
+    assert any(event.get("event") == "order_refused" for event in journal)
+
+
 def test_entry_routes_through_order_manager_and_enforces_one_position():
     gateway = Gateway()
     runner_instance, manager = runner(gateway)

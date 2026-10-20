@@ -1,0 +1,20 @@
+{
+  "task": "T-200",
+  "status": "implementation_complete",
+  "scope": "Tai spread guard Q-075=A",
+  "formula": "spread > max(0.25 * stop_distance, 2 * tick_size)",
+  "exact_limit_allowed": true,
+  "missing_quote": "spread_quote_unavailable",
+  "alert_throttle": "per epic and refusal reason",
+  "offline_validation": {
+    "ruff_format": "pass",
+    "ruff_check": "pass",
+    "py_compile": "pass",
+    "git_diff_check": "pass",
+    "pytest": "unavailable: No module named pytest"
+  },
+  "broker_calls": 0,
+  "orders": 0,
+  "holdout_reads": 0,
+  "secrets_used": false
+}

@@ -343,7 +343,12 @@ class TaiSignalProvider:
         if minimum_history < EMA_PERIOD:
             raise ValueError("minimum_history must support EMA200 warmup")
         self.minimum_history = minimum_history
-        self._bars: deque[ClosedBar] = deque(history, maxlen=max(minimum_history * 2, 600))
+        # Keep the complete available series.  The closed T-162 port seeds EMA200
+        # from the first 200 bars in its input and then carries that state forward.
+        # Truncating this deque at 600 bars reseeded EMA200 (and the recursive
+        # indicators) whenever a long-running session crossed the cutoff, which
+        # made the runtime disagree with the port at otherwise identical bars.
+        self._bars: deque[ClosedBar] = deque(history)
 
     @classmethod
     def from_lake(
@@ -398,7 +403,10 @@ class TaiSignalProvider:
             )
         builder = ThreeMinuteBarBuilder(epic)
         bars = builder.extend(minutes)
-        return cls(bars[-minimum_history:], minimum_history=minimum_history)
+        # Retain the full lake series so a restart resumes the same EMA/HA/ADX
+        # state as the closed port.  ``minimum_history`` is a readiness gate, not
+        # a truncation boundary; the feed tailer starts after the final bar below.
+        return cls(bars, minimum_history=minimum_history)
 
     @property
     def history(self) -> tuple[ClosedBar, ...]:
@@ -494,6 +502,14 @@ def parse_tai_instrument_rules(payload: Mapping[str, Any]) -> TaiInstrumentRules
     # in the metadata and convert only the known tick/point representation.
     stop_distance = stop * tick if stop_unit in {"POINT", "POINTS"} else stop
     limit_distance = limit * tick if limit_unit in {"POINT", "POINTS"} else limit
+    snapshot = payload.get("snapshot")
+    bid = (
+        _as_decimal(snapshot["bid"], "bid")
+        if isinstance(snapshot, Mapping) and snapshot.get("bid") is not None
+        else None
+    )
+    ask_raw = snapshot.get("offer", snapshot.get("ask")) if isinstance(snapshot, Mapping) else None
+    ask = _as_decimal(ask_raw, "offer") if ask_raw is not None else None
     return TaiInstrumentRules(
         min_size=minimum,
         size_step=step,
@@ -501,6 +517,8 @@ def parse_tai_instrument_rules(payload: Mapping[str, Any]) -> TaiInstrumentRules
         tick_size=tick,
         min_stop_distance=stop_distance,
         min_limit_distance=limit_distance,
+        bid=bid,
+        ask=ask,
     )
 
 
