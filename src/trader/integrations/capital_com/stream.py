@@ -52,6 +52,7 @@ class OhlcUpdate:
 
 ConnectionFactory = Callable[..., ClientConnection]
 UpdateHandler = Callable[[OhlcUpdate], None]
+BatchUpdateHandler = Callable[[Iterable[OhlcUpdate]], None]
 ReconnectHandler = Callable[[int, str], None]
 DataExpected = Callable[[], bool]
 
@@ -65,6 +66,7 @@ class CapitalComStreamClient:
         epics: Iterable[str],
         on_update: UpdateHandler,
         *,
+        on_backfill_batch: BatchUpdateHandler | None = None,
         on_reconnect: ReconnectHandler | None = None,
         connection_factory: ConnectionFactory = connect,
         reconnect_min_seconds: float = 1.0,
@@ -87,6 +89,7 @@ class CapitalComStreamClient:
         self._rest = rest_client
         self._epics = normalized
         self._on_update = on_update
+        self._on_backfill_batch = on_backfill_batch
         self._on_reconnect = on_reconnect
         self._connect = connection_factory
         self._reconnect_min = reconnect_min_seconds
@@ -97,6 +100,7 @@ class CapitalComStreamClient:
         self._clock = clock
         self._sleep = sleep
         self._last_seen: dict[tuple[str, str], datetime] = {}
+        self._watermark_lock = threading.RLock()
         self._correlation = 0
         self._reconnect_count = 0
         self._ping_reply_ok: bool | None = None
@@ -122,7 +126,8 @@ class CapitalComStreamClient:
         for (epic, side), stamp in watermarks.items():
             if epic not in self._epics or side not in {"bid", "ask"} or stamp.tzinfo is None:
                 raise ValueError("invalid persisted OHLC watermark")
-            self._last_seen[(epic, side)] = stamp.astimezone(UTC)
+            with self._watermark_lock:
+                self._last_seen[(epic, side)] = stamp.astimezone(UTC)
 
     def _message(self, destination: str, payload: Mapping[str, Any] | None = None) -> str:
         self._correlation += 1
@@ -335,32 +340,105 @@ class CapitalComStreamClient:
                 _LOG.error("Capital.com stream consumer failed (%s)", type(exc).__name__)
             raise _ConsumerCallbackFailure(exc) from exc
 
+    def _emit_backfill_batch(self, updates: list[OhlcUpdate]) -> None:
+        if not updates:
+            return
+        callback = self._on_backfill_batch
+        if callback is None:
+            for update in updates:
+                self._emit(update)
+            return
+        try:
+            callback(tuple(updates))
+        except Exception as exc:
+            if isinstance(exc, ValueError):
+                _LOG.error(
+                    "Capital.com stream consumer failed (%s): %s",
+                    type(exc).__name__,
+                    str(exc)[:160],
+                )
+            else:
+                _LOG.error("Capital.com stream consumer failed (%s)", type(exc).__name__)
+            raise _ConsumerCallbackFailure(exc) from exc
+
     def _backfill(self) -> int:
-        end = self._clock().astimezone(UTC)
         emitted_count = 0
         for epic in self._epics:
-            seen = {side: stamp for (item, side), stamp in self._last_seen.items() if item == epic}
+            started = time.monotonic()
+            with self._watermark_lock:
+                seen = {
+                    side: stamp for (item, side), stamp in self._last_seen.items() if item == epic
+                }
             if not seen:
+                _LOG.info(
+                    "Capital.com backfill end: epic=%s start=none end=%s candles=0 "
+                    "passes=0 elapsed_seconds=%.3f",
+                    epic,
+                    self._clock().astimezone(UTC).isoformat(),
+                    time.monotonic() - started,
+                )
                 continue
-            start = min(seen.values()).replace(second=0, microsecond=0)
-            if start >= end:
-                continue
-            emitted: dict[str, set[datetime]] = {"bid": set(), "ask": set()}
-            for candle in self._rest.iter_price_history(
-                epic, Resolution.MINUTE, start, end, max_pages=100
-            ):
-                for update in self._parse_rest_candle(epic, candle):
-                    watermark = seen.get(update.price_type)
-                    if watermark is not None and update.timestamp < watermark:
-                        continue
-                    if update.timestamp in emitted[update.price_type]:
-                        continue
-                    self._emit(update)
-                    emitted_count += 1
-                    emitted[update.price_type].add(update.timestamp)
-                    if watermark is None or update.timestamp > watermark:
-                        seen[update.price_type] = update.timestamp
-                        self._last_seen[(epic, update.price_type)] = update.timestamp
+            passes = 0
+            epic_count = 0
+            last_start = min(seen.values()).replace(second=0, microsecond=0)
+            last_end = self._clock().astimezone(UTC)
+            while passes < 2:
+                with self._watermark_lock:
+                    for (item, side), stamp in self._last_seen.items():
+                        if item == epic and (side not in seen or stamp > seen[side]):
+                            seen[side] = stamp
+                end = self._clock().astimezone(UTC)
+                start = min(seen.values()).replace(second=0, microsecond=0)
+                last_start, last_end = start, end
+                _LOG.info(
+                    "Capital.com backfill start: epic=%s start=%s end=%s pass=%s",
+                    epic,
+                    start.isoformat(),
+                    end.isoformat(),
+                    passes + 1,
+                )
+                if start >= end - timedelta(minutes=1):
+                    break
+                emitted: dict[str, set[datetime]] = {"bid": set(), "ask": set()}
+                batch: list[OhlcUpdate] = []
+                before = dict(seen)
+                for candle in self._rest.iter_price_history(
+                    epic, Resolution.MINUTE, start, end, max_pages=100
+                ):
+                    for update in self._parse_rest_candle(epic, candle):
+                        watermark = seen.get(update.price_type)
+                        if watermark is not None and update.timestamp < watermark:
+                            continue
+                        if update.timestamp in emitted[update.price_type]:
+                            continue
+                        batch.append(update)
+                        emitted[update.price_type].add(update.timestamp)
+                        if watermark is None or update.timestamp > watermark:
+                            seen[update.price_type] = update.timestamp
+                            with self._watermark_lock:
+                                key = (epic, update.price_type)
+                                current = self._last_seen.get(key)
+                                if current is None or update.timestamp > current:
+                                    self._last_seen[key] = update.timestamp
+                self._emit_backfill_batch(batch)
+                epic_count += len(batch)
+                emitted_count += len(batch)
+                passes += 1
+                progressed = any(seen.get(side) != before.get(side) for side in seen)
+                if not batch or not progressed or min(seen.values()) >= (
+                    self._clock().astimezone(UTC) - timedelta(minutes=2)
+                ):
+                    break
+            _LOG.info(
+                "Capital.com backfill end: epic=%s start=%s end=%s candles=%s "
+                "passes=%s elapsed_seconds=%.3f",
+                epic,
+                last_start.isoformat(),
+                last_end.isoformat(),
+                epic_count,
+                passes,
+                time.monotonic() - started,
+            )
         return emitted_count
 
     def _renew_session(self) -> bool:
@@ -430,9 +508,10 @@ class CapitalComStreamClient:
         self._emit(update)
         self._last_data_at = self._clock().astimezone(UTC)
         key = (update.epic, update.price_type)
-        previous = self._last_seen.get(key)
-        if previous is None or update.timestamp > previous:
-            self._last_seen[key] = update.timestamp
+        with self._watermark_lock:
+            previous = self._last_seen.get(key)
+            if previous is None or update.timestamp > previous:
+                self._last_seen[key] = update.timestamp
 
     def run_forever(self, stop_event: threading.Event) -> None:
         """Run until stopped; validate replies, reconnect, and REST-backfill gaps."""
@@ -447,6 +526,8 @@ class CapitalComStreamClient:
             backfill_started = False
             backfill_completed = False
             backfill_updates = 0
+            backfill_thread: threading.Thread | None = None
+            backfill_state: dict[str, Any] = {"updates": 0, "error": None}
             attempt_error: BaseException | None = None
             try:
                 self._rest.ping()
@@ -463,14 +544,31 @@ class CapitalComStreamClient:
                     subscribe_ok = True
                     self._ping(socket)
                     ping_ok = True
+
+                    def run_backfill() -> None:
+                        try:
+                            backfill_state["updates"] = self._backfill()
+                            backfill_state["completed"] = True
+                        except BaseException as exc:  # noqa: BLE001 - hand back to stream loop
+                            backfill_state["error"] = exc
+
                     backfill_started = True
-                    backfill_updates = self._backfill()
-                    backfill_completed = True
+                    backfill_thread = threading.Thread(
+                        target=run_backfill,
+                        name="capital-data-backfill",
+                        daemon=True,
+                    )
+                    backfill_thread.start()
                     self._last_data_at = self._clock().astimezone(UTC)
                     backoff = self._reconnect_min
                     last_ping = self._clock()
                     was_expected = self._is_data_expected()
                     while not stop_event.is_set():
+                        backfill_error = backfill_state.get("error")
+                        if backfill_error is not None:
+                            raise backfill_error
+                        backfill_updates = int(backfill_state.get("updates", 0))
+                        backfill_completed = bool(backfill_state.get("completed", False))
                         try:
                             raw = socket.recv(timeout=1)
                         except TimeoutError:
@@ -528,6 +626,10 @@ class CapitalComStreamClient:
                 if self._on_reconnect is not None:
                     self._on_reconnect(self._reconnect_count, type(exc).__name__)
             finally:
+                if backfill_thread is not None:
+                    backfill_thread.join(timeout=2)
+                    backfill_updates = int(backfill_state.get("updates", 0))
+                    backfill_completed = bool(backfill_state.get("completed", False))
                 self._attempt_log(
                     attempt_id=attempt_id,
                     rest_ping_ok=rest_ping_ok,
@@ -552,3 +654,4 @@ class CapitalComStreamClient:
         except Exception as exc:  # pragma: no cover - defensive worker boundary
             _LOG.warning("Capital.com market expectation unavailable (%s)", type(exc).__name__)
             return False
+
