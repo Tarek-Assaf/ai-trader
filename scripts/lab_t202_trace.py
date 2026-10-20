@@ -309,6 +309,84 @@ def _independent_bars(minutes: Sequence[replay.Candle], epic: str) -> tuple[Clos
     )
 
 
+def _seeded_ema_from_port(
+    bars: Sequence[ClosedBar],
+    port_bars: Sequence[ClosedBar],
+    port_ema: Sequence[float | None],
+    period: int = port.EMA_PERIOD,
+) -> tuple[float | None, ...]:
+    """Carry the closed-port EMA state into the runtime bar window.
+
+    The runtime replay starts at the selected diagnostic window while the port
+    is seeded from the complete diagnostic series.  Re-seeding the runtime
+    from the port EMA at its first bar isolates the history-start effect from
+    later indicator or HA differences.
+    """
+    port_index = {bar.at: index for index, bar in enumerate(port_bars)}
+    out: list[float | None] = [None] * len(bars)
+    if not bars:
+        return tuple(out)
+    first = port_index.get(bars[0].at)
+    if first is None or first >= len(port_ema) or port_ema[first] is None:
+        return tuple(out)
+    current = float(port_ema[first])
+    out[0] = current
+    alpha = 2.0 / (period + 1.0)
+    for index in range(1, len(bars)):
+        current += alpha * (float(bars[index].close) - current)
+        out[index] = current
+    return tuple(out)
+
+
+def _ema_seed_metadata(
+    bars: Sequence[ClosedBar],
+    port_bars: Sequence[ClosedBar],
+    port_features: port.Features,
+    bounded_features: Mapping[str, Sequence[object]],
+    unbounded_features: Mapping[str, Sequence[object]],
+) -> dict[str, object]:
+    """Return explicit EMA starts, seeds, and sample deltas for the report."""
+    port_ema = port_features.ema
+    port_seed_index = next((i for i, value in enumerate(port_ema) if value is not None), None)
+    runtime_first = next((i for i, value in enumerate(bounded_features["ema"]) if value is not None), None)
+    runtime_unbounded_first = next(
+        (i for i, value in enumerate(unbounded_features["ema"]) if value is not None), None
+    )
+    return {
+        "period": port.EMA_PERIOD,
+        "port": {
+            "series_start": port_bars[0].at.isoformat() if port_bars else None,
+            "seed_index": port_seed_index,
+            "seed_bar": port_bars[port_seed_index].at.isoformat()
+            if port_seed_index is not None
+            else None,
+            "seed_value": port_ema[port_seed_index] if port_seed_index is not None else None,
+            "algorithm": "SMA of first 200 closes, then alpha=2/(200+1) recursive EMA",
+        },
+        "runtime_bounded": {
+            "series_start": bars[0].at.isoformat() if bars else None,
+            "seed_index": runtime_first,
+            "seed_value": bounded_features["ema"][runtime_first]
+            if runtime_first is not None
+            else None,
+            "algorithm": "tai_wiring._features over the bounded deque window",
+        },
+        "runtime_unbounded": {
+            "series_start": bars[0].at.isoformat() if bars else None,
+            "seed_index": runtime_unbounded_first,
+            "seed_value": unbounded_features["ema"][runtime_unbounded_first]
+            if runtime_unbounded_first is not None
+            else None,
+            "algorithm": "tai_wiring._features over the selected runtime window",
+        },
+        "recomputed_with_port_seed": {
+            "algorithm": "port EMA state at the first runtime bar, then recurse over runtime closes",
+            "series_start": bars[0].at.isoformat() if bars else None,
+            "result": "computed below for every port entry; deltas should be near zero when closes align",
+        },
+    }
+
+
 def _bar_diff(left: Sequence[ClosedBar], right: Sequence[ClosedBar]) -> dict[str, object]:
     if len(left) != len(right):
         return {"same": False, "reason": "count", "left": len(left), "right": len(right)}
@@ -340,6 +418,15 @@ def run(
     target_times = {entry.at for entry in port_entries}
     bounded, bounded_trace, _ = _runtime_trace(bars, selected, target_times, unbounded=False)
     unbounded, unbounded_trace, _ = _runtime_trace(bars, selected, target_times, unbounded=True)
+    # Recompute the runtime EMA from the closed-port state at the first runtime
+    # bar.  This is intentionally diagnostic only; no production wiring is
+    # changed by T-202.
+    bounded_features = tai_wiring._features(tuple(bars[:HISTORY_WINDOW]))
+    unbounded_features = tai_wiring._features(tuple(bars))
+    seeded_ema = _seeded_ema_from_port(bars, comparison_bars, port_features.ema)
+    ema_seed_analysis = _ema_seed_metadata(
+        bars, comparison_bars, port_features, bounded_features, unbounded_features
+    )
     bounded_by_key = _entry_by_key(bounded)
     unbounded_by_key = _entry_by_key(unbounded)
     rows: list[dict[str, object]] = []
@@ -381,6 +468,16 @@ def run(
             "plus_di14": _value(port_features.plus_di[port_index]) if port_index >= 0 else None,
             "minus_di14": _value(port_features.minus_di[port_index]) if port_index >= 0 else None,
             "vwap": _value(port_features.vwap[port_index]) if port_index >= 0 else None,
+            "entry_trigger": (
+                "cross"
+                if port_index >= 0
+                and bool(
+                    port_features.buy_cross[port_index]
+                    if expected.direction == "BUY"
+                    else port_features.sell_cross[port_index]
+                )
+                else "refresh"
+            ),
             "session_anchor": "session_1800_ny",
             "gates": {
                 "ha_cross": bool(
@@ -393,6 +490,10 @@ def run(
             else {},
         }
         runtime_row = trace if isinstance(trace, Mapping) else {}
+        runtime_index = next((i for i, bar in enumerate(bars) if bar.at == expected.at), -1)
+        port_ema = _value(port_features.ema[port_index]) if port_index >= 0 else None
+        original_ema = _value(runtime_row.get("ema200"))
+        aligned_ema = seeded_ema[runtime_index] if runtime_index >= 0 else None
         rows.append(
             {
                 "at": expected.at.isoformat(),
@@ -404,6 +505,15 @@ def run(
                 "port": port_row,
                 "runtime_bounded": runtime_row,
                 "runtime_unbounded": unbounded_trace.get(expected.at.isoformat(), {}),
+                "ema200_deltas": {
+                    "port_minus_bounded": port_ema - original_ema
+                    if port_ema is not None and original_ema is not None
+                    else None,
+                    "port_minus_seed_aligned": port_ema - aligned_ema
+                    if port_ema is not None and aligned_ema is not None
+                    else None,
+                },
+                "seed_aligned_runtime_ema200": aligned_ema,
                 "cause": cause,
                 "runtime_entry": replay._entry_payload(runtime) if runtime else None,
                 "unbounded_entry": replay._entry_payload(unbounded_match)
@@ -433,12 +543,7 @@ def run(
         },
         "rows": rows,
         "focus_rows": [row for row in rows if row["cause"] != "matched"][:10],
-        "ema_seed_analysis": {
-            "port": "Closed 3m comparison bars; full-series EMA200 from the first available port bar using the port indicator helper.",
-            "runtime_bounded": "Runtime Tai wiring features over the bounded deque history (max 600 bars), recomputed at each target entry.",
-            "runtime_unbounded": "Runtime Tai wiring features over the full diagnostic history, recomputed at each target entry.",
-            "recomputed_with_port_seed": "not yet applied; this trace identifies the first differing quantity before any fix",
-        },
+        "ema_seed_analysis": ema_seed_analysis,
         "safety": {
             "broker_calls": 0,
             "order_calls": 0,
@@ -476,6 +581,30 @@ def _write_outputs(payload: Mapping[str, object], output_dir: Path) -> None:
             "The JSON records the port and nearest runtime entry values and indicator rows."
         ),
         "",
+        "## EMA200 seed and recomputation",
+        "",
+        f"- Port seed: {payload['ema_seed_analysis']['port']}",
+        f"- Bounded runtime seed: {payload['ema_seed_analysis']['runtime_bounded']}",
+        f"- Unbounded runtime seed: {payload['ema_seed_analysis']['runtime_unbounded']}",
+        f"- Port-seeded recomputation: {payload['ema_seed_analysis']['recomputed_with_port_seed']}",
+        "",
+        "The per-entry JSON records `port_minus_bounded` and `port_minus_seed_aligned`; the latter is the controlled recomputation.",
+        "",
+        "## First differing quantity",
+        "",
+        (
+            "The ten displayed port entries have a false raw HA cross on both sides. "
+            "They are refresh entries: the closed port appends a direction when "
+            "`last_exit is not None and i - last_exit >= REFRESH_BARS` and `_smart_ok` "
+            "passes (`scripts/lab_t162_pine_port.py:446-451`). The runtime provider "
+            "only assigns a direction from `features[buy/sell][index]` "
+            "(`src/trader/experiments/tai_wiring.py:439-453`). Therefore the first "
+            "differing quantity is the entry trigger/refresh state, before any HA "
+            "open or close quantity differs; the side-by-side HA values are retained "
+            "to make that conclusion auditable."
+        ),
+        "",
+        "",
         (
             "Position lock does not apply because this diagnostic traces the pure signal "
             "provider directly. Bar construction compares the runtime builder with an "
@@ -509,9 +638,10 @@ def _write_outputs(payload: Mapping[str, object], output_dir: Path) -> None:
         [
             "",
             (
-                "No proposed code fix is applied by T-202; the narrowest candidate is to "
-                "align runtime history/indicator seeding with the full-series port after "
-                "review."
+            "Minimal fix: make the runtime signal path carry the closed-port EMA state "
+                "and implement the same post-exit refresh trigger (with an explicit "
+                "position/last-exit state) before asking T-199 to re-run. T-202 does not "
+                "edit production `tai_wiring.py`."
             ),
         ]
     )
