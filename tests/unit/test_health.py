@@ -77,6 +77,35 @@ def test_health_exposes_runtime_unavailable_reason(monkeypatch) -> None:
     health.set_runtime_health(None)
 
 
+def test_health_exposes_tai_demo_outcome_counters(monkeypatch) -> None:
+    """Tai outcome telemetry is grouped by epic and contains no price data."""
+    monkeypatch.setattr(health, "_probe_database", lambda _url: True)
+    monkeypatch.setattr(health, "_probe_redis", lambda _url: True)
+    monkeypatch.setenv("ROLE", "worker")
+    health.set_tai_demo_health_provider(
+        lambda: {
+            "NSXUSD": {
+                "evaluated": 3,
+                "no_signal": 2,
+                "market_closed_or_break": 0,
+                "stale_or_incomplete": 1,
+                "refused": {"spread_too_wide": 1},
+                "entry": 0,
+                "exit": 0,
+                "last_no_signal_gate": "adx",
+            }
+        }
+    )
+    try:
+        payload = health.health_payload()
+    finally:
+        health.set_tai_demo_health_provider(None)
+
+    assert payload["tai_demo"]["NSXUSD"]["evaluated"] == 3
+    assert payload["tai_demo"]["NSXUSD"]["last_no_signal_gate"] == "adx"
+    assert "price" not in str(payload["tai_demo"])
+
+
 def test_recorder_health_exposes_reconnect_reason_and_market_liveness(tmp_path: Path) -> None:
     """Health exposes the bounded recorder status allowlist without secrets."""
     status_file = tmp_path / "recorder.json"

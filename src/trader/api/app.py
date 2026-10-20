@@ -19,7 +19,11 @@ from typing import Any, cast
 from fastapi import FastAPI
 
 from trader.api.control import router as control_router
-from trader.api.health import health_payload, set_runtime_health
+from trader.api.health import (
+    health_payload,
+    set_runtime_health,
+    set_tai_demo_health_provider,
+)
 from trader.channels.router import ChatRouter, RoutedIntent
 from trader.channels.telegram import TelegramBotTransport, TelegramChannel
 from trader.core.audit import AuditEvent
@@ -231,6 +235,7 @@ def _build_tai_demo_runtime(
         else None
     )
     app.state.tai_feed_tailer = None
+    set_tai_demo_health_provider(None)
     if not bool(getattr(settings, "tai_demo_experiment", False)):
         if not getattr(app.state, "tai_startup_logged", False):
             _LOG.info(
@@ -326,6 +331,7 @@ def _build_tai_demo_runtime(
     )
     if runtime_adapter is not None:
         app.state.tai_demo_runtime = runtime_adapter
+        set_tai_demo_health_provider(runtime_adapter.health_snapshot)
         history = getattr(signal, "history", ())
         # Never replay recorded history as live bars: start after the warm-up, or
         # after the last closed minute when there is no warm-up at all.
@@ -613,6 +619,7 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.tai_feed_tailer = None
     _app.state.tai_feed_task = None
     _app.state.tai_demo_runtime = None
+    set_tai_demo_health_provider(None)
     _app.state.tai_startup_logged = False
     _app.state.runtime_services = None
     _app.state.runtime_service_overrides = None
@@ -921,6 +928,7 @@ async def lifespan(_app: FastAPI) -> Any:
             shutdown_thread.join(timeout=0.5)
         if capital_client is not None:
             capital_client.close()
+        set_tai_demo_health_provider(None)
 
 
 app = FastAPI(title="AI Trader", version="0.1.0", lifespan=lifespan)

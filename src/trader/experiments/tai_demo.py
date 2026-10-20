@@ -263,6 +263,20 @@ class _ManagedPosition:
     remaining_size: Decimal | None = None
 
 
+@dataclass
+class _EpicOutcomes:
+    """In-memory per-epic outcome counters (reset at restart, never persisted)."""
+
+    evaluated: int = 0
+    no_signal: int = 0
+    market_closed_or_break: int = 0
+    stale_or_incomplete: int = 0
+    refused: dict[str, int] = field(default_factory=dict)
+    entry: int = 0
+    exit: int = 0
+    last_no_signal_gate: str | None = None
+
+
 class TaiDemoRunner:
     """Run Tai signals through OrderManager and manage mockable exits.
 
@@ -307,6 +321,9 @@ class TaiDemoRunner:
         self._spread_alerted: set[tuple[str, str]] = set()
         self._startup_blocked = False
         self._state_corrupt = False
+        self._last_epic: str | None = epic
+        self._last_summary_hour: datetime | None = None
+        self._outcomes: dict[str, _EpicOutcomes] = {}
         persisted_state = self._load_state()
         # Runtime composition may be retried after a dependency outage. Keep
         # Tai position bookkeeping across that retry so an open demo position
@@ -465,6 +482,7 @@ class TaiDemoRunner:
     def on_bar(self, bar: ClosedBar) -> DemoOutcome:
         """Process exactly one closed 3m bar; never trade an incomplete bar."""
 
+        self._last_epic = bar.epic
         cycle_id = f"tai-demo-{bar.at.astimezone(UTC).strftime('%Y%m%dT%H%M%S')}-{bar.epic}"
         if not bar.closed:
             return self._outcome(cycle_id, "NO_TRADE", "bar_not_closed")
@@ -619,6 +637,7 @@ class TaiDemoRunner:
             self._journal_event(
                 cycle_id, "reconcile_closed", deal_id=deal_id, reason="broker_closed"
             )
+            self._record_exit(bar.epic)
             self._send_alert(f"flat {bar.epic} broker_closed")
             self._persist_state()
         for position in positions:
@@ -651,6 +670,7 @@ class TaiDemoRunner:
                     self._journal_event(
                         cycle_id, "exit", deal_id=position.deal_id, reason="target_3"
                     )
+                    self._record_exit(bar.epic)
                     self._send_alert(f"exit {bar.epic} target_3")
                     self._persist_state()
                     break
@@ -698,6 +718,7 @@ class TaiDemoRunner:
                     if callable(note_exit):
                         note_exit(bar.at)
                     self._journal_event(cycle_id, "exit", deal_id=deal_id, reason="target_3")
+                    self._record_exit(bar.epic)
                     self._send_alert(f"exit {bar.epic} target_3")
                     self._persist_state()
                     break
@@ -740,6 +761,7 @@ class TaiDemoRunner:
             if callable(note_exit):
                 note_exit(bar.at)
             self._journal_event(cycle_id, "exit", deal_id=deal_id, reason=reason)
+            self._record_exit(bar.epic)
             self._send_alert(f"flat {bar.epic} {reason}")
             self._persist_state()
 
@@ -864,8 +886,64 @@ class TaiDemoRunner:
         )
 
     @staticmethod
-    def _outcome(cycle_id: str, action: str, reason: str) -> DemoOutcome:
+    def _blank_outcomes() -> _EpicOutcomes:
+        return _EpicOutcomes()
+
+    def health_snapshot(self) -> dict[str, dict[str, object]]:
+        """Return secret-free outcome counters grouped by epic."""
+        return {
+            epic: {
+                "evaluated": values.evaluated,
+                "no_signal": values.no_signal,
+                "market_closed_or_break": values.market_closed_or_break,
+                "stale_or_incomplete": values.stale_or_incomplete,
+                "refused": dict(values.refused),
+                "entry": values.entry,
+                "exit": values.exit,
+                "last_no_signal_gate": values.last_no_signal_gate,
+            }
+            for epic, values in self._outcomes.items()
+        }
+
+    def _outcome(self, cycle_id: str, action: str, reason: str) -> DemoOutcome:
+        epic = self._last_epic or self._epic or "unknown"
+        values = self._outcomes.setdefault(epic, self._blank_outcomes())
+        values.evaluated += 1
+        if reason == "no_signal":
+            values.no_signal += 1
+            gate = getattr(self._signal, "last_failure_gate", None)
+            values.last_no_signal_gate = gate if isinstance(gate, str) else None
+        elif reason == "market_closed_or_blackout":
+            values.market_closed_or_break += 1
+        elif reason in {"bar_not_closed", "feed_stale"}:
+            values.stale_or_incomplete += 1
+        elif reason in {"entry_submitted", "order_would_submit"}:
+            values.entry += 1
+        elif action == "REJECTED":
+            values.refused[reason] = values.refused.get(reason, 0) + 1
+        self._log_summary_if_due(epic, values)
         return DemoOutcome(action, reason, cycle_id)
+
+    def _record_exit(self, epic: str) -> None:
+        self._outcomes.setdefault(epic, self._blank_outcomes()).exit += 1
+
+    def _log_summary_if_due(self, epic: str, values: _EpicOutcomes) -> None:
+        hour = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+        if self._last_summary_hour == hour:
+            return
+        self._last_summary_hour = hour
+        LOGGER.info(
+            "tai demo outcome summary epic=%s evaluated=%s no_signal=%s "
+            "market_closed_or_break=%s stale_or_incomplete=%s refused=%s entry=%s exit=%s",
+            epic,
+            values.evaluated,
+            values.no_signal,
+            values.market_closed_or_break,
+            values.stale_or_incomplete,
+            values.refused,
+            values.entry,
+            values.exit,
+        )
 
 
 __all__ = [

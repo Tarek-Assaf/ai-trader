@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -21,6 +22,7 @@ RECORDER_STATUS_PATH = Path(
 )
 _RUNTIME_HEALTH_REASON: str | None = None
 _RUNTIME_HEALTH_DETAIL: str | None = None
+_TAI_DEMO_HEALTH_PROVIDER: Callable[[], Mapping[str, Any]] | None = None
 
 
 def set_runtime_health(reason: str | None, detail: str | None = None) -> None:
@@ -32,6 +34,27 @@ def set_runtime_health(reason: str | None, detail: str | None = None) -> None:
         raise ValueError("runtime health detail must be a short string")
     _RUNTIME_HEALTH_REASON = reason
     _RUNTIME_HEALTH_DETAIL = detail if reason is not None else None
+
+
+def set_tai_demo_health_provider(
+    provider: Callable[[], Mapping[str, Any]] | None,
+) -> None:
+    """Register the in-process Tai telemetry source used by ``/health``."""
+    global _TAI_DEMO_HEALTH_PROVIDER
+    _TAI_DEMO_HEALTH_PROVIDER = provider
+
+
+def _tai_demo_health() -> dict[str, Any] | None:
+    provider = _TAI_DEMO_HEALTH_PROVIDER
+    if provider is None:
+        return None
+    try:
+        value = provider()
+    except Exception:  # noqa: BLE001 - health output must never break the endpoint
+        return None
+    if not isinstance(value, Mapping):
+        return None
+    return dict(value)
 
 
 def _service_urls() -> tuple[str, str]:
@@ -260,6 +283,7 @@ def health_payload() -> dict[str, Any]:
     )
     runtime_reason = _RUNTIME_HEALTH_REASON
     runtime_detail = _RUNTIME_HEALTH_DETAIL
+    tai_demo = _tai_demo_health()
     return {
         "status": (
             "healthy"
@@ -278,5 +302,6 @@ def health_payload() -> dict[str, Any]:
         "db": "reachable" if database_ok else "unreachable",
         "redis": "reachable" if redis_ok else "unreachable",
         "data_recorder": recorder,
+        "tai_demo": tai_demo,
         "time": datetime.now(UTC).isoformat(),
     }
