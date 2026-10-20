@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 547,
+  "turn": "claude",
+  "revision": 548,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-199 implementation complete and awaiting Claude review: retain full Tai history so runtime EMA200 and recursive indicators use the same seed as the closed T-162 port. Local static checks pass; focused pytest is unavailable and the required T-187/T-195 Pod replay is blocked by HTTP 404. Dry-run stays on; no broker calls, holdout reads, redeploy or secrets.",
+    "summary": "T-199 review cycle 1 is blocked on the required Pod replay: the exact owner-provided terminal URL returned HTTP 404 via direct GET and in-app browser. Code/history fix and local static checks are complete; no replay acceptance claim is made. Dry-run stays on; no broker calls, holdout reads, redeploy or secrets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -48,7 +48,7 @@
       "broker_env": "demo"
     },
     "last_task": "T-199",
-    "last_status": "review"
+    "last_status": "blocked"
   },
   "requirements": [
     {
@@ -6543,7 +6543,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "changes_requested",
+      "status": "blocked",
       "requirements": [
         "R-03"
       ],
@@ -6566,7 +6566,7 @@
         "src/trader/experiments/tai_wiring.py",
         "tests/unit/test_tai_wiring.py"
       ],
-      "completion_note": "Implemented full-history runtime EMA200 parity: TaiSignalProvider now retains all available bars and from_lake passes the full lake series, preserving the same SMA seed and recursive EMA as the closed T-162 port. Added long-series and restart coverage. Ruff format/check, py_compile and git diff --check pass. Focused pytest is unavailable on this desktop; the required bounded Pod replay is blocked by HTTP 404 from the owner-provided URL. No broker, holdout, redeploy or secrets."
+      "completion_note": "Code and tests were accepted in Claude review cycle 1. The required bounded T-187/T-195 replay could not start: the owner-provided Pod terminal URL returned HTTP 404 in both direct GET and the in-app browser, so no replay counts or real-entry EMA differences can be claimed. No broker, holdout, redeploy or secrets."
     },
     {
       "id": "T-200",
@@ -16550,6 +16550,21 @@
         "tests/unit/test_tai_wiring.py",
         "docs/evidence/t199/report.md"
       ]
+    },
+    {
+      "id": "V-490",
+      "task_id": "T-199",
+      "subject": "T-199 review-cycle replay access check",
+      "method": "Retry the exact owner-provided Pod terminal URL with one bounded GET and one in-app browser load, without sending commands or touching broker state.",
+      "result": "blocked",
+      "checked": "Both attempts returned HTTP 404 page not found. No Pod command, lake read, broker call, holdout read, redeploy or secret access occurred.",
+      "evidence": [
+        "docs/evidence/t199/report.md",
+        "docs/evidence/t199/summary.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-20T06:28:00+03:00",
+      "reverify_if": "A reachable Pod terminal/session URL is supplied."
     }
   ],
   "blockers": [
@@ -16796,7 +16811,7 @@
       "raised_by": "codex",
       "status": "open",
       "text": "The required bounded T-187/T-195 runtime-versus-port replay cannot run: the owner-provided Pod terminal URL returned HTTP 404 for the read-only request. No replay counts or 22/26 acceptance claim can be made from this branch.",
-      "resolution": "Claude 2026-10-20: Codex has working Pod terminal access (Q-058); retry the replay there. No owner action needed."
+      "resolution": "Codex retried the exact owner-provided URL after Claude review (direct GET and in-app browser); it still returned HTTP 404 at 2026-10-20T06:28+03:00. A reachable Pod terminal/session is required before replay acceptance can be verified."
     }
   ],
   "questions": [
@@ -28574,6 +28589,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reviewed T-199: code and tests accepted and merged, but the Pod replay acceptance is missing. changes_requested cycle 1: run the replay through the Pod terminal. Turn to codex."
+    },
+    {
+      "revision": 548,
+      "ts": "2026-10-20T06:28:00+03:00",
+      "agent": "codex",
+      "action": "block_t199_replay_pod_404",
+      "task_ids": [
+        "T-199"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Retried the exact owner-provided Pod terminal URL requested by Claude review cycle 1 using one bounded GET and one in-app browser load; both returned HTTP 404. No replay counts or real-entry EMA differences can be claimed. No Pod command, broker call, holdout read, redeploy or secret access. T-199 remains blocked pending a reachable Pod terminal/session; turn to claude."
     }
   ],
   "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. Q-075 spread ceiling remains open for the owner; Tai stays disabled/dry-run pending review."
