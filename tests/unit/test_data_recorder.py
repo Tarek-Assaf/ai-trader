@@ -10,6 +10,16 @@ from trader.data.recorder import CapitalDataRecorder, ParquetCandleStore
 from trader.integrations.capital_com.stream import OhlcUpdate
 
 
+class CountingStore:
+    def __init__(self) -> None:
+        self.calls: list[list[tuple[str, OhlcUpdate]]] = []
+
+    def upsert_many(self, items, *, on_reject=None) -> int:
+        batch = list(items)
+        self.calls.append(batch)
+        return len(batch)
+
+
 def _update(
     minute: datetime, side: str, *, source: str = "capital_ws", close: float = 100.0
 ) -> OhlcUpdate:
@@ -46,6 +56,29 @@ def test_partial_minute_waits_for_rollover_and_writes_spread_once_closed(tmp_pat
     assert {row["spread_close"] for row in closed} == {1.5}
     assert {row["lineage_tag"] for row in closed} == {"capital_com_1m_recorder_v1"}
     assert {row["source"] for row in closed} == {"capital_ws"}
+
+
+def test_backfill_batch_commits_once_to_the_store(tmp_path: Path) -> None:
+    current = datetime(2026, 10, 3, 12, 3, tzinfo=UTC)
+    store = CountingStore()
+    recorder = CapitalDataRecorder(
+        store,
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+        clock=lambda: current,
+    )
+
+    recorder.on_backfill_batch(
+        [
+            _update(current - timedelta(minutes=2), "bid", source="capital_rest"),
+            _update(current - timedelta(minutes=2), "ask", source="capital_rest"),
+            _update(current - timedelta(minutes=1), "bid", source="capital_rest"),
+            _update(current - timedelta(minutes=1), "ask", source="capital_rest"),
+        ]
+    )
+
+    assert len(store.calls) == 1
+    assert len(store.calls[0]) == 4
 
 
 def test_upsert_is_idempotent_and_rest_wins_for_same_minute(tmp_path: Path) -> None:
@@ -281,3 +314,4 @@ def test_bad_spread_is_quarantined_without_stopping_recorder(tmp_path: Path) -> 
     status = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
     assert status["rejected_candles"] == 1
     assert status["last_reject_reason"] == "ask_close_below_bid_close"
+
