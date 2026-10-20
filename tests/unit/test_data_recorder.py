@@ -3,9 +3,11 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import pyarrow.parquet as pq
 
+from trader.data.market_hours import MarketHours
 from trader.data.recorder import CapitalDataRecorder, ParquetCandleStore
 from trader.integrations.capital_com.stream import OhlcUpdate
 
@@ -32,6 +34,13 @@ def _update(
         low=close - 1,
         close=close,
         source=source,
+    )
+
+
+def _maintenance_schedule() -> MarketHours:
+    return MarketHours(
+        zone=ZoneInfo("America/New_York"),
+        weekly={weekday: ((0, 17 * 60), (18 * 60, 24 * 60)) for weekday in range(7)},
     )
 
 
@@ -258,6 +267,69 @@ def test_feed_stall_alerts_are_bounded_and_recovery_is_reported(tmp_path: Path) 
     recorder.on_update(_update(bar, "ask", close=101.0))
     recorder.on_update(_update(bar + timedelta(minutes=1), "bid"))
     assert any("feed recovered" in alert for alert in alerts)
+
+
+def test_feed_stall_alert_is_suppressed_during_maintenance_break(tmp_path: Path) -> None:
+    now = [datetime(2026, 10, 5, 21, 0, tzinfo=UTC)]
+    alerts: list[str] = []
+    recorder = CapitalDataRecorder(
+        ParquetCandleStore(tmp_path / "lake"),
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+        clock=lambda: now[0],
+        on_alert=alerts.append,
+    )
+
+    now[0] = datetime(2026, 10, 5, 21, 30, tzinfo=UTC)
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="TRADEABLE",
+        expected_open_by_epic={"US100": True},
+        market_hours_by_epic={"US100": _maintenance_schedule()},
+    )
+
+    value = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert alerts == []
+    assert value["feed_stalled"] is False
+
+    now[0] = datetime(2026, 10, 5, 22, 6, tzinfo=UTC)
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="TRADEABLE",
+        expected_open_by_epic={"US100": True},
+        market_hours_by_epic={"US100": _maintenance_schedule()},
+    )
+    assert len(alerts) == 1
+    assert "feed stalled" in alerts[0]
+
+
+def test_feed_stall_break_suppression_is_dst_aware(tmp_path: Path) -> None:
+    now = [datetime(2026, 11, 1, 22, 30, tzinfo=UTC)]
+    alerts: list[str] = []
+    recorder = CapitalDataRecorder(
+        ParquetCandleStore(tmp_path / "lake"),
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+        clock=lambda: now[0],
+        on_alert=alerts.append,
+    )
+
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="TRADEABLE",
+        expected_open_by_epic={"US100": True},
+        market_hours_by_epic={"US100": _maintenance_schedule()},
+    )
+    assert alerts == []
+
+    now[0] = datetime(2026, 11, 1, 23, 6, tzinfo=UTC)
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="TRADEABLE",
+        expected_open_by_epic={"US100": True},
+        market_hours_by_epic={"US100": _maintenance_schedule()},
+    )
+    assert len(alerts) == 1
 
 
 def test_recorder_health_counts_received_ticks(tmp_path: Path) -> None:

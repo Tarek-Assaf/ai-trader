@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 577,
+  "revision": 579,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-210 read-only Pod inventory complete: ROLE=all has API, recorder, Postgres, Redis and backup loop; no worker/autoscaler/Telegram/report supervisor programs. Health was healthy at the snapshot, Tai dry_run=false in paper/demo with live_enabled=false and flat state; GOLD backfill was observed. T-209 health counters are not on the deployed image. No orders, broker writes, restart, config or secrets.",
+    "summary": "T-212 accepted: no feed-stall alerts during the scheduled 17:00-18:00 NY break. Next for Codex: T-213 Telegram live check, plus a read-only look at the broker's real break hours. Dry-run is off by owner decision; no order, risk/gate or secret changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-210",
+    "last_task": "T-212",
     "last_status": "done"
   },
   "requirements": [
@@ -6954,7 +6954,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-07",
         "R-18"
@@ -6969,8 +6969,10 @@
         "docs/specs/t212_quiet_stall_alert_in_break.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Queued by Claude; not started."
+      "evidence": [
+        "V-511"
+      ],
+      "completion_note": "Accepted by Claude; Codex code rebuilt on main (branch handoff was stacked on an unmerged branch). Import order fixed."
     },
     {
       "id": "T-213",
@@ -17274,6 +17276,21 @@
       ],
       "validated_by": "claude",
       "reverify_if": "false"
+    },
+    {
+      "id": "V-511",
+      "task_id": "T-212",
+      "subject": "Claude review of T-212 quiet stall alert in the maintenance break",
+      "method": "Read recorder.py, workers/recorder.py and new tests against docs/specs/t212_quiet_stall_alert_in_break.md; ruff check/format (line 100); CI quality; handoff validator.",
+      "result": "pass",
+      "checked": "Stall flag, repeat timer and recovery alert are suppressed only while every watched epic's MarketHours.is_break is true (America/New_York, DST aware); outside the break the 5-minute threshold, 30-minute repeat and recovery message are unchanged; tests cover inside break, just after break and DST day. No order, dry-run, risk/gate or Tai stale-guard change. Not verified here: the broker's real break hours; the recorder saw a bar at 21:33Z, so Capital.com may quote inside the repo's 17:00-18:00 NY window and some alerts could remain.",
+      "evidence": [
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "MarketHours break logic or recorder stall rules change"
     }
   ],
   "blockers": [
@@ -29828,7 +29845,39 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-210 (V-510): inventory shows ROLE=all running (supervisord, Postgres, Redis, API, recorder, backup loop); worker pool, autoscaler, live LLM cycle and research feeds not running; Pod is 2 vCPU / 4 GB; Telegram chat and reports live inside the API process but delivery unproven. Queued T-212 (quiet the stall alert during the 17:00-18:00 New York break) and T-213 (prove Telegram commands and scheduled reports, fix minimally). No order, dry-run, risk/gate, redeploy or secret changes. Turn to codex."
+    },
+    {
+      "revision": 578,
+      "ts": "2026-10-20T21:25:00+00:00",
+      "agent": "codex",
+      "action": "complete_t212_quiet_stall_alert",
+      "task_ids": [
+        "T-212"
+      ],
+      "files_changed": [
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py"
+      ],
+      "summary": "Suppressed feed-stall and recovery alerts during the scheduled 17:00-18:00 New York break using MarketHours.is_break; behavior outside the break unchanged; added break, post-break and DST tests. No orders, broker calls, config, dry-run, risk/gate or Tai stale-guard changes."
+    },
+    {
+      "revision": 579,
+      "ts": "2026-10-20T21:50:00+00:00",
+      "agent": "claude",
+      "action": "accept_t212_next_t213",
+      "task_ids": [
+        "T-212",
+        "T-213"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py"
+      ],
+      "summary": "Accepted T-212 (V-511). Owner asked for the merge so the new image can be redeployed. Caveat: a bar arrived at 21:33Z, so the broker's real break may differ from the repo window; Codex to read the real break hours in the recorder log (read-only) as part of T-213 prep. Next for Codex: T-213 (Telegram commands and reports live check). No order, dry-run, risk/gate, redeploy or secret changes. Turn to codex."
     }
   ],
-  "project_summary": "T-209 per-bar outcome telemetry accepted; /health now shows tai_demo counters. Next for Codex: T-210 read-only Pod inventory. No order, dry-run, risk/gate, redeploy or secret changes."
+  "project_summary": "T-212 accepted: no feed-stall alerts during the scheduled 17:00-18:00 NY break. Next for Codex: T-213 Telegram live check, plus a read-only look at the broker's real break hours. Dry-run is off by owner decision; no order, risk/gate or secret changes."
 }
