@@ -1,5 +1,3 @@
-[codex/t211-feed-resilience 98a3db4] T-211: Log empty backfill start
- 1 file changed, 5 insertions(+)
 """Capital.com OHLC market-data WebSocket with reconnect and REST gap fill."""
 
 from __future__ import annotations
