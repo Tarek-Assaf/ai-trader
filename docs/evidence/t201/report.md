@@ -1,40 +1,15 @@
-# T-201 cost per trade in R diagnostic
+# T-201 configured cost per trade in R
 
-Status: **blocked**.
+- Status: **ok**; offline six-cell TRAINING scan completed on the reachable Pod.
+- Holdout was excluded; safety fields are all zero or false.
 
-The authoritative T-201 diagnostic requires a six-year TRAINING mirror-control
-scan for NSXUSD and XAUUSD at 1m, 3m, and 5m. That scan needs the RunPod data
-lake and runtime dependencies. The owner-provided Pod terminal URL returned
-HTTP 404 during the bounded read-only check (`B-033/Q-076`), and this desktop
-checkout has no `/workspace/data/lake` plus no installed `sqlalchemy`/`pytest`
-runtime. No broker, order, holdout, config, redeploy, or secret operation was
-attempted.
+| Instrument | TF | Trades | Median cost/R | P05 | P95 | Cost>0.25R | Cost>1R | Configured net R | Configured R/trade | Zero-cost R/trade |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| NSXUSD | 1m | 10199 | 0.662073 | 0.146334 | 5.504102 | 0.8446 | 0.3420 | -26119.915 | -2.561 | 0.277 |
+| NSXUSD | 3m | 5486 | 0.355149 | 0.086405 | 3.245134 | 0.6343 | 0.1726 | -9295.315 | -1.694 | 0.328 |
+| NSXUSD | 5m | 4001 | 0.260860 | 0.065414 | 2.640298 | 0.5139 | 0.1285 | -3681.880 | -0.920 | 0.287 |
+| XAUUSD | 1m | 10656 | 2.496797 | 0.419026 | 23.659163 | 0.9863 | 0.8193 | -103883.498 | -9.749 | 0.358 |
+| XAUUSD | 3m | 6022 | 1.304952 | 0.232190 | 11.321115 | 0.9432 | 0.6106 | -22101.108 | -3.670 | 0.330 |
+| XAUUSD | 5m | 4331 | 0.978667 | 0.176487 | 8.291938 | 0.9109 | 0.4916 | -14204.943 | -3.280 | 0.315 |
 
-## Observable offline inputs
-
-* `docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv`
-  contains 108 TradingView rows and 54 distinct trade numbers (entry and exit
-  rows). This does not match the specification's description of a 31-trade
-  owner comparison, so no unverified 31-trade result is asserted.
-* `docs/evidence/owner/tai_smart_filter_pine_source.txt` was inspected. The
-  source defines ATR-based risk (`tradeATR = ta.atr(14)`, an ATR stop multiplier,
-  and a maximum-risk-in-ATR filter at lines 498-554), but no explicit minimum
-  stop-point floor or bar-range filter was found in the required risk section.
-* `config/strategy_lab.yaml` supplies configured costs of 4 points for NSXUSD
-  and 1.6 points for XAUUSD. `config/instruments.yaml` leaves tick-size and
-  minimum-stop values null for both instruments, so T-200 and minimum-stop
-  subsets cannot be claimed from local configuration.
-
-## Unavailable outputs
-
-The six percentile cells, >0.25R/>1R shares, net-R all-trade totals, T-200
-spread-guard subset, minimum-stop subset, and any 2700-strategy gap comparison
-were not run. They require the missing training lake and a reachable Pod
-session. This report deliberately records the blocker rather than fabricating
-distribution values.
-
-## Reproduction after the blocker is cleared
-
-Run `python scripts/lab_t201_cost_in_r.py --output-dir docs/evidence/t201`
-inside the project runtime with the training lake mounted. The script is
-read-only and writes only the requested report and summary evidence.
+The configured-cost result is negative in all six cells while zero-cost gross results remain positive. The cost burden is largest for XAUUSD 1m (median 2.4968R; 81.93% above 1R) and smallest for NSXUSD 5m (median 0.2609R). This is evidence only; no config or gate was changed.
