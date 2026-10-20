@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 544,
+  "turn": "codex",
+  "revision": 545,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-198 accepted (V-487): mirror counts match, no tradable edge at configured costs, pre-cost tilt erased by costs. Tai stays dry-run. Waiting on owner for Q-075 (spread limit) before the next build.",
+    "summary": "T-191..T-198 accepted. Findings: runtime EMA200 differs from the port (T-199 queued), configured-cost results are negative in every non-empty cell and the mirror control shows no edge. Spread guard (Q-075=A) queued as T-200. Dry-run stays on; runtime not cleared for demo orders. No broker orders, no holdout reads.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -172,7 +172,9 @@
         "T-195",
         "T-196",
         "T-197",
-        "T-198"
+        "T-198",
+        "T-199",
+        "T-200"
       ]
     },
     {
@@ -6534,6 +6536,56 @@
         "V-487"
       ],
       "completion_note": "Completed the full TRAINING mirror-control replay for NSXUSD and XAUUSD at 1m, 3m and 5m from 2020-10-17 through 2026-10-17. All six cells exited successfully with mirror_trade_count equal to trade_count. Configured-cost original and mirror metrics plus per-year splits are recorded; zero-cost counterfactuals are included. The original does not beat the mirror in every cell, so no directional edge is claimed. Holdout guard passed; safety counters are all zero. Ruff format/check, py_compile and git diff --check passed locally; CI remains required for full pytest/mypy/make check."
+    },
+    {
+      "id": "T-199",
+      "title": "Make the runtime EMA200 and entries match the closed T-162 port (T-196 finding)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-196"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t199_runtime_ema_parity.md exactly. Dry-run stays on; no broker write calls, holdout reads, risk/gate edits, redeploy or secrets. Ruff check and format (line length 100), mypy, CI green. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t199_runtime_ema_parity.md",
+        "src/trader/experiments/tai_wiring.py",
+        "tests/unit/test_tai_wiring.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-200",
+      "title": "Tai spread guard (audit item 6, Q-075 = A)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-197"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t200_tai_spread_guard.md exactly. Dry-run stays on; no broker write calls, holdout reads, risk/gate edits, redeploy or secrets. Ruff check and format (line length 100), mypy, CI green. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t200_tai_spread_guard.md",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -7160,6 +7212,13 @@
     {
       "id": "D-081",
       "statement": "Claude: T-198 accepted (V-487). Tai mirror control shows no tradable directional edge at configured costs; a pre-cost tilt exists but costs exceed it. Tai stays dry-run. Nothing is queued for Codex: the next build step (spread guard) waits for the owner's answer to Q-075.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "claude"
+    },
+    {
+      "id": "D-082",
+      "statement": "Owner-delegated (chat 2026-10-20: go with recommendations while away): Q-075 answered A, spread ceiling max(0.25 x stop distance, 2 ticks). Queue order for Codex: T-199 (runtime EMA200 parity, the T-196 finding) first, then T-200 (spread guard). Findings so far: T-194/T-198 show configured-cost net R is negative in every non-empty cell and the mirror control shows no edge; the runtime is still not cleared for demo orders; dry-run stays on.",
       "status": "final",
       "do_not_reopen": false,
       "decided_by": "claude"
@@ -17623,7 +17682,7 @@
       "id": "Q-075",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "The audit found Tai has no spread guard. Before demo orders are enabled, what is the widest spread (cost of entering) Tai may accept? Codex will build it after your answer; dry-run stays on meanwhile.",
       "options": [
         "A: max(0.25 x stop distance, 2 ticks), the audit's proposal (recommended)",
@@ -17631,7 +17690,7 @@
         "C: no spread guard (not recommended)"
       ],
       "recommendation": "A: it blocks entries when costs eat a quarter of the risk, and it is simple to test.",
-      "answer": null
+      "answer": "A (owner-delegated: owner said in chat 2026-10-20 01:01 Riyadh to go with the recommendation while away; confirmed on return): max(0.25 x stop distance, 2 ticks)."
     }
   ],
   "log": [
@@ -28422,6 +28481,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-198 reviewed and accepted (V-487, D-081) after fixing two unit tests that failed CI. Bundles the pending acceptance chain for T-193 to T-198 onto main. No Codex task queued: the spread guard needs the owner's Q-075 answer. No broker calls, orders, holdout reads, redeploy or secrets. Turn to human."
+    },
+    {
+      "revision": 545,
+      "ts": "2026-10-20T09:30:00+03:00",
+      "agent": "claude",
+      "action": "answer_q075_queue_t199_t200",
+      "task_ids": [
+        "T-199",
+        "T-200"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t199_runtime_ema_parity.md",
+        "docs/specs/t200_tai_spread_guard.md"
+      ],
+      "summary": "The loop had stalled on Q-075 (turn human since rev 544). Answered Q-075 with the recommendation A under the owner's delegation (D-082) and queued T-199 (runtime EMA200 parity, from the T-196 finding: 22 of 23 first differences are ema200) then T-200 (spread guard). Specs written. Codex: do T-199 first, then T-200. Dry-run stays on. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
     }
   ],
   "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. Q-075 spread ceiling remains open for the owner; Tai stays disabled/dry-run pending review."
