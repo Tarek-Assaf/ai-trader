@@ -23,3 +23,21 @@ Method: read-only source and test review. No broker, order, holdout, gate, risk-
 The runtime has strong environment, dry-run, control, Guardian/P&L boundary, sizing, stale-feed, and price-distance protections. It is not ready to enable because the spread guard is absent, the CME break is not wired, refusal outcomes are not uniformly alerted/journaled, and exit API errors/partial fills are not handled with the required fail-safe alert path.
 
 ready to enable: no, blockers: unwired CME 17:00-18:00 New York break, incomplete refusal alert/journal coverage, unhandled Tai exit API errors/partial fills, and T-199 runtime EMA replay blocker.
+
+## Addendum 2026-10-20 (Claude, after T-197, T-199, T-200, T-203, T-204, T-205)
+
+| # | Result now | Resolved by |
+|---|---|---|
+| 6 spread | PASS | T-200: refuses when ask-bid > max(0.25 x stop distance, 2 ticks) |
+| 7 CME break | PASS (per T-197 implementation; CI-tested) | T-197: DST-aware 17:00-18:00 New York break wired into production bars |
+| 8 refusal alerts | PASS (per T-197; CI-tested) | T-197: journaled, throttled refusal alerts |
+| 9 exit errors | PASS (per T-197; CI-tested) | T-197: fail-safe exit error and partial-fill handling with persisted retryable state |
+| EMA replay | PASS | T-199/T-203/T-204/T-205: 25 of 26 reference entries, 0 extras; last miss is a test-tool ordering artifact |
+
+Not verified live: nothing above has run against the real Capital.com demo broker with orders enabled. Costs: T-201 shows every
+configured-cost backtest cell is negative, so enabling demo orders tests the machinery and the indicator's live behaviour, not a
+proven edge.
+
+ready to enable (demo account only, owner decision): yes, blockers: none known in the audit. To enable the owner sets
+TAI_DEMO_DRY_RUN=false (TAI_DEMO_EXPERIMENT=true, BROKER_ENV=demo, TRADING_MODE=paper, LIVE_TRADING_ENABLED=false and a
+non-zero TAI_DEMO_START_BALANCE stay as they are) and restarts the Pod on the same /workspace volume. Kill/pause controls stay available.
