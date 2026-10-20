@@ -23,6 +23,7 @@ def test_mirror_inverts_direction_and_uses_same_risk() -> None:
     original = SimpleNamespace(
         direction="long",
         entry_index=0,
+        exit_index=1,
         entry_time=bars[0].ts_utc,
         entry_price=100.0,
         stop_price=98.0,
@@ -42,6 +43,7 @@ def test_original_long_can_win_two_r_while_mirror_stops() -> None:
     original = SimpleNamespace(
         direction="long",
         entry_index=0,
+        exit_index=1,
         entry_time=bars[0].ts_utc,
         entry_price=100.0,
         stop_price=98.0,
