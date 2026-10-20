@@ -1,9 +1,11 @@
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
+import trader.experiments.tai_wiring as tai_wiring
 from trader.execution.brokers.base import Direction
 from trader.execution.control import ControlMode
 from trader.experiments.tai_demo import (
@@ -15,6 +17,7 @@ from trader.experiments.tai_demo import (
     TaiSignal,
 )
 from trader.experiments.tai_wiring import (
+    REFRESH_BARS,
     TaiMinuteBar,
     TaiOrderFactory,
     TaiSignalProvider,
@@ -316,6 +319,48 @@ def test_signal_provider_keeps_ema_seed_across_long_series_and_restart() -> None
         restarted(bar)
     assert restarted.history == tuple(bars)
     assert _features(restarted.history)["ema"][-1] == pytest.approx(reference)
+
+
+def test_signal_provider_refreshes_only_after_post_exit_delay(monkeypatch: pytest.MonkeyPatch) -> None:
+    start = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    bars = tuple(
+        ClosedBar(
+            start + timedelta(minutes=index * 3),
+            "NSXUSD",
+            Decimal("101"),
+            Decimal("102"),
+            Decimal("100"),
+            Decimal("101"),
+        )
+        for index in range(300)
+    )
+
+    def features(current: tuple[ClosedBar, ...]) -> dict[str, tuple[object, ...]]:
+        size = len(current)
+        return {
+            "ema": (99.0,) * size,
+            "atr": (1.0,) * size,
+            "adx": (30.0,) * size,
+            "plus_di": (30.0,) * size,
+            "minus_di": (10.0,) * size,
+            "vwap": (100.0,) * size,
+            "buy": (False,) * size,
+            "sell": (False,) * size,
+        }
+
+    monkeypatch.setattr(tai_wiring, "_features", features)
+    provider = TaiSignalProvider(bars, minimum_history=300)
+    provider.note_exit(bars[-1].at)
+    for index in range(REFRESH_BARS - 1):
+        next_bar = replace(
+            bars[-1], at=bars[-1].at + timedelta(minutes=3 * (index + 1))
+        )
+        assert provider(next_bar) is None
+    signal = provider(
+        replace(bars[-1], at=bars[-1].at + timedelta(minutes=3 * REFRESH_BARS))
+    )
+    assert signal is not None
+    assert signal.direction is Direction.BUY
 
 
 def test_dry_run_journals_without_submitting() -> None:

@@ -46,6 +46,7 @@ SWING_LOOKBACK = 5
 MAX_RISK_ATR = 2.0
 VWAP_DISTANCE_ATR = 1.5
 GROUP_BARS = 18
+REFRESH_BARS = 12
 EXPERIMENT_LABEL = "Tai port, owner-directed demo experiment, loosely matched to the owner"
 
 
@@ -349,6 +350,20 @@ class TaiSignalProvider:
         # indicators) whenever a long-running session crossed the cutoff, which
         # made the runtime disagree with the port at otherwise identical bars.
         self._bars: deque[ClosedBar] = deque(history)
+        self._last_exit_at: datetime | None = None
+
+    @property
+    def last_exit_at(self) -> datetime | None:
+        """Return the persisted exit anchor used by the refresh trigger."""
+        return self._last_exit_at
+
+    def note_exit(self, at: datetime) -> None:
+        """Anchor the refresh countdown after a position closes."""
+        self._last_exit_at = _minute_stamp(at)
+
+    def restore_exit(self, at: datetime | None) -> None:
+        """Restore the refresh anchor from the T-191 position state."""
+        self._last_exit_at = _minute_stamp(at) if at is not None else None
 
     @classmethod
     def from_lake(
@@ -435,23 +450,36 @@ class TaiSignalProvider:
         vwap = features["vwap"][index]
         if None in (atr, ema, adx, plus, minus, vwap) or atr <= 0:
             return None
+        def smart_ok(candidate: Direction) -> bool:
+            if candidate is Direction.BUY:
+                return (
+                    bar.close > Decimal(str(ema))
+                    and float(adx) >= 20
+                    and float(plus) > float(minus)
+                    and bar.close > Decimal(str(vwap))
+                )
+            return (
+                bar.close < Decimal(str(ema))
+                and float(adx) >= 20
+                and float(minus) > float(plus)
+                and bar.close < Decimal(str(vwap))
+            )
+
         direction: Direction | None = None
-        if (
-            features["buy"][index]
-            and bar.close > Decimal(str(ema))
-            and float(adx) >= 20
-            and float(plus) > float(minus)
-            and bar.close > Decimal(str(vwap))
-        ):
+        if features["buy"][index] and smart_ok(Direction.BUY):
             direction = Direction.BUY
-        elif (
-            features["sell"][index]
-            and bar.close < Decimal(str(ema))
-            and float(adx) >= 20
-            and float(minus) > float(plus)
-            and bar.close < Decimal(str(vwap))
-        ):
+        elif features["sell"][index] and smart_ok(Direction.SELL):
             direction = Direction.SELL
+        if direction is None and self._last_exit_at is not None:
+            exit_index = max(
+                (i for i, item in enumerate(bars) if item.at <= self._last_exit_at),
+                default=-1,
+            )
+            if exit_index >= 0 and index - exit_index >= REFRESH_BARS:
+                for candidate in (Direction.BUY, Direction.SELL):
+                    if smart_ok(candidate):
+                        direction = candidate
+                        break
         if (
             direction is None
             or abs(float(bar.close) - float(vwap)) / float(atr) > VWAP_DISTANCE_ATR
@@ -757,6 +785,7 @@ __all__ = [
     "TaiOrderFactory",
     "TaiSignalProvider",
     "ThreeMinuteBarBuilder",
+    "REFRESH_BARS",
     "minute_bar_from_candle",
     "parse_tai_instrument_rules",
 ]

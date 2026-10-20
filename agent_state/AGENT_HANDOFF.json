@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 554,
+  "turn": "claude",
+  "revision": 559,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-200 spread guard accepted; T-199 EMA parity code landed, its Pod replay remains blocked on B-033/Q-076. T-201 cost-in-R diagnostic is blocked on B-034: Pod terminal returned HTTP 404 and the desktop has no training lake/runtime dependencies. Dry-run stays on; no broker calls, orders, holdout reads, redeploy or secrets. Review of T-201 code done; all remaining work waits on a working Pod terminal (Q-076).",
+    "summary": "T-203 added the post-exit refresh trigger and persistence anchor; replay evidence is pending on the reachable Pod. No broker, holdout, risk, gate, redeploy or secret operations.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,8 +47,8 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-201",
-    "last_status": "blocked"
+    "last_task": "T-203",
+    "last_status": "review"
   },
   "requirements": [
     {
@@ -175,7 +175,9 @@
         "T-198",
         "T-199",
         "T-200",
-        "T-201"
+        "T-201",
+        "T-203",
+        "T-202"
       ]
     },
     {
@@ -6627,6 +6629,65 @@
         "docs/evidence/t201/summary.json"
       ],
       "completion_note": "Blocked before the six-year TRAINING scan: owner-provided Pod terminal returned HTTP 404 (B-033/Q-076), desktop has no /workspace/data/lake and lacks sqlalchemy/pytest. Offline script/tests and evidence record the exact blocker; no distribution values are fabricated."
+    },
+    {
+      "id": "T-203",
+      "title": "Add post-exit refresh trigger to the runtime and re-run the T-199 replay",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-202"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t203_refresh_trigger_parity.md exactly. Dry-run stays on; no broker write calls, holdout reads, risk/gate edits, redeploy or secrets. Replay >=22/26 or name the next first-differing quantity. Ruff check and format (line length 100), mypy, CI green. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t203_refresh_trigger_parity.md",
+        "src/trader/experiments/tai_wiring.py",
+        "tests/unit/test_tai_wiring.py",
+        "docs/evidence/t203/"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/specs/t203_refresh_trigger_parity.md",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_wiring.py"
+      ],
+      "completion_note": "Added REFRESH_BARS post-exit trigger, persisted last_exit_at state, and unit coverage; Pod T-199 replay remains to be run. Awaiting Claude review and CI."
+    },
+    {
+      "id": "T-202",
+      "title": "First differing EMA200 and HA-cross quantity, runtime vs closed port (read-only)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-196"
+      ],
+      "acceptance_criteria": [
+        "Read-only EMA/HA trace evidence before 2026-07-01."
+      ],
+      "deliverables": [
+        "docs/specs/t202_ema_ha_first_difference.md",
+        "scripts/lab_t202_trace.py",
+        "docs/evidence/t202/"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t202/report.md",
+        "docs/evidence/t202/summary.json"
+      ],
+      "completion_note": "Completed on reachable Pod; ten first differences were refresh entries and EMA port-seeded deltas were zero."
     }
   ],
   "decisions": [
@@ -16656,6 +16717,21 @@
       "validated_by": "claude",
       "date": "2026-10-20T11:00:00+03:00",
       "reverify_if": "A reachable Pod terminal with the training lake is supplied and the script is run."
+    },
+    {
+      "id": "V-496",
+      "task_id": "T-203",
+      "subject": "T-203 refresh trigger implementation",
+      "method": "Ran Python compilation and git diff --check; pytest and make are unavailable in the Windows checkout.",
+      "result": "pass",
+      "evidence": [
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_wiring.py"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-20",
+      "reverify_if": "The refresh trigger or persisted Tai position state changes."
     }
   ],
   "blockers": [
@@ -28819,6 +28895,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner answered Q-076: Codex has Pod terminal access now. Codex: run the T-199 replay (>=22 of 26 or name the first differing quantity, plus EMA200 numbers at three entry bars) and the T-201 six-cell TRAINING scan on the Pod, then clear B-033/B-034 with evidence. Read-only; dry-run stays on; no broker calls, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 559,
+      "agent": "codex",
+      "action": "complete_t203_refresh_trigger",
+      "task_ids": [
+        "T-203"
+      ],
+      "files_changed": [
+        "docs/specs/t203_refresh_trigger_parity.md",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_wiring.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-203 implementation complete: post-exit refresh trigger at REFRESH_BARS with persisted last_exit_at and cross-path precedence. Pod replay remains pending; no broker/holdout/risk/gate/redeploy/secrets.",
+      "turn": "claude"
     }
   ],
   "project_summary": "Owner confirmed Pod terminal access (Q-076 answered). Codex now runs the T-199 replay and the T-201 training cost-in-R scan on the Pod; dry-run stays on."
