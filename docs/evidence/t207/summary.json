@@ -1,0 +1,95 @@
+{
+  "task_id": "T-207",
+  "status": "blocked",
+  "window": {
+    "start": "2026-10-20T12:33:22Z",
+    "end_exclusive": "2026-10-20T14:35:00Z",
+    "epic": "NSXUSD",
+    "timeframe": "3m"
+  },
+  "runtime": {
+    "startup_dry_run": "off",
+    "mode": "paper",
+    "broker_env": "demo",
+    "live_enabled": false,
+    "health": "degraded",
+    "last_closed_bar_at": "2026-10-20T14:34:00Z",
+    "last_tick_at": "2026-10-20T14:35:09.567376Z",
+    "new_closed_minute_log_lines": 107,
+    "observed_entries": 0,
+    "observed_refusals": 0,
+    "observed_exits": 0,
+    "observed_order_events": 0,
+    "audit_rows_in_window": 0,
+    "positions": {},
+    "last_exit_at": null
+  },
+  "lake": {
+    "closed_minute_bars": 117,
+    "last_closed_minute": "2026-10-20T14:34:00Z",
+    "complete_3m_bars": 40,
+    "stale_within_window": 0,
+    "stale_after_window_at": "2026-10-20T14:40:00Z"
+  },
+  "port_replay": {
+    "mode": "closed",
+    "candidate_crosses": 0,
+    "signals_after_gates": 0,
+    "entries": [],
+    "entry_count": 0,
+    "gate_failures": {
+      "ema200": 0,
+      "adx_di": 0,
+      "vwap_side": 0,
+      "vwap_distance": 0,
+      "risk": 0,
+      "warmup_missing": 0
+    }
+  },
+  "comparison": {
+    "runtime_entries": 0,
+    "port_entries": 0,
+    "matched": 0,
+    "extras": [],
+    "misses": [],
+    "exact": true
+  },
+  "outcomes": {
+    "port_3m_bars": {
+      "no_signal": 40,
+      "market_closed_or_break": 0,
+      "stale": 0,
+      "incomplete": 0,
+      "refused": 0,
+      "entry": 0
+    },
+    "runtime_per_bar": {
+      "no_signal": null,
+      "market_closed_or_break": null,
+      "stale": null,
+      "incomplete": null,
+      "refused": null,
+      "entry": null,
+      "reason": "runtime exposes no per-bar outcome counters in the supplied logs or audit rows"
+    }
+  },
+  "blocker": {
+    "id": "T207-FEED-GAP-TELEMETRY",
+    "first_difference": "runtime closed-minute log lines vs lake closed-minute bars",
+    "numbers": {
+      "runtime_log_lines": 107,
+      "lake_bars": 117,
+      "delta": 10
+    },
+    "detail": "Runtime logs expose 107 closed-minute lines and no per-bar outcome telemetry; the lake has 117 complete minutes and the closed port evaluates 40 complete 3m bars. Runtime bar evaluation count and gate-failure split cannot be independently verified."
+  },
+  "evidence_sources": [
+    "/workspace/logs/api.err.log",
+    "/workspace/state/tai_demo_positions.json",
+    "/workspace/data/lake",
+    "http://127.0.0.1:8000/health",
+    "/workspace/t204_src/docs/evidence/t204/summary.json"
+  ],
+  "read_only": true,
+  "no_orders": true
+}
