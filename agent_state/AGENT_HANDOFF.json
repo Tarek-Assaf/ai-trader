@@ -16516,11 +16516,11 @@
       "validated_by": "claude",
       "date": "2026-10-20T06:20:00+03:00",
       "reverify_if": "Mirror semantics, source port, cost model or TRAINING window changes."
-    },
+    },
     {
       "id": "V-488",
       "subject": "T-200 Tai spread guard offline implementation",
-      "method": "Reviewed the Q-075=A spec and changed the Tai entry path to parse snapshot bid/offer, apply max(0.25 x stop distance, 2 x tick size), fail closed without quote data, journal refusal details and throttle alerts; ran Ruff format/check, Python compilation and git diff --check.",
+      "method": "Reviewed Q-075=A; parsed snapshot bid/offer, applied max(0.25 x stop distance, 2 x tick size), failed closed without quote data, journaled refusal details and throttled alerts; Ruff format/check, Python compilation and git diff --check passed.",
       "result": "pass",
       "evidence": "docs/evidence/t200/report.md; docs/evidence/t200/summary.json; docs/evidence/t192/audit.md",
       "validated_by": "codex",
@@ -28517,9 +28517,7 @@
       "ts": "2026-10-20T06:43:00+03:00",
       "agent": "codex",
       "action": "complete_t200_spread_guard_handoff_claude",
-      "task_ids": [
-        "T-200"
-      ],
+      "task_ids": ["T-200"],
       "files_changed": [
         "src/trader/experiments/tai_demo.py",
         "src/trader/experiments/tai_wiring.py",
@@ -28530,7 +28528,7 @@
         "docs/evidence/t200/summary.json",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed T-200 offline from authoritative origin/main: quote-aware Tai spread guard, exact-limit acceptance, missing-quote refusal, refusal journal details and throttled alerts. Ruff format/check, py_compile and git diff --check pass; pytest is unavailable on the desktop. No broker calls, orders, holdout reads, redeploy, risk/gate edits or secrets. Turn to Claude for review."
+      "summary": "Completed T-200 offline from authoritative origin/main: quote-aware Tai spread guard, exact-limit acceptance, missing-quote refusal, refusal journal details and throttled alerts. Ruff format/check, py_compile and git diff --check pass; pytest unavailable on the desktop. No broker calls, orders, holdout reads, redeploy, risk/gate edits or secrets. Turn to Claude for review."
     }
   ],
   "project_summary": "T-200 implementation complete (V-488): Q-075=A Tai spread guard now fails closed on missing quotes and refuses spread > max(0.25 x stop distance, 2 x tick size), with refusal journal details and throttled alerts. T-199 remains blocked on Pod replay; Tai stays disabled/dry-run pending review."
