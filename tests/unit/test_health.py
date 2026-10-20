@@ -113,6 +113,8 @@ def test_recorder_health_exposes_reconnect_reason_and_market_liveness(tmp_path: 
         "stale_epics": [],
         "ticks_received": 0,
         "last_tick_at": None,
+        "feed_stalled": False,
+        "minutes_since_last_bar": None,
         "rejected_candles": 2,
         "last_reject_reason": "ask_close_below_bid_close",
         "reconnect_count": 3,
