@@ -130,6 +130,7 @@ def _runtime_trace(
     selected: set[datetime.date],
     target_times: set[datetime],
     *,
+    exit_times: Sequence[datetime] = (),
     unbounded: bool,
 ) -> tuple[tuple[replay.RuntimeEntry, ...], dict[str, dict[str, object]], int]:
     # Keep the runtime history shape, but evaluate the expensive indicator
@@ -139,8 +140,14 @@ def _runtime_trace(
     history = [] if unbounded else deque(maxlen=HISTORY_WINDOW)
     result: list[replay.RuntimeEntry] = []
     trace: dict[str, dict[str, object]] = {}
+    exit_cursor = 0
+    last_exit_at: datetime | None = None
+    ordered_exits = tuple(sorted(exit_times))
     for bar in bars:
         history.append(bar)
+        while exit_cursor < len(ordered_exits) and ordered_exits[exit_cursor] <= bar.at:
+            last_exit_at = ordered_exits[exit_cursor]
+            exit_cursor += 1
         if bar.at not in target_times:
             continue
         snapshot = tuple(history)
@@ -156,6 +163,31 @@ def _runtime_trace(
         vwap = features["vwap"][index]
         buy_cross = bool(features["buy"][index])
         sell_cross = bool(features["sell"][index])
+        def smart_ok(candidate: str) -> bool:
+            if candidate == "BUY":
+                return (
+                    ema is not None
+                    and adx is not None
+                    and plus is not None
+                    and minus is not None
+                    and vwap is not None
+                    and float(adx) >= 20
+                    and float(plus) > float(minus)
+                    and bar.close > Decimal(str(ema))
+                    and bar.close > Decimal(str(vwap))
+                )
+            return (
+                ema is not None
+                and adx is not None
+                and plus is not None
+                and minus is not None
+                and vwap is not None
+                and float(adx) >= 20
+                and float(minus) > float(plus)
+                and bar.close < Decimal(str(ema))
+                and bar.close < Decimal(str(vwap))
+            )
+
         direction: str | None = None
         if (
             buy_cross
@@ -185,6 +217,16 @@ def _runtime_trace(
             and bar.close < Decimal(str(vwap))
         ):
             direction = "SELL"
+        if direction is None and last_exit_at is not None:
+            exit_index = max(
+                (i for i, item in enumerate(snapshot) if item.at <= last_exit_at),
+                default=-1,
+            )
+            if exit_index >= 0 and index - exit_index >= tai_wiring.REFRESH_BARS:
+                for candidate in ("BUY", "SELL"):
+                    if smart_ok(candidate):
+                        direction = candidate
+                        break
         indicators_ready = None not in (atr, ema, adx, plus, minus, vwap) and bool(atr and atr > 0)
         ha_colour = (
             ("green" if ha_close[index] > ha_open[index] else "red")
@@ -334,8 +376,16 @@ def run(
         port_candles, "closed", ha_anchor="session_1800_ny", vwap_anchor="session_1800_ny"
     )
     target_times = {entry.at for entry in port_entries}
-    bounded, bounded_trace, _ = _runtime_trace(bars, selected, target_times, unbounded=False)
-    unbounded, unbounded_trace, _ = _runtime_trace(bars, selected, target_times, unbounded=True)
+    port_trades, _ = port.replay(
+        port_candles, "closed", ha_anchor="session_1800_ny", vwap_anchor="session_1800_ny"
+    )
+    exit_times = tuple(trade.exit_time for trade in port_trades if trade.exit_time is not None)
+    bounded, bounded_trace, _ = _runtime_trace(
+        bars, selected, target_times, exit_times=exit_times, unbounded=False
+    )
+    unbounded, unbounded_trace, _ = _runtime_trace(
+        bars, selected, target_times, exit_times=exit_times, unbounded=True
+    )
     bounded_by_key = _entry_by_key(bounded)
     unbounded_by_key = _entry_by_key(unbounded)
     rows: list[dict[str, object]] = []
