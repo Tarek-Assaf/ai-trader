@@ -351,6 +351,12 @@ class TaiSignalProvider:
         # made the runtime disagree with the port at otherwise identical bars.
         self._bars: deque[ClosedBar] = deque(history)
         self._last_exit_at: datetime | None = None
+        self._last_failure_gate: str | None = None
+
+    @property
+    def last_failure_gate(self) -> str | None:
+        """Return the most recent gate that prevented a signal."""
+        return self._last_failure_gate
 
     @property
     def last_exit_at(self) -> datetime | None:
@@ -436,8 +442,10 @@ class TaiSignalProvider:
         return len(self._bars)
 
     def __call__(self, bar: ClosedBar) -> TaiSignal | None:
+        self._last_failure_gate = None
         self._bars.append(bar)
         if len(self._bars) < self.minimum_history:
+            self._last_failure_gate = "ema200"
             return None
         bars = tuple(self._bars)
         index = len(bars) - 1
@@ -448,7 +456,14 @@ class TaiSignalProvider:
         plus = features["plus_di"][index]
         minus = features["minus_di"][index]
         vwap = features["vwap"][index]
-        if None in (atr, ema, adx, plus, minus, vwap) or atr <= 0:
+        if ema is None:
+            self._last_failure_gate = "ema200"
+            return None
+        if adx is None or plus is None or minus is None:
+            self._last_failure_gate = "adx"
+            return None
+        if atr is None or vwap is None or atr <= 0:
+            self._last_failure_gate = "vwap_distance"
             return None
 
         def smart_ok(candidate: Direction) -> bool:
@@ -481,11 +496,27 @@ class TaiSignalProvider:
                     if smart_ok(candidate):
                         direction = candidate
                         break
-        if (
-            direction is None
-            or abs(float(bar.close) - float(vwap)) / float(atr) > VWAP_DISTANCE_ATR
-            or index < SWING_LOOKBACK
-        ):
+        if direction is None:
+            if features["buy"][index] or features["sell"][index]:
+                if (
+                    (features["buy"][index] and bar.close <= Decimal(str(ema)))
+                    or (features["sell"][index] and bar.close >= Decimal(str(ema)))
+                ):
+                    self._last_failure_gate = "ema200"
+                elif float(adx) < 20 or (
+                    features["buy"][index] and float(plus) <= float(minus)
+                ) or (features["sell"][index] and float(minus) <= float(plus)):
+                    self._last_failure_gate = "adx"
+                else:
+                    self._last_failure_gate = "vwap_distance"
+            else:
+                self._last_failure_gate = "ha_cross"
+            return None
+        if abs(float(bar.close) - float(vwap)) / float(atr) > VWAP_DISTANCE_ATR:
+            self._last_failure_gate = "vwap_distance"
+            return None
+        if index < SWING_LOOKBACK:
+            self._last_failure_gate = "swing"
             return None
         previous = bars[index - SWING_LOOKBACK : index]
         stop = (
@@ -495,6 +526,7 @@ class TaiSignalProvider:
         )
         risk = bar.close - stop if direction is Direction.BUY else stop - bar.close
         if risk <= 0 or float(risk) / float(atr) > MAX_RISK_ATR:
+            self._last_failure_gate = "risk"
             return None
         return TaiSignal(direction, bar.close, stop)
 
@@ -668,6 +700,10 @@ class TaiDemoRuntimeAdapter:
     def pending_bars(self) -> dict[str, ClosedBar]:
         """Return queued closed bars that have not reached the cycle runtime."""
         return dict(self._bars)
+
+    def health_snapshot(self) -> dict[str, dict[str, object]]:
+        """Return the runner's secret-free outcome counters for /health."""
+        return self.runner.health_snapshot()
 
     def mark_feed_stale(self) -> None:
         """Fail closed and emit one bounded stale-feed alert per outage."""
