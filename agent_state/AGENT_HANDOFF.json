@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 573,
+  "revision": 575,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-211 feed resilience and batched, live-safe REST backfill are complete with green CI and handoff to Claude for review; no broker calls, orders, config/risk/gate changes, redeploy or secrets.",
+    "summary": "T-209 per-bar outcome telemetry accepted; /health now shows tai_demo counters. Next for Codex: T-210 read-only Pod inventory. No order, dry-run, risk/gate, redeploy or secret changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-207",
+    "last_task": "T-209",
     "last_status": "done"
   },
   "requirements": [
@@ -6852,7 +6852,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6869,8 +6869,10 @@
         "tests/unit/"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Queued by Claude; not started."
+      "evidence": [
+        "V-508"
+      ],
+      "completion_note": "Accepted by Claude. Codex code rebuilt on main by Claude: the Codex branch handoff file was corrupted (contained a tool truncation notice) and its health.py edit dropped the T-211 recorder fields feed_stalled and minutes_since_last_bar; those were restored."
     },
     {
       "id": "T-211",
@@ -17172,6 +17174,19 @@
       ],
       "validated_by": "claude",
       "reverify_if": "stream.py backfill or recorder commit path changes"
+    },
+    {
+      "id": "V-508",
+      "task_id": "T-209",
+      "subject": "Claude review of T-209 per-bar outcome telemetry",
+      "method": "Read full diff of tai_demo.py, tai_wiring.py, health.py, app.py and tests against docs/specs/t209_bar_outcome_telemetry.md; ruff format and check (line 100); CI quality; handoff validator.",
+      "result": "pass",
+      "checked": "Counters per epic (evaluated, no_signal, market_closed_or_break, stale_or_incomplete, refused by reason, entry, exit) reuse existing outcome strings; last failing gate kept for no_signal; /health exposes tai_demo counts only; one hourly summary log line; nothing persisted; no decision, dry-run, risk, gate, order or broker change. Fixed in review: health.py had removed the T-211 recorder fields, restored with the matching test expectation.",
+      "reverify_if": "tai_demo.py outcome reasons or /health payload change",
+      "validated_by": "claude",
+      "evidence": [
+        "Diff review against spec; ruff format/check on touched files; CI quality check (see PR)"
+      ]
     }
   ],
   "blockers": [
@@ -29659,7 +29674,42 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-211 (V-507): batched backfill with bounded two-pass catch-up in a background thread, stall and recovery alerts to Telegram, bounded session renewal, reconnect telemetry and rejection logging. Merging to main; the owner redeploys the new image. Next for Codex: T-209 (per-bar counters), then T-210 (Pod inventory). No order, dry-run, risk/gate, redeploy or secret changes. Turn to codex."
+    },
+    {
+      "revision": 574,
+      "ts": "2026-10-20T19:02:31+00:00",
+      "agent": "codex",
+      "action": "complete_t209_bar_outcome_telemetry",
+      "task_ids": [
+        "T-209"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/api/health.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_tai_demo.py",
+        "tests/unit/test_health.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented per-epic outcome counters, last no-signal gate telemetry, hourly summary logging and /health exposure with unit tests. Restored from the Codex branch by Claude because the branch handoff file was damaged. No order, broker, dry-run, risk, gate, config, redeploy or secret changes."
+    },
+    {
+      "revision": 575,
+      "ts": "2026-10-20T22:10:00+00:00",
+      "agent": "claude",
+      "action": "accept_t209_next_t210",
+      "task_ids": [
+        "T-209",
+        "T-210"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/api/health.py",
+        "tests/unit/test_health.py"
+      ],
+      "summary": "Accepted T-209 (V-508) after rebuilding on main: the Codex branch handoff was corrupted and its health.py change dropped the T-211 recorder fields, now restored. Next for Codex: T-210 (read-only Pod inventory). Reminder for Codex: never commit tool output into the handoff file; edit it with a script that reads and rewrites the JSON. No order, dry-run, risk/gate, redeploy or secret changes. Turn to codex."
     }
   ],
-  "project_summary": "T-207 read-only quiet-session check found dry_run=off but live_enabled=false in paper/demo mode; no entries, refusals, exits or order events and state stayed flat. Port replay had 0 entries on 40 complete 3m bars. Runtime exposed 107 closed-minute lines versus 117 lake bars and no per-bar outcome telemetry, so runtime outcome/gate counts remain blocked. T-204/T-205 replay evidence remains accepted at 25/26."
+  "project_summary": "T-209 per-bar outcome telemetry accepted; /health now shows tai_demo counters. Next for Codex: T-210 read-only Pod inventory. No order, dry-run, risk/gate, redeploy or secret changes."
 }

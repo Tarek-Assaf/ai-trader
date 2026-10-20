@@ -18,7 +18,7 @@ from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, cast
 
 from trader.execution.brokers.base import Direction, OrderRequest, Position
 from trader.execution.control import ControlMode
@@ -307,6 +307,9 @@ class TaiDemoRunner:
         self._spread_alerted: set[tuple[str, str]] = set()
         self._startup_blocked = False
         self._state_corrupt = False
+        self._last_epic: str | None = epic
+        self._last_summary_hour: datetime | None = None
+        self._outcomes: dict[str, dict[str, object]] = {}
         persisted_state = self._load_state()
         # Runtime composition may be retried after a dependency outage. Keep
         # Tai position bookkeeping across that retry so an open demo position
@@ -465,6 +468,7 @@ class TaiDemoRunner:
     def on_bar(self, bar: ClosedBar) -> DemoOutcome:
         """Process exactly one closed 3m bar; never trade an incomplete bar."""
 
+        self._last_epic = bar.epic
         cycle_id = f"tai-demo-{bar.at.astimezone(UTC).strftime('%Y%m%dT%H%M%S')}-{bar.epic}"
         if not bar.closed:
             return self._outcome(cycle_id, "NO_TRADE", "bar_not_closed")
@@ -619,6 +623,7 @@ class TaiDemoRunner:
             self._journal_event(
                 cycle_id, "reconcile_closed", deal_id=deal_id, reason="broker_closed"
             )
+            self._record_exit(bar.epic)
             self._send_alert(f"flat {bar.epic} broker_closed")
             self._persist_state()
         for position in positions:
@@ -651,6 +656,7 @@ class TaiDemoRunner:
                     self._journal_event(
                         cycle_id, "exit", deal_id=position.deal_id, reason="target_3"
                     )
+                    self._record_exit(bar.epic)
                     self._send_alert(f"exit {bar.epic} target_3")
                     self._persist_state()
                     break
@@ -698,6 +704,7 @@ class TaiDemoRunner:
                     if callable(note_exit):
                         note_exit(bar.at)
                     self._journal_event(cycle_id, "exit", deal_id=deal_id, reason="target_3")
+                    self._record_exit(bar.epic)
                     self._send_alert(f"exit {bar.epic} target_3")
                     self._persist_state()
                     break
@@ -740,6 +747,7 @@ class TaiDemoRunner:
             if callable(note_exit):
                 note_exit(bar.at)
             self._journal_event(cycle_id, "exit", deal_id=deal_id, reason=reason)
+            self._record_exit(bar.epic)
             self._send_alert(f"flat {bar.epic} {reason}")
             self._persist_state()
 
@@ -863,9 +871,89 @@ class TaiDemoRunner:
             },
         )
 
-    @staticmethod
-    def _outcome(cycle_id: str, action: str, reason: str) -> DemoOutcome:
+    def health_snapshot(self) -> dict[str, dict[str, object]]:
+        """Return secret-free outcome counters grouped by epic."""
+        return {
+            epic: {
+                "evaluated": cast(int, values["evaluated"]),
+                "no_signal": cast(int, values["no_signal"]),
+                "market_closed_or_break": cast(int, values["market_closed_or_break"]),
+                "stale_or_incomplete": cast(int, values["stale_or_incomplete"]),
+                "refused": dict(cast(dict[str, int], values["refused"])),
+                "entry": cast(int, values["entry"]),
+                "exit": cast(int, values["exit"]),
+                "last_no_signal_gate": values["last_no_signal_gate"],
+            }
+            for epic, values in self._outcomes.items()
+        }
+
+    def _outcome(self, cycle_id: str, action: str, reason: str) -> DemoOutcome:
+        epic = self._last_epic or self._epic or "unknown"
+        values = self._outcomes.setdefault(
+            epic,
+            {
+                "evaluated": 0,
+                "no_signal": 0,
+                "market_closed_or_break": 0,
+                "stale_or_incomplete": 0,
+                "refused": {},
+                "entry": 0,
+                "exit": 0,
+                "last_no_signal_gate": None,
+            },
+        )
+        values["evaluated"] = int(values["evaluated"]) + 1
+        if reason == "no_signal":
+            values["no_signal"] = int(values["no_signal"]) + 1
+            gate = getattr(self._signal, "last_failure_gate", None)
+            values["last_no_signal_gate"] = gate if isinstance(gate, str) else None
+        elif reason == "market_closed_or_blackout":
+            values["market_closed_or_break"] = int(values["market_closed_or_break"]) + 1
+        elif reason in {"bar_not_closed", "feed_stale"}:
+            values["stale_or_incomplete"] = int(values["stale_or_incomplete"]) + 1
+        elif reason in {"entry_submitted", "order_would_submit"}:
+            values["entry"] = int(values["entry"]) + 1
+        elif action == "REJECTED":
+            refused = values["refused"]
+            assert isinstance(refused, dict)
+            refused[reason] = int(refused.get(reason, 0)) + 1
+        self._log_summary_if_due(epic, values, cycle_id)
         return DemoOutcome(action, reason, cycle_id)
+
+    def _record_exit(self, epic: str) -> None:
+        values = self._outcomes.setdefault(
+            epic,
+            {
+                "evaluated": 0,
+                "no_signal": 0,
+                "market_closed_or_break": 0,
+                "stale_or_incomplete": 0,
+                "refused": {},
+                "entry": 0,
+                "exit": 0,
+                "last_no_signal_gate": None,
+            },
+        )
+        values["exit"] = int(values["exit"]) + 1
+
+    def _log_summary_if_due(self, epic: str, values: dict[str, object], cycle_id: str) -> None:
+        del cycle_id
+        hour = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
+        if self._last_summary_hour == hour:
+            return
+        self._last_summary_hour = hour
+        LOGGER.info(
+            "tai demo outcome summary epic=%s evaluated=%s no_signal=%s "
+            "market_closed_or_break=%s stale_or_incomplete=%s refused=%s entry=%s exit=%s",
+            epic,
+            values["evaluated"],
+            values["no_signal"],
+            values["market_closed_or_break"],
+            values["stale_or_incomplete"],
+            values["refused"],
+            values["entry"],
+            values["exit"],
+        )
 
 
 __all__ = [

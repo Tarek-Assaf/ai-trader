@@ -241,6 +241,36 @@ def test_guardian_veto_and_market_closed_are_journaled_without_entry():
     assert blocked.on_bar(bar(market_open=False)).reason == "market_closed_or_blackout"
 
 
+def test_outcome_telemetry_counts_reasons_entries_and_exits():
+    gateway = Gateway()
+    no_signal, _ = runner(gateway, signal_provider=lambda _bar: None)
+    no_signal.on_bar(bar(closed=False))
+    no_signal.on_bar(bar(market_open=False))
+    no_signal.on_bar(bar())
+    no_signal.on_bar(bar(in_break=True))
+    counts = no_signal.health_snapshot()["NSXUSD"]
+    assert counts["evaluated"] == 4
+    assert counts["stale_or_incomplete"] == 1
+    assert counts["market_closed_or_break"] == 2
+    assert counts["no_signal"] == 1
+    assert counts["refused"] == {}
+
+    refused, _ = runner(
+        Gateway(),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="103"),
+    )
+    assert refused.on_bar(bar()).reason == "spread_too_wide"
+    assert refused.health_snapshot()["NSXUSD"]["refused"] == {"spread_too_wide": 1}
+
+    live_gateway = Gateway()
+    live, _ = runner(live_gateway)
+    assert live.on_bar(bar()).action == "SUBMITTED"
+    assert live.on_bar(bar(high="103")).action == "SUBMITTED"
+    live_counts = live.health_snapshot()["NSXUSD"]
+    assert live_counts["entry"] == 2
+    assert live_counts["exit"] == 1
+
+
 def test_kill_flattens_and_alerts():
     gateway = Gateway()
     control = Control(ControlMode.KILL)
