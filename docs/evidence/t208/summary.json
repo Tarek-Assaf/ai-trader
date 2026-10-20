@@ -1,0 +1,60 @@
+{
+  "task_id": "T-208",
+  "window": {
+    "start": "2026-10-20T12:33:00Z",
+    "end": "2026-10-20T16:30:54Z",
+    "timezone": "UTC"
+  },
+  "read_only": true,
+  "pod": {
+    "status": "degraded",
+    "ping_reply_ok": false,
+    "market_status": "unknown",
+    "market_status_source": "unknown,unknown",
+    "reconnect_count": 247,
+    "rejected_candles": 10,
+    "last_reject_reason": "ask_close_below_bid_close",
+    "ticks_received": 796,
+    "last_closed_bar_at": "2026-10-20T14:34:00Z"
+  },
+  "reconnect_reasons_precise": {
+    "CapitalComError": 202,
+    "ConnectionClosedError": 49,
+    "total": 251
+  },
+  "provider_signals": [
+    "HTTP 429 on POST /api/v1/session at 2026-10-20T12:33:18Z",
+    "ConnectionClosedError close_code=1006 close_reason=unknown",
+    "Capital.com transport error for ping (ConnectError)",
+    "Capital.com market status unavailable (CapitalComError)"
+  ],
+  "lake_gap_check": {
+    "epic": "NAS100",
+    "resolution": "1m",
+    "expected_minutes": 122,
+    "bid_minutes": 118,
+    "ask_minutes": 118,
+    "missing_both_sides": [
+      "2026-10-20T12:41:00Z",
+      "2026-10-20T12:45:00Z",
+      "2026-10-20T13:42:00Z",
+      "2026-10-20T14:11:00Z"
+    ]
+  },
+  "conclusion": {
+    "three_minute_policy": "No synthetic fill; 3m builder requires all three minute timestamps.",
+    "backfill": "REST backfill exists after successful ping/connect/subscribe/ping, but current reconnect failures can prevent completion.",
+    "primary_observed_causes": [
+      "provider/session or transport pressure",
+      "market-status lookup failures",
+      "bounded data-quality rejection telemetry"
+    ],
+    "smallest_proposed_fix": "Add bounded reconnect subscribe/backfill outcome telemetry in stream.py; do not change trading or fill semantics."
+  },
+  "limitations": [
+    "No timestamped per-rejection events; only aggregate count and last reason.",
+    "No successful-subscribe or backfill-count log markers.",
+    "No historical resource time series in the image-supplied files."
+  ]
+}
+

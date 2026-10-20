@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 569,
+  "revision": 571,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -310,7 +310,8 @@
         "C-003",
         "T-015",
         "T-044",
-        "T-109"
+        "T-109",
+        "T-211"
       ]
     },
     {
@@ -466,7 +467,8 @@
         "T-092",
         "T-099",
         "T-103",
-        "T-110"
+        "T-110",
+        "T-211"
       ]
     },
     {
@@ -514,7 +516,9 @@
         "T-086",
         "T-090",
         "T-092",
-        "T-093"
+        "T-093",
+        "T-210",
+        "T-211"
       ]
     },
     {
@@ -525,7 +529,8 @@
       "covered_by": [
         "T-003",
         "T-070",
-        "T-094"
+        "T-094",
+        "T-210"
       ]
     },
     {
@@ -547,7 +552,8 @@
         "T-081",
         "T-094",
         "T-109",
-        "T-110"
+        "T-110",
+        "T-210"
       ]
     },
     {
@@ -6819,7 +6825,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6834,8 +6840,11 @@
         "docs/evidence/t208/"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Queued by Claude; not started."
+      "evidence": [
+        "docs/evidence/t208/report.md",
+        "docs/evidence/t208/summary.json"
+      ],
+      "completion_note": "Completed read-only Pod diagnosis. Recorder was degraded: 251 precise reconnect observations (202 CapitalComError, 49 ConnectionClosedError), repeated ping ConnectError and unknown market status, with an HTTP 429 session response at startup. The direct NAS100 lake query found four one-minute both-side gaps (12:41Z, 12:45Z, 13:42Z, 14:11Z) in the 12:33Z–14:34Z window. Stream REST backfill exists after successful connect/subscribe/ping but can be interrupted by the observed failures; recorder and Tai 3m code do not synthesize missing minutes. Rejected-candle telemetry is aggregate-only (10, last ask_close_below_bid_close), so per-event attribution is unavailable. Proposed smallest fix: bounded reconnect subscribe/backfill outcome telemetry in stream.py; no code or broker changes made. Accepted (V-505); follow-up T-211."
     },
     {
       "id": "T-209",
@@ -6858,6 +6867,61 @@
         "src/trader/experiments/tai_demo.py",
         "src/trader/api/health.py",
         "tests/unit/"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Queued by Claude; not started."
+    },
+    {
+      "id": "T-211",
+      "title": "Feed resilience: stall alert, session renewal, reconnect telemetry",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-07",
+        "R-18",
+        "R-21"
+      ],
+      "depends_on": [
+        "T-208"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t211_feed_stall_resilience.md exactly. Dry-run flag, risk/gate files, strategy and order behaviour unchanged. Ruff check and format (line length 100), mypy, CI green. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t211_feed_stall_resilience.md",
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/workers/recorder.py",
+        "src/trader/api/health.py",
+        "tests/unit/"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Queued by Claude; not started."
+    },
+    {
+      "id": "T-210",
+      "title": "Pod inventory against the architecture: what runs, what is missing (read-only)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-21",
+        "R-22",
+        "R-23"
+      ],
+      "depends_on": [
+        "T-208"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t210_pod_inventory_gap.md exactly. Read-only on the Pod; never print secret values; no restart, config, code or orders. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t210_pod_inventory_gap.md",
+        "docs/evidence/t210/"
       ],
       "review_cycles": 0,
       "evidence": [],
@@ -17033,6 +17097,34 @@
       "evidence": [
         "docs/evidence/t207/report.md",
         "docs/evidence/t207/summary.json"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "false"
+    },
+    {
+      "id": "V-504",
+      "task_id": "T-208",
+      "subject": "Codex read-only recorder degradation diagnosis",
+      "method": "Read-only inspection of image-supplied Pod status, scheduler/API logs, NAS100 lake metadata, and source files for reconnect, recorder, Tai feed, and 3m aggregation behavior.",
+      "result": "pass",
+      "evidence": [
+        "docs/evidence/t208/report.md",
+        "docs/evidence/t208/summary.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-20",
+      "reverify_if": "A later recorder run adds per-event rejection/backfill telemetry or changes the gap-fill contract."
+    },
+    {
+      "id": "V-505",
+      "task_id": "T-208",
+      "subject": "Claude review of T-208 recorder diagnosis",
+      "method": "Read docs/evidence/t208/report.md and summary.json; read stream.py reconnect path; handoff validator.",
+      "result": "pass",
+      "checked": "Evidence is concrete and honest about limits: 251 reconnect observations, four one-minute lake gaps (12:41, 12:45, 13:42, 14:11Z), startup HTTP 429, market status unknown, last closed bar 14:34Z when checked at about 16:30Z. Important consequence not stated in the report: the feed has been stalled for hours with no owner alert. Recovery sequence exists (REST backfill after connect/subscribe/ping) but cannot complete when the REST ping or session fails.",
+      "evidence": [
+        "docs/evidence/t208/report.md",
+        "docs/evidence/t208/summary.json"
       ],
       "validated_by": "claude",
       "reverify_if": "false"
@@ -29454,6 +29546,39 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-207 (V-503): the port finds no candidate in the live window, so zero entries is normal. But health is degraded since about 14:40Z (recorder reconnects, rejected candles, unknown market status) and the runtime log is 10 minutes short of the lake. Queued T-208 (read-only diagnosis of the recorder gaps, do first) and T-209 (per-bar outcome counters in /health, code). Dry-run stays off by the owner's decision; no order, config, risk/gate, redeploy or secret changes. Turn to codex."
+    },
+    {
+      "revision": 570,
+      "ts": "2026-10-20T16:35:00Z",
+      "agent": "codex",
+      "action": "complete_t208_recorder_diagnosis",
+      "task_ids": [
+        "T-208"
+      ],
+      "files_changed": [
+        "docs/evidence/t208/report.md",
+        "docs/evidence/t208/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Read-only Pod diagnosis complete. Recorder degraded with 251 precise reconnect observations (202 CapitalComError, 49 ConnectionClosedError), repeated ping ConnectError, unknown market status, and startup HTTP 429. NAS100 lake query found four one-minute both-side gaps in the inspected window. REST backfill exists after successful connect/subscribe/ping but can be interrupted; recorder and Tai 3m builder do not synthesize missing minutes. Rejected-candle telemetry is aggregate-only. Proposed bounded reconnect subscribe/backfill outcome telemetry in stream.py. No broker writes, orders, restarts, config or code changes. Turn to claude."
+    },
+    {
+      "revision": 571,
+      "ts": "2026-10-20T20:05:00+03:00",
+      "agent": "claude",
+      "action": "accept_t208_queue_t211_t210",
+      "task_ids": [
+        "T-208",
+        "T-210",
+        "T-211"
+      ],
+      "files_changed": [
+        "docs/evidence/t208/report.md",
+        "docs/evidence/t208/summary.json",
+        "docs/specs/t211_feed_stall_resilience.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-208 (V-505). Finding: the recorder stalled at 14:34Z for hours (ping/session failures, 251 reconnects, startup HTTP 429) with no owner alert, so the Tai runner could not trade. Owner advised to restart the Pod for a fresh login. Queued T-211 first (stall alert to Telegram, session renewal with 429 backoff, reconnect telemetry, rejection log), then T-209 (per-bar counters), then T-210 (Pod inventory). No order, config, risk/gate, redeploy or secret changes. Turn to codex."
     }
   ],
   "project_summary": "T-207 read-only quiet-session check found dry_run=off but live_enabled=false in paper/demo mode; no entries, refusals, exits or order events and state stayed flat. Port replay had 0 entries on 40 complete 3m bars. Runtime exposed 107 closed-minute lines versus 117 lake bars and no per-bar outcome telemetry, so runtime outcome/gate counts remain blocked. T-204/T-205 replay evidence remains accepted at 25/26."
