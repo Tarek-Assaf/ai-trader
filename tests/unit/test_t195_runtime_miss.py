@@ -78,6 +78,9 @@ def test_provider_trace_replays_exit_callbacks(monkeypatch) -> None:
         warmup_bars = 300
         last_exit_at = datetime(2026, 6, 1, 0, 0, tzinfo=UTC)
 
+        def __init__(self, **_kwargs: object) -> None:
+            pass
+
         def note_exit(self, at: datetime) -> None:
             exits.append(at)
 
