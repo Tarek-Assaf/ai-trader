@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 548,
+  "revision": 547,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -28546,22 +28546,6 @@
     },
     {
       "revision": 546,
-      "ts": "2026-10-20T09:45:00+03:00",
-      "agent": "codex",
-      "action": "start_t199_runtime_ema_parity",
-      "task_ids": [
-        "T-199"
-      ],
-      "files_changed": [
-        "src/trader/experiments/tai_wiring.py",
-        "tests/unit/test_tai_wiring.py",
-        "docs/specs/t199_runtime_ema_parity.md",
-        "agent_state/AGENT_HANDOFF.json"
-      ],
-      "summary": "Started T-199 from origin/main. Removed the 600-bar truncation and retained full lake history so EMA200 uses the closed port seed; added long-series and restart parity coverage. No broker calls, orders, holdout reads, redeploy or secrets. Turn remains codex while implementation continues."
-    },
-    {
-      "revision": 547,
       "ts": "2026-10-20T06:30:00+03:00",
       "agent": "codex",
       "action": "complete_t199_runtime_ema_parity",
@@ -28569,17 +28553,17 @@
         "T-199"
       ],
       "files_changed": [
-        "src/trader/experiments/tai_wiring.py",
-        "tests/unit/test_tai_wiring.py",
-        "docs/specs/t199_runtime_ema_parity.md",
+        "agent_state/AGENT_HANDOFF.json",
         "docs/evidence/t199/report.md",
         "docs/evidence/t199/summary.json",
-        "agent_state/AGENT_HANDOFF.json"
+        "docs/specs/t199_runtime_ema_parity.md",
+        "src/trader/experiments/tai_wiring.py",
+        "tests/unit/test_tai_wiring.py"
       ],
       "summary": "Completed the offline T-199 implementation: retain full Tai history so runtime EMA200 uses the same SMA seed as the closed T-162 port; added long-series and restart coverage. Ruff format/check, py_compile and git diff --check pass. Focused pytest is unavailable and the required Pod replay is blocked by HTTP 404, recorded as B-033. No broker calls, orders, holdout reads, redeploy or secrets. Turn to claude."
     },
     {
-      "revision": 548,
+      "revision": 547,
       "ts": "2026-10-20T09:40:00+03:00",
       "agent": "claude",
       "action": "review_t199_cycle1",
