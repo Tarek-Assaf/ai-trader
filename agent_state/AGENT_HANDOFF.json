@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 551,
+  "turn": "human",
+  "revision": 553,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-200 spread guard accepted; T-199 EMA parity code landed, its Pod replay waits for a fresh Pod terminal (Q-076). T-201 (why configured-cost backtests lose) queued. Dry-run stays on; runtime not yet cleared for demo orders. No broker orders, no holdout reads.",
+    "summary": "T-200 spread guard accepted; T-199 EMA parity code landed, its Pod replay remains blocked on B-033/Q-076. T-201 cost-in-R diagnostic is blocked on B-034: Pod terminal returned HTTP 404 and the desktop has no training lake/runtime dependencies. Dry-run stays on; no broker calls, orders, holdout reads, redeploy or secrets. Review of T-201 code done; all remaining work waits on a working Pod terminal (Q-076).",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-199",
+    "last_task": "T-201",
     "last_status": "blocked"
   },
   "requirements": [
@@ -6604,7 +6604,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "blocked",
       "requirements": [
         "R-03"
       ],
@@ -6620,8 +6620,13 @@
         "docs/evidence/t201/"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "scripts/lab_t201_cost_in_r.py",
+        "tests/unit/test_lab_t201_cost_in_r.py",
+        "docs/evidence/t201/report.md",
+        "docs/evidence/t201/summary.json"
+      ],
+      "completion_note": "Blocked before the six-year TRAINING scan: owner-provided Pod terminal returned HTTP 404 (B-033/Q-076), desktop has no /workspace/data/lake and lacks sqlalchemy/pytest. Offline script/tests and evidence record the exact blocker; no distribution values are fabricated."
     }
   ],
   "decisions": [
@@ -16619,6 +16624,38 @@
       ],
       "validated_by": "claude",
       "reverify_if": "tai_demo.py or tai_wiring.py changes"
+    },
+    {
+      "id": "V-492",
+      "task_id": "T-201",
+      "subject": "T-201 offline implementation and blocker evidence",
+      "method": "Read T-201 spec, added the read-only distribution script and focused tests, inspected owner CSV and Pine source, and attempted only the bounded Pod health check.",
+      "result": "pending",
+      "checked": "Owner Pod URL returned HTTP 404; desktop has no training lake and lacks sqlalchemy/pytest. Ruff format/check, py_compile and git diff --check pass; six TRAINING cells and percentile outputs were not run.",
+      "evidence": [
+        "scripts/lab_t201_cost_in_r.py",
+        "tests/unit/test_lab_t201_cost_in_r.py",
+        "docs/evidence/t201/report.md",
+        "docs/evidence/t201/summary.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-20T07:38:00+03:00",
+      "reverify_if": "A reachable Pod terminal/session with the training lake and runtime dependencies is supplied."
+    },
+    {
+      "id": "V-493",
+      "task_id": "T-201",
+      "subject": "Claude review of T-201 offline code (blocked on data)",
+      "method": "Read spec and report; ruff check and format (line 100) clean; quality CI success on PR 393; handoff validator with --previous OK. Code and tests are read-only and offline.",
+      "result": "pass",
+      "checked": "Code and honest blocker evidence accepted; Pine check done (no minimum-stop or bar-range filter, only ATR-based max-risk); owner CSV has 54 trades not 31 (noted, nothing asserted). The six percentile cells and net-R tables are NOT produced, so T-201 stays blocked.",
+      "evidence": [
+        "docs/evidence/t201/report.md",
+        "scripts/lab_t201_cost_in_r.py"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-20T11:00:00+03:00",
+      "reverify_if": "A reachable Pod terminal with the training lake is supplied and the script is run."
     }
   ],
   "blockers": [
@@ -16866,6 +16903,14 @@
       "status": "open",
       "text": "The required bounded T-187/T-195 runtime-versus-port replay cannot run: the owner-provided Pod terminal URL returned HTTP 404 for the read-only request. No replay counts or 22/26 acceptance claim can be made from this branch.",
       "resolution": "Codex retried the exact owner-provided URL after Claude review (direct GET and in-app browser); it still returned HTTP 404 at 2026-10-20T06:28+03:00. A reachable Pod terminal/session is required before replay acceptance can be verified."
+    },
+    {
+      "id": "B-034",
+      "task_id": "T-201",
+      "raised_by": "codex",
+      "status": "open",
+      "text": "The required six-year TRAINING per-trade cost-in-R scan cannot run: the owner-provided Pod terminal URL returned HTTP 404, and the desktop checkout has no /workspace/data/lake or sqlalchemy/pytest runtime. No percentile or net-R results can be claimed.",
+      "resolution": "Owner must provide a reachable Pod terminal/session with the training lake and runtime dependencies before the six instrument/timeframe cells can be computed."
     }
   ],
   "questions": [
@@ -28726,7 +28771,41 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-200 accepted (spread guard, Q-075=A) and T-199's code landed after review (the replay acceptance stays blocked on the Pod terminal, B-033/Q-076). Both Codex branches had failed CI only on handoff validator errors, so I rebuilt them on current main with the review branch's handoff. Queued T-201 (read-only: cost per trade in R by stop size, owner request) with its spec. Codex: do T-201 now. Dry-run stays on. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 552,
+      "ts": "2026-10-20T11:38:00+03:00",
+      "agent": "codex",
+      "action": "block_t201_missing_training_lake",
+      "task_ids": [
+        "T-201"
+      ],
+      "files_changed": [
+        "scripts/lab_t201_cost_in_r.py",
+        "tests/unit/test_lab_t201_cost_in_r.py",
+        "docs/evidence/t201/report.md",
+        "docs/evidence/t201/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-201 offline implementation and blocked evidence recorded. The owner-provided Pod terminal returned HTTP 404 (B-033/Q-076); desktop has no /workspace/data/lake and lacks sqlalchemy/pytest, so the six-year TRAINING percentile and net-R scan cannot run. Ruff format/check, py_compile and git diff --check pass; no broker, holdout, config, redeploy or secret operation. Turn to Claude."
+    },
+    {
+      "revision": 553,
+      "ts": "2026-10-20T11:00:00+03:00",
+      "agent": "claude",
+      "action": "accept_t201_code_blocked_on_pod",
+      "task_ids": [
+        "T-201"
+      ],
+      "files_changed": [
+        "scripts/lab_t201_cost_in_r.py",
+        "tests/unit/test_lab_t201_cost_in_r.py",
+        "docs/evidence/t201/report.md",
+        "docs/evidence/t201/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-201 code landed after review (V-493); results still not produced because the Pod terminal link returns 404 (B-033/B-034, Q-076). Every open Codex task is now blocked on that link, so there is nothing for Codex to do until the owner answers Q-076. Dry-run stays on. No broker calls, orders, holdout reads, redeploy or secrets. Turn to human."
     }
   ],
-  "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. Q-075 spread ceiling remains open for the owner; Tai stays disabled/dry-run pending review."
+  "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. T-201 offline implementation is recorded, but its required per-trade distribution scan is blocked by B-034 until a reachable Pod training lake/runtime is available."
 }
