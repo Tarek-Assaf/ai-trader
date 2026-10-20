@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 542,
+  "turn": "claude",
+  "revision": 543,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-194 accepted (V-485): Tai port loses at configured costs on every non-empty cell; zero-cost is positive (diagnostic only). T-198 mirror control queued for Codex. Q-075 spread ceiling still open for the owner; Tai stays dry-run.",
+    "summary": "T-198 completed (V-486): mirror counts match the original in all six TRAINING cells; configured-cost diagnostics do not show a directional edge. Zero-cost counterfactuals are recorded for context. T-199 is next only after Claude review; Q-075 remains open; Tai stays dry-run.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-194",
+    "last_task": "T-198",
     "last_status": "done"
   },
   "requirements": [
@@ -6509,7 +6509,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6526,8 +6526,13 @@
         "docs/evidence/t198/summary.json"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t198/report.md",
+        "docs/evidence/t198/summary.json",
+        "scripts/lab_t198_mirror_control.py",
+        "tests/unit/test_lab_t198_mirror_control.py"
+      ],
+      "completion_note": "Completed the full TRAINING mirror-control replay for NSXUSD and XAUUSD at 1m, 3m and 5m from 2020-10-17 through 2026-10-17. All six cells exited successfully with mirror_trade_count equal to trade_count. Configured-cost original and mirror metrics plus per-year splits are recorded; zero-cost counterfactuals are included. The original does not beat the mirror in every cell, so no directional edge is claimed. Holdout guard passed; safety counters are all zero. Ruff format/check, py_compile and git diff --check passed locally; CI remains required for full pytest/mypy/make check."
     }
   ],
   "decisions": [
@@ -16420,6 +16425,16 @@
       ],
       "reverify_if": "the T-194 numbers are used in a decision",
       "validated_by": "claude"
+    },
+    {
+      "id": "V-486",
+      "subject": "T-198 Tai mirror-control replay safety and count match",
+      "method": "Run the wrapper on the reachable Pod against the TRAINING lake for NSXUSD/XAUUSD at 1m/3m/5m; compare one inverted mirror trade for every original trade and inspect safety counters.",
+      "result": "pass",
+      "evidence": "docs/evidence/t198/report.md; docs/evidence/t198/summary.json; Pod run generated_at 2026-10-20T02:03:30Z: six cells, all count_match=true, broker_calls=0, orders=0, lake_writes=0, production_state_writes=0, sealed_holdout_read=false, tuning=false.",
+      "validated_by": "codex",
+      "date": "2026-10-20T05:03:30+03:00",
+      "reverify_if": "Mirror semantics, source port, cost model or TRAINING lake window changes."
     }
   ],
   "blockers": [
@@ -28358,7 +28373,24 @@
         "docs/specs/t198_tai_mirror_control.md"
       ],
       "summary": "T-194 accepted (V-485); fixed its test import so CI passes. Queued T-198 (mirror control, Q-057 B) for Codex. Dry-run stays on; no broker calls, holdout reads, or risk/gate edits."
+    },
+    {
+      "revision": 543,
+      "ts": "2026-10-20T05:05:00+03:00",
+      "agent": "codex",
+      "action": "complete_t198_mirror_control",
+      "task_ids": [
+        "T-198"
+      ],
+      "files_changed": [
+        "scripts/lab_t198_mirror_control.py",
+        "tests/unit/test_lab_t198_mirror_control.py",
+        "docs/evidence/t198/report.md",
+        "docs/evidence/t198/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-198 full TRAINING Tai mirror-control diagnostic completed on the reachable Pod for NSXUSD/XAUUSD at 1m/3m/5m. Six cells exited 0; every mirror trade count equals the original count. Configured-cost and zero-cost metrics plus per-year configured splits are recorded. Original does not beat mirror in every cell, so no directional edge is claimed. Holdout guard passed; safety counters are all zero. Ruff format/check, py_compile and git diff --check passed locally; CI remains required. Turn to claude for review."
     }
   ],
-  "project_summary": "T-193 Pod evidence is captured read-only but exact script execution is blocked by missing lab_t189_minute_gaps.py and market-details JSON; hand to Claude with docs/evidence/t193/report.md. T-197 accepted (V-482); Q-075 remains open; Tai stays disabled/dry-run."
+  "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. Q-075 spread ceiling remains open for the owner; Tai stays disabled/dry-run pending review."
 }

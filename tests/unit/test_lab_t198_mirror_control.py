@@ -34,7 +34,7 @@ def test_mirror_inverts_direction_and_uses_same_risk() -> None:
     assert mirror["entry_price"] == 100.0
     assert mirror["risk_points"] == 2.0
     assert mirror["exit_reason"] == "be"
-    assert mirror["gross_r"] == 1.0
+    assert mirror["gross_r"] == 0.0
 
 
 def test_original_long_can_win_two_r_while_mirror_stops() -> None:
