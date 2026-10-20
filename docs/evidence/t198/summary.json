@@ -1,0 +1,28 @@
+{
+  "task": "T-198",
+  "generated_at": "2026-10-20T02:03:30.084008+00:00",
+  "window": {
+    "start": "2020-10-17T04:00:00+00:00",
+    "end": "2026-10-17T04:00:00+00:00"
+  },
+  "holdout_guard": {
+    "tested": true,
+    "holdout_start": "2026-10-17T04:00:00+00:00"
+  },
+  "safety": {
+    "broker_calls": 0,
+    "lake_writes": 0,
+    "orders": 0,
+    "production_state_writes": 0,
+    "sealed_holdout_read": false,
+    "tuning": false
+  },
+  "cells": [
+    {"instrument":"NSXUSD","timeframe_minutes":1,"trade_count":10694,"mirror_trade_count":10694,"count_match":true,"original_configured_net_r":-27464.08744489732,"mirror_configured_net_r":-26723.520094697822,"original_zero_cost_net_r":2951.0,"mirror_zero_cost_net_r":-704.0,"per_year":{"2020":{"trades":414,"original_net_r":-2577.428,"mirror_net_r":-2497.829},"2021":{"trades":1830,"original_net_r":-7595.078,"mirror_net_r":-7332.69},"2022":{"trades":1917,"original_net_r":-2839.993,"mirror_net_r":-2794.339},"2023":{"trades":1644,"original_net_r":-3737.251,"mirror_net_r":-3329.295},"2024":{"trades":1905,"original_net_r":-4086.933,"mirror_net_r":-3843.016},"2025":{"trades":1706,"original_net_r":-4760.863,"mirror_net_r":-4926.847},"2026":{"trades":1278,"original_net_r":-1866.542,"mirror_net_r":-1999.503}}},
+    {"instrument":"NSXUSD","timeframe_minutes":3,"trade_count":5751,"mirror_trade_count":5751,"count_match":true,"original_configured_net_r":-9490.895682442693,"mirror_configured_net_r":-10127.56416964554,"original_zero_cost_net_r":1898.0,"mirror_zero_cost_net_r":63.0,"per_year":{"2020":{"trades":234,"original_net_r":-208.534,"mirror_net_r":-212.08},"2021":{"trades":994,"original_net_r":-1298.456,"mirror_net_r":-1381.703},"2022":{"trades":1025,"original_net_r":-1297.891,"mirror_net_r":-1327.157},"2023":{"trades":887,"original_net_r":-3691.221,"mirror_net_r":-3679.201},"2024":{"trades":958,"original_net_r":-2015.8,"mirror_net_r":-2176.206},"2025":{"trades":952,"original_net_r":-748.77,"mirror_net_r":-998.692},"2026":{"trades":701,"original_net_r":-230.224,"mirror_net_r":-352.525}}},
+    {"instrument":"NSXUSD","timeframe_minutes":5,"trade_count":4206,"mirror_trade_count":4206,"count_match":true,"original_configured_net_r":-3678.0983981218446,"mirror_configured_net_r":-4253.46078484654,"original_zero_cost_net_r":1216.0,"mirror_zero_cost_net_r":-61.0,"per_year":{"2020":{"trades":155,"original_net_r":-110.534,"mirror_net_r":-110.089},"2021":{"trades":745,"original_net_r":-836.516,"mirror_net_r":-902.486},"2022":{"trades":695,"original_net_r":-1216.404,"mirror_net_r":-1313.94},"2023":{"trades":638,"original_net_r":-634.989,"mirror_net_r":-738.8},"2024":{"trades":737,"original_net_r":-437.639,"mirror_net_r":-510.084},"2025":{"trades":726,"original_net_r":-409.472,"mirror_net_r":-576.695},"2026":{"trades":510,"original_net_r":-32.544,"mirror_net_r":-101.367}}},
+    {"instrument":"XAUUSD","timeframe_minutes":1,"trade_count":11144,"mirror_trade_count":11144,"count_match":true,"original_configured_net_r":-104504.21041902105,"mirror_configured_net_r":-92346.38852313766,"original_zero_cost_net_r":3965.0,"mirror_zero_cost_net_r":-33.0,"per_year":{"2020":{"trades":382,"original_net_r":-2469.169,"mirror_net_r":-2056.848},"2021":{"trades":1871,"original_net_r":-18818.866,"mirror_net_r":-16061.088},"2022":{"trades":1858,"original_net_r":-19467.18,"mirror_net_r":-16625.77},"2023":{"trades":1736,"original_net_r":-31484.781,"mirror_net_r":-28547.864},"2024":{"trades":1952,"original_net_r":-23298.651,"mirror_net_r":-20914.327},"2025":{"trades":1888,"original_net_r":-6590.433,"mirror_net_r":-5760.939},"2026":{"trades":1457,"original_net_r":-2375.13,"mirror_net_r":-2379.552}}},
+    {"instrument":"XAUUSD","timeframe_minutes":3,"trade_count":6296,"mirror_trade_count":6296,"count_match":true,"original_configured_net_r":-22223.480886205907,"mirror_configured_net_r":-19599.40735136662,"original_zero_cost_net_r":2078.0,"mirror_zero_cost_net_r":-31.0,"per_year":{"2020":{"trades":223,"original_net_r":-773.148,"mirror_net_r":-633.577},"2021":{"trades":1100,"original_net_r":-5878.395,"mirror_net_r":-5283.582},"2022":{"trades":1035,"original_net_r":-4548.361,"mirror_net_r":-3769.812},"2023":{"trades":934,"original_net_r":-4542.812,"mirror_net_r":-3955.397},"2024":{"trades":1095,"original_net_r":-4727.061,"mirror_net_r":-4135.959},"2025":{"trades":1070,"original_net_r":-1368.819,"mirror_net_r":-1308.14},"2026":{"trades":839,"original_net_r":-384.884,"mirror_net_r":-512.941}}},
+    {"instrument":"XAUUSD","timeframe_minutes":5,"trade_count":4542,"mirror_trade_count":4542,"count_match":true,"original_configured_net_r":-14243.55010511015,"mirror_configured_net_r":-13023.119838231985,"original_zero_cost_net_r":1447.0,"mirror_zero_cost_net_r":128.0,"per_year":{"2020":{"trades":156,"original_net_r":-466.692,"mirror_net_r":-389.933},"2021":{"trades":787,"original_net_r":-4572.64,"mirror_net_r":-4235.684},"2022":{"trades":761,"original_net_r":-2615.743,"mirror_net_r":-2294.844},"2023":{"trades":707,"original_net_r":-2273.701,"mirror_net_r":-1908.722},"2024":{"trades":760,"original_net_r":-2387.169,"mirror_net_r":-2111.226},"2025":{"trades":731,"original_net_r":-1709.481,"mirror_net_r":-1754.682},"2026":{"trades":640,"original_net_r":-218.124,"mirror_net_r":-328.029}}}
+  ]
+}
