@@ -1,0 +1,824 @@
+{
+  "cells": [
+    {
+      "configured_costs": {
+        "avg_r": -2.5681772438,
+        "max_drawdown_r": 27464.3113,
+        "net_r": -27464.0874,
+        "profit_factor": 0.1207181715,
+        "trades": 10694,
+        "win_rate": 0.2270432018
+      },
+      "configured_per_session": {
+        "asia": {
+          "net_r": -20682.233837,
+          "trades": 4662
+        },
+        "closed": {
+          "net_r": -1939.590928,
+          "trades": 1789
+        },
+        "london": {
+          "net_r": -7085.149703,
+          "trades": 4084
+        },
+        "new_york": {
+          "net_r": -2813.19856,
+          "trades": 3202
+        }
+      },
+      "configured_per_year": {
+        "2020": {
+          "net_r": -2577.427734,
+          "trades": 414
+        },
+        "2021": {
+          "net_r": -7595.078014,
+          "trades": 1830
+        },
+        "2022": {
+          "net_r": -2839.992763,
+          "trades": 1917
+        },
+        "2023": {
+          "net_r": -3737.250733,
+          "trades": 1644
+        },
+        "2024": {
+          "net_r": -4086.933337,
+          "trades": 1905
+        },
+        "2025": {
+          "net_r": -4760.863176,
+          "trades": 1706
+        },
+        "2026": {
+          "net_r": -1866.541689,
+          "trades": 1278
+        }
+      },
+      "instrument": "NSXUSD",
+      "label": "port of the stored indicator, loosely matched to the owner (3/31 within 3 bars, 15/31 within 30 bars)",
+      "signal_count": 25856,
+      "source_rows": 1998770,
+      "status": "ok",
+      "timeframe_minutes": 1,
+      "warmup_bars": 6674,
+      "window_bars": 1998770,
+      "zero_cost": {
+        "avg_r": 0.2759491,
+        "max_drawdown_r": 19,
+        "net_r": 2951,
+        "profit_factor": 1.6810524,
+        "trades": 10694,
+        "win_rate": 0.2270432018
+      },
+      "zero_cost_per_session": {
+        "asia": {
+          "net_r": 1431,
+          "trades": 1431
+        },
+        "closed": {
+          "net_r": 274,
+          "trades": 274
+        },
+        "london": {
+          "net_r": 1273,
+          "trades": 1273
+        },
+        "new_york": {
+          "net_r": 981,
+          "trades": 981
+        }
+      },
+      "zero_cost_per_year": {
+        "2020": {
+          "net_r": 109,
+          "trades": 414
+        },
+        "2021": {
+          "net_r": 606,
+          "trades": 1830
+        },
+        "2022": {
+          "net_r": 477,
+          "trades": 1917
+        },
+        "2023": {
+          "net_r": 405,
+          "trades": 1644
+        },
+        "2024": {
+          "net_r": 505,
+          "trades": 1905
+        },
+        "2025": {
+          "net_r": 537,
+          "trades": 1706
+        },
+        "2026": {
+          "net_r": 312,
+          "trades": 1278
+        }
+      }
+    },
+    {
+      "configured_costs": {
+        "avg_r": -1.6503035,
+        "max_drawdown_r": 9506.0006,
+        "net_r": -9490.8957,
+        "profit_factor": 0.209584,
+        "trades": 5751,
+        "win_rate": 0.2378717
+      },
+      "configured_per_session": {
+        "asia": {
+          "net_r": -5598.201398,
+          "trades": 2091
+        },
+        "closed": {
+          "net_r": -295.950999,
+          "trades": 951
+        },
+        "london": {
+          "net_r": -3710.328821,
+          "trades": 2465
+        },
+        "new_york": {
+          "net_r": -2066.440067,
+          "trades": 2091
+        }
+      },
+      "configured_per_year": {
+        "2020": {
+          "net_r": -208.533584,
+          "trades": 234
+        },
+        "2021": {
+          "net_r": -1298.456059,
+          "trades": 994
+        },
+        "2022": {
+          "net_r": -1297.891062,
+          "trades": 1025
+        },
+        "2023": {
+          "net_r": -3691.221465,
+          "trades": 887
+        },
+        "2024": {
+          "net_r": -2015.799832,
+          "trades": 958
+        },
+        "2025": {
+          "net_r": -748.769793,
+          "trades": 952
+        },
+        "2026": {
+          "net_r": -230.223887,
+          "trades": 701
+        }
+      },
+      "instrument": "NSXUSD",
+      "label": "port of the stored indicator, loosely matched to the owner (3/31 within 3 bars, 15/31 within 30 bars)",
+      "signal_count": 7725,
+      "source_rows": 665928,
+      "status": "ok",
+      "timeframe_minutes": 3,
+      "warmup_bars": 2224,
+      "window_bars": 665928,
+      "zero_cost": {
+        "avg_r": 0.3300296,
+        "max_drawdown_r": 16,
+        "net_r": 1898,
+        "profit_factor": 1.8603808,
+        "trades": 5751,
+        "win_rate": 0.2378717
+      },
+      "zero_cost_per_session": {
+        "asia": {
+          "net_r": 872,
+          "trades": 872
+        },
+        "closed": {
+          "net_r": 115,
+          "trades": 115
+        },
+        "london": {
+          "net_r": 817,
+          "trades": 817
+        },
+        "new_york": {
+          "net_r": 724,
+          "trades": 724
+        }
+      },
+      "zero_cost_per_year": {
+        "2020": {
+          "net_r": 82,
+          "trades": 234
+        },
+        "2021": {
+          "net_r": 345,
+          "trades": 994
+        },
+        "2022": {
+          "net_r": 280,
+          "trades": 1025
+        },
+        "2023": {
+          "net_r": 294,
+          "trades": 887
+        },
+        "2024": {
+          "net_r": 363,
+          "trades": 958
+        },
+        "2025": {
+          "net_r": 313,
+          "trades": 952
+        },
+        "2026": {
+          "net_r": 221,
+          "trades": 701
+        }
+      }
+    },
+    {
+      "configured_costs": {
+        "avg_r": -0.8744884,
+        "max_drawdown_r": 3700.8734,
+        "net_r": -3678.0984,
+        "profit_factor": 0.3381442,
+        "trades": 4206,
+        "win_rate": 0.224679
+      },
+      "configured_per_session": {
+        "asia": {
+          "net_r": -2773.573305,
+          "trades": 1522
+        },
+        "closed": {
+          "net_r": -79.382998,
+          "trades": 759
+        },
+        "london": {
+          "net_r": -1046.715494,
+          "trades": 1632
+        },
+        "new_york": {
+          "net_r": -359.78016,
+          "trades": 1505
+        }
+      },
+      "configured_per_year": {
+        "2020": {
+          "net_r": -110.534103,
+          "trades": 155
+        },
+        "2021": {
+          "net_r": -836.516214,
+          "trades": 745
+        },
+        "2022": {
+          "net_r": -1216.404239,
+          "trades": 695
+        },
+        "2023": {
+          "net_r": -634.98898,
+          "trades": 638
+        },
+        "2024": {
+          "net_r": -437.639206,
+          "trades": 737
+        },
+        "2025": {
+          "net_r": -409.471777,
+          "trades": 726
+        },
+        "2026": {
+          "net_r": -32.54388,
+          "trades": 510
+        }
+      },
+      "instrument": "NSXUSD",
+      "label": "port of the stored indicator, loosely matched to the owner (3/31 within 3 bars, 15/31 within 30 bars)",
+      "signal_count": 4379,
+      "source_rows": 399333,
+      "status": "ok",
+      "timeframe_minutes": 5,
+      "warmup_bars": 1334,
+      "window_bars": 399333,
+      "zero_cost": {
+        "avg_r": 0.2891108,
+        "max_drawdown_r": 24,
+        "net_r": 1216,
+        "profit_factor": 1.7510809,
+        "trades": 4206,
+        "win_rate": 0.224679
+      },
+      "zero_cost_per_session": {
+        "asia": {
+          "net_r": 630,
+          "trades": 630
+        },
+        "closed": {
+          "net_r": 109,
+          "trades": 109
+        },
+        "london": {
+          "net_r": 506,
+          "trades": 506
+        },
+        "new_york": {
+          "net_r": 355,
+          "trades": 355
+        }
+      },
+      "zero_cost_per_year": {
+        "2020": {
+          "net_r": 31,
+          "trades": 155
+        },
+        "2021": {
+          "net_r": 229,
+          "trades": 745
+        },
+        "2022": {
+          "net_r": 156,
+          "trades": 695
+        },
+        "2023": {
+          "net_r": 244,
+          "trades": 638
+        },
+        "2024": {
+          "net_r": 200,
+          "trades": 737
+        },
+        "2025": {
+          "net_r": 250,
+          "trades": 726
+        },
+        "2026": {
+          "net_r": 106,
+          "trades": 510
+        }
+      }
+    },
+    {
+      "configured_costs": {
+        "avg_r": null,
+        "max_drawdown_r": 0,
+        "net_r": 0,
+        "profit_factor": null,
+        "trades": 0,
+        "win_rate": null
+      },
+      "configured_per_session": {},
+      "configured_per_year": {},
+      "instrument": "NSXUSD",
+      "label": "port of the stored indicator, loosely matched to the owner (3/31 within 3 bars, 15/31 within 30 bars)",
+      "signal_count": 0,
+      "source_rows": 32458,
+      "status": "ok",
+      "timeframe_minutes": 60,
+      "warmup_bars": 109,
+      "window_bars": 32458,
+      "zero_cost": {
+        "avg_r": null,
+        "max_drawdown_r": 0,
+        "net_r": 0,
+        "profit_factor": null,
+        "trades": 0,
+        "win_rate": null
+      },
+      "zero_cost_per_session": {},
+      "zero_cost_per_year": {}
+    },
+    {
+      "configured_costs": {
+        "avg_r": -9.3776212,
+        "max_drawdown_r": 104508.934,
+        "net_r": -104504.2104,
+        "profit_factor": 0.0165732,
+        "trades": 11144,
+        "win_rate": 0.2455133
+      },
+      "configured_per_session": {
+        "asia": {
+          "net_r": -57216.330958,
+          "trades": 4995
+        },
+        "closed": {
+          "net_r": -33583.125497,
+          "trades": 2642
+        },
+        "london": {
+          "net_r": -16710.878648,
+          "trades": 3612
+        },
+        "new_york": {
+          "net_r": -9366.703423,
+          "trades": 2602
+        }
+      },
+      "configured_per_year": {
+        "2020": {
+          "net_r": -2469.169152,
+          "trades": 382
+        },
+        "2021": {
+          "net_r": -18818.865774,
+          "trades": 1871
+        },
+        "2022": {
+          "net_r": -19467.180165,
+          "trades": 1858
+        },
+        "2023": {
+          "net_r": -31484.781246,
+          "trades": 1736
+        },
+        "2024": {
+          "net_r": -23298.651159,
+          "trades": 1952
+        },
+        "2025": {
+          "net_r": -6590.43298,
+          "trades": 1888
+        },
+        "2026": {
+          "net_r": -2375.129943,
+          "trades": 1457
+        }
+      },
+      "instrument": "XAUUSD",
+      "label": "port of the stored indicator, loosely matched to the owner (3/31 within 3 bars, 15/31 within 30 bars)",
+      "signal_count": 27299,
+      "source_rows": 2067577,
+      "status": "ok",
+      "timeframe_minutes": 1,
+      "warmup_bars": 6900,
+      "window_bars": 2067577,
+      "zero_cost": {
+        "avg_r": 0.3557968,
+        "max_drawdown_r": 18,
+        "net_r": 3965,
+        "profit_factor": 1.9344803,
+        "trades": 11144,
+        "win_rate": 0.2455133
+      },
+      "zero_cost_per_session": {
+        "asia": {
+          "net_r": 2340,
+          "trades": 2340
+        },
+        "closed": {
+          "net_r": 687,
+          "trades": 687
+        },
+        "london": {
+          "net_r": 1162,
+          "trades": 1162
+        },
+        "new_york": {
+          "net_r": 688,
+          "trades": 688
+        }
+      },
+      "zero_cost_per_year": {
+        "2020": {
+          "net_r": 150,
+          "trades": 382
+        },
+        "2021": {
+          "net_r": 724,
+          "trades": 1871
+        },
+        "2022": {
+          "net_r": 682,
+          "trades": 1858
+        },
+        "2023": {
+          "net_r": 577,
+          "trades": 1736
+        },
+        "2024": {
+          "net_r": 729,
+          "trades": 1952
+        },
+        "2025": {
+          "net_r": 624,
+          "trades": 1888
+        },
+        "2026": {
+          "net_r": 479,
+          "trades": 1457
+        }
+      }
+    },
+    {
+      "configured_costs": {
+        "avg_r": -3.5297778,
+        "max_drawdown_r": 22233.1178,
+        "net_r": -22223.4809,
+        "profit_factor": 0.0659538,
+        "trades": 6296,
+        "win_rate": 0.2360229
+      },
+      "configured_per_session": {
+        "asia": {
+          "net_r": -14148.119349,
+          "trades": 2844
+        },
+        "closed": {
+          "net_r": -2495.671923,
+          "trades": 1142
+        },
+        "london": {
+          "net_r": -6286.204205,
+          "trades": 2371
+        },
+        "new_york": {
+          "net_r": -3257.071049,
+          "trades": 1678
+        }
+      },
+      "configured_per_year": {
+        "2020": {
+          "net_r": -773.1482,
+          "trades": 223
+        },
+        "2021": {
+          "net_r": -5878.395492,
+          "trades": 1100
+        },
+        "2022": {
+          "net_r": -4548.360691,
+          "trades": 1035
+        },
+        "2023": {
+          "net_r": -4542.812348,
+          "trades": 934
+        },
+        "2024": {
+          "net_r": -4727.061124,
+          "trades": 1095
+        },
+        "2025": {
+          "net_r": -1368.818548,
+          "trades": 1070
+        },
+        "2026": {
+          "net_r": -384.884484,
+          "trades": 839
+        }
+      },
+      "instrument": "XAUUSD",
+      "label": "port of the stored indicator, loosely matched to the owner (3/31 within 3 bars, 15/31 within 30 bars)",
+      "signal_count": 8391,
+      "source_rows": 688723,
+      "status": "ok",
+      "timeframe_minutes": 3,
+      "warmup_bars": 2300,
+      "window_bars": 688723,
+      "zero_cost": {
+        "avg_r": 0.3300508,
+        "max_drawdown_r": 18,
+        "net_r": 2078,
+        "profit_factor": 1.8731092,
+        "trades": 6296,
+        "win_rate": 0.2360229
+      },
+      "zero_cost_per_session": {
+        "asia": {
+          "net_r": 1311,
+          "trades": 1311
+        },
+        "closed": {
+          "net_r": 87,
+          "trades": 87
+        },
+        "london": {
+          "net_r": 800,
+          "trades": 800
+        },
+        "new_york": {
+          "net_r": 474,
+          "trades": 474
+        }
+      },
+      "zero_cost_per_year": {
+        "2020": {
+          "net_r": 43,
+          "trades": 223
+        },
+        "2021": {
+          "net_r": 467,
+          "trades": 1100
+        },
+        "2022": {
+          "net_r": 311,
+          "trades": 1035
+        },
+        "2023": {
+          "net_r": 373,
+          "trades": 934
+        },
+        "2024": {
+          "net_r": 364,
+          "trades": 1095
+        },
+        "2025": {
+          "net_r": 285,
+          "trades": 1070
+        },
+        "2026": {
+          "net_r": 235,
+          "trades": 839
+        }
+      }
+    },
+    {
+      "configured_costs": {
+        "avg_r": -3.1359644,
+        "max_drawdown_r": 14243.5501,
+        "net_r": -14243.5501,
+        "profit_factor": 0.0841751,
+        "trades": 4542,
+        "win_rate": 0.2340379
+      },
+      "configured_per_session": {
+        "asia": {
+          "net_r": -8528.925136,
+          "trades": 2076
+        },
+        "closed": {
+          "net_r": -802.176673,
+          "trades": 710
+        },
+        "london": {
+          "net_r": -5097.382861,
+          "trades": 1714
+        },
+        "new_york": {
+          "net_r": -2938.044797,
+          "trades": 1320
+        }
+      },
+      "configured_per_year": {
+        "2020": {
+          "net_r": -466.691585,
+          "trades": 156
+        },
+        "2021": {
+          "net_r": -4572.640128,
+          "trades": 787
+        },
+        "2022": {
+          "net_r": -2615.742996,
+          "trades": 761
+        },
+        "2023": {
+          "net_r": -2273.701362,
+          "trades": 707
+        },
+        "2024": {
+          "net_r": -2387.169252,
+          "trades": 760
+        },
+        "2025": {
+          "net_r": -1709.481017,
+          "trades": 731
+        },
+        "2026": {
+          "net_r": -218.123764,
+          "trades": 640
+        }
+      },
+      "instrument": "XAUUSD",
+      "label": "port of the stored indicator, loosely matched to the owner (3/31 within 3 bars, 15/31 within 30 bars)",
+      "signal_count": 4658,
+      "source_rows": 412986,
+      "status": "ok",
+      "timeframe_minutes": 5,
+      "warmup_bars": 1380,
+      "window_bars": 412986,
+      "zero_cost": {
+        "avg_r": 0.3185821,
+        "max_drawdown_r": 19,
+        "net_r": 1447,
+        "profit_factor": 1.8306544,
+        "trades": 4542,
+        "win_rate": 0.2340379
+      },
+      "zero_cost_per_session": {
+        "asia": {
+          "net_r": 934,
+          "trades": 934
+        },
+        "closed": {
+          "net_r": -19,
+          "trades": -19
+        },
+        "london": {
+          "net_r": 623,
+          "trades": 623
+        },
+        "new_york": {
+          "net_r": 393,
+          "trades": 393
+        }
+      },
+      "zero_cost_per_year": {
+        "2020": {
+          "net_r": 35,
+          "trades": 156
+        },
+        "2021": {
+          "net_r": 293,
+          "trades": 787
+        },
+        "2022": {
+          "net_r": 218,
+          "trades": 761
+        },
+        "2023": {
+          "net_r": 293,
+          "trades": 707
+        },
+        "2024": {
+          "net_r": 196,
+          "trades": 760
+        },
+        "2025": {
+          "net_r": 215,
+          "trades": 731
+        },
+        "2026": {
+          "net_r": 197,
+          "trades": 640
+        }
+      }
+    },
+    {
+      "configured_costs": {
+        "avg_r": null,
+        "max_drawdown_r": 0,
+        "net_r": 0,
+        "profit_factor": null,
+        "trades": 0,
+        "win_rate": null
+      },
+      "configured_per_session": {},
+      "configured_per_year": {},
+      "instrument": "XAUUSD",
+      "label": "port of the stored indicator, loosely matched to the owner (3/31 within 3 bars, 15/31 within 30 bars)",
+      "signal_count": 0,
+      "source_rows": 34020,
+      "status": "ok",
+      "timeframe_minutes": 60,
+      "warmup_bars": 115,
+      "window_bars": 34020,
+      "zero_cost": {
+        "avg_r": null,
+        "max_drawdown_r": 0,
+        "net_r": 0,
+        "profit_factor": null,
+        "trades": 0,
+        "win_rate": null
+      },
+      "zero_cost_per_session": {},
+      "zero_cost_per_year": {}
+    }
+  ],
+  "generated_at": "2026-10-20T00:50:00+00:00",
+  "holdout_guard": {
+    "holdout_start": "2026-10-17T04:00:00+00:00",
+    "longer_history_run": true,
+    "tested": true
+  },
+  "label": "port of the stored indicator, loosely matched to the owner",
+  "provenance": {
+    "exit_code": 0,
+    "pod_command": "python /app/scripts/lab_t180_hist_tai.py --lake /workspace/data/lake --start 2020-10-17 --end 2026-10-17 --holdout-start 2026-10-17T04:00:00+00:00",
+    "postprocessed": "scripts/lab_t194_history_all_tf.py",
+    "raw_output": "/tmp/t194_full.json"
+  },
+  "safety": {
+    "broker_calls": 0,
+    "lake_writes": 0,
+    "orders": 0,
+    "production_state_writes": 0,
+    "sealed_holdout_read": false,
+    "tuning": false
+  },
+  "session_split_definition": "Broad UTC session_tags; tags overlap during London/New York overlap.",
+  "task": "T-194",
+  "window": {
+    "end": "2026-10-17T00:00:00",
+    "end_exclusive": true,
+    "start": "2020-10-17T00:00:00"
+  }
+}
