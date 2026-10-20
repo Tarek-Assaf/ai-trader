@@ -94,6 +94,7 @@ class ParquetCandleStore:
         on_reject: Callable[[str, OhlcUpdate | None], None] | None = None,
     ) -> int:
         """Merge a closed update batch and atomically replace affected month files."""
+
         def reject(reason: str, update: OhlcUpdate | None = None) -> None:
             if not callable(on_reject):
                 return
@@ -102,7 +103,6 @@ class ParquetCandleStore:
             except TypeError:
                 # Preserve compatibility with older one-argument callbacks.
                 on_reject(reason)  # type: ignore[call-arg]
-
 
         grouped: dict[Path, list[tuple[str, OhlcUpdate]]] = defaultdict(list)
         for symbol, update in items:
@@ -533,9 +533,7 @@ class CapitalDataRecorder:
         market_unknown = market_status == "unknown" or any(
             value is None for value in expected_open.values()
         )
-        feed_expected = market_unknown or any(
-            value is True for value in expected_open.values()
-        )
+        feed_expected = market_unknown or any(value is True for value in expected_open.values())
         last_bar = self._last_closed_bar_at
         age_seconds = (
             (now - last_bar).total_seconds()
