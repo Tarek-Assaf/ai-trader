@@ -314,7 +314,13 @@ def _provider_trace(
         while exit_cursor < len(ordered_exits) and ordered_exits[exit_cursor] <= bar.at:
             provider.note_exit(ordered_exits[exit_cursor])
             exit_cursor += 1
-        signal = provider(bar)
+        # Preserve every bar in the provider's state, but only calculate the
+        # expensive indicator arrays at the 26 comparison timestamps.
+        if bar.at in target_times:
+            signal = provider(bar)
+        else:
+            provider._bars.append(bar)
+            signal = None
         if bar.at not in target_times:
             continue
         row: dict[str, object] = {
