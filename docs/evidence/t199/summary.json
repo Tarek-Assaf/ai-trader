@@ -1,0 +1,61 @@
+{
+  "task": "T-199",
+  "status": "ok",
+  "command": "timeout 180s python /app/lab_t195_runtime_miss.py --lake /workspace/data/lake --holdout-start 2026-07-01T00:00:00Z --epic NSXUSD --days 10 --output-dir /workspace/t199_run",
+  "pod_terminal": "https://pbkmi8nx193x3w-19123.proxy.runpod.net/gt00f7em302mcpp6gezy1e5nzxyeph5r/",
+  "holdout_start": "2026-07-01T00:00:00Z",
+  "comparison": {
+    "port_count": 26,
+    "runtime_count": 1,
+    "matched": 1,
+    "extras": [],
+    "exact": false,
+    "hypothesis_counts": {
+      "matched": 1,
+      "runtime_gate_ha_cross": 25
+    },
+    "matching_entry": {
+      "at": "2026-06-24T16:00:00+00:00",
+      "direction": "BUY",
+      "entry": "29556.867",
+      "stop": "29462.963656558964332"
+    },
+    "remaining_first_difference": "runtime_gate_ha_cross"
+  },
+  "ema200_samples": [
+    {
+      "at": "2026-06-19T08:21:00+00:00",
+      "direction": "BUY",
+      "port": 30241.5510512159,
+      "runtime_bounded": 30241.288876608574,
+      "runtime_unbounded": 30241.288876608574,
+      "delta_bounded_minus_port": -0.2621746073234234
+    },
+    {
+      "at": "2026-06-19T11:57:00+00:00",
+      "direction": "SELL",
+      "port": 30272.2985023102,
+      "runtime_bounded": 30272.13913103505,
+      "runtime_unbounded": 30272.17088889924,
+      "delta_bounded_minus_port": -0.1593712750727182
+    },
+    {
+      "at": "2026-06-21T23:30:00+00:00",
+      "direction": "SELL",
+      "port": 30312.022663035947,
+      "runtime_bounded": 30311.62496894538,
+      "runtime_unbounded": 30311.98788472692,
+      "delta_bounded_minus_port": -0.3976940905668016
+    }
+  ],
+  "safety": {
+    "broker_calls": false,
+    "order_calls": 0,
+    "network_access": false,
+    "lake_writes": false,
+    "sealed_holdout_read": false,
+    "redeploy": false,
+    "risk_or_gate_edits": false,
+    "status": "ok"
+  }
+}

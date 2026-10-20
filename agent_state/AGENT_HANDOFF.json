@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 553,
+  "turn": "claude",
+  "revision": 555,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-200 spread guard accepted; T-199 EMA parity code landed, its Pod replay remains blocked on B-033/Q-076. T-201 cost-in-R diagnostic is blocked on B-034: Pod terminal returned HTTP 404 and the desktop has no training lake/runtime dependencies. Dry-run stays on; no broker calls, orders, holdout reads, redeploy or secrets. Review of T-201 code done; all remaining work waits on a working Pod terminal (Q-076).",
+    "summary": "T-199 Pod replay completed on the reachable owner terminal: 1/26 entries matched; 25 remain runtime_gate_ha_cross, with EMA200 numeric samples recorded. The URL blocker B-033 is resolved, but T-199 acceptance remains blocked on the exact replay threshold. T-201 six-cell TRAINING scan is still running on the same Pod and remains blocked until its evidence is committed. Dry-run stays on; no broker calls, orders, holdout reads, redeploy or secrets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-201",
+    "last_task": "T-199",
     "last_status": "blocked"
   },
   "requirements": [
@@ -6567,7 +6567,7 @@
         "src/trader/experiments/tai_wiring.py",
         "tests/unit/test_tai_wiring.py"
       ],
-      "completion_note": "Code landed on main (full-history EMA seed, long-series and restart tests) after Claude review; task stays BLOCKED, not done: the required before/after replay (>=22 of 26 port entries) needs a reachable Pod terminal (B-033, Q-076)."
+      "completion_note": "Pod replay completed through the new reachable owner terminal. It produced 1/26 matches (25 runtime_gate_ha_cross; two bar/stop mismatches) and three real entry-bar EMA200 comparisons. B-033 URL access is resolved, but the >=22/26 acceptance criterion remains unmet; exact remaining differences are recorded. T-199 remains BLOCKED."
     },
     {
       "id": "T-200",
@@ -16656,6 +16656,21 @@
       "validated_by": "claude",
       "date": "2026-10-20T11:00:00+03:00",
       "reverify_if": "A reachable Pod terminal with the training lake is supplied and the script is run."
+    },
+    {
+      "id": "V-494",
+      "task_id": "T-199",
+      "subject": "T-199 bounded Pod replay after Q-076",
+      "method": "Ran the existing lab_t195_runtime_miss.py through the new owner Pod URL against /workspace/data/lake with holdout guard 2026-07-01T00:00:00Z; inspected comparison, rows and safety object.",
+      "result": "fail",
+      "checked": "status=ok; port_count=26; runtime_count=1; matched=1; extras=0. Twenty-five rows first fail at runtime_gate_ha_cross; two include bar_or_stop_difference. Three entry-bar EMA200 port/runtime values are recorded. No broker, order, holdout, lake-write, redeploy, risk/gate or secret activity.",
+      "validated_by": "codex",
+      "date": "2026-10-20T12:51:00+03:00",
+      "evidence": [
+        "docs/evidence/t199/report.md",
+        "docs/evidence/t199/summary.json"
+      ],
+      "reverify_if": "A replay implementation or runtime gate changes."
     }
   ],
   "blockers": [
@@ -16900,9 +16915,11 @@
       "id": "B-033",
       "task_id": "T-199",
       "raised_by": "codex",
-      "status": "open",
+      "status": "resolved",
       "text": "The required bounded T-187/T-195 runtime-versus-port replay cannot run: the owner-provided Pod terminal URL returned HTTP 404 for the read-only request. No replay counts or 22/26 acceptance claim can be made from this branch.",
-      "resolution": "Codex retried the exact owner-provided URL after Claude review (direct GET and in-app browser); it still returned HTTP 404 at 2026-10-20T06:28+03:00. A reachable Pod terminal/session is required before replay acceptance can be verified."
+      "resolution": "Owner supplied a reachable Pod URL. The bounded replay completed at status=ok on 2026-10-20 12:51+03:00; its 1/26 result and numeric EMA200 samples are recorded in docs/evidence/t199/report.md and summary.json.",
+      "resolved_by": "codex",
+      "resolved_at": "2026-10-20"
     },
     {
       "id": "B-034",
@@ -16911,6 +16928,14 @@
       "status": "open",
       "text": "The required six-year TRAINING per-trade cost-in-R scan cannot run: the owner-provided Pod terminal URL returned HTTP 404, and the desktop checkout has no /workspace/data/lake or sqlalchemy/pytest runtime. No percentile or net-R results can be claimed.",
       "resolution": "Owner must provide a reachable Pod terminal/session with the training lake and runtime dependencies before the six instrument/timeframe cells can be computed."
+    },
+    {
+      "id": "B-035",
+      "task_id": "T-199",
+      "raised_by": "codex",
+      "status": "open",
+      "text": "The reachable Pod replay still produces only 1 of 26 reference entries; 25 are classified runtime_gate_ha_cross (two also show bar/stop differences). The >=22/26 acceptance criterion is not met.",
+      "resolution": "Claude must review the exact remaining gate differences before T-199 can be accepted; no strategy or risk/gate change was made."
     }
   ],
   "questions": [
@@ -17856,7 +17881,7 @@
       "id": "Q-076",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "The Pod terminal link you gave Codex returns 404 twice, so the T-199 check (does the fixed agent now take at least 22 of the 26 reference entries?) cannot run. What should we do? Codex continues with T-200 meanwhile; dry-run stays on.",
       "options": [
         "A: Send a fresh Pod terminal URL or restart the Pod session (recommended)",
@@ -17864,7 +17889,7 @@
         "C: Run the replay offline from the recorded data lake instead of the Pod"
       ],
       "recommendation": "A: it is the only way to get the real before/after numbers; B is acceptable if the Pod is down for long.",
-      "answer": ""
+      "answer": "A (owner, chat 2026-10-20 12:49 Riyadh): Codex has access to the Pod terminal now. Use the new reachable URL for the T-199 replay and T-201 training scan."
     }
   ],
   "log": [
@@ -28805,6 +28830,35 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-201 code landed after review (V-493); results still not produced because the Pod terminal link returns 404 (B-033/B-034, Q-076). Every open Codex task is now blocked on that link, so there is nothing for Codex to do until the owner answers Q-076. Dry-run stays on. No broker calls, orders, holdout reads, redeploy or secrets. Turn to human."
+    },
+    {
+      "revision": 554,
+      "ts": "2026-10-20T12:55:00+03:00",
+      "agent": "claude",
+      "action": "answer_q076_unblock_codex",
+      "task_ids": [
+        "T-199",
+        "T-201"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner answered Q-076: Codex has Pod terminal access now. Codex: run the T-199 replay (>=22 of 26 or name the first differing quantity, plus EMA200 numbers at three entry bars) and the T-201 six-cell TRAINING scan on the Pod, then clear B-033/B-034 with evidence. Read-only; dry-run stays on; no broker calls, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 555,
+      "ts": "2026-10-20T13:05:00+03:00",
+      "agent": "codex",
+      "action": "complete_t199_pod_replay_blocked_acceptance",
+      "task_ids": [
+        "T-199"
+      ],
+      "files_changed": [
+        "docs/evidence/t199/report.md",
+        "docs/evidence/t199/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "New Pod URL is reachable and the bounded T-195 replay completed read-only. It matches 1/26 entries; 25 remain runtime_gate_ha_cross, and three EMA200 numeric comparisons are recorded. B-033 is resolved, but T-199 remains blocked on the >=22/26 acceptance threshold (B-035). No broker calls, orders, holdout reads, redeploy, risk/gate edits or secrets. T-201 scan is still running separately on the same Pod. Turn to Claude for review."
     }
   ],
   "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. T-201 offline implementation is recorded, but its required per-trade distribution scan is blocked by B-034 until a reachable Pod training lake/runtime is available."
