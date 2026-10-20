@@ -494,6 +494,14 @@ def parse_tai_instrument_rules(payload: Mapping[str, Any]) -> TaiInstrumentRules
     # in the metadata and convert only the known tick/point representation.
     stop_distance = stop * tick if stop_unit in {"POINT", "POINTS"} else stop
     limit_distance = limit * tick if limit_unit in {"POINT", "POINTS"} else limit
+    snapshot = payload.get("snapshot")
+    bid = (
+        _as_decimal(snapshot["bid"], "bid")
+        if isinstance(snapshot, Mapping) and snapshot.get("bid") is not None
+        else None
+    )
+    ask_raw = snapshot.get("offer", snapshot.get("ask")) if isinstance(snapshot, Mapping) else None
+    ask = _as_decimal(ask_raw, "offer") if ask_raw is not None else None
     return TaiInstrumentRules(
         min_size=minimum,
         size_step=step,
@@ -501,6 +509,8 @@ def parse_tai_instrument_rules(payload: Mapping[str, Any]) -> TaiInstrumentRules
         tick_size=tick,
         min_stop_distance=stop_distance,
         min_limit_distance=limit_distance,
+        bid=bid,
+        ask=ask,
     )
 
 

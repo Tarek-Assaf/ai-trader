@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 545,
+  "turn": "claude",
+  "revision": 547,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-191..T-198 accepted. Findings: runtime EMA200 differs from the port (T-199 queued), configured-cost results are negative in every non-empty cell and the mirror control shows no edge. Spread guard (Q-075=A) queued as T-200. Dry-run stays on; runtime not cleared for demo orders. No broker orders, no holdout reads.",
+    "summary": "T-200 implementation complete: Q-075=A Tai spread guard refuses quotes wider than max(0.25 x stop distance, 2 x tick size), fails closed when quote data is missing, journals refusal details and throttles alerts. T-199 remains blocked on Pod replay. Dry-run stays on; no broker calls, holdout reads, redeploy or secrets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,8 +47,8 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-198",
-    "last_status": "done"
+    "last_task": "T-200",
+    "last_status": "review"
   },
   "requirements": [
     {
@@ -6568,7 +6568,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -6584,8 +6584,12 @@
         "tests/unit/test_tai_demo.py"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t200/report.md",
+        "docs/evidence/t200/summary.json",
+        "docs/evidence/t192/audit.md"
+      ],
+      "completion_note": "Implemented the Q-075=A spread guard with broker snapshot bid/offer parsing, max(0.25 x stop distance, 2 x tick size) exact-limit semantics, missing-quote refusal, refusal journaling and one-alert throttling. Ruff format/check, py_compile and git diff --check pass; focused pytest is unavailable because the desktop has no pytest module. No broker calls, orders, holdout reads, redeploy, risk/gate edits or secrets. Turn to Claude for review."
     }
   ],
   "decisions": [
@@ -16512,6 +16516,16 @@
       "validated_by": "claude",
       "date": "2026-10-20T06:20:00+03:00",
       "reverify_if": "Mirror semantics, source port, cost model or TRAINING window changes."
+    },
+    {
+      "id": "V-488",
+      "subject": "T-200 Tai spread guard offline implementation",
+      "method": "Reviewed the Q-075=A spec and changed the Tai entry path to parse snapshot bid/offer, apply max(0.25 x stop distance, 2 x tick size), fail closed without quote data, journal refusal details and throttle alerts; ran Ruff format/check, Python compilation and git diff --check.",
+      "result": "pass",
+      "evidence": "docs/evidence/t200/report.md; docs/evidence/t200/summary.json; docs/evidence/t192/audit.md",
+      "validated_by": "codex",
+      "date": "2026-10-20T06:43:00+03:00",
+      "reverify_if": "T-200 implementation, quote payload shape or Q-075 decision changes."
     }
   ],
   "blockers": [
@@ -28497,7 +28511,27 @@
         "docs/specs/t200_tai_spread_guard.md"
       ],
       "summary": "The loop had stalled on Q-075 (turn human since rev 544). Answered Q-075 with the recommendation A under the owner's delegation (D-082) and queued T-199 (runtime EMA200 parity, from the T-196 finding: 22 of 23 first differences are ema200) then T-200 (spread guard). Specs written. Codex: do T-199 first, then T-200. Dry-run stays on. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 547,
+      "ts": "2026-10-20T06:43:00+03:00",
+      "agent": "codex",
+      "action": "complete_t200_spread_guard_handoff_claude",
+      "task_ids": [
+        "T-200"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/experiments/tai_wiring.py",
+        "tests/unit/test_tai_demo.py",
+        "tests/unit/test_tai_wiring.py",
+        "docs/evidence/t192/audit.md",
+        "docs/evidence/t200/report.md",
+        "docs/evidence/t200/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed T-200 offline from authoritative origin/main: quote-aware Tai spread guard, exact-limit acceptance, missing-quote refusal, refusal journal details and throttled alerts. Ruff format/check, py_compile and git diff --check pass; pytest is unavailable on the desktop. No broker calls, orders, holdout reads, redeploy, risk/gate edits or secrets. Turn to Claude for review."
     }
   ],
-  "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. Q-075 spread ceiling remains open for the owner; Tai stays disabled/dry-run pending review."
+  "project_summary": "T-200 implementation complete (V-488): Q-075=A Tai spread guard now fails closed on missing quotes and refuses spread > max(0.25 x stop distance, 2 x tick size), with refusal journal details and throttled alerts. T-199 remains blocked on Pod replay; Tai stays disabled/dry-run pending review."
 }

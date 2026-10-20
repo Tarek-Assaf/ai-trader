@@ -79,6 +79,21 @@ def test_capital_rules_parser_requires_distance_and_preserves_values() -> None:
         parse_tai_instrument_rules({"instrument": payload["instrument"], "dealingRules": {}})
 
 
+def test_capital_rules_parser_preserves_snapshot_quote() -> None:
+    payload = {
+        "instrument": {"epic": "NSXUSD", "tickSize": "0.1", "valuePerPoint": "1"},
+        "dealingRules": {
+            "minDealSize": {"value": "0.1", "unit": "AMOUNT"},
+            "minSizeIncrement": {"value": "0.1", "unit": "AMOUNT"},
+            "minStopOrLimitDistance": {"value": "10", "unit": "POINTS"},
+        },
+        "snapshot": {"bid": "19999.8", "offer": "20000.0"},
+    }
+    rules = parse_tai_instrument_rules(payload)
+    assert rules.bid == Decimal("19999.8")
+    assert rules.ask == Decimal("20000.0")
+
+
 def test_order_factory_rounds_price_levels_and_rejects_short_stop() -> None:
     rules = TaiInstrumentRules(
         Decimal("0.1"), Decimal("0.1"), Decimal("1"), Decimal("0.1"), Decimal("1"), Decimal("1")

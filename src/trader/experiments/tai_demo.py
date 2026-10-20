@@ -26,6 +26,10 @@ from trader.execution.manager import ExecutionPaused
 
 LOGGER = logging.getLogger(__name__)
 EXPERIMENT_LABEL = "Tai port, owner-directed demo experiment, loosely matched to the owner"
+# Q-075 = A: refuse entries when the live quote consumes more than one quarter
+# of the stop distance or two broker ticks, whichever is wider.
+SPREAD_RISK_FRACTION = Decimal("0.25")
+MIN_SPREAD_TICKS = Decimal("2")
 
 
 class TaiDemoRefused(RuntimeError):
@@ -177,6 +181,8 @@ class TaiInstrumentRules:
     tick_size: Decimal | None = None
     min_stop_distance: Decimal | None = None
     min_limit_distance: Decimal | None = None
+    bid: Decimal | None = None
+    ask: Decimal | None = None
 
     def __post_init__(self) -> None:
         for name in ("min_size", "size_step"):
@@ -195,6 +201,14 @@ class TaiInstrumentRules:
                 not isinstance(value, Decimal) or not value.is_finite() or value <= 0
             ):
                 raise ValueError(f"{name} must be a positive finite Decimal")
+        for name in ("bid", "ask"):
+            value = getattr(self, name)
+            if value is not None and (
+                not isinstance(value, Decimal) or not value.is_finite() or value <= 0
+            ):
+                raise ValueError(f"{name} must be a positive finite Decimal")
+        if self.bid is not None and self.ask is not None and self.ask < self.bid:
+            raise ValueError("ask must not be below bid")
 
 
 @dataclass(frozen=True, slots=True)
@@ -289,6 +303,7 @@ class TaiDemoRunner:
         self._alert = alert or (lambda message: LOGGER.info("tai demo: %s", message))
         self._state_path = state_path
         self._epic = epic
+        self._spread_alerted: set[tuple[str, str]] = set()
         self._startup_blocked = False
         self._state_corrupt = False
         persisted_state = self._load_state()
@@ -474,6 +489,21 @@ class TaiDemoRunner:
             return self._outcome(cycle_id, "NO_TRADE", "no_signal")
         try:
             rules = self._rules_provider(bar.epic) if self._rules_provider is not None else None
+            refusal = self._spread_refusal(signal, rules)
+            if refusal is not None:
+                reason, details = refusal
+                self._journal_event(
+                    cycle_id,
+                    "order_refused",
+                    epic=bar.epic,
+                    reason=reason,
+                    **details,
+                )
+                alert_key = (bar.epic, reason)
+                if alert_key not in self._spread_alerted:
+                    self._spread_alerted.add(alert_key)
+                    self._send_alert(f"entry refused for {bar.epic}: {reason}")
+                return self._outcome(cycle_id, "REJECTED", reason)
             requested_size = self._requested_size(rules)
             order = self._build_order(signal, cycle_id, requested_size)
         except (TaiDemoRefused, ValueError) as exc:
@@ -780,6 +810,32 @@ class TaiDemoRunner:
     def _send_alert(self, message: str) -> None:
         prefix = "DRY-RUN: " if self._dry_run else ""
         self._alert(f"{prefix}{EXPERIMENT_LABEL}: {message}")
+
+    @staticmethod
+    def _spread_refusal(
+        signal: TaiSignal, rules: TaiInstrumentRules | None
+    ) -> tuple[str, dict[str, Decimal]] | None:
+        """Return a fail-closed spread refusal, preserving legacy no-rules tests."""
+        if rules is None:
+            return None
+        if rules.tick_size is None or rules.bid is None or rules.ask is None:
+            return ("spread_quote_unavailable", {})
+        spread = rules.ask - rules.bid
+        stop_distance = abs(signal.entry - signal.stop)
+        limit = max(SPREAD_RISK_FRACTION * stop_distance, MIN_SPREAD_TICKS * rules.tick_size)
+        if spread <= limit:
+            return None
+        return (
+            "spread_too_wide",
+            {
+                "bid": rules.bid,
+                "ask": rules.ask,
+                "spread": spread,
+                "spread_limit": limit,
+                "stop_distance": stop_distance,
+                "tick_size": rules.tick_size,
+            },
+        )
 
     @staticmethod
     def _outcome(cycle_id: str, action: str, reason: str) -> DemoOutcome:
