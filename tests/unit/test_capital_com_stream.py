@@ -149,6 +149,24 @@ def test_backfill_includes_the_watermark_minute_for_rest_reconciliation() -> Non
     )
 
 
+def test_backfill_invokes_one_batch_callback_per_epic() -> None:
+    rest = FakeRest()
+    batches: list[list[OhlcUpdate]] = []
+    stamp = datetime(2026, 10, 3, 10, 1, tzinfo=UTC)
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        lambda _event: None,
+        on_backfill_batch=lambda batch: batches.append(list(batch)),
+        clock=lambda: datetime(2026, 10, 3, 10, 3, tzinfo=UTC),
+    )
+    client.seed_watermarks({("US100", side): stamp for side in ("bid", "ask")})
+
+    assert client._backfill() == 4
+    assert len(batches) == 1
+    assert len(batches[0]) == 4
+
+
 def test_session_renewal_is_bounded_per_minute() -> None:
     rest = FakeRest()
     client = CapitalComStreamClient(rest, ["US100"], lambda _event: None)
@@ -539,3 +557,4 @@ def test_stream_sends_keepalive_ping_before_ten_minutes() -> None:
 
     messages = [json.loads(message) for message in socket.sent]
     assert sum(message["destination"] == "ping" for message in messages) == 2
+
