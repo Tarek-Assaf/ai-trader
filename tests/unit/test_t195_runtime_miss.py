@@ -1,8 +1,15 @@
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from scripts import lab_t187_runtime_replay as replay
-from scripts.lab_t195_runtime_miss import _classify_cause, _first_gate, _nearest_entry
+from scripts.lab_t195_runtime_miss import (
+    _classify_cause,
+    _first_gate,
+    _nearest_entry,
+    _provider_trace,
+)
+from trader.experiments import tai_wiring
+from trader.experiments.tai_demo import ClosedBar
 
 
 def test_first_gate_uses_provider_order() -> None:
@@ -61,3 +68,38 @@ def test_nearest_entry_preserves_port_side_for_runtime_evidence() -> None:
     expected = replay.RuntimeEntry(stamp, "SELL", Decimal("100"), Decimal("101"))
     candidate = replay.RuntimeEntry(stamp.replace(minute=3), "SELL", Decimal("99"), Decimal("102"))
     assert _nearest_entry(expected, (candidate,)) == candidate
+
+
+def test_provider_trace_replays_exit_callbacks(monkeypatch) -> None:
+    exits: list[datetime] = []
+
+    class FakeProvider:
+        warmup_bars = 300
+        last_exit_at = datetime(2026, 6, 1, 0, 0, tzinfo=UTC)
+
+        def note_exit(self, at: datetime) -> None:
+            exits.append(at)
+
+        def __call__(self, bar: ClosedBar):
+            return None
+
+    monkeypatch.setattr(tai_wiring, "TaiSignalProvider", FakeProvider)
+    first = datetime(2026, 6, 1, 0, 0, tzinfo=UTC)
+    bars = tuple(
+        ClosedBar(
+            at=first + timedelta(minutes=3 * index),
+            epic="NSXUSD",
+            open=Decimal("100"),
+            high=Decimal("101"),
+            low=Decimal("99"),
+            close=Decimal("100"),
+            timeframe_minutes=3,
+            closed=True,
+            market_open=True,
+            in_break=False,
+            volume=Decimal("1"),
+        )
+        for index in range(2)
+    )
+    _provider_trace(bars, {bars[-1].at}, (first,))
+    assert exits == [first]

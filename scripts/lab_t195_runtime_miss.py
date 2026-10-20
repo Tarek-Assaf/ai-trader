@@ -293,6 +293,47 @@ def _runtime_trace(
     return tuple(result), trace, len(history)
 
 
+def _provider_trace(
+    bars: Sequence[ClosedBar],
+    target_times: set[datetime],
+    exit_times: Sequence[datetime],
+) -> tuple[tuple[replay.RuntimeEntry, ...], dict[str, dict[str, object]]]:
+    """Replay the production signal provider with the real exit callback.
+
+    The historical port emits refresh entries only after a position closes.  This
+    path deliberately exercises ``TaiSignalProvider.note_exit`` before feeding
+    each closed bar, so the diagnostic proves the runtime callback wiring instead
+    of duplicating the refresh countdown in the harness.
+    """
+    provider = tai_wiring.TaiSignalProvider(minimum_history=MINIMUM_HISTORY)
+    ordered_exits = tuple(sorted(exit_times))
+    exit_cursor = 0
+    entries: list[replay.RuntimeEntry] = []
+    trace: dict[str, dict[str, object]] = {}
+    for bar in bars:
+        while exit_cursor < len(ordered_exits) and ordered_exits[exit_cursor] <= bar.at:
+            provider.note_exit(ordered_exits[exit_cursor])
+            exit_cursor += 1
+        signal = provider(bar)
+        if bar.at not in target_times:
+            continue
+        row: dict[str, object] = {
+            "history_bars": provider.warmup_bars,
+            "last_exit_at": provider.last_exit_at.isoformat()
+            if provider.last_exit_at is not None
+            else None,
+            "signal": None,
+        }
+        if signal is not None:
+            entry = replay.RuntimeEntry(
+                bar.at, signal.direction.value, signal.entry, signal.stop
+            )
+            entries.append(entry)
+            row["signal"] = replay._entry_payload(entry)
+        trace[bar.at.isoformat()] = row
+    return tuple(entries), trace
+
+
 def _entry_by_key(
     entries: Sequence[replay.RuntimeEntry],
 ) -> dict[tuple[str, str], replay.RuntimeEntry]:
@@ -390,12 +431,12 @@ def run(
         port_candles, "closed", ha_anchor="session_1800_ny", vwap_anchor="session_1800_ny"
     )
     exit_times = tuple(trade.exit_time for trade in port_trades if trade.exit_time is not None)
-    bounded, bounded_trace, _ = _runtime_trace(
-        bars, selected, target_times, exit_times=exit_times, unbounded=False
-    )
-    unbounded, unbounded_trace, _ = _runtime_trace(
-        bars, selected, target_times, exit_times=exit_times, unbounded=True
-    )
+    # T-204 exercises the production provider and its exit callback.  The
+    # prior T-203 harness duplicated the countdown locally and could not prove
+    # that the runtime callback path was wired.
+    bounded, bounded_trace = _provider_trace(bars, target_times, exit_times)
+    unbounded: tuple[replay.RuntimeEntry, ...] = ()
+    unbounded_trace: dict[str, dict[str, object]] = {}
     bounded_by_key = _entry_by_key(bounded)
     unbounded_by_key = _entry_by_key(unbounded)
     rows: list[dict[str, object]] = []
@@ -466,7 +507,7 @@ def run(
     # Runtime emits no independent position lock: it is a pure provider trace.
     comparison = replay.compare_entries(bounded, port_entries)
     return {
-        "task": "T-195",
+        "task": "T-204",
         "status": "ok",
         "epic": epic,
         "holdout_start": holdout_start.isoformat(),
@@ -481,7 +522,7 @@ def run(
         "bar_construction": _bar_diff(bars, comparison_bars),
         "position_lock": {
             "applies": False,
-            "reason": "TaiSignalProvider is traced directly and has no position state.",
+            "reason": "TaiSignalProvider is replayed directly with note_exit callbacks; a full TaiDemoRunner fake broker is not required for this callback parity check.",
         },
         "rows": rows,
         "safety": {
@@ -505,7 +546,7 @@ def _write_outputs(payload: Mapping[str, object], output_dir: Path) -> None:
     rows = payload["rows"]
     assert isinstance(counts, Mapping) and isinstance(rows, Sequence)
     report = [
-        "# T-195 runtime miss diagnostic",
+        "# T-204 runner exit replay",
         "",
         f"- Port entries: **{payload['port_entries']}**",
         f"- Bounded runtime entries: **{payload['bounded_runtime_entries']}**",
@@ -522,9 +563,8 @@ def _write_outputs(payload: Mapping[str, object], output_dir: Path) -> None:
         ),
         "",
         (
-            "Position lock does not apply because this diagnostic traces the pure signal "
-            "provider directly. Bar construction compares the runtime builder with an "
-            "independent UTC resampler over the same minute input."
+            "This replay uses the production TaiSignalProvider and calls note_exit at each "
+            "port exit timestamp. It does not place broker orders or read the holdout."
         ),
         "",
         "## Per-entry rows",
@@ -554,9 +594,9 @@ def _write_outputs(payload: Mapping[str, object], output_dir: Path) -> None:
         [
             "",
             (
-                "No proposed code fix is applied by T-195; the narrowest candidate is to "
-                "align runtime history/indicator seeding with the full-series port after "
-                "review."
+                "The provider callback path is the narrowest runner-equivalent replay for "
+                "the refresh trigger; a full TaiDemoRunner fake-broker integration is not "
+                "needed because the callback is the behavior under test."
             ),
         ]
     )
@@ -576,7 +616,7 @@ def main() -> int:
     print(
         json.dumps(
             {
-                "task": "T-195",
+                "task": "T-204",
                 "status": payload["status"],
                 "hypothesis_counts": payload["hypothesis_counts"],
                 "comparison": payload["comparison"],
