@@ -1,0 +1,26 @@
+{
+  "task": "T-199",
+  "status": "review",
+  "root_cause": "Runtime EMA200 was recomputed from a truncated history window, changing the SMA seed versus the closed port on long series.",
+  "runtime_ema": "src/trader/experiments/tai_wiring.py:199-211",
+  "port_ema": "scripts/lab_t162_pine_port.py:112-124",
+  "synthetic": {
+    "bars": 850,
+    "full_ema200": 101.896749405124496,
+    "bounded_600_ema200": 101.89678461078968,
+    "difference": -0.000035205665185
+  },
+  "historical_replay": {
+    "status": "blocked",
+    "blocker": "Owner-provided Pod URL returned HTTP 404; T-187/T-195 replay route/session unavailable.",
+    "broker_calls": 0,
+    "holdout_access": false
+  },
+  "validation": {
+    "ruff_format": "passed",
+    "ruff_check": "passed",
+    "py_compile": "passed",
+    "git_diff_check": "passed",
+    "pytest": "not_run: pytest module unavailable"
+  }
+}

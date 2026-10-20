@@ -269,6 +269,40 @@ def test_signal_features_match_t162_closed_fixture_with_buy_and_sell() -> None:
     assert any(ours["sell"])
 
 
+def test_signal_provider_keeps_ema_seed_across_long_series_and_restart() -> None:
+    start = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    bars = []
+    for index in range(850):
+        close = Decimal("100") + Decimal(index % 37) / Decimal("10")
+        bars.append(
+            ClosedBar(
+                start + timedelta(minutes=index * 3),
+                "NSXUSD",
+                close,
+                close + Decimal("1"),
+                close - Decimal("1"),
+                close,
+            )
+        )
+
+    continuous = TaiSignalProvider(bars[:300], minimum_history=300)
+    for bar in bars[300:]:
+        continuous(bar)
+    reference = _features(bars)["ema"][-1]
+
+    assert len(continuous.history) == len(bars)
+    assert continuous.history == tuple(bars)
+    assert continuous.history and _features(continuous.history)["ema"][-1] == pytest.approx(
+        reference
+    )
+
+    restarted = TaiSignalProvider(continuous.history[:650], minimum_history=300)
+    for bar in continuous.history[650:]:
+        restarted(bar)
+    assert restarted.history == tuple(bars)
+    assert _features(restarted.history)["ema"][-1] == pytest.approx(reference)
+
+
 def test_dry_run_journals_without_submitting() -> None:
     class Control:
         def read(self) -> ControlMode:
