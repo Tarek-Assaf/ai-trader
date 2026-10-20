@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 568,
+  "turn": "codex",
+  "revision": 569,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -181,7 +181,9 @@
         "T-204",
         "T-205",
         "T-206",
-        "T-207"
+        "T-207",
+        "T-208",
+        "T-209"
       ]
     },
     {
@@ -6809,7 +6811,57 @@
         "docs/evidence/t207/report.md",
         "docs/evidence/t207/summary.json"
       ],
-      "completion_note": "Completed read-only Pod check. Port had 0 entries on 40 complete 3m bars; runtime had no observed entries, refusals, exits, orders or audit rows. Runtime closed-minute lines were 107 versus 117 lake bars and runtime exposed no per-bar outcome telemetry; recorded as T207-FEED-GAP-TELEMETRY blocker."
+      "completion_note": "Completed read-only Pod check. Port had 0 entries on 40 complete 3m bars; runtime had no observed entries, refusals, exits, orders or audit rows. Runtime closed-minute lines were 107 versus 117 lake bars and runtime exposed no per-bar outcome telemetry; recorded as T207-FEED-GAP-TELEMETRY blocker. Accepted (V-503): quiet session is consistent with the port; follow-ups T-208 (recorder gaps) and T-209 (telemetry)."
+    },
+    {
+      "id": "T-208",
+      "title": "Diagnose recorder degradation and missing minute bars (read-only)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-207"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t208_recorder_degraded.md exactly. Read-only on the Pod; no restart, config, code, order or secrets. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t208_recorder_degraded.md",
+        "docs/evidence/t208/"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Queued by Claude; not started."
+    },
+    {
+      "id": "T-209",
+      "title": "Per-bar outcome telemetry for the Tai runner",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-207"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t209_bar_outcome_telemetry.md exactly. Counters only; no change to trading decisions, dry-run, risk or gate files. Ruff check and format (line length 100), mypy, CI green. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t209_bar_outcome_telemetry.md",
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/api/health.py",
+        "tests/unit/"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Queued by Claude; not started."
     }
   ],
   "decisions": [
@@ -16970,6 +17022,20 @@
       ],
       "validated_by": "claude",
       "reverify_if": "a later session has entries"
+    },
+    {
+      "id": "V-503",
+      "task_id": "T-207",
+      "subject": "Claude review of T-207 quiet-session check",
+      "method": "Read docs/evidence/t207/report.md and summary.json; handoff validator.",
+      "result": "pass",
+      "checked": "Port replay over the live window: 117 lake minutes, 40 complete 3m bars, 0 candidates, 0 entries, so zero runtime entries is consistent with the port. Open issues found: the recorder was degraded from about 14:40Z (reconnects, rejected candles) and the runtime log has 107 closed minutes vs 117 in the lake (10 missing); the runtime has no per-bar outcome telemetry.",
+      "evidence": [
+        "docs/evidence/t207/report.md",
+        "docs/evidence/t207/summary.json"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "false"
     }
   ],
   "blockers": [
@@ -29371,6 +29437,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Read-only Pod check complete. dry_run=off, paper/demo, live_enabled=false; no runtime entries/refusals/exits/orders/audit rows and positions stayed flat. Port replay: 117 lake minutes -> 40 complete 3m bars, 0 candidates, 0 entries; runtime-vs-port matched 0/extras 0/misses 0. Blocker: runtime logs expose 107 closed-minute lines (10 fewer than lake) and no per-bar outcome telemetry, so runtime evaluated/gate counts cannot be independently verified. No config/code/risk/gate/order/restart/secret changes. Turn to claude."
+    },
+    {
+      "revision": 569,
+      "ts": "2026-10-20T19:30:00+03:00",
+      "agent": "claude",
+      "action": "accept_t207_queue_t208_t209",
+      "task_ids": [
+        "T-207",
+        "T-208",
+        "T-209"
+      ],
+      "files_changed": [
+        "docs/specs/t208_recorder_degraded.md",
+        "docs/specs/t209_bar_outcome_telemetry.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-207 (V-503): the port finds no candidate in the live window, so zero entries is normal. But health is degraded since about 14:40Z (recorder reconnects, rejected candles, unknown market status) and the runtime log is 10 minutes short of the lake. Queued T-208 (read-only diagnosis of the recorder gaps, do first) and T-209 (per-bar outcome counters in /health, code). Dry-run stays off by the owner's decision; no order, config, risk/gate, redeploy or secret changes. Turn to codex."
     }
   ],
   "project_summary": "T-207 read-only quiet-session check found dry_run=off but live_enabled=false in paper/demo mode; no entries, refusals, exits or order events and state stayed flat. Port replay had 0 entries on 40 complete 3m bars. Runtime exposed 107 closed-minute lines versus 117 lake bars and no per-bar outcome telemetry, so runtime outcome/gate counts remain blocked. T-204/T-205 replay evidence remains accepted at 25/26."
