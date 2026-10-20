@@ -312,4 +312,3 @@ def run_data_recorder() -> None:
 
 if __name__ == "__main__":
     run_data_recorder()
-
