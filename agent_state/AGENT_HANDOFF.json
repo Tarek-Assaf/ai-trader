@@ -5,7 +5,7 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
+  "turn": "human",
   "revision": 562,
   "current_phase": 1,
   "protocol": {
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-199/T-204 closed: runtime provider reproduces 25/26 reference entries. T-205 (explain last miss) queued for Codex. Dry-run stays on; real demo orders await owner decision.",
+    "summary": "Tai dry-run agent matches the closed port on 25/26 reference entries (T-199 done; last miss explained, T-205). Configured costs make every backtest negative (T-201), so demo trading tests the machinery, not an edge. Dry-run stays on; redeploy and turning dry-run off are the owner's decisions.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -16872,6 +16872,20 @@
       "validated_by": "claude",
       "date": "2026-10-20",
       "reverify_if": "The provider exit callback or refresh trigger changes."
+    },
+    {
+      "id": "V-500",
+      "task_id": "T-205",
+      "subject": "Claude review of T-205 explanation of the last replay miss",
+      "method": "Read docs/evidence/t205/report.md and summary.json; compared the port's last_exit handling (lab_t162_pine_port.py replay) with the harness order of note_exit; ruff check/format; handoff validator.",
+      "result": "pass",
+      "checked": "The 14:27Z SELL miss comes from the harness applying the same-bar exit before evaluating the refresh age, so age is 0; the port uses the prior 10:09Z exit. Same-bar ATR14, swing high and stop inputs match to full precision. No runtime logic defect, no src change needed. Not verified here: how the real runner orders a same-bar exit against a new entry; the one-position rule means the entry would not open on that bar anyway. 25/26 with this one explained difference is accepted as parity.",
+      "evidence": [
+        "docs/evidence/t205/report.md",
+        "docs/evidence/t205/summary.json"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "false"
     }
   ],
   "blockers": [
@@ -17116,9 +17130,9 @@
       "id": "B-033",
       "task_id": "T-199",
       "raised_by": "codex",
-      "status": "open",
+      "status": "resolved",
       "text": "The required bounded T-187/T-195 runtime-versus-port replay cannot run: the owner-provided Pod terminal URL returned HTTP 404 for the read-only request. No replay counts or 22/26 acceptance claim can be made from this branch.",
-      "resolution": "Codex retried the exact owner-provided URL after Claude review (direct GET and in-app browser); it still returned HTTP 404 at 2026-10-20T06:28+03:00. A reachable Pod terminal/session is required before replay acceptance can be verified."
+      "resolution": "Resolved: the Pod terminal works and T-204 reproduced 25/26 port entries (V-499); the remaining miss is a harness callback-ordering artifact (T-205, V-500)."
     },
     {
       "id": "B-034",
@@ -17133,10 +17147,10 @@
     {
       "id": "B-035",
       "task_id": "T-199",
-      "status": "open",
+      "status": "resolved",
       "raised_by": "codex",
       "text": "The reachable Pod replay remains 1/26. Ten inspected misses are refresh entries with false raw HA buy/sell flags on both port and runtime; the runtime has no post-exit refresh state. T-199 cannot claim >=22/26 until the narrow refresh-state fix is reviewed and rerun.",
-      "resolution": "Queue a narrowly scoped refresh-state wiring fix; do not change risk gates in T-202."
+      "resolution": "Resolved: the Pod terminal works and T-204 reproduced 25/26 port entries (V-499); the remaining miss is a harness callback-ordering artifact (T-205, V-500)."
     }
   ],
   "questions": [
@@ -29120,7 +29134,7 @@
       "summary": "T-203 code accepted (V-497): the refresh rule matches the port. Its 1/26 replay is a harness gap (no exit callbacks), so queued T-204: replay through the runner path and report matched/extras/misses. Fixed lint (B023, E501) in Codex's files and merged the T-201/T-202 evidence chain onto main. Codex: do T-204 on the Pod. Dry-run stays on. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
     },
     {
-      "revision": 560,
+      "revision": 559,
       "ts": "2026-10-20T14:20:00+03:00",
       "agent": "codex",
       "action": "complete_t204_runner_exit_replay",
@@ -29139,7 +29153,7 @@
       "turn": "claude"
     },
     {
-      "revision": 561,
+      "revision": 560,
       "ts": "2026-10-20T14:40:00+03:00",
       "agent": "claude",
       "action": "accept_t204_queue_t205",
@@ -29159,7 +29173,7 @@
       "turn": "codex"
     },
     {
-      "revision": 562,
+      "revision": 561,
       "ts": "2026-10-20T15:30:00+03:00",
       "agent": "codex",
       "action": "complete_t205_last_miss_stop_parity",
@@ -29173,6 +29187,20 @@
       ],
       "summary": "Read-only Pod replay on image-supplied repo files (not /app, which is not a git repo) names the first difference as callback ordering/state. The port refresh uses the prior 10:09Z exit; the harness overwrites last_exit_at with the same-bar 14:27Z exit before evaluation, so refresh age is 0 and no signal is emitted. Same-bar ATR14 24.51261351548424, max prior high 29765.849 and stop 29770.751522703096 match. The nearest runtime candidate is the earlier 09:51Z SELL with ATR14 23.23775794906513, max prior high 29794.909 and stop 29799.556551589813026. No broker, holdout, lake-write, redeploy or secret operations. Turn to Claude.",
       "turn": "claude"
+    },
+    {
+      "revision": 562,
+      "ts": "2026-10-20T15:45:00+03:00",
+      "agent": "claude",
+      "action": "accept_t205_parity_closed",
+      "task_ids": [
+        "T-205",
+        "T-199"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-205 accepted (V-500): the last replay miss is a harness ordering artifact, not a runtime defect. Runtime reproduces 25 of 26 port entries with no extras (T-199 done). B-033 and B-035 resolved. Landed the stacked T-204/T-205 branches on main. Next: owner decision on redeploy of the final image and on dry-run; no further Codex task queued. Dry-run stays on. No broker calls, orders, holdout reads, redeploy or secrets. Turn to human."
     }
   ],
   "project_summary": "Owner Pod T-204 replay: production provider exit callbacks reproduced 25/26 port entries with no extras; the remaining miss is named in docs/evidence/t204/report.md. Dry-run stays on."
