@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 572,
+  "turn": "codex",
+  "revision": 573,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -6878,7 +6878,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-07",
         "R-18",
@@ -6909,7 +6909,7 @@
         "tests/unit/test_capital_com_stream.py",
         "tests/unit/test_health.py"
       ],
-      "completion_note": "Implemented bounded feed-stall/recovery alerts, session renewal, reconnect telemetry, timestamped rejection logging, per-epic REST backfill batching, bounded two-pass catch-up to a two-minute lag target, and a background backfill worker so the WebSocket receive loop remains active. Added fake-store upsert-count and stream batch coverage. Static compileall, smoke checks, diff checks, and remote CI pass; local pytest/Ruff/mypy are unavailable in the desktop runtime. No broker calls, orders, config/risk/gate changes, redeploy or secrets."
+      "completion_note": "Implemented bounded feed-stall/recovery alerts, session renewal, reconnect telemetry, timestamped rejection logging, per-epic REST backfill batching, bounded two-pass catch-up to a two-minute lag target, and a background backfill worker so the WebSocket receive loop remains active. Added fake-store upsert-count and stream batch coverage. Static compileall, smoke checks, diff checks, and remote CI pass; local pytest/Ruff/mypy are unavailable in the desktop runtime. No broker calls, orders, config/risk/gate changes, redeploy or secrets. Accepted (V-507). Owner redeploys the new image; verify backfill timing lines and /health feed_stalled on the Pod."
     },
     {
       "id": "T-210",
@@ -17155,6 +17155,23 @@
       "validated_by": "codex",
       "date": "2026-10-20",
       "reverify_if": "Claude review or CI reports a failure."
+    },
+    {
+      "id": "V-507",
+      "task_id": "T-211",
+      "subject": "Claude review of T-211 feed resilience",
+      "method": "Read the full diff of recorder.py, stream.py, client.py, workers/recorder.py, health.py and tests; ruff check/format; CI quality green on the code commit; handoff validator.",
+      "result": "pass",
+      "checked": "Writes from the backfill thread and the live stream are serialized by the recorder lock; backfill is batched (one store upsert per batch) with a bounded two-pass catch-up to a two-minute lag; stall and recovery alerts are bounded (5 min threshold, 30 min repeat) and best-effort; session renewal is capped at three per minute behind the existing rate limiter; rejection logging is rate limited and secret-free; no order, dry-run, risk or gate change. Not verifiable here: behaviour against the real broker after deployment (check backfill start/end timing lines and the Telegram stall alert on the Pod).",
+      "evidence": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_capital_com_stream.py"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "stream.py backfill or recorder commit path changes"
     }
   ],
   "blockers": [
@@ -29627,6 +29644,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-211 implementation complete: feed stall alerts, bounded session renewal, reconnect telemetry, batched REST backfill with two-pass catch-up, live-safe receive-loop concurrency, and fake-store coverage. CI is green; no broker calls, orders, config/risk/gate changes, redeploy or secrets. Turn to Claude for review."
+    },
+    {
+      "revision": 573,
+      "ts": "2026-10-20T21:50:00+03:00",
+      "agent": "claude",
+      "action": "accept_t211_next_t209",
+      "task_ids": [
+        "T-211",
+        "T-209",
+        "T-210"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-211 (V-507): batched backfill with bounded two-pass catch-up in a background thread, stall and recovery alerts to Telegram, bounded session renewal, reconnect telemetry and rejection logging. Merging to main; the owner redeploys the new image. Next for Codex: T-209 (per-bar counters), then T-210 (Pod inventory). No order, dry-run, risk/gate, redeploy or secret changes. Turn to codex."
     }
   ],
   "project_summary": "T-207 read-only quiet-session check found dry_run=off but live_enabled=false in paper/demo mode; no entries, refusals, exits or order events and state stayed flat. Port replay had 0 entries on 40 complete 3m bars. Runtime exposed 107 closed-minute lines versus 117 lake bars and no per-bar outcome telemetry, so runtime outcome/gate counts remain blocked. T-204/T-205 replay evidence remains accepted at 25/26."
