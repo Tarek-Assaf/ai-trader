@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 577,
+  "turn": "claude",
+  "revision": 578,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-210 read-only Pod inventory complete: ROLE=all has API, recorder, Postgres, Redis and backup loop; no worker/autoscaler/Telegram/report supervisor programs. Health was healthy at the snapshot, Tai dry_run=false in paper/demo with live_enabled=false and flat state; GOLD backfill was observed. T-209 health counters are not on the deployed image. No orders, broker writes, restart, config or secrets.",
+    "summary": "T-212 implementation complete and ready for Claude review: recorder feed-stall alerts are suppressed during the configured DST-aware MarketHours maintenance break and re-armed after it; recovery alerts remain outside the break. Focused tests cover the break, post-break threshold and November DST transition. Desktop lacks pytest/Ruff/mypy/make; compileall and diff checks pass. No orders, broker calls, dry-run, risk/gate, configuration or Tai stale-guard changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,8 +47,8 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-210",
-    "last_status": "done"
+    "last_task": "T-212",
+    "last_status": "review"
   },
   "requirements": [
     {
@@ -6954,7 +6954,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-07",
         "R-18"
@@ -6969,8 +6969,13 @@
         "docs/specs/t212_quiet_stall_alert_in_break.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Queued by Claude; not started."
+      "evidence": [
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py",
+        "docs/specs/t212_quiet_stall_alert_in_break.md"
+      ],
+      "completion_note": "Implemented DST-aware maintenance-break suppression using the existing MarketHours.is_break schedule passed from the recorder worker. Stall state and alert timers are re-armed after the break; recovery remains unchanged outside the break. Added in-break, post-break, and first-Sunday-November DST tests. Desktop lacks pytest, Ruff, mypy and make; compileall and diff checks pass. No orders, broker calls, configuration, dry-run, risk/gate or Tai stale-guard changes."
     },
     {
       "id": "T-213",
@@ -17274,6 +17279,22 @@
       ],
       "validated_by": "claude",
       "reverify_if": "false"
+    },
+    {
+      "id": "V-511",
+      "task_id": "T-212",
+      "subject": "T-212 quiet maintenance-break stall alert validation",
+      "method": "Ran Python compileall over src and tests, git diff --check, and reviewed focused recorder tests for in-break suppression, post-break re-arming, recovery preservation and New York DST handling. The desktop image has no pytest, Ruff, mypy or make.",
+      "result": "pass",
+      "evidence": [
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py",
+        "docs/specs/t212_quiet_stall_alert_in_break.md"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-21",
+      "reverify_if": "Claude review or CI reports a failure."
     }
   ],
   "blockers": [
@@ -29828,7 +29849,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-210 (V-510): inventory shows ROLE=all running (supervisord, Postgres, Redis, API, recorder, backup loop); worker pool, autoscaler, live LLM cycle and research feeds not running; Pod is 2 vCPU / 4 GB; Telegram chat and reports live inside the API process but delivery unproven. Queued T-212 (quiet the stall alert during the 17:00-18:00 New York break) and T-213 (prove Telegram commands and scheduled reports, fix minimally). No order, dry-run, risk/gate, redeploy or secret changes. Turn to codex."
+    },
+    {
+      "revision": 578,
+      "ts": "2026-10-21T00:00:00+03:00",
+      "agent": "codex",
+      "action": "complete_t212_quiet_stall_alert",
+      "task_ids": [
+        "T-212"
+      ],
+      "files_changed": [
+        "src/trader/data/recorder.py",
+        "src/trader/workers/recorder.py",
+        "tests/unit/test_data_recorder.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented T-212 using existing DST-aware MarketHours.is_break logic. Recorder suppresses feed-stall and recovery alerts during the scheduled 17:00-18:00 America/New_York break, clears alert state for re-arming after the break, and preserves the existing 5-minute stall, 30-minute repeat and recovery behavior outside it. Added focused break, post-break and DST tests. compileall and diff checks pass; pytest/Ruff/mypy/make unavailable. No orders, broker calls, configuration, dry-run, risk/gate or Tai stale-guard changes. Turn to claude."
     }
   ],
-  "project_summary": "T-209 per-bar outcome telemetry accepted; /health now shows tai_demo counters. Next for Codex: T-210 read-only Pod inventory. No order, dry-run, risk/gate, redeploy or secret changes."
+  "project_summary": "T-212 is implemented for Claude review. Existing MarketHours schedules are passed to the recorder; feed-stall state and alerts are quiet during the 17:00-18:00 America/New_York maintenance break and the 5-minute rule re-arms afterward. Recovery remains intact outside the break. No broker calls, orders, dry-run, risk/gate, configuration or Tai stale-guard changes; desktop pytest/Ruff/mypy/make are unavailable."
 }
