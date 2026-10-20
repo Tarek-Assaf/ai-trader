@@ -1,0 +1,37 @@
+{
+  "task": "T-203",
+  "status": "review",
+  "pod_reachable": true,
+  "replay": {
+    "port_entries": 26,
+    "runtime_entries": 1,
+    "matched": 1,
+    "extras": 0,
+    "first_difference": "runtime_gate_ha_cross",
+    "first_difference_count": 25,
+    "refresh_bars": 12,
+    "holdout_start": "2026-07-01T00:00:00Z",
+    "epic": "NSXUSD",
+    "days": 10
+  },
+  "safety": {
+    "broker_calls": 0,
+    "order_calls": 0,
+    "sealed_holdout_read": false,
+    "lake_writes": false,
+    "risk_or_gate_edits": false,
+    "redeploy": false,
+    "secrets_used": false
+  },
+  "checks": {
+    "compileall": "pass",
+    "diff_check": "pass",
+    "handoff_validator": "pass",
+    "pytest": "unavailable: pytest not installed",
+    "make_lint_test": "unavailable: make not installed"
+  },
+  "provenance": {
+    "pod_terminal": "https://pbkmi8nx193x3w-19123.proxy.runpod.net/gt00f7em302mcpp6gezy1e5nzxyeph5r/",
+    "source_branch": "codex/t203-refresh"
+  }
+}
