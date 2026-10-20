@@ -303,6 +303,7 @@ class TaiDemoRunner:
         self._alert = alert or (lambda message: LOGGER.info("tai demo: %s", message))
         self._state_path = state_path
         self._epic = epic
+        self._last_exit_at: datetime | None = None
         self._spread_alerted: set[tuple[str, str]] = set()
         self._startup_blocked = False
         self._state_corrupt = False
@@ -316,6 +317,9 @@ class TaiDemoRunner:
         }
         if self._epic is None and self._managed:
             self._epic = next(iter(self._managed.values())).epic
+        restore_exit = getattr(self._signal, "restore_exit", None)
+        if callable(restore_exit):
+            restore_exit(self._last_exit_at)
         self._reconcile_startup()
 
     def snapshot_state(self) -> dict[str, _ManagedPosition]:
@@ -332,6 +336,9 @@ class TaiDemoRunner:
             positions = payload.get("positions")
             if not isinstance(positions, dict):
                 raise ValueError("positions must be an object")
+            raw_exit = payload.get("last_exit_at")
+            if raw_exit is not None:
+                self._last_exit_at = datetime.fromisoformat(str(raw_exit))
             loaded: dict[str, _ManagedPosition] = {}
             for deal_id, raw in positions.items():
                 if not isinstance(raw, dict) or not isinstance(deal_id, str) or not deal_id:
@@ -415,6 +422,9 @@ class TaiDemoRunner:
             return
         payload = {
             "version": 1,
+            "last_exit_at": (
+                self._last_exit_at.astimezone(UTC).isoformat() if self._last_exit_at else None
+            ),
             "positions": {
                 deal_id: {
                     "epic": state.epic,
@@ -602,6 +612,10 @@ class TaiDemoRunner:
             if tracked.shadow or tracked.epic != bar.epic or deal_id in present_ids:
                 continue
             self._managed.pop(deal_id, None)
+            self._last_exit_at = bar.at
+            note_exit = getattr(self._signal, "note_exit", None)
+            if callable(note_exit):
+                note_exit(bar.at)
             self._journal_event(
                 cycle_id, "reconcile_closed", deal_id=deal_id, reason="broker_closed"
             )
@@ -630,6 +644,10 @@ class TaiDemoRunner:
                 if index == 3:
                     self._positions.close_position(position.deal_id)
                     self._managed.pop(position.deal_id, None)
+                    self._last_exit_at = bar.at
+                    note_exit = getattr(self._signal, "note_exit", None)
+                    if callable(note_exit):
+                        note_exit(bar.at)
                     self._journal_event(
                         cycle_id, "exit", deal_id=position.deal_id, reason="target_3"
                     )
@@ -675,6 +693,10 @@ class TaiDemoRunner:
                     self._send_alert(f"stop moved to entry for {bar.epic}")
                 if index == 3:
                     self._managed.pop(deal_id, None)
+                    self._last_exit_at = bar.at
+                    note_exit = getattr(self._signal, "note_exit", None)
+                    if callable(note_exit):
+                        note_exit(bar.at)
                     self._journal_event(cycle_id, "exit", deal_id=deal_id, reason="target_3")
                     self._send_alert(f"exit {bar.epic} target_3")
                     self._persist_state()
@@ -713,6 +735,10 @@ class TaiDemoRunner:
                 continue
             reason = "stop_entry" if state.entry_stop_moved else "stop"
             self._managed.pop(deal_id, None)
+            self._last_exit_at = bar.at
+            note_exit = getattr(self._signal, "note_exit", None)
+            if callable(note_exit):
+                note_exit(bar.at)
             self._journal_event(cycle_id, "exit", deal_id=deal_id, reason=reason)
             self._send_alert(f"flat {bar.epic} {reason}")
             self._persist_state()
