@@ -1,0 +1,2381 @@
+{
+  "epic": "NSXUSD",
+  "first_difference_counts": {
+    "ema200": 22,
+    "ha_open_54m": 1
+  },
+  "ha_cross_miss_rows": 23,
+  "holdout_start": "2026-07-01T00:00:00+00:00",
+  "port_entries": 26,
+  "rows": [
+    {
+      "at": "2026-06-19T11:57:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-19T11:51:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 27.371345901409182,
+            "ema200": 30272.48546000937,
+            "ha_close_54m": 30296.42425,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30300.240692198102,
+            "ha_prev_colour": null,
+            "minus_di14": 23.371449132781695,
+            "plus_di14": 18.507786463233007,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30278.05862144705
+          },
+          "runtime": {
+            "adx14": 27.371345901409182,
+            "ema200": 30272.33679109869,
+            "ha_close_54m": 30296.42425,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30300.24069219901,
+            "ha_prev_colour": null,
+            "minus_di14": 23.371449132781695,
+            "plus_di14": 18.507786463233007,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30278.05862144705
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-19T11:54:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 26.485180769389473,
+            "ema200": 30272.3987887655,
+            "ha_close_54m": 30296.42425,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30300.240692198102,
+            "ha_prev_colour": "red",
+            "minus_di14": 23.767531736919697,
+            "plus_di14": 17.579877817075793,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30278.004220077244
+          },
+          "runtime": {
+            "adx14": 26.485180769389473,
+            "ema200": 30272.244700995194,
+            "ha_close_54m": 30296.42425,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30300.240692198582,
+            "ha_prev_colour": "red",
+            "minus_di14": 23.767531736919697,
+            "plus_di14": 17.579877817075793,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30278.004220077244
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-19T11:57:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 25.66231314679974,
+            "ema200": 30272.29850231012,
+            "ha_close_54m": 30296.42425,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30300.240692198102,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.826986937329774,
+            "plus_di14": 16.884195032624415,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30277.949183333356
+          },
+          "runtime": {
+            "adx14": 25.66231314679974,
+            "ema200": 30272.13913103505,
+            "ha_close_54m": 30296.42425,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30300.24069219809,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.826986937329774,
+            "plus_di14": 16.884195032624415,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30277.949183333356
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-21T23:30:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-21T23:24:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 40.61545385960921,
+            "ema200": 30313.665483884633,
+            "ha_close_54m": 30359.90325,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30365.093968524212,
+            "ha_prev_colour": null,
+            "minus_di14": 42.052339566520295,
+            "plus_di14": 15.089088152520521,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30233.84225925926
+          },
+          "runtime": {
+            "adx14": 40.61545385960921,
+            "ema200": 30313.26963888054,
+            "ha_close_54m": 30359.90325,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30365.09396852951,
+            "ha_prev_colour": null,
+            "minus_di14": 42.052339566520295,
+            "plus_di14": 15.089088152520521,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30233.84225925926
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-21T23:27:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 41.084840751789606,
+            "ema200": 30312.95701140817,
+            "ha_close_54m": 30359.90325,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30365.093968524212,
+            "ha_prev_colour": "red",
+            "minus_di14": 40.3907292605473,
+            "plus_di14": 14.492874371303834,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30234.71266666667
+          },
+          "runtime": {
+            "adx14": 41.084840751789606,
+            "ema200": 30312.56103343384,
+            "ha_close_54m": 30359.90325,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30365.093968530608,
+            "ha_prev_colour": "red",
+            "minus_di14": 40.3907292605473,
+            "plus_di14": 14.492874371303834,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30234.71266666667
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-21T23:30:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 42.060744694909026,
+            "ema200": 30312.022663035947,
+            "ha_close_54m": 30359.90325,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30365.093968524212,
+            "ha_prev_colour": "red",
+            "minus_di14": 44.48035602465222,
+            "plus_di14": 13.007302499340057,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30233.534212121216
+          },
+          "runtime": {
+            "adx14": 42.060744694909026,
+            "ema200": 30311.62496894538,
+            "ha_close_54m": 30359.90325,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30365.093968530673,
+            "ha_prev_colour": "red",
+            "minus_di14": 44.48035602465222,
+            "plus_di14": 13.007302499340057,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30233.534212121216
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-22T05:30:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-22T05:24:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.01259315148719,
+            "ema200": 30272.840876113987,
+            "ha_close_54m": 30266.08125,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30277.778290769722,
+            "ha_prev_colour": null,
+            "minus_di14": 30.161631114599,
+            "plus_di14": 18.477083198138086,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30241.914423772603
+          },
+          "runtime": {
+            "adx14": 21.01259315148719,
+            "ema200": 30273.573516906985,
+            "ha_close_54m": 30266.08125,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30277.778290769536,
+            "ha_prev_colour": null,
+            "minus_di14": 30.161631114599,
+            "plus_di14": 18.477083198138086,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30241.914423772603
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-22T05:27:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.462537336344578,
+            "ema200": 30272.48324550589,
+            "ha_close_54m": 30266.08125,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30277.778290769722,
+            "ha_prev_colour": "red",
+            "minus_di14": 30.721929172205297,
+            "plus_di14": 17.540567060382227,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30241.881879487173
+          },
+          "runtime": {
+            "adx14": 21.462537336344578,
+            "ema200": 30273.229179802922,
+            "ha_close_54m": 30266.08125,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30277.77829077159,
+            "ha_prev_colour": "red",
+            "minus_di14": 30.721929172205297,
+            "plus_di14": 17.540567060382227,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30241.881879487173
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-22T05:30:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.5773991817891,
+            "ema200": 30272.167073908815,
+            "ha_close_54m": 30266.08125,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30277.778290769722,
+            "ha_prev_colour": "red",
+            "minus_di14": 28.687332709138754,
+            "plus_di14": 17.931976808526947,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30241.867608142486
+          },
+          "runtime": {
+            "adx14": 21.5773991817891,
+            "ema200": 30272.92814314204,
+            "ha_close_54m": 30266.08125,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30277.778290770904,
+            "ha_prev_colour": "red",
+            "minus_di14": 28.687332709138754,
+            "plus_di14": 17.931976808526947,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30241.867608142486
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-22T15:57:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-22T15:51:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 35.72769988677995,
+            "ema200": 30430.9980675196,
+            "ha_close_54m": 30558.648999999998,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 30470.234795185923,
+            "ha_prev_colour": null,
+            "minus_di14": 32.54972644973464,
+            "plus_di14": 8.543357730837231,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30354.651357988176
+          },
+          "runtime": {
+            "adx14": 35.72769988677995,
+            "ema200": 30430.519648636786,
+            "ha_close_54m": 30558.648999999998,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 30470.234795173987,
+            "ha_prev_colour": null,
+            "minus_di14": 32.54972644973464,
+            "plus_di14": 8.543357730837231,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30354.651357988176
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-22T15:54:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 37.84511986017312,
+            "ema200": 30429.45047480796,
+            "ha_close_54m": 30558.648999999998,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 30470.234795185923,
+            "ha_prev_colour": "green",
+            "minus_di14": 36.324078999926705,
+            "plus_di14": 7.606176859773941,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30354.407966568353
+          },
+          "runtime": {
+            "adx14": 37.84511986017312,
+            "ema200": 30428.97063582872,
+            "ha_close_54m": 30558.648999999998,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 30470.234795173616,
+            "ha_prev_colour": "green",
+            "minus_di14": 36.324078999926705,
+            "plus_di14": 7.606176859773941,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30354.407966568353
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-22T15:57:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 39.122351159966165,
+            "ema200": 30428.367246202906,
+            "ha_close_54m": 30558.648999999998,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 30470.234795185923,
+            "ha_prev_colour": "green",
+            "minus_di14": 33.62247463824531,
+            "plus_di14": 9.559007363509398,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30354.276617647072
+          },
+          "runtime": {
+            "adx14": 39.122351159966165,
+            "ema200": 30427.885049782268,
+            "ha_close_54m": 30558.648999999998,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 30470.23479517311,
+            "ha_prev_colour": "green",
+            "minus_di14": 33.62247463824531,
+            "plus_di14": 9.559007363509398,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30354.276617647072
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-23T00:57:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-23T00:51:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 35.13530356948028,
+            "ema200": 30319.20039887521,
+            "ha_close_54m": 30261.574,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30303.3323999906,
+            "ha_prev_colour": null,
+            "minus_di14": 29.76660303099103,
+            "plus_di14": 10.377264920181835,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30288.315456140346
+          },
+          "runtime": {
+            "adx14": 35.13530356948028,
+            "ema200": 30319.437725703978,
+            "ha_close_54m": 30261.574,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30303.332399987696,
+            "ha_prev_colour": null,
+            "minus_di14": 29.76660303099103,
+            "plus_di14": 10.377264920181835,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30288.315456140346
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-23T00:54:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 34.87419228494597,
+            "ema200": 30318.5684148068,
+            "ha_close_54m": 30261.574,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30303.3323999906,
+            "ha_prev_colour": "red",
+            "minus_di14": 27.750796723333384,
+            "plus_di14": 14.462240120705523,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30287.426213675208
+          },
+          "runtime": {
+            "adx14": 34.87419228494597,
+            "ema200": 30318.807501320218,
+            "ha_close_54m": 30261.574,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30303.332399987157,
+            "ha_prev_colour": "red",
+            "minus_di14": 27.750796723333384,
+            "plus_di14": 14.462240120705523,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30287.426213675208
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-23T00:57:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 33.775515471851314,
+            "ema200": 30318.047087296283,
+            "ha_close_54m": 30261.574,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30303.3323999906,
+            "ha_prev_colour": "red",
+            "minus_di14": 25.623401076476437,
+            "plus_di14": 17.263565997127476,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30286.790758333325
+          },
+          "runtime": {
+            "adx14": 33.775515471851314,
+            "ema200": 30318.28805666313,
+            "ha_close_54m": 30261.574,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30303.332399987805,
+            "ha_prev_colour": "red",
+            "minus_di14": 25.623401076476437,
+            "plus_di14": 17.263565997127476,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30286.790758333325
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-23T02:15:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-23T02:09:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 24.86376959824739,
+            "ema200": 30304.312120857743,
+            "ha_close_54m": 30227.91925,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30282.4531999953,
+            "ha_prev_colour": null,
+            "minus_di14": 17.211371325836414,
+            "plus_di14": 21.98119780591532,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30273.710567708335
+          },
+          "runtime": {
+            "adx14": 24.86376959824739,
+            "ema200": 30304.573190016425,
+            "ha_close_54m": 30227.91925,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30282.45319999892,
+            "ha_prev_colour": null,
+            "minus_di14": 17.211371325836414,
+            "plus_di14": 21.98119780591532,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30273.710567708335
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-23T02:12:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 23.33038295193888,
+            "ema200": 30304.014627117864,
+            "ha_close_54m": 30227.91925,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30282.4531999953,
+            "ha_prev_colour": "red",
+            "minus_di14": 18.75260426931304,
+            "plus_di14": 20.07119905650057,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30273.881533333333
+          },
+          "runtime": {
+            "adx14": 23.33038295193888,
+            "ema200": 30304.275826831134,
+            "ha_close_54m": 30227.91925,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30282.453199998985,
+            "ha_prev_colour": "red",
+            "minus_di14": 18.75260426931304,
+            "plus_di14": 20.07119905650057,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30273.881533333333
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-23T02:15:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 22.309886609845,
+            "ema200": 30303.60220296744,
+            "ha_close_54m": 30227.91925,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30282.4531999953,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.227991833137093,
+            "plus_di14": 18.541068686337812,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30273.782984848483
+          },
+          "runtime": {
+            "adx14": 22.309886609845,
+            "ema200": 30303.863651018077,
+            "ha_close_54m": 30227.91925,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 30282.45319999823,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.227991833137093,
+            "plus_di14": 18.541068686337812,
+            "session_anchor": "session_1800_ny",
+            "vwap": 30273.782984848483
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-24T00:15:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-24T00:09:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.696320285294814,
+            "ema200": 29488.397556890843,
+            "ha_close_54m": 29409.8515,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29412.01233440911,
+            "ha_prev_colour": null,
+            "minus_di14": 34.52460757122124,
+            "plus_di14": 21.24634696743787,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29393.868611111102
+          },
+          "runtime": {
+            "adx14": 21.696320285294814,
+            "ema200": 29488.43201193199,
+            "ha_close_54m": 29409.8515,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29412.012334420833,
+            "ha_prev_colour": null,
+            "minus_di14": 34.52460757122124,
+            "plus_di14": 21.24634696743787,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29393.868611111102
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T00:12:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 20.983740067766707,
+            "ema200": 29486.960625976506,
+            "ha_close_54m": 29409.8515,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29412.01233440911,
+            "ha_prev_colour": "red",
+            "minus_di14": 32.41438491056307,
+            "plus_di14": 25.613412589576217,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29391.85663999999
+          },
+          "runtime": {
+            "adx14": 20.983740067766707,
+            "ema200": 29486.98359371674,
+            "ha_close_54m": 29409.8515,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29412.01233441689,
+            "ha_prev_colour": "red",
+            "minus_di14": 32.41438491056307,
+            "plus_di14": 25.613412589576217,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29391.85663999999
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T00:15:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 20.03843333912902,
+            "ema200": 29485.634679449377,
+            "ha_close_54m": 29409.8515,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29412.01233440911,
+            "ha_prev_colour": "red",
+            "minus_di14": 30.609071495900825,
+            "plus_di14": 26.206202586768132,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29390.387756410248
+          },
+          "runtime": {
+            "adx14": 20.03843333912902,
+            "ema200": 29485.63953533268,
+            "ha_close_54m": 29409.8515,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29412.01233442623,
+            "ha_prev_colour": "red",
+            "minus_di14": 30.609071495900825,
+            "plus_di14": 26.206202586768132,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29390.387756410248
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-24T04:51:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-24T04:45:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 23.54223422899892,
+            "ema200": 29469.581685284986,
+            "ha_close_54m": 29413.57975,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29481.087244825285,
+            "ha_prev_colour": null,
+            "minus_di14": 21.419801075081736,
+            "plus_di14": 23.835076946618486,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29446.239853448275
+          },
+          "runtime": {
+            "adx14": 23.54223422899892,
+            "ema200": 29470.36163925679,
+            "ha_close_54m": 29413.57975,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29481.087244832328,
+            "ha_prev_colour": null,
+            "minus_di14": 21.419801075081736,
+            "plus_di14": 23.835076946618486,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29446.239853448275
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T04:48:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.917798598366357,
+            "ema200": 29469.022753093097,
+            "ha_close_54m": 29413.57975,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29481.087244825285,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.81402695352619,
+            "plus_di14": 22.451838737947515,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29445.993287749287
+          },
+          "runtime": {
+            "adx14": 21.917798598366357,
+            "ema200": 29469.810082038686,
+            "ha_close_54m": 29413.57975,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29481.08724483377,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.81402695352619,
+            "plus_di14": 22.451838737947515,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29445.993287749287
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T04:51:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 20.523283365539413,
+            "ema200": 29468.477243112073,
+            "ha_close_54m": 29413.57975,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29481.087244825285,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.111778602511738,
+            "plus_di14": 21.077572727641737,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29445.740158192086
+          },
+          "runtime": {
+            "adx14": 20.523283365539413,
+            "ema200": 29469.27635434835,
+            "ha_close_54m": 29413.57975,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29481.087244832015,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.111778602511738,
+            "plus_di14": 21.077572727641737,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29445.740158192086
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-24T13:57:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-24T13:51:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 25.177824666385757,
+            "ema200": 29496.148360386494,
+            "ha_close_54m": 29495.226,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29490.48261620588,
+            "ha_prev_colour": null,
+            "minus_di14": 25.875420781600546,
+            "plus_di14": 11.856503486684982,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29476.411421700224
+          },
+          "runtime": {
+            "adx14": 25.177824666385757,
+            "ema200": 29495.269271855777,
+            "ha_close_54m": 29495.226,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29490.48261616024,
+            "ha_prev_colour": null,
+            "minus_di14": 25.875420781600546,
+            "plus_di14": 11.856503486684982,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29476.411421700224
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T13:54:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 26.42507539642896,
+            "ema200": 29495.726237397575,
+            "ha_close_54m": 29495.226,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29490.48261620588,
+            "ha_prev_colour": "green",
+            "minus_di14": 27.721964253096335,
+            "plus_di14": 11.148049092184236,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29476.33994871795
+          },
+          "runtime": {
+            "adx14": 26.42507539642896,
+            "ema200": 29494.83261786365,
+            "ha_close_54m": 29495.226,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29490.482616164358,
+            "ha_prev_colour": "green",
+            "minus_di14": 27.721964253096335,
+            "plus_di14": 11.148049092184236,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29476.33994871795
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T13:57:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 27.64301359452453,
+            "ema200": 29495.31782707521,
+            "ha_close_54m": 29495.226,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29490.48261620588,
+            "ha_prev_colour": "green",
+            "minus_di14": 26.438137204248566,
+            "plus_di14": 10.415550487900363,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29476.268201111106
+          },
+          "runtime": {
+            "adx14": 27.64301359452453,
+            "ema200": 29494.411572361274,
+            "ha_close_54m": 29495.226,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29490.482616158686,
+            "ha_prev_colour": "green",
+            "minus_di14": 26.438137204248566,
+            "plus_di14": 10.415550487900363,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29476.268201111106
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-24T15:09:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-24T15:03:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 40.955619806824764,
+            "ema200": 29479.06799333119,
+            "ha_close_54m": 29476.867,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29492.854308102942,
+            "ha_prev_colour": null,
+            "minus_di14": 31.03416146120211,
+            "plus_di14": 10.773996674983225,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29472.021966873705
+          },
+          "runtime": {
+            "adx14": 40.955619806824764,
+            "ema200": 29478.005295758736,
+            "ha_close_54m": 29476.867,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29492.854308036316,
+            "ha_prev_colour": null,
+            "minus_di14": 31.03416146120211,
+            "plus_di14": 10.773996674983225,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29472.021966873705
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T15:06:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 41.32506056836663,
+            "ema200": 29477.746092900034,
+            "ha_close_54m": 29397.12675,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29484.86065405147,
+            "ha_prev_colour": "red",
+            "minus_di14": 28.511242523430003,
+            "plus_di14": 10.511098719173543,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29471.69652115583
+          },
+          "runtime": {
+            "adx14": 41.32506056836663,
+            "ema200": 29476.67494313984,
+            "ha_close_54m": 29397.12675,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29484.860654016942,
+            "ha_prev_colour": "red",
+            "minus_di14": 28.511242523430003,
+            "plus_di14": 10.511098719173543,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29471.69652115583
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T15:09:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 41.67869853240491,
+            "ema200": 29476.66899744829,
+            "ha_close_54m": 29397.12675,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29484.86065405147,
+            "ha_prev_colour": "red",
+            "minus_di14": 26.33165216121511,
+            "plus_di14": 9.67104628506413,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29471.39441255144
+          },
+          "runtime": {
+            "adx14": 41.67869853240491,
+            "ema200": 29475.592105098833,
+            "ha_close_54m": 29397.12675,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29484.86065401636,
+            "ha_prev_colour": "red",
+            "minus_di14": 26.33165216121511,
+            "plus_di14": 9.67104628506413,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29471.39441255144
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-24T23:42:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-24T23:36:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 57.442952489023604,
+            "ema200": 29372.64333659734,
+            "ha_close_54m": 29143.1275,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29177.717346906655,
+            "ha_prev_colour": null,
+            "minus_di14": 8.999892181257449,
+            "plus_di14": 46.21717743370576,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29773.371564102566
+          },
+          "runtime": {
+            "adx14": 57.442952489023604,
+            "ema200": 29372.436378438317,
+            "ha_close_54m": 29143.1275,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29177.717346885063,
+            "ha_prev_colour": null,
+            "minus_di14": 8.999892181257449,
+            "plus_di14": 46.21717743370576,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29773.371564102566
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T23:39:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 57.93021130007009,
+            "ema200": 29376.46064668095,
+            "ha_close_54m": 29143.1275,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29177.717346906655,
+            "ha_prev_colour": "red",
+            "minus_di14": 9.778232004988439,
+            "plus_di14": 44.94747636893954,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29772.209023809526
+          },
+          "runtime": {
+            "adx14": 57.93021130007009,
+            "ema200": 29376.25938311062,
+            "ha_close_54m": 29143.1275,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29177.717346916157,
+            "ha_prev_colour": "red",
+            "minus_di14": 9.778232004988439,
+            "plus_di14": 44.94747636893954,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29772.209023809526
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-24T23:42:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 58.45074372837711,
+            "ema200": 29380.40993377865,
+            "ha_close_54m": 29143.1275,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29177.717346906655,
+            "ha_prev_colour": "red",
+            "minus_di14": 9.47603701552794,
+            "plus_di14": 45.011605037658136,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29771.943600000002
+          },
+          "runtime": {
+            "adx14": 58.45074372837711,
+            "ema200": 29380.208953245645,
+            "ha_close_54m": 29143.1275,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29177.717346921858,
+            "ha_prev_colour": "red",
+            "minus_di14": 9.47603701552794,
+            "plus_di14": 45.011605037658136,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29771.943600000002
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "BUY",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-26T01:39:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-26T01:33:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 20.226514841425566,
+            "ema200": 29476.290268538134,
+            "ha_close_54m": 29446.0025,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29401.4801083813,
+            "ha_prev_colour": null,
+            "minus_di14": 29.943304174019804,
+            "plus_di14": 13.959566999432518,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29417.075378205125
+          },
+          "runtime": {
+            "adx14": 20.226514841425566,
+            "ema200": 29474.848680930747,
+            "ha_close_54m": 29446.0025,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29401.480108394288,
+            "ha_prev_colour": null,
+            "minus_di14": 29.943304174019804,
+            "plus_di14": 13.959566999432518,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29417.075378205125
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-26T01:36:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.101596812966726,
+            "ema200": 29475.22068377656,
+            "ha_close_54m": 29422.47125,
+            "ha_colour": "red",
+            "ha_cross": true,
+            "ha_open_54m": 29423.741304190647,
+            "ha_prev_colour": "green",
+            "minus_di14": 27.823230157816173,
+            "plus_di14": 14.181179709827823,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29416.130591194968
+          },
+          "runtime": {
+            "adx14": 21.101596812966726,
+            "ema200": 29473.774649986484,
+            "ha_close_54m": 29422.47125,
+            "ha_colour": "red",
+            "ha_cross": true,
+            "ha_open_54m": 29423.741304191935,
+            "ha_prev_colour": "green",
+            "minus_di14": 27.823230157816173,
+            "plus_di14": 14.181179709827823,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29416.130591194968
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-26T01:39:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.35982474360831,
+            "ema200": 29474.224826226542,
+            "ha_close_54m": 29422.47125,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29423.741304190647,
+            "ha_prev_colour": "red",
+            "minus_di14": 25.417904910391247,
+            "plus_di14": 15.343095032299459,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29415.365697530862
+          },
+          "runtime": {
+            "adx14": 21.35982474360831,
+            "ema200": 29472.7749306825,
+            "ha_close_54m": 29422.47125,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29423.741304190786,
+            "ha_prev_colour": "red",
+            "minus_di14": 25.417904910391247,
+            "plus_di14": 15.343095032299459,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29415.365697530862
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-26T08:18:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-26T08:12:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 30.609506150115248,
+            "ema200": 29188.140227543507,
+            "ha_close_54m": 29098.4945,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29033.611648860864,
+            "ha_prev_colour": null,
+            "minus_di14": 16.744957488450176,
+            "plus_di14": 31.663755923217117,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29190.52478558557
+          },
+          "runtime": {
+            "adx14": 30.609506150115248,
+            "ema200": 29188.484733912606,
+            "ha_close_54m": 29098.4945,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29033.611648899256,
+            "ha_prev_colour": null,
+            "minus_di14": 16.744957488450176,
+            "plus_di14": 31.663755923217117,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29190.52478558557
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-26T08:15:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 31.460199988861543,
+            "ema200": 29188.55417552815,
+            "ha_close_54m": 29098.4945,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29033.611648860864,
+            "ha_prev_colour": "green",
+            "minus_di14": 14.898245029912687,
+            "plus_di14": 36.93906477022074,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29190.652499999986
+          },
+          "runtime": {
+            "adx14": 31.460199988861543,
+            "ema200": 29188.88735174188,
+            "ha_close_54m": 29098.4945,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29033.611648900096,
+            "ha_prev_colour": "green",
+            "minus_di14": 14.898245029912687,
+            "plus_di14": 36.93906477022074,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29190.652499999986
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-26T08:18:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 32.25012998198311,
+            "ema200": 29188.60026333384,
+            "ha_close_54m": 29098.4945,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29033.611648860864,
+            "ha_prev_colour": "green",
+            "minus_di14": 13.548612877285606,
+            "plus_di14": 33.59275455705355,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29190.7270178253
+          },
+          "runtime": {
+            "adx14": 32.25012998198311,
+            "ema200": 29188.92021018456,
+            "ha_close_54m": 29098.4945,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29033.611648902377,
+            "ha_prev_colour": "green",
+            "minus_di14": 13.548612877285606,
+            "plus_di14": 33.59275455705355,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29190.7270178253
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "BUY",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-26T15:15:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-26T15:09:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 26.502645111267345,
+            "ema200": 29110.735383513886,
+            "ha_close_54m": 29086.11275,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29074.564270112736,
+            "ha_prev_colour": null,
+            "minus_di14": 13.773104406726766,
+            "plus_di14": 27.368744200617122,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29151.970871399157
+          },
+          "runtime": {
+            "adx14": 26.502645111267345,
+            "ema200": 29112.49158506157,
+            "ha_close_54m": 29086.11275,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29074.56427012052,
+            "ha_prev_colour": null,
+            "minus_di14": 13.773104406726766,
+            "plus_di14": 27.368744200617122,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29151.970871399157
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-26T15:12:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 27.179632033272075,
+            "ema200": 29112.580424473945,
+            "ha_close_54m": 29086.11275,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29074.564270112736,
+            "ha_prev_colour": "green",
+            "minus_di14": 12.629167721222581,
+            "plus_di14": 26.82493682116423,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29152.357147692288
+          },
+          "runtime": {
+            "adx14": 27.179632033272075,
+            "ema200": 29114.331983524262,
+            "ha_close_54m": 29086.11275,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29074.564270119787,
+            "ha_prev_colour": "green",
+            "minus_di14": 12.629167721222581,
+            "plus_di14": 26.82493682116423,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29152.357147692288
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-26T15:15:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 27.808262746562182,
+            "ema200": 29113.830569504054,
+            "ha_close_54m": 29086.11275,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29074.564270112736,
+            "ha_prev_colour": "green",
+            "minus_di14": 11.695704212398622,
+            "plus_di14": 24.84221712008792,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29152.686858895686
+          },
+          "runtime": {
+            "adx14": 27.808262746562182,
+            "ema200": 29115.581654965237,
+            "ha_close_54m": 29086.11275,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29074.564270120274,
+            "ha_prev_colour": "green",
+            "minus_di14": 11.695704212398622,
+            "plus_di14": 24.84221712008792,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29152.686858895686
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "BUY",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-26T19:39:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-26T19:33:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.289047610629634,
+            "ema200": 29205.944362256323,
+            "ha_close_54m": 29310.4305,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29245.364876257045,
+            "ha_prev_colour": null,
+            "minus_di14": 23.95584576905798,
+            "plus_di14": 14.187410413157885,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29178.314107605158
+          },
+          "runtime": {
+            "adx14": 21.289047610629634,
+            "ema200": 29206.347719848396,
+            "ha_close_54m": 29310.4305,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29245.364876254414,
+            "ha_prev_colour": null,
+            "minus_di14": 23.95584576905798,
+            "plus_di14": 14.187410413157885,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29178.314107605158
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-26T19:36:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 22.09896031450943,
+            "ema200": 29205.674886014967,
+            "ha_close_54m": 29232.2105,
+            "ha_colour": "red",
+            "ha_cross": true,
+            "ha_open_54m": 29277.89768812852,
+            "ha_prev_colour": "green",
+            "minus_di14": 26.554940379348867,
+            "plus_di14": 13.489356941000828,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29178.312091202562
+          },
+          "runtime": {
+            "adx14": 22.09896031450943,
+            "ema200": 29206.056338122835,
+            "ha_close_54m": 29232.2105,
+            "ha_colour": "red",
+            "ha_cross": true,
+            "ha_open_54m": 29277.897688128436,
+            "ha_prev_colour": "green",
+            "minus_di14": 26.554940379348867,
+            "plus_di14": 13.489356941000828,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29178.312091202562
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-26T19:39:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 22.732970197024024,
+            "ema200": 29205.343862273527,
+            "ha_close_54m": 29232.2105,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29277.89768812852,
+            "ha_prev_colour": "red",
+            "minus_di14": 25.108232099429532,
+            "plus_di14": 13.232234683109324,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29178.30687520127
+          },
+          "runtime": {
+            "adx14": 22.732970197024024,
+            "ema200": 29205.703787550632,
+            "ha_close_54m": 29232.2105,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29277.897688128614,
+            "ha_prev_colour": "red",
+            "minus_di14": 25.108232099429532,
+            "plus_di14": 13.232234683109324,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29178.30687520127
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-28T23:18:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-28T23:12:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 23.246242737794386,
+            "ema200": 29187.668112278767,
+            "ha_close_54m": 29147.307999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29207.639922032133,
+            "ha_prev_colour": null,
+            "minus_di14": 19.477472192904106,
+            "plus_di14": 33.18568848193303,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29192.7088
+          },
+          "runtime": {
+            "adx14": 23.246242737794386,
+            "ema200": 29186.973522701646,
+            "ha_close_54m": 29147.307999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29207.63992203803,
+            "ha_prev_colour": null,
+            "minus_di14": 19.477472192904106,
+            "plus_di14": 33.18568848193303,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29192.7088
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-28T23:15:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 23.531030943794715,
+            "ema200": 29188.42982260435,
+            "ha_close_54m": 29147.307999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29207.639922032133,
+            "ha_prev_colour": "red",
+            "minus_di14": 18.665815117582827,
+            "plus_di14": 32.63734794249918,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29203.109944444444
+          },
+          "runtime": {
+            "adx14": 23.531030943794715,
+            "ema200": 29187.704238896553,
+            "ha_close_54m": 29147.307999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29207.639922040515,
+            "ha_prev_colour": "red",
+            "minus_di14": 18.665815117582827,
+            "plus_di14": 32.63734794249918,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29203.109944444444
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-28T23:18:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 23.143766673327054,
+            "ema200": 29188.664491036147,
+            "ha_close_54m": 29147.307999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29207.639922032133,
+            "ha_prev_colour": "red",
+            "minus_di14": 20.934906708072962,
+            "plus_di14": 30.194011895027998,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29206.527714285716
+          },
+          "runtime": {
+            "adx14": 23.143766673327054,
+            "ema200": 29187.910957041233,
+            "ha_close_54m": 29147.307999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29207.639922039234,
+            "ha_prev_colour": "red",
+            "minus_di14": 20.934906708072962,
+            "plus_di14": 30.194011895027998,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29206.527714285716
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "BUY",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-29T01:57:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-29T01:51:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 43.017758543972164,
+            "ema200": 29215.77804002606,
+            "ha_close_54m": 29233.21525,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29245.432427754018,
+            "ha_prev_colour": null,
+            "minus_di14": 26.720520070955722,
+            "plus_di14": 13.550864877436878,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29258.891839080457
+          },
+          "runtime": {
+            "adx14": 43.017758543972164,
+            "ema200": 29215.91173796776,
+            "ha_close_54m": 29233.21525,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29245.43242774137,
+            "ha_prev_colour": null,
+            "minus_di14": 26.720520070955722,
+            "plus_di14": 13.550864877436878,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29258.891839080457
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-29T01:54:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 40.72735780385041,
+            "ema200": 29215.63124360789,
+            "ha_close_54m": 29233.21525,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29245.432427754018,
+            "ha_prev_colour": "red",
+            "minus_di14": 24.3142082736505,
+            "plus_di14": 19.514070262621054,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29257.64742937853
+          },
+          "runtime": {
+            "adx14": 40.72735780385041,
+            "ema200": 29215.80494862626,
+            "ha_close_54m": 29233.21525,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29245.432427741376,
+            "ha_prev_colour": "red",
+            "minus_di14": 24.3142082736505,
+            "plus_di14": 19.514070262621054,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29257.64742937853
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-29T01:57:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 38.372004257734126,
+            "ema200": 29215.507191432687,
+            "ha_close_54m": 29233.21525,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29245.432427754018,
+            "ha_prev_colour": "red",
+            "minus_di14": 23.238644894955858,
+            "plus_di14": 19.894766770113378,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29256.709133333334
+          },
+          "runtime": {
+            "adx14": 38.372004257734126,
+            "ema200": 29215.721282583192,
+            "ha_close_54m": 29233.21525,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29245.43242774115,
+            "ha_prev_colour": "red",
+            "minus_di14": 23.238644894955858,
+            "plus_di14": 19.894766770113378,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29256.709133333334
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-29T03:21:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-29T03:15:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.11030189380738,
+            "ema200": 29211.116784530444,
+            "ha_close_54m": 29138.47725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29239.32383887701,
+            "ha_prev_colour": null,
+            "minus_di14": 30.304737442401994,
+            "plus_di14": 11.573421478207504,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29238.539271317833
+          },
+          "runtime": {
+            "adx14": 21.11030189380738,
+            "ema200": 29211.808534555243,
+            "ha_close_54m": 29138.47725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29239.32383887995,
+            "ha_prev_colour": null,
+            "minus_di14": 30.304737442401994,
+            "plus_di14": 11.573421478207504,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29238.539271317833
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-29T03:18:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.68360876408054,
+            "ema200": 29210.60884637591,
+            "ha_close_54m": 29138.47725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29239.32383887701,
+            "ha_prev_colour": "red",
+            "minus_di14": 28.462345837373817,
+            "plus_di14": 15.618644774231772,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29237.523720306515
+          },
+          "runtime": {
+            "adx14": 21.68360876408054,
+            "ema200": 29211.313228545856,
+            "ha_close_54m": 29138.47725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29239.32383888569,
+            "ha_prev_colour": "red",
+            "minus_di14": 28.462345837373817,
+            "plus_di14": 15.618644774231772,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29237.523720306515
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-29T03:21:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 20.884523208340084,
+            "ema200": 29210.416141436846,
+            "ha_close_54m": 29138.47725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29239.32383887701,
+            "ha_prev_colour": "red",
+            "minus_di14": 26.119546249990755,
+            "plus_di14": 21.15718612069314,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29236.8916969697
+          },
+          "runtime": {
+            "adx14": 20.884523208340084,
+            "ema200": 29211.133450989746,
+            "ha_close_54m": 29138.47725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29239.323838885248,
+            "ha_prev_colour": "red",
+            "minus_di14": 26.119546249990755,
+            "plus_di14": 21.15718612069314,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29236.8916969697
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-29T05:03:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-29T04:57:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 20.470896363077298,
+            "ema200": 29220.175178606558,
+            "ha_close_54m": 29227.93,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29182.573397219254,
+            "ha_prev_colour": null,
+            "minus_di14": 14.000466667110722,
+            "plus_di14": 32.736589098310354,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29238.899175000006
+          },
+          "runtime": {
+            "adx14": 20.470896363077298,
+            "ema200": 29220.84652434375,
+            "ha_close_54m": 29227.93,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29182.57339723615,
+            "ha_prev_colour": null,
+            "minus_di14": 14.000466667110722,
+            "plus_di14": 32.736589098310354,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29238.899175000006
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-29T05:00:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 21.872144264333496,
+            "ema200": 29220.83522658062,
+            "ha_close_54m": 29227.93,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29182.573397219254,
+            "ha_prev_colour": "green",
+            "minus_di14": 13.15265756447459,
+            "plus_di14": 30.75419959039447,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29239.315366391187
+          },
+          "runtime": {
+            "adx14": 21.872144264333496,
+            "ema200": 29221.493396890142,
+            "ha_close_54m": 29227.93,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29182.573397227134,
+            "ha_prev_colour": "green",
+            "minus_di14": 13.15265756447459,
+            "plus_di14": 30.75419959039447,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29239.315366391187
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-29T05:03:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 22.605524575425697,
+            "ema200": 29221.320109898228,
+            "ha_close_54m": 29227.93,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29182.573397219254,
+            "ha_prev_colour": "green",
+            "minus_di14": 14.656390546131162,
+            "plus_di14": 28.53923509369279,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29239.63859289618
+          },
+          "runtime": {
+            "adx14": 22.605524575425697,
+            "ema200": 29221.967754911893,
+            "ha_close_54m": 29227.93,
+            "ha_colour": "green",
+            "ha_cross": false,
+            "ha_open_54m": 29182.573397214306,
+            "ha_prev_colour": "green",
+            "minus_di14": 14.656390546131162,
+            "plus_di14": 28.53923509369279,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29239.63859289618
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "BUY",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-29T15:45:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-29T15:39:00+00:00",
+          "first_difference": "ha_open_54m",
+          "port": {
+            "adx14": 25.020408233206037,
+            "ema200": 29347.815696394442,
+            "ha_close_54m": 29349.09725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29416.148764989557,
+            "ha_prev_colour": null,
+            "minus_di14": 21.62577509197426,
+            "plus_di14": 22.531011517252075,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29313.865900199617
+          },
+          "runtime": {
+            "adx14": 25.020408233206037,
+            "ema200": 29347.26504709744,
+            "ha_close_54m": 29349.09725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29416.14876502462,
+            "ha_prev_colour": null,
+            "minus_di14": 21.62577509197426,
+            "plus_di14": 22.531011517252075,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29313.865900199617
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-29T15:42:00+00:00",
+          "first_difference": "ha_open_54m",
+          "port": {
+            "adx14": 23.264811100704776,
+            "ema200": 29347.316982997483,
+            "ha_close_54m": 29349.09725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29416.148764989557,
+            "ha_prev_colour": "red",
+            "minus_di14": 21.243971268762333,
+            "plus_di14": 21.43262245920283,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29313.841650746286
+          },
+          "runtime": {
+            "adx14": 23.264811100704776,
+            "ema200": 29346.752036931062,
+            "ha_close_54m": 29349.09725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29416.148765023783,
+            "ha_prev_colour": "red",
+            "minus_di14": 21.243971268762333,
+            "plus_di14": 21.43262245920283,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29313.841650746286
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-29T15:45:00+00:00",
+          "first_difference": "ha_open_54m",
+          "port": {
+            "adx14": 22.292205517911675,
+            "ema200": 29346.172246848255,
+            "ha_close_54m": 29349.09725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29416.148764989557,
+            "ha_prev_colour": "red",
+            "minus_di14": 24.468445497212922,
+            "plus_di14": 20.162320590666948,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29313.664415674615
+          },
+          "runtime": {
+            "adx14": 22.292205517911675,
+            "ema200": 29345.592841996495,
+            "ha_close_54m": 29349.09725,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29416.148765018377,
+            "ha_prev_colour": "red",
+            "minus_di14": 24.468445497212922,
+            "plus_di14": 20.162320590666948,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29313.664415674615
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ha_open_54m"
+    },
+    {
+      "at": "2026-06-30T02:36:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-30T02:30:00+00:00",
+          "first_difference": "ha_cross",
+          "port": {
+            "adx14": 23.747577603005407,
+            "ema200": 29650.843955451186,
+            "ha_close_54m": 29727.81175,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29736.436518317867,
+            "ha_prev_colour": null,
+            "minus_di14": 16.699368053928453,
+            "plus_di14": 31.370330388275658,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29734.604455399072
+          },
+          "runtime": {
+            "adx14": 23.747577603005407,
+            "ema200": 29651.12313477691,
+            "ha_close_54m": 29727.81175,
+            "ha_colour": "red",
+            "ha_cross": true,
+            "ha_open_54m": 29736.43651832813,
+            "ha_prev_colour": null,
+            "minus_di14": 16.699368053928453,
+            "plus_di14": 31.370330388275658,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29734.604455399072
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-30T02:33:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 23.87948848664819,
+            "ema200": 29652.005040471573,
+            "ha_close_54m": 29727.81175,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29736.436518317867,
+            "ha_prev_colour": "red",
+            "minus_di14": 17.267603741476506,
+            "plus_di14": 29.14714861662627,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29735.164337962975
+          },
+          "runtime": {
+            "adx14": 23.87948848664819,
+            "ema200": 29652.27153954364,
+            "ha_close_54m": 29727.81175,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29736.436518329152,
+            "ha_prev_colour": "red",
+            "minus_di14": 17.267603741476506,
+            "plus_di14": 29.14714861662627,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29735.164337962975
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-30T02:36:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 22.507698500573166,
+            "ema200": 29652.941836088772,
+            "ha_close_54m": 29727.81175,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29736.436518317867,
+            "ha_prev_colour": "red",
+            "minus_di14": 23.769200174625087,
+            "plus_di14": 26.100315099995807,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29735.363100456634
+          },
+          "runtime": {
+            "adx14": 22.507698500573166,
+            "ema200": 29653.19735694168,
+            "ha_close_54m": 29727.81175,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29736.436518325867,
+            "ha_prev_colour": "red",
+            "minus_di14": 23.769200174625087,
+            "plus_di14": 26.100315099995807,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29735.363100456634
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "BUY",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-30T09:51:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-30T09:45:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 23.05689729494404,
+            "ema200": 29788.460851629163,
+            "ha_close_54m": 29796.644999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29847.76507136062,
+            "ha_prev_colour": null,
+            "minus_di14": 36.51241714347212,
+            "plus_di14": 13.15693139660706,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29794.249908950627
+          },
+          "runtime": {
+            "adx14": 23.05689729494404,
+            "ema200": 29788.06708025828,
+            "ha_close_54m": 29796.644999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29847.765071355934,
+            "ha_prev_colour": null,
+            "minus_di14": 36.51241714347212,
+            "plus_di14": 13.15693139660706,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29794.249908950627
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-30T09:48:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 25.040971784683897,
+            "ema200": 29788.08388793136,
+            "ha_close_54m": 29796.644999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29847.76507136062,
+            "ha_prev_colour": "red",
+            "minus_di14": 37.25495338382139,
+            "plus_di14": 12.143681096522775,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29794.07389093703
+          },
+          "runtime": {
+            "adx14": 25.040971784683897,
+            "ema200": 29787.690893290823,
+            "ha_close_54m": 29796.644999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29847.765071358088,
+            "ha_prev_colour": "red",
+            "minus_di14": 37.25495338382139,
+            "plus_di14": 12.143681096522775,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29794.07389093703
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-30T09:51:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 27.07840802305114,
+            "ema200": 29787.83869501662,
+            "ha_close_54m": 29796.644999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29847.76507136062,
+            "ha_prev_colour": "red",
+            "minus_di14": 36.535055216705054,
+            "plus_di14": 11.047449120392693,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29793.90023700307
+          },
+          "runtime": {
+            "adx14": 27.07840802305114,
+            "ema200": 29787.446621677693,
+            "ha_close_54m": 29796.644999999997,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29847.765071357797,
+            "ha_prev_colour": "red",
+            "minus_di14": 36.535055216705054,
+            "plus_di14": 11.047449120392693,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29793.90023700307
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    },
+    {
+      "at": "2026-06-30T14:27:00+00:00",
+      "cause": "runtime_gate_ha_cross",
+      "context": [
+        {
+          "at": "2026-06-30T14:21:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 27.09464209097484,
+            "ema200": 29796.131630754444,
+            "ha_close_54m": 29776.4485,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29827.84870535502,
+            "ha_prev_colour": null,
+            "minus_di14": 21.68936775888791,
+            "plus_di14": 14.650265238719765,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29797.465188311704
+          },
+          "runtime": {
+            "adx14": 27.09464209097484,
+            "ema200": 29796.49914546994,
+            "ha_close_54m": 29776.4485,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29827.84870536961,
+            "ha_prev_colour": null,
+            "minus_di14": 21.68936775888791,
+            "plus_di14": 14.650265238719765,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29797.465188311704
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-30T14:24:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 27.097052496570843,
+            "ema200": 29795.5478732345,
+            "ha_close_54m": 29776.4485,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29827.84870535502,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.9952836338442,
+            "plus_di14": 13.18118967370746,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29797.253764832807
+          },
+          "runtime": {
+            "adx14": 27.097052496570843,
+            "ema200": 29795.906279044008,
+            "ha_close_54m": 29776.4485,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29827.848705371456,
+            "ha_prev_colour": "red",
+            "minus_di14": 22.9952836338442,
+            "plus_di14": 13.18118967370746,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29797.253764832807
+          },
+          "runtime_history_bars": 600
+        },
+        {
+          "at": "2026-06-30T14:27:00+00:00",
+          "first_difference": "ema200",
+          "port": {
+            "adx14": 25.640671057886276,
+            "ema200": 29795.222232704804,
+            "ha_close_54m": 29776.4485,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29827.84870535502,
+            "ha_prev_colour": "red",
+            "minus_di14": 20.635157956274536,
+            "plus_di14": 18.040880543411593,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29797.114706451626
+          },
+          "runtime": {
+            "adx14": 25.640671057886276,
+            "ema200": 29795.56742789638,
+            "ha_close_54m": 29776.4485,
+            "ha_colour": "red",
+            "ha_cross": false,
+            "ha_open_54m": 29827.84870537528,
+            "ha_prev_colour": "red",
+            "minus_di14": 20.635157956274536,
+            "plus_di14": 18.040880543411593,
+            "session_anchor": "session_1800_ny",
+            "vwap": 29797.114706451626
+          },
+          "runtime_history_bars": 600
+        }
+      ],
+      "direction": "SELL",
+      "first_difference": "ema200"
+    }
+  ],
+  "safety": {
+    "broker_calls": 0,
+    "lake_writes": false,
+    "network_access": false,
+    "order_calls": 0,
+    "redeploy": false,
+    "risk_or_gate_edits": false,
+    "sealed_holdout_read": false,
+    "secrets_read": false
+  },
+  "selected_trading_dates": [
+    "2026-06-19",
+    "2026-06-21",
+    "2026-06-22",
+    "2026-06-23",
+    "2026-06-24",
+    "2026-06-25",
+    "2026-06-26",
+    "2026-06-28",
+    "2026-06-29",
+    "2026-06-30"
+  ],
+  "source": {
+    "port": "scripts/lab_t162_pine_port.py",
+    "runtime": "src/trader/experiments/tai_wiring.py",
+    "t195_script": "scripts/lab_t195_runtime_miss.py"
+  },
+  "status": "ok",
+  "task": "T-196",
+  "transfer": {
+    "display_precision": "10 significant digits",
+    "fields": [
+      "ha_open_54m",
+      "ha_close_54m",
+      "ha_colour",
+      "ha_prev_colour",
+      "ha_cross",
+      "ema200",
+      "adx14",
+      "plus_di14",
+      "minus_di14",
+      "vwap"
+    ],
+    "format": "T196_ROW pipe records; each row has port/runtime values for entry and two prior bars",
+    "full_json_path": "/workspace/state/t196/summary.json"
+  }
+}
