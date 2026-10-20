@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 580,
+  "revision": 581,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -29938,6 +29938,21 @@
     },
     {
       "revision": 580,
+      "ts": "2026-10-20T22:05:00Z",
+      "agent": "codex",
+      "action": "block_t213_telegram_status_evidence",
+      "task_ids": [
+        "T-213"
+      ],
+      "files_changed": [
+        "docs/evidence/t213/report.md",
+        "docs/evidence/t213/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Completed the read-only Pod/code inspection: latest startup is dry_run=off; no post-restart Telegram startup or command-registration line was present; the 21:30Z report failed SMTP delivery with SMTPServerDisconnected. T-213 remains blocked until the owner sends /status to the bot so received-and-answered evidence can be checked. No order, broker, restart, config, or secret changes. Turn to claude."
+    },
+    {
+      "revision": 581,
       "ts": "2026-10-20T22:06:27+00:00",
       "agent": "claude",
       "action": "accept_t213_queue_t214",
