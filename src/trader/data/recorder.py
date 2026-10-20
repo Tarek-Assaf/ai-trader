@@ -7,7 +7,7 @@ import os
 import tempfile
 import threading
 from collections import defaultdict
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -408,47 +408,55 @@ class CapitalDataRecorder:
         with self._lock:
             self._closed_minute_callback = callback
 
-    def on_update(self, update: OhlcUpdate) -> None:
-        """Keep partial values in memory until their minute closes or REST confirms it."""
-        symbol = self._symbols.get(update.epic)
-        if symbol is None:
-            return
-        reason = self._reject_reason(update)
-        if reason is not None:
-            self._record_rejection(reason, update)
-            self._write_status()
-            return
-        minute = self._key(update)[1]
+    def _on_updates(self, updates: Iterable[OhlcUpdate]) -> None:
+        """Buffer updates and commit all closed values in one store call."""
         current_minute = self._clock().astimezone(UTC).replace(second=0, microsecond=0)
         with self._lock:
-            updated_at = self._clock().astimezone(UTC)
-            self._status["last_update_at"] = updated_at.isoformat()
-            self._status["ticks_received"] += 1
-            self._status["last_tick_at"] = updated_at.isoformat()
-            self._last_tick_by_epic[update.epic] = updated_at
             closed: list[_BufferedUpdate] = []
-            for key, buffered in list(self._pending.items()):
-                if key[0] == update.epic and key[1] < minute:
-                    closed.append(buffered)
-                    del self._pending[key]
-            key = self._key(update)
-            prior = self._pending.get(key)
-            if update.source == "capital_rest" and minute < current_minute:
-                closed.append(_BufferedUpdate(update, symbol))
-                self._pending.pop(key, None)
-            elif minute < current_minute:
-                # A late closed WebSocket minute can be saved once it is known to be closed.
-                if prior is None or prior.update.source != "capital_rest":
+            for update in updates:
+                symbol = self._symbols.get(update.epic)
+                if symbol is None:
+                    continue
+                reason = self._reject_reason(update)
+                if reason is not None:
+                    self._record_rejection(reason, update)
+                    continue
+                updated_at = self._clock().astimezone(UTC)
+                self._status["last_update_at"] = updated_at.isoformat()
+                self._status["ticks_received"] += 1
+                self._status["last_tick_at"] = updated_at.isoformat()
+                self._last_tick_by_epic[update.epic] = updated_at
+                minute = self._key(update)[1]
+                for key, buffered in list(self._pending.items()):
+                    if key[0] == update.epic and key[1] < minute:
+                        closed.append(buffered)
+                        del self._pending[key]
+                key = self._key(update)
+                prior = self._pending.get(key)
+                if update.source == "capital_rest" and minute < current_minute:
                     closed.append(_BufferedUpdate(update, symbol))
-                self._pending.pop(key, None)
-            elif (
-                prior is None
-                or prior.update.source != "capital_rest"
-                or update.source == "capital_rest"
-            ):
-                self._pending[key] = _BufferedUpdate(update, symbol)
+                    self._pending.pop(key, None)
+                elif minute < current_minute:
+                    # A late closed WebSocket minute can be saved once it is known to be closed.
+                    if prior is None or prior.update.source != "capital_rest":
+                        closed.append(_BufferedUpdate(update, symbol))
+                    self._pending.pop(key, None)
+                elif (
+                    prior is None
+                    or prior.update.source != "capital_rest"
+                    or update.source == "capital_rest"
+                ):
+                    self._pending[key] = _BufferedUpdate(update, symbol)
             self._commit(closed)
             self._write_status()
+
+    def on_update(self, update: OhlcUpdate) -> None:
+        """Keep partial values in memory until their minute closes or REST confirms it."""
+        self._on_updates((update,))
+
+    def on_backfill_batch(self, updates: Iterable[OhlcUpdate]) -> None:
+        """Persist a REST backfill page/epic with one store upsert."""
+        self._on_updates(updates)
 
     def on_reconnect(self, count: int, reason: str) -> None:
         """Expose stream failures with a safe reason while retrying in the worker."""
@@ -573,3 +581,4 @@ class CapitalDataRecorder:
                 for side in ("bid", "ask"):
                     latest.setdefault((epic, side), watermark)
         return latest
+
