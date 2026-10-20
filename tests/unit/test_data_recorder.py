@@ -314,4 +314,3 @@ def test_bad_spread_is_quarantined_without_stopping_recorder(tmp_path: Path) -> 
     status = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
     assert status["rejected_candles"] == 1
     assert status["last_reject_reason"] == "ask_close_below_bid_close"
-
