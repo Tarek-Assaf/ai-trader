@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 557,
+  "turn": "codex",
+  "revision": 558,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -176,7 +176,8 @@
         "T-199",
         "T-200",
         "T-201",
-        "T-202"
+        "T-202",
+        "T-203"
       ]
     },
     {
@@ -1165,7 +1166,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u0639\u2018\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00be\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b9\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a5\u0623\u00a2\u00e2\u201a\u00ac\u00e2\u201e\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u0639\u2018\u0637\u00a2\u0622\u00ac\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00a5\u00e2\u20ac\u2122\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a9\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u0639\u2018\u0637\u00a2\u0622\u00ac\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u0686\u0637\u00a2\u0622\u00a21 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ´ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ´ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ£ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ£ط·آ·ط¢آ¢ط·آ¢ط¢آ¹ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ·ط·آ¥أ¢â‚¬â„¢ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ط·آ·ط¢آ¹ط·آ¢ط¢آ©ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â‚¬â€چط¢آ¢1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -5269,7 +5270,7 @@
         "docs/evidence/t157_rule_by_rule.csv",
         "docs/evidence/t157_report.md"
       ],
-      "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in \u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b13 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in \u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b13 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
+      "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in ط·آ¢ط¢آ±3 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in ط·آ¢ط¢آ±3 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
     },
     {
       "id": "T-158",
@@ -6605,7 +6606,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6635,12 +6636,12 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
       "depends_on": [
-        "T-199"
+        "T-196"
       ],
       "acceptance_criteria": [
         "Read-only offline Pod trace before 2026-07-01; report port/runtime EMA seed starts and recomputed deltas.",
@@ -6661,6 +6662,32 @@
         "docs/evidence/t201/summary.json"
       ],
       "completion_note": "Reachable Pod trace completed read-only; evidence records EMA starts, zero port-seeded deltas, ten HA rows and the refresh trigger first difference. Awaiting Claude review and quality CI."
+    },
+    {
+      "id": "T-203",
+      "title": "Add post-exit refresh trigger to the runtime and re-run the T-199 replay",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-202"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t203_refresh_trigger_parity.md exactly. Dry-run stays on; no broker write calls, holdout reads, risk/gate edits, redeploy or secrets. Replay >=22/26 or name the next first-differing quantity. Ruff check and format (line length 100), mypy, CI green. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t203_refresh_trigger_parity.md",
+        "src/trader/experiments/tai_wiring.py",
+        "tests/unit/test_tai_wiring.py",
+        "docs/evidence/t203/"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Queued by Claude; not started."
     }
   ],
   "decisions": [
@@ -8102,7 +8129,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b9\u0637\u00a2\u0622\u00be\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ab\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u0639\u2018\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¢آ¢ط·آ¹ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ«ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ·ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -15260,7 +15287,7 @@
       "subject": "T-151 owner-trade forming-candle replay and Pod evidence",
       "method": "Read docs/specs/t151_owner_trades_comparison.md, reviewed the script and CI-importable unit tests, ran ruff format/check, py_compile and git diff --check locally, then ran the script read-only in the reachable owner-provided Pod against the NAS100 Capital.com 1m lake and owner CSV.",
       "result": "pass",
-      "checked": "Pod run completed with 31 owner entries, 9 groups, 0 same-direction hits at \u0637\u00a2\u0622\u00b11/\u0637\u00a2\u0622\u00b12/\u0637\u00a2\u0622\u00b15 for every group, forming variant extra-signal counts of 5\u0623\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u015312, price basis matched_entries=27/missing_entry_minutes=4, and safety flags showing zero broker calls/orders and no holdout/gate/cost/ledger writes. Primary owner endpoint remained ERR_BLOCKED_BY_CLIENT; alternate owner endpoint supplied in the task was used.",
+      "checked": "Pod run completed with 31 owner entries, 9 groups, 0 same-direction hits at ط¢آ±1/ط¢آ±2/ط¢آ±5 for every group, forming variant extra-signal counts of 5أ¢â‚¬â€œ12, price basis matched_entries=27/missing_entry_minutes=4, and safety flags showing zero broker calls/orders and no holdout/gate/cost/ledger writes. Primary owner endpoint remained ERR_BLOCKED_BY_CLIENT; alternate owner endpoint supplied in the task was used.",
       "evidence": [
         "scripts/lab_t151_owner_trades.py",
         "tests/unit/test_t151_owner_trades.py",
@@ -15391,7 +15418,7 @@
       "subject": "T-157 rule-by-rule replay and timing switches",
       "method": "Ran scripts/lab_t157_rule_by_rule.py on the owner-provided Pod with the NAS100 lake and owner CSV; inspected the report and artifact hashes; ran py_compile and git diff --check; verified the script has no broker, holdout or production-state access.",
       "result": "pass",
-      "checked": "Pod run exited 0 with 31 entries, 5,103 data rows plus header, mid/bid/ask bases and nine registered switches. The forming-Wilder-SMA-EMA UTC baseline passed 0/31 at center and in \u0637\u00a2\u0622\u00b13 bars; the best registered switch passed 1/31 in \u0637\u00a2\u0622\u00b13 bars, below the 20/31 stop threshold. Baseline first-failure counts were ha_state 20, ema_side 3, adx_di 3, dont_chase 1 and four missing bars. Pod CSV SHA-256 b365f36b34199c1b21a2806f4fd541e98c04ff3236bc2aa2fdb82f97230e81a1; report SHA-256 d22698d39eef079f25c1e50d0561496c7dee2d4fc762bb64a3a03f16e53756df. No broker calls, orders, sealed holdout reads, gate, cost, ledger, promotion or lake writes.",
+      "checked": "Pod run exited 0 with 31 entries, 5,103 data rows plus header, mid/bid/ask bases and nine registered switches. The forming-Wilder-SMA-EMA UTC baseline passed 0/31 at center and in ط¢آ±3 bars; the best registered switch passed 1/31 in ط¢آ±3 bars, below the 20/31 stop threshold. Baseline first-failure counts were ha_state 20, ema_side 3, adx_di 3, dont_chase 1 and four missing bars. Pod CSV SHA-256 b365f36b34199c1b21a2806f4fd541e98c04ff3236bc2aa2fdb82f97230e81a1; report SHA-256 d22698d39eef079f25c1e50d0561496c7dee2d4fc762bb64a3a03f16e53756df. No broker calls, orders, sealed holdout reads, gate, cost, ledger, promotion or lake writes.",
       "evidence": [
         "scripts/lab_t157_rule_by_rule.py",
         "docs/evidence/t157_rule_by_rule.csv",
@@ -15501,7 +15528,7 @@
         "docs/evidence/t162_report.md",
         "docs/evidence/t162_port.json",
         "docs/evidence/t162_entries.csv",
-        "pass with stop: closed 1/31 exact/\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b11/\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b12 and forming 0/31 exact/\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b11/\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b12; the 25/31 bar was not met. Pod exited 0; broker calls, orders, sealed-holdout reads, lake writes, production-state writes and gate evaluation were all zero/false; 54 owner exit rows parsed."
+        "pass with stop: closed 1/31 exact/ط·آ¢ط¢آ±1/ط·آ¢ط¢آ±2 and forming 0/31 exact/ط·آ¢ط¢آ±1/ط·آ¢ط¢آ±2; the 25/31 bar was not met. Pod exited 0; broker calls, orders, sealed-holdout reads, lake writes, production-state writes and gate evaluation were all zero/false; 54 owner exit rows parsed."
       ],
       "reverify_if": "The owner supplies a corrected Pine/TradingView alignment or requests a reviewed replay change."
     },
@@ -16721,6 +16748,21 @@
       "validated_by": "codex",
       "date": "2026-10-20T14:18:00+03:00",
       "reverify_if": "Claude review or the narrow stateful refresh fix changes."
+    },
+    {
+      "id": "V-496",
+      "task_id": "T-201",
+      "subject": "Claude review of T-201 cost-in-R scan and T-202 EMA/HA trace",
+      "method": "Read both reports and spec acceptance; ruff check/format on the T-202 script (fixed 3 E501 and formatting), handoff validator.",
+      "result": "pass",
+      "checked": "T-201: six cells reported with median/P05/P95/share>0.25R/>1R and net R, all negative at configured cost, zero-cost gross positive; holdout excluded. T-202: EMA seeds both sides, port-seeded deltas 0, ten rows, first differing quantity named (refresh trigger) with the two code lines, one fix described. Safety fields zero.",
+      "evidence": [
+        "docs/evidence/t201/report.md",
+        "docs/evidence/t202/report.md"
+      ],
+      "validated_by": "claude",
+      "date": "2026-10-20T13:50:00+03:00",
+      "reverify_if": "false"
     }
   ],
   "blockers": [
@@ -16948,7 +16990,7 @@
       "task_id": "T-187",
       "raised_by": "codex",
       "status": "resolved",
-      "text": "T-187 bounded read-only replay cannot start: the owner-provided Pod terminal URL returned \u0623\u00a2\u00e2\u201a\u00ac\u0625\u201cWaiting for service to respond \u0623\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u200c The service on this port is either still initializing or not running.\u0623\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u0152 No lake was read and no evidence run was started; retry only after the owner supplies a reachable Pod terminal/service.",
+      "text": "T-187 bounded read-only replay cannot start: the owner-provided Pod terminal URL returned أ¢â‚¬إ“Waiting for service to respond أ¢â‚¬â€‌ The service on this port is either still initializing or not running.أ¢â‚¬â€Œ No lake was read and no evidence run was started; retry only after the owner supplies a reachable Pod terminal/service.",
       "resolution": "Owner Pod became reachable. The required T-187 replay completed at status=ok; exact comparison failed and is recorded in docs/evidence/t187/report.md and summary.json.",
       "resolved_by": "codex",
       "resolved_at": "2026-10-19"
@@ -19063,7 +19105,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u00e2\u20ac\u201c2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019â€“2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -26734,7 +26776,7 @@
         "docs/evidence/t151_owner_trades_summary.json",
         "docs/evidence/t151_owner_trades_report.md"
       ],
-      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity. Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at \u0622\u00b11/\u0622\u00b12/\u0622\u00b15, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
+      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity. Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at آ±1/آ±2/آ±5, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
     },
     {
       "revision": 421,
@@ -26882,7 +26924,7 @@
         "docs/evidence/t156_entry_feature_dump.csv",
         "docs/evidence/t156_report.md"
       ],
-      "summary": "Completed T-156 from the accepted T-155 dependency. The read-only Pod diagnostic generated raw feature windows for all 31 owner entries, condition shortfalls and sign counts, 1m coverage diagnostics, and bid/ask/mid sensitivity. The committed CSV is a compact center-bar index and the script regenerates the full \u0622\u00b13 window JSON. Pod output exited 0 with zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. Handed T-156 to Claude for review."
+      "summary": "Completed T-156 from the accepted T-155 dependency. The read-only Pod diagnostic generated raw feature windows for all 31 owner entries, condition shortfalls and sign counts, 1m coverage diagnostics, and bid/ask/mid sensitivity. The committed CSV is a compact center-bar index and the script regenerates the full آ±3 window JSON. Pod output exited 0 with zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. Handed T-156 to Claude for review."
     },
     {
       "revision": 431,
@@ -26925,7 +26967,7 @@
         "docs/evidence/t157_rule_by_rule.csv",
         "docs/evidence/t157_report.md"
       ],
-      "summary": "Completed T-157 from accepted T-156. Read-only Pod replay evaluated each Tai rule for all 31 owner entries across \u0622\u00b13 bars and mid/bid/ask bases, tested nine registered HA/VWAP/ADX/DI/EMA/timestamp switches, and stopped under the 20/31 threshold. Baseline first failures: HA 20, EMA 3, ADX/DI 3, dont-chase 1, four missing bars; baseline and all price bases pass 0/31, best switch passes 1/31 in \u0622\u00b13. Pod artifact hashes and compact-index caveat are recorded. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
+      "summary": "Completed T-157 from accepted T-156. Read-only Pod replay evaluated each Tai rule for all 31 owner entries across آ±3 bars and mid/bid/ask bases, tested nine registered HA/VWAP/ADX/DI/EMA/timestamp switches, and stopped under the 20/31 threshold. Baseline first failures: HA 20, EMA 3, ADX/DI 3, dont-chase 1, four missing bars; baseline and all price bases pass 0/31, best switch passes 1/31 in آ±3. Pod artifact hashes and compact-index caveat are recorded. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
     },
     {
       "revision": 434,
@@ -28230,7 +28272,7 @@
         "scripts/report_t190_dry_run_day.py",
         "tests/unit/test_t190_dry_run_report.py"
       ],
-      "summary": "Started T-190 on the authoritative claude/t190-queue branch. Implementing the real builder/provider replay with recorded bid/ask shadow fills, known-answer fixture tests and report outputs. No broker calls, orders, holdout reads, lake writes, redeploy or secrets; Pod run still required. | Completed T-190 read-only shadow replay/report and known-answer fixture tests. Bounded Pod run (US100, 2026-10-19T15:00Z\u00e2\u20ac\u201c17:23Z) loaded the lake and produced 0 signals/trades, 0 journal matches, 2 missing minutes; no broker calls, orders, network, holdout or lake writes. USD unavailable without recorded value-per-point. Ruff and compile checks pass; desktop pytest unavailable. Turn to Claude for review."
+      "summary": "Started T-190 on the authoritative claude/t190-queue branch. Implementing the real builder/provider replay with recorded bid/ask shadow fills, known-answer fixture tests and report outputs. No broker calls, orders, holdout reads, lake writes, redeploy or secrets; Pod run still required. | Completed T-190 read-only shadow replay/report and known-answer fixture tests. Bounded Pod run (US100, 2026-10-19T15:00Zâ€“17:23Z) loaded the lake and produced 0 signals/trades, 0 journal matches, 2 missing minutes; no broker calls, orders, network, holdout or lake writes. USD unavailable without recorded value-per-point. Ruff and compile checks pass; desktop pytest unavailable. Turn to Claude for review."
     },
     {
       "revision": 513,
@@ -28914,6 +28956,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Reachable Pod URL verified. T-201 six-cell TRAINING cost-in-R scan completed read-only. T-202 traced the first EMA seed difference and ten T-199 misses: port seed 30125.183525 (2026-06-17T09:57Z), runtime seed 30087.069945 (2026-06-18T04:00Z), port-seeded deltas 0.0; all ten entries are refresh triggers with false raw HA flags on both sides. T-199 remains 1/26 and blocked on a stateful post-exit refresh fix. No broker, orders, holdout, risk/gate edit, redeploy or secrets. Turn to Claude."
+    },
+    {
+      "revision": 558,
+      "ts": "2026-10-20T13:50:00+03:00",
+      "agent": "claude",
+      "action": "accept_t201_t202_queue_t203",
+      "task_ids": [
+        "T-201",
+        "T-202",
+        "T-203"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t203_refresh_trigger_parity.md",
+        "scripts/lab_t202_trace.py"
+      ],
+      "summary": "Accepted T-201 and T-202 (evidence honest; fixed lint in the T-202 script). Cost burden explains the configured-cost losses; the T-199 misses are the missing post-exit refresh trigger, not HA or EMA logic. Queued T-203: add the refresh trigger to the runtime and re-run the replay. Codex: do T-203."
     }
   ],
   "project_summary": "Owner confirmed Pod terminal access (Q-076 answered). Codex now runs the T-199 replay and the T-201 training cost-in-R scan on the Pod; dry-run stays on."

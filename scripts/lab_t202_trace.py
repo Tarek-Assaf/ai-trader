@@ -348,7 +348,9 @@ def _ema_seed_metadata(
     """Return explicit EMA starts, seeds, and sample deltas for the report."""
     port_ema = port_features.ema
     port_seed_index = next((i for i, value in enumerate(port_ema) if value is not None), None)
-    runtime_first = next((i for i, value in enumerate(bounded_features["ema"]) if value is not None), None)
+    runtime_first = next(
+        (i for i, value in enumerate(bounded_features["ema"]) if value is not None), None
+    )
     runtime_unbounded_first = next(
         (i for i, value in enumerate(unbounded_features["ema"]) if value is not None), None
     )
@@ -380,9 +382,13 @@ def _ema_seed_metadata(
             "algorithm": "tai_wiring._features over the selected runtime window",
         },
         "recomputed_with_port_seed": {
-            "algorithm": "port EMA state at the first runtime bar, then recurse over runtime closes",
+            "algorithm": (
+                "port EMA state at the first runtime bar, then recurse over runtime closes"
+            ),
             "series_start": bars[0].at.isoformat() if bars else None,
-            "result": "computed below for every port entry; deltas should be near zero when closes align",
+            "result": (
+                "computed below for every port entry; deltas should be near zero when closes align"
+            ),
         },
     }
 
@@ -450,8 +456,12 @@ def run(
         port_row = {
             "ha_open_54m": _value(port_features.ha_open[port_index]) if port_index >= 0 else None,
             "ha_close_54m": _value(port_features.ha_close[port_index]) if port_index >= 0 else None,
-            "ha_open_previous_54m": _value(port_features.ha_open[port_index - 1]) if port_index > 0 else None,
-            "ha_close_previous_54m": _value(port_features.ha_close[port_index - 1]) if port_index > 0 else None,
+            "ha_open_previous_54m": _value(port_features.ha_open[port_index - 1])
+            if port_index > 0
+            else None,
+            "ha_close_previous_54m": _value(port_features.ha_close[port_index - 1])
+            if port_index > 0
+            else None,
             "buy_flag": bool(port_features.buy_cross[port_index]) if port_index >= 0 else False,
             "sell_flag": bool(port_features.sell_cross[port_index]) if port_index >= 0 else False,
             "ha_colour": (
@@ -588,7 +598,8 @@ def _write_outputs(payload: Mapping[str, object], output_dir: Path) -> None:
         f"- Unbounded runtime seed: {payload['ema_seed_analysis']['runtime_unbounded']}",
         f"- Port-seeded recomputation: {payload['ema_seed_analysis']['recomputed_with_port_seed']}",
         "",
-        "The per-entry JSON records `port_minus_bounded` and `port_minus_seed_aligned`; the latter is the controlled recomputation.",
+        "The per-entry JSON records `port_minus_bounded` and `port_minus_seed_aligned`; "
+        "the latter is the controlled recomputation.",
         "",
         "## First differing quantity",
         "",
@@ -638,7 +649,7 @@ def _write_outputs(payload: Mapping[str, object], output_dir: Path) -> None:
         [
             "",
             (
-            "Minimal fix: make the runtime signal path carry the closed-port EMA state "
+                "Minimal fix: make the runtime signal path carry the closed-port EMA state "
                 "and implement the same post-exit refresh trigger (with an explicit "
                 "position/last-exit state) before asking T-199 to re-run. T-202 does not "
                 "edit production `tai_wiring.py`."
