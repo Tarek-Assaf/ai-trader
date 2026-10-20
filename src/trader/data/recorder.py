@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import tempfile
 import threading
@@ -17,6 +18,8 @@ import pyarrow as pa  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from trader.integrations.capital_com.stream import OhlcUpdate
+
+_LOG = logging.getLogger(__name__)
 
 _SCHEMA = pa.schema(
     [
@@ -579,4 +582,3 @@ class CapitalDataRecorder:
                 for side in ("bid", "ask"):
                     latest.setdefault((epic, side), watermark)
         return latest
-
