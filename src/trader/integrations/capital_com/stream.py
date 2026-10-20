@@ -248,7 +248,7 @@ class CapitalComStreamClient:
             close_reason = close_reason[:160]
         connection_age = age_seconds(self._connection_started_at)
         _LOG.info(
-            "Capital.com WebSocket reconnect: exception=%s reason=%s close_code=%s "
+            "Capital.com stream reconnect: exception=%s reason=%s close_code=%s "
             "close_reason=%s seconds_since_ping_reply=%s seconds_since_tick=%s "
             "connection_age_seconds=%s",
             type(exc).__name__,
