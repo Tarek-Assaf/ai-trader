@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 576,
+  "turn": "codex",
+  "revision": 577,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -62,7 +62,8 @@
         "T-087",
         "T-091",
         "T-111",
-        "T-150"
+        "T-150",
+        "T-213"
       ]
     },
     {
@@ -311,7 +312,8 @@
         "T-015",
         "T-044",
         "T-109",
-        "T-211"
+        "T-211",
+        "T-212"
       ]
     },
     {
@@ -401,7 +403,8 @@
         "T-090",
         "T-091",
         "T-092",
-        "T-111"
+        "T-111",
+        "T-213"
       ]
     },
     {
@@ -468,7 +471,9 @@
         "T-099",
         "T-103",
         "T-110",
-        "T-211"
+        "T-211",
+        "T-212",
+        "T-213"
       ]
     },
     {
@@ -6919,7 +6924,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-21",
         "R-22",
@@ -6941,7 +6946,56 @@
         "docs/evidence/t210/summary.json",
         "V-509"
       ],
-      "completion_note": "Read-only Pod inventory completed from image files and runtime at version 7f3214f. ROLE=all runs supervisord, Postgres, Redis, API and recorder; backup loop is active; no worker, autoscaler, Telegram process or report scheduler is configured in supervisord.all.conf. Health was healthy with DB/Redis reachable, feed_stalled=false, live_enabled=false, paper/demo, flat Tai state, recent backup and GOLD backfill. The deployed image predates T-209 health counters. No orders, broker writes, restart, config, code or secrets."
+      "completion_note": "Read-only Pod inventory completed from image files and runtime at version 7f3214f. ROLE=all runs supervisord, Postgres, Redis, API and recorder; backup loop is active; no worker, autoscaler, Telegram process or report scheduler is configured in supervisord.all.conf. Health was healthy with DB/Redis reachable, feed_stalled=false, live_enabled=false, paper/demo, flat Tai state, recent backup and GOLD backfill. The deployed image predates T-209 health counters. No orders, broker writes, restart, config, code or secrets. Accepted (V-510). Follow-ups: T-212, T-213."
+    },
+    {
+      "id": "T-212",
+      "title": "No feed-stall alerts during the scheduled maintenance break",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-07",
+        "R-18"
+      ],
+      "depends_on": [
+        "T-210"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t212_quiet_stall_alert_in_break.md exactly. No change to orders, dry-run, risk/gate files or the Tai stale guard. Ruff check and format (line length 100), mypy, CI green. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t212_quiet_stall_alert_in_break.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Queued by Claude; not started."
+    },
+    {
+      "id": "T-213",
+      "title": "Prove Telegram commands and scheduled reports work on the Pod",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-01",
+        "R-12",
+        "R-18"
+      ],
+      "depends_on": [
+        "T-210"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t213_telegram_reports_live_check.md exactly. Read-only first; any fix is minimal with tests; no trading, risk or gate changes; never print secrets. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t213_telegram_reports_live_check.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Queued by Claude; not started."
     }
   ],
   "decisions": [
@@ -17206,6 +17260,20 @@
       "validated_by": "codex",
       "date": "2026-10-20",
       "reverify_if": "Owner deploys a newer image or changes ROLE/supervisor configuration."
+    },
+    {
+      "id": "V-510",
+      "task_id": "T-210",
+      "subject": "Claude review of T-210 Pod inventory",
+      "method": "Read docs/evidence/t210/report.md and summary.json; cross-checked docs/ARCHITECTURE and src/trader/api/app.py for where Telegram and reports run; handoff validator.",
+      "result": "pass",
+      "checked": "Inventory is read-only and secret-free. Correction to its reading: Telegram chat and the report scheduler are designed to run inside the API process, not as supervisor programs, so 'not a separate process' is not 'not running'; delivery is still unproven (T-213). Confirmed gaps: no worker pool or autoscaler running (ROLE=all), no live LLM or agent cycle observed, no research feeds (search/news/FRED keys absent by name), GITHUB_REPO and HF_DATASET_REPO absent by name although backup upload lines pass, Pod is 2 vCPU / 4 GB versus the planned 8 vCPU / 32 GB, GOLD recorded but not traded.",
+      "evidence": [
+        "docs/evidence/t210/report.md",
+        "docs/evidence/t210/summary.json"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "false"
     }
   ],
   "blockers": [
@@ -29743,6 +29811,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Read-only Pod inventory complete. ROLE=all runs supervisord, Postgres, Redis, API and recorder with a backup loop; worker/autoscaler/Telegram/report supervisor programs are absent. /health was healthy, paper/demo, dry_run=false, live_enabled=false, feed_stalled=false, state flat; GOLD backfill observed. T-209 health counters are not in deployed image 7f3214f. No orders, broker writes, restart, config, code or secrets. Turn to claude."
+    },
+    {
+      "revision": 577,
+      "ts": "2026-10-21T00:40:00+03:00",
+      "agent": "claude",
+      "action": "accept_t210_queue_t212_t213",
+      "task_ids": [
+        "T-210",
+        "T-212",
+        "T-213"
+      ],
+      "files_changed": [
+        "docs/specs/t212_quiet_stall_alert_in_break.md",
+        "docs/specs/t213_telegram_reports_live_check.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-210 (V-510): inventory shows ROLE=all running (supervisord, Postgres, Redis, API, recorder, backup loop); worker pool, autoscaler, live LLM cycle and research feeds not running; Pod is 2 vCPU / 4 GB; Telegram chat and reports live inside the API process but delivery unproven. Queued T-212 (quiet the stall alert during the 17:00-18:00 New York break) and T-213 (prove Telegram commands and scheduled reports, fix minimally). No order, dry-run, risk/gate, redeploy or secret changes. Turn to codex."
     }
   ],
   "project_summary": "T-209 per-bar outcome telemetry accepted; /health now shows tai_demo counters. Next for Codex: T-210 read-only Pod inventory. No order, dry-run, risk/gate, redeploy or secret changes."
