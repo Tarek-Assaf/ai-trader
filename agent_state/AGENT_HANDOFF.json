@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 575,
+  "turn": "claude",
+  "revision": 576,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-209 per-bar outcome telemetry accepted; /health now shows tai_demo counters. Next for Codex: T-210 read-only Pod inventory. No order, dry-run, risk/gate, redeploy or secret changes.",
+    "summary": "T-210 read-only Pod inventory complete: ROLE=all has API, recorder, Postgres, Redis and backup loop; no worker/autoscaler/Telegram/report supervisor programs. Health was healthy at the snapshot, Tai dry_run=false in paper/demo with live_enabled=false and flat state; GOLD backfill was observed. T-209 health counters are not on the deployed image. No orders, broker writes, restart, config or secrets.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-209",
+    "last_task": "T-210",
     "last_status": "done"
   },
   "requirements": [
@@ -6919,7 +6919,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-21",
         "R-22",
@@ -6936,8 +6936,12 @@
         "docs/evidence/t210/"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Queued by Claude; not started."
+      "evidence": [
+        "docs/evidence/t210/report.md",
+        "docs/evidence/t210/summary.json",
+        "V-509"
+      ],
+      "completion_note": "Read-only Pod inventory completed from image files and runtime at version 7f3214f. ROLE=all runs supervisord, Postgres, Redis, API and recorder; backup loop is active; no worker, autoscaler, Telegram process or report scheduler is configured in supervisord.all.conf. Health was healthy with DB/Redis reachable, feed_stalled=false, live_enabled=false, paper/demo, flat Tai state, recent backup and GOLD backfill. The deployed image predates T-209 health counters. No orders, broker writes, restart, config, code or secrets."
     }
   ],
   "decisions": [
@@ -17187,6 +17191,21 @@
       "evidence": [
         "Diff review against spec; ruff format/check on touched files; CI quality check (see PR)"
       ]
+    },
+    {
+      "id": "V-509",
+      "task_id": "T-210",
+      "subject": "Read-only Pod architecture inventory",
+      "method": "Collected supervisor configuration, process table, process start times, /health response, non-secret environment flags, image module paths and secret-free backup log markers from the owner Pod; cross-checked against ARCHITECTURE.md sections 3, 5.2, 5.9-5.12 and 8.",
+      "result": "pass",
+      "checked": "ROLE=all image version 7f3214f; API/recorder/Postgres/Redis/backup loop active; no worker/autoscaler/Telegram/report supervisor programs; Tai US100 heartbeat and GOLD backfill observed; state remained flat; no broker/order or mutating operation.",
+      "evidence": [
+        "docs/evidence/t210/report.md",
+        "docs/evidence/t210/summary.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-20",
+      "reverify_if": "Owner deploys a newer image or changes ROLE/supervisor configuration."
     }
   ],
   "blockers": [
@@ -29709,6 +29728,21 @@
         "tests/unit/test_health.py"
       ],
       "summary": "Accepted T-209 (V-508) after rebuilding on main: the Codex branch handoff was corrupted and its health.py change dropped the T-211 recorder fields, now restored. Next for Codex: T-210 (read-only Pod inventory). Reminder for Codex: never commit tool output into the handoff file; edit it with a script that reads and rewrites the JSON. No order, dry-run, risk/gate, redeploy or secret changes. Turn to codex."
+    },
+    {
+      "revision": 576,
+      "ts": "2026-10-20T21:19:30Z",
+      "agent": "codex",
+      "action": "complete_t210_pod_inventory",
+      "task_ids": [
+        "T-210"
+      ],
+      "files_changed": [
+        "docs/evidence/t210/report.md",
+        "docs/evidence/t210/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Read-only Pod inventory complete. ROLE=all runs supervisord, Postgres, Redis, API and recorder with a backup loop; worker/autoscaler/Telegram/report supervisor programs are absent. /health was healthy, paper/demo, dry_run=false, live_enabled=false, feed_stalled=false, state flat; GOLD backfill observed. T-209 health counters are not in deployed image 7f3214f. No orders, broker writes, restart, config, code or secrets. Turn to claude."
     }
   ],
   "project_summary": "T-209 per-bar outcome telemetry accepted; /health now shows tai_demo counters. Next for Codex: T-210 read-only Pod inventory. No order, dry-run, risk/gate, redeploy or secret changes."
