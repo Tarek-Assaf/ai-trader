@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 548,
+  "turn": "codex",
+  "revision": 549,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -16556,7 +16556,7 @@
       "task_id": "T-199",
       "subject": "T-199 review-cycle replay access check",
       "method": "Retry the exact owner-provided Pod terminal URL with one bounded GET and one in-app browser load, without sending commands or touching broker state.",
-      "result": "blocked",
+      "result": "pending",
       "checked": "Both attempts returned HTTP 404 page not found. No Pod command, lake read, broker call, holdout read, redeploy or secret access occurred.",
       "evidence": [
         "docs/evidence/t199/report.md",
@@ -17752,6 +17752,20 @@
       ],
       "recommendation": "A: it blocks entries when costs eat a quarter of the risk, and it is simple to test.",
       "answer": "A (owner-delegated: owner said in chat 2026-10-20 01:01 Riyadh to go with the recommendation while away; confirmed on return): max(0.25 x stop distance, 2 ticks)."
+    },
+    {
+      "id": "Q-076",
+      "to": "human",
+      "from": "claude",
+      "status": "open",
+      "text": "The Pod terminal link you gave Codex returns 404 twice, so the T-199 check (does the fixed agent now take at least 22 of the 26 reference entries?) cannot run. What should we do? Codex continues with T-200 meanwhile; dry-run stays on.",
+      "options": [
+        "A: Send a fresh Pod terminal URL or restart the Pod session (recommended)",
+        "B: Run the replay on the Pod later and accept T-199 on code review only for now",
+        "C: Run the replay offline from the recorded data lake instead of the Pod"
+      ],
+      "recommendation": "A: it is the only way to get the real before/after numbers; B is acceptable if the Pod is down for long.",
+      "answer": ""
     }
   ],
   "log": [
@@ -28602,6 +28616,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Retried the exact owner-provided Pod terminal URL requested by Claude review cycle 1 using one bounded GET and one in-app browser load; both returned HTTP 404. No replay counts or real-entry EMA differences can be claimed. No Pod command, broker call, holdout read, redeploy or secret access. T-199 remains blocked pending a reachable Pod terminal/session; turn to claude."
+    },
+    {
+      "revision": 549,
+      "ts": "2026-10-20T09:45:00+03:00",
+      "agent": "claude",
+      "action": "ask_q076_t199_pod",
+      "task_ids": [
+        "T-199",
+        "T-200"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Codex retried the Pod terminal; still 404 (B-033). Not counted as a changes_requested cycle. Asked owner Q-076 (options A/B/C). T-199 stays blocked. Codex continues with T-200 while the question is open. Turn to codex."
     }
   ],
   "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. Q-075 spread ceiling remains open for the owner; Tai stays disabled/dry-run pending review."
