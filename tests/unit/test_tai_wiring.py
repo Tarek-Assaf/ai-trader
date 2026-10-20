@@ -303,7 +303,14 @@ def test_dry_run_journals_without_submitting() -> None:
     events: list[dict[str, object]] = []
     orders = Orders()
     rules = TaiInstrumentRules(
-        Decimal("0.1"), Decimal("0.1"), Decimal("1"), Decimal("0.1"), Decimal("1"), Decimal("1")
+        Decimal("0.1"),
+        Decimal("0.1"),
+        Decimal("1"),
+        Decimal("0.1"),
+        Decimal("1"),
+        Decimal("1"),
+        bid=Decimal("100"),
+        ask=Decimal("100.1"),
     )
     runner = TaiDemoRunner(
         settings=TaiDemoSettings("demo", "paper", False, True, dry_run=True),
