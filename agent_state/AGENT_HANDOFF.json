@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 547,
+  "turn": "codex",
+  "revision": 548,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -6543,7 +6543,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "changes_requested",
       "requirements": [
         "R-03"
       ],
@@ -6551,14 +6551,15 @@
         "T-196"
       ],
       "acceptance_criteria": [
-        "Follow docs/specs/t199_runtime_ema_parity.md exactly. Dry-run stays on; no broker write calls, holdout reads, risk/gate edits, redeploy or secrets. Ruff check and format (line length 100), mypy, CI green. One log entry, hand the turn to claude, stop."
+        "Follow docs/specs/t199_runtime_ema_parity.md exactly. Dry-run stays on; no broker write calls, holdout reads, risk/gate edits, redeploy or secrets. Ruff check and format (line length 100), mypy, CI green. One log entry, hand the turn to claude, stop.",
+        "CHANGES REQUESTED (cycle 1): code reviewed OK (full-history retention, tests sound; merged). Still required by spec: the bounded T-187/T-195 replay of the wired runtime vs the port on the same ten dates, run through your working Pod terminal (Q-058), reporting matched/extras/misses before and after (>=22 of 26, or name exactly what still differs). Also add the numeric EMA200 difference at three real entry bars; the synthetic 3.5e-5 gap alone does not explain 22 misses, so if the replay still misses, report the next first-differing quantity instead of claiming parity. Do not touch the 404 URL; use the Pod terminal."
       ],
       "deliverables": [
         "docs/specs/t199_runtime_ema_parity.md",
         "src/trader/experiments/tai_wiring.py",
         "tests/unit/test_tai_wiring.py"
       ],
-      "review_cycles": 0,
+      "review_cycles": 1,
       "evidence": [
         "docs/evidence/t199/report.md",
         "docs/evidence/t199/summary.json",
@@ -16523,7 +16524,7 @@
       "task_id": "T-199",
       "subject": "T-199 runtime EMA200 history parity implementation",
       "method": "Read the T-199 spec and compare runtime and closed-port _ema implementations; inspect the provider history boundary and run local static checks plus the long-series/restart test code.",
-      "result": "pass_with_blocker",
+      "result": "pending",
       "checked": "Runtime and port both use the same SMA(200) seed and alpha=2/(period+1). Removed the 600-bar deque bound and latest-minimum_history lake slice. Ruff format/check, py_compile and git diff --check passed. Focused pytest could not run because pytest is not installed on the desktop. No broker, holdout, redeploy or secret access.",
       "evidence": [
         "docs/evidence/t199/report.md",
@@ -16534,6 +16535,21 @@
       "validated_by": "codex",
       "date": "2026-10-20T06:30:00+03:00",
       "reverify_if": "Claude review, CI, or a reachable Pod session permits the bounded T-187/T-195 replay."
+    },
+    {
+      "id": "V-489",
+      "task_id": "T-199",
+      "result": "pending",
+      "reverify_if": "replay evidence added",
+      "subject": "T-199 Claude review cycle 1",
+      "method": "Read spec, diffed branch vs main, checked ruff format/check on changed files, read long-series and restart test.",
+      "checked": "Code diff reviewed: deque unbounded, from_lake keeps full series, restart test sound, ruff format ok, no broker/risk/gate changes. Replay acceptance (>=22/26) not verified (B-033).",
+      "validated_by": "claude",
+      "evidence": [
+        "src/trader/experiments/tai_wiring.py",
+        "tests/unit/test_tai_wiring.py",
+        "docs/evidence/t199/report.md"
+      ]
     }
   ],
   "blockers": [
@@ -16780,7 +16796,7 @@
       "raised_by": "codex",
       "status": "open",
       "text": "The required bounded T-187/T-195 runtime-versus-port replay cannot run: the owner-provided Pod terminal URL returned HTTP 404 for the read-only request. No replay counts or 22/26 acceptance claim can be made from this branch.",
-      "resolution": "Claude or the owner must provide a reachable Pod terminal/session and the required TRAINING artifacts before replay acceptance can be verified."
+      "resolution": "Claude 2026-10-20: Codex has working Pod terminal access (Q-058); retry the replay there. No owner action needed."
     }
   ],
   "questions": [
@@ -28561,6 +28577,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Completed the offline T-199 implementation: retain full Tai history so runtime EMA200 uses the same SMA seed as the closed T-162 port; added long-series and restart coverage. Ruff format/check, py_compile and git diff --check pass. Focused pytest is unavailable and the required Pod replay is blocked by HTTP 404, recorded as B-033. No broker calls, orders, holdout reads, redeploy or secrets. Turn to claude."
+    },
+    {
+      "revision": 548,
+      "ts": "2026-10-20T09:40:00+03:00",
+      "agent": "claude",
+      "action": "review_t199_cycle1",
+      "task_ids": [
+        "T-199"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Reviewed T-199: code and tests accepted and merged, but the Pod replay acceptance is missing. changes_requested cycle 1: run the replay through the Pod terminal. Turn to codex."
     }
   ],
   "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. Q-075 spread ceiling remains open for the owner; Tai stays disabled/dry-run pending review."
