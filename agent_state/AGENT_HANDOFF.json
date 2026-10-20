@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 558,
+  "turn": "claude",
+  "revision": 560,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Tai dry-run agent. Cost burden explains the configured-cost backtest losses (T-201); T-203 added the post-exit refresh trigger; T-204 replays through the runner to confirm >=22 of 26 port entries (T-199). Dry-run stays on; redeploy and turning dry-run off are the owner's decisions.",
+    "summary": "T-204 replayed the production TaiSignalProvider with exit callbacks: 25/26 port entries matched and the one remaining miss is measured. Dry-run stays on; no broker, holdout, risk, gate, redeploy or secret operations.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-203",
+    "last_task": "T-204",
     "last_status": "review"
   },
   "requirements": [
@@ -6704,7 +6704,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -6721,7 +6721,7 @@
       ],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": "Queued by Claude; not started."
+      "completion_note": "Production TaiSignalProvider replay called note_exit at each port exit. Pod result: 25/26 exact matches, 0 extras, one measured miss at 2026-06-30T14:27:00Z. Compileall and diff check pass; pytest/make unavailable on Windows."
     }
   ],
   "decisions": [
@@ -16812,6 +16812,20 @@
       ],
       "validated_by": "claude",
       "reverify_if": "false"
+    },
+    {
+      "id": "V-498",
+      "task_id": "T-204",
+      "subject": "T-204 provider callback replay",
+      "method": "Ran the Pod replay on NSXUSD using the production TaiSignalProvider and note_exit callbacks; reviewed generated summary/report and local compileall/diff check.",
+      "result": "pass",
+      "evidence": [
+        "docs/evidence/t204/report.md",
+        "docs/evidence/t204/summary.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-20",
+      "reverify_if": "The production exit callback or refresh trigger changes."
     }
   ],
   "blockers": [
@@ -29058,7 +29072,26 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-203 code accepted (V-497): the refresh rule matches the port. Its 1/26 replay is a harness gap (no exit callbacks), so queued T-204: replay through the runner path and report matched/extras/misses. Fixed lint (B023, E501) in Codex's files and merged the T-201/T-202 evidence chain onto main. Codex: do T-204 on the Pod. Dry-run stays on. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
+    },
+    {
+      "revision": 560,
+      "ts": "2026-10-20T14:20:00+03:00",
+      "agent": "codex",
+      "action": "complete_t204_runner_exit_replay",
+      "task_ids": [
+        "T-204"
+      ],
+      "files_changed": [
+        "docs/specs/t204_runner_exit_replay.md",
+        "scripts/lab_t195_runtime_miss.py",
+        "tests/unit/test_t195_runtime_miss.py",
+        "docs/evidence/t204/report.md",
+        "docs/evidence/t204/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-204 completed on the reachable Pod: production provider exit callbacks reproduced 25/26 port entries with no extras; one remaining miss is named with port/runtime quantities. No broker calls, orders, holdout reads, lake writes, redeploy or secrets. Turn to claude.",
+      "turn": "claude"
     }
   ],
-  "project_summary": "Owner confirmed Pod terminal access (Q-076 answered). Codex now runs the T-199 replay and the T-201 training cost-in-R scan on the Pod; dry-run stays on."
+  "project_summary": "Owner Pod T-204 replay: production provider exit callbacks reproduced 25/26 port entries with no extras; the remaining miss is named in docs/evidence/t204/report.md. Dry-run stays on."
 }
