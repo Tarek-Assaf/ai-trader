@@ -1,0 +1,54 @@
+{
+  "task": "T-206",
+  "status": "ok",
+  "session": {
+    "started_at": "2026-10-20T12:33:22.534Z",
+    "observed_through": "2026-10-20T12:44:42Z",
+    "epic": "US100",
+    "experiment": true,
+    "dry_run": false,
+    "trading_mode": "paper",
+    "broker_env": "demo",
+    "live_trading_enabled": false
+  },
+  "positions_state": {
+    "path": "/workspace/state/tai_demo_positions.json",
+    "last_exit_at": null,
+    "positions": {},
+    "version": 1
+  },
+  "events": {
+    "entries": 0,
+    "refusals": 0,
+    "spread_too_wide": 0,
+    "exits": 0,
+    "order_events": 0,
+    "runtime_dependency_unavailable": 4,
+    "runtime_recovered": 2
+  },
+  "port_comparison": {
+    "matched": 0,
+    "extras": 0,
+    "misses": 0,
+    "first_differing_quantity": null,
+    "too_few_trades_to_judge": true
+  },
+  "pnl": {
+    "realized_r": 0,
+    "realized_money": 0,
+    "spread_entries": 0,
+    "spread_guard_r": 0.25,
+    "guard_exercised": false
+  },
+  "provenance": {
+    "pod_image": "bfb1193",
+    "app_is_git_repo": false,
+    "read_only": true,
+    "broker_write_calls": 0,
+    "order_calls": 0,
+    "holdout_read": false,
+    "lake_writes": false,
+    "redeploy": false,
+    "secrets": false
+  }
+}

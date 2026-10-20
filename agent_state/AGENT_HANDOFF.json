@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "human",
-  "revision": 563,
+  "revision": 566,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Tai agent matches the closed port on 25/26 reference entries; audit blockers resolved, so it can be enabled on the Capital.com demo account (owner sets TAI_DEMO_DRY_RUN=false). Costs make every backtest negative (T-201), so the demo run tests the machinery and live behaviour, not a proven edge.",
+    "summary": "The first owner-enabled Tai demo session was watched read-only (T-206): dry-run is off, but no entries, refusals, exits or order events occurred; state stayed flat and two short dependency alert bursts recovered. There are too few trades to judge parity or P&L.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-205",
+    "last_task": "T-206",
     "last_status": "done"
   },
   "requirements": [
@@ -179,7 +179,8 @@
         "T-202",
         "T-203",
         "T-204",
-        "T-205"
+        "T-205",
+        "T-206"
       ]
     },
     {
@@ -6754,6 +6755,33 @@
         "docs/evidence/t205/summary.json"
       ],
       "completion_note": "Pod replay names the first differing quantity: callback ordering/state, not stop inputs. The port refresh uses the prior 10:09Z exit; the harness applies the same-bar 14:27Z exit before evaluating, so last_exit_at age is 0 and no refresh signal is emitted. Same-bar ATR/swing stop inputs match. No src change proposed."
+    },
+    {
+      "id": "T-206",
+      "title": "Watch the first Tai demo session and compare entries with the port",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "done",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-205"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t206_demo_watch.md exactly. Read-only on the Pod; no config, code, risk/gate edits, redeploy or secrets. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t206_demo_watch.md",
+        "docs/evidence/t206/"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t206/report.md",
+        "docs/evidence/t206/summary.json"
+      ],
+      "completion_note": "Read-only watch of the first owner-enabled Tai demo session on the Pod. TAI_DEMO_DRY_RUN=false and startup dry_run=off were confirmed. The session had zero entries, refusals, exits or order events, zero open positions, and two brief dependency-unavailable/recovered alert bursts. With no entries, port comparison is 0 matched, 0 extras, 0 misses; P&L is 0 R / 0 money and the 0.25R spread guard was not exercised. No safety fault found. Accepted (V-502). Parity and spread guard remain unjudged until the agent takes trades."
     }
   ],
   "decisions": [
@@ -16886,6 +16914,34 @@
       ],
       "validated_by": "claude",
       "reverify_if": "false"
+    },
+    {
+      "id": "V-501",
+      "task_id": "T-206",
+      "subject": "First Tai demo session watch",
+      "method": "Read-only Pod inspection of the image-supplied logs, environment, and /workspace/state/tai_demo_positions.json after the owner enabled TAI_DEMO_DRY_RUN=false; summarized journal events and port comparison.",
+      "result": "pass",
+      "evidence": [
+        "docs/evidence/t206/report.md",
+        "docs/evidence/t206/summary.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-20",
+      "reverify_if": "A later demo session produces an entry or the Tai journal/state contract changes."
+    },
+    {
+      "id": "V-502",
+      "task_id": "T-206",
+      "subject": "Claude review of the first Tai demo session watch",
+      "method": "Read docs/evidence/t206/report.md and summary.json; handoff validator.",
+      "result": "pass",
+      "checked": "Startup line shows experiment=on dry_run=off on image bfb1193 with paper/demo/live-off flags; state file flat; 0 entries, refusals, exits or orders in the roughly 11-minute window; two short runtime_dependency_unavailable bursts recovered by themselves. No safety fault. Too short to judge parity, spread guard or P&L.",
+      "evidence": [
+        "docs/evidence/t206/report.md",
+        "docs/evidence/t206/summary.json"
+      ],
+      "validated_by": "claude",
+      "reverify_if": "a later session has entries"
     }
   ],
   "blockers": [
@@ -29215,7 +29271,50 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner chose to keep Tai and test it on the demo account. Added an addendum to the T-192 audit: all listed blockers are resolved (T-197, T-199..T-205), so the audit now reads ready to enable on demo only, as the owner's decision, by setting TAI_DEMO_DRY_RUN=false and restarting on the same volume. Costs caveat from T-201 recorded. No code, config, broker or secret changes. Turn to human."
+    },
+    {
+      "revision": 564,
+      "ts": "2026-10-20T15:45:00+03:00",
+      "agent": "claude",
+      "action": "demo_enabled_by_owner_queue_t206",
+      "task_ids": [
+        "T-206"
+      ],
+      "files_changed": [
+        "docs/specs/t206_demo_watch.md",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner reports TAI_DEMO_DRY_RUN=false on the Pod (health: version bfb1193, paper, demo, live_enabled false, feed healthy); the startup line itself is not yet seen. Demo orders are enabled by the owner's decision. Queued T-206: read-only watch of the first session and comparison with the port. Codex: do T-206. No config, code, risk/gate, redeploy or secret changes."
+    },
+    {
+      "revision": 565,
+      "ts": "2026-10-20T15:45:00+03:00",
+      "agent": "codex",
+      "action": "complete_t206_first_demo_watch",
+      "task_ids": [
+        "T-206"
+      ],
+      "files_changed": [
+        "docs/evidence/t206/report.md",
+        "docs/evidence/t206/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Read-only Pod watch confirmed TAI_DEMO_DRY_RUN=false and startup dry_run=off. The first session had zero entries, refusals, exits or order events and no open positions; two brief runtime dependency alerts recovered. Port comparison is 0 matched/0 extras/0 misses because no entries occurred; P&L is 0 R / 0 money and the 0.25R guard was not exercised. /app was not a git repository; image files/logs were used. No safety fault, broker write, order, config, code, redeploy or secret operation. Turn to Claude.",
+      "turn": "claude"
+    },
+    {
+      "revision": 566,
+      "ts": "2026-10-20T16:00:00+03:00",
+      "agent": "claude",
+      "action": "accept_t206_first_watch",
+      "task_ids": [
+        "T-206"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-206 (V-502): demo orders are enabled (dry_run=off confirmed), the state is flat, no safety fault, no trades yet in the 11-minute window. Parity and the spread guard cannot be judged until entries occur. No new Codex task is queued; I will queue another watch once the owner reports or the schedules see entries. No broker calls, orders, config, holdout or secret changes. Turn to human."
     }
   ],
-  "project_summary": "Owner Pod T-204 replay: production provider exit callbacks reproduced 25/26 port entries with no extras; the remaining miss is named in docs/evidence/t204/report.md. Dry-run stays on."
+  "project_summary": "Owner-enabled Tai demo watch (T-206) confirmed dry-run off, but the first session produced no entries, refusals, exits or order events and remained flat; there are too few trades to judge parity or P&L. T-204/T-205 replay evidence remains accepted at 25/26."
 }
