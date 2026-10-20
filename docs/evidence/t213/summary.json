@@ -1,0 +1,18 @@
+{
+  "task": "T-213",
+  "status": "blocked",
+  "pod": {
+    "startup_log": "2026-10-20 19:26:22,391",
+    "dry_run": "off",
+    "telegram_startup_line": false,
+    "pre_restart_poll_errors": true,
+    "report_run_at": "2026-10-20T21:30:02.418Z",
+    "report_email_error": "SMTPServerDisconnected: Connection unexpectedly closed"
+  },
+  "source_wiring": {
+    "commands": ["/status", "/pause", "/stop", "/kill", "/report"],
+    "poll_thread": "telegram-long-poll"
+  },
+  "blocker": "Owner must send /status to the bot so the received-and-answered log evidence can be checked; Codex did not send an external message.",
+  "safety": "No secrets, broker calls, orders, restarts or configuration changes."
+}
