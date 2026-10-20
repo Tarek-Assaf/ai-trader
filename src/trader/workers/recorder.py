@@ -249,6 +249,7 @@ def run_data_recorder() -> None:
             stream_thread.start()
             market_status = "unknown"
             market_status_source = "unknown"
+            market_hours_by_epic: dict[str, MarketHours | None] = {}
             stale_after_by_epic = {
                 epic: config["stale_after_seconds"] for epic, config in session_settings.items()
             }
@@ -259,6 +260,7 @@ def run_data_recorder() -> None:
                 if now >= next_market_poll:
                     statuses: list[str] = []
                     expected_open = {}
+                    market_hours_by_epic = {}
                     sources: list[str] = []
                     for epic in symbols_by_epic:
                         try:
@@ -278,6 +280,7 @@ def run_data_recorder() -> None:
                                     "Capital.com opening hours unavailable (%s)",
                                     type(exc).__name__,
                                 )
+                            market_hours_by_epic[epic] = schedule
                             is_open, source = resolve_market_open(
                                 broker_status,
                                 schedule,
@@ -302,6 +305,7 @@ def run_data_recorder() -> None:
                     expected_open_by_epic=expected_open,
                     market_status_source=market_status_source,
                     stale_after_seconds_by_epic=stale_after_by_epic,
+                    market_hours_by_epic=market_hours_by_epic,
                 )
                 stop.wait(_STATUS_POLL_SECONDS)
             stop.set()
