@@ -1,0 +1,50 @@
+{
+  "task": "T-204",
+  "status": "ok",
+  "pod_reachable": true,
+  "replay": {
+    "port_entries": 26,
+    "runtime_entries": 25,
+    "matched": 25,
+    "extras": 0,
+    "misses": 1,
+    "first_difference": "runtime_no_signal_after_all_gates",
+    "holdout_start": "2026-07-01T00:00:00Z",
+    "epic": "NSXUSD",
+    "days": 10
+  },
+  "misses": [
+    {
+      "at": "2026-06-30T14:27:00+00:00",
+      "direction": "SELL",
+      "cause": "runtime_no_signal_after_all_gates",
+      "port_entry": "29762.821",
+      "port_stop": "29770.751522703096",
+      "runtime_candidate_entry": "29763.442",
+      "runtime_candidate_stop": "29799.556551589813026",
+      "first_failing_gate": null,
+      "history_bars": 3704
+    }
+  ],
+  "safety": {
+    "broker_calls": 0,
+    "order_calls": 0,
+    "network_access": false,
+    "sealed_holdout_read": false,
+    "lake_writes": false,
+    "risk_or_gate_edits": false,
+    "redeploy": false,
+    "secrets_used": false
+  },
+  "checks": {
+    "compileall": "pass",
+    "diff_check": "pass",
+    "pytest": "not run in Windows checkout (pytest unavailable)",
+    "make_lint_test": "not run in Windows checkout (make unavailable)"
+  },
+  "provenance": {
+    "pod_terminal": "https://pbkmi8nx193x3w-19123.proxy.runpod.net/gghm7kv5k18235w7589uqti9cchcqzx3/",
+    "source_branch": "codex/t204-runner",
+    "pod_output_dir": "/workspace/t204_run"
+  }
+}
