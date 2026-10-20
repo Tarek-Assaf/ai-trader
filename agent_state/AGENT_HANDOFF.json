@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 569,
+  "turn": "claude",
+  "revision": 570,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-207 read-only quiet-session check: dry_run=off but live_enabled=false in paper/demo mode; no entries, refusals, exits, order events or audit rows. Port replay found 0 entries on 40 complete 3m bars. Runtime exposes 107 closed-minute lines versus 117 lake bars and no per-bar outcome telemetry, so runtime outcome/gate counts remain blocked.",
+    "summary": "T-208 read-only recorder diagnosis: Pod remained degraded with 251 precise reconnect observations (202 CapitalComError, 49 ConnectionClosedError), ping ConnectError and unknown market status; NAS100 lake had four one-minute both-side gaps in the inspected window. REST backfill is attempted after successful connect/subscribe/ping but can be interrupted; recorder and Tai 3m builder do not synthesize missing minutes. T-209 remains queued for per-bar telemetry.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -6819,7 +6819,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-03"
       ],
@@ -6834,8 +6834,11 @@
         "docs/evidence/t208/"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Queued by Claude; not started."
+      "evidence": [
+        "docs/evidence/t208/report.md",
+        "docs/evidence/t208/summary.json"
+      ],
+      "completion_note": "Completed read-only Pod diagnosis. Recorder was degraded: 251 precise reconnect observations (202 CapitalComError, 49 ConnectionClosedError), repeated ping ConnectError and unknown market status, with an HTTP 429 session response at startup. The direct NAS100 lake query found four one-minute both-side gaps (12:41Z, 12:45Z, 13:42Z, 14:11Z) in the 12:33Z–14:34Z window. Stream REST backfill exists after successful connect/subscribe/ping but can be interrupted by the observed failures; recorder and Tai 3m code do not synthesize missing minutes. Rejected-candle telemetry is aggregate-only (10, last ask_close_below_bid_close), so per-event attribution is unavailable. Proposed smallest fix: bounded reconnect subscribe/backfill outcome telemetry in stream.py; no code or broker changes made."
     },
     {
       "id": "T-209",
@@ -17036,6 +17039,20 @@
       ],
       "validated_by": "claude",
       "reverify_if": "false"
+    },
+    {
+      "id": "V-504",
+      "task_id": "T-208",
+      "subject": "Codex read-only recorder degradation diagnosis",
+      "method": "Read-only inspection of image-supplied Pod status, scheduler/API logs, NAS100 lake metadata, and source files for reconnect, recorder, Tai feed, and 3m aggregation behavior.",
+      "result": "pass",
+      "evidence": [
+        "docs/evidence/t208/report.md",
+        "docs/evidence/t208/summary.json"
+      ],
+      "validated_by": "codex",
+      "date": "2026-10-20",
+      "reverify_if": "A later recorder run adds per-event rejection/backfill telemetry or changes the gap-fill contract."
     }
   ],
   "blockers": [
@@ -29454,7 +29471,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Accepted T-207 (V-503): the port finds no candidate in the live window, so zero entries is normal. But health is degraded since about 14:40Z (recorder reconnects, rejected candles, unknown market status) and the runtime log is 10 minutes short of the lake. Queued T-208 (read-only diagnosis of the recorder gaps, do first) and T-209 (per-bar outcome counters in /health, code). Dry-run stays off by the owner's decision; no order, config, risk/gate, redeploy or secret changes. Turn to codex."
+    },
+    {
+      "revision": 570,
+      "ts": "2026-10-20T16:35:00Z",
+      "agent": "codex",
+      "action": "complete_t208_recorder_diagnosis",
+      "task_ids": [
+        "T-208"
+      ],
+      "files_changed": [
+        "docs/evidence/t208/report.md",
+        "docs/evidence/t208/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Read-only Pod diagnosis complete. Recorder degraded with 251 precise reconnect observations (202 CapitalComError, 49 ConnectionClosedError), repeated ping ConnectError, unknown market status, and startup HTTP 429. NAS100 lake query found four one-minute both-side gaps in the inspected window. REST backfill exists after successful connect/subscribe/ping but can be interrupted; recorder and Tai 3m builder do not synthesize missing minutes. Rejected-candle telemetry is aggregate-only. Proposed bounded reconnect subscribe/backfill outcome telemetry in stream.py. No broker writes, orders, restarts, config or code changes. Turn to claude."
     }
   ],
-  "project_summary": "T-207 read-only quiet-session check found dry_run=off but live_enabled=false in paper/demo mode; no entries, refusals, exits or order events and state stayed flat. Port replay had 0 entries on 40 complete 3m bars. Runtime exposed 107 closed-minute lines versus 117 lake bars and no per-bar outcome telemetry, so runtime outcome/gate counts remain blocked. T-204/T-205 replay evidence remains accepted at 25/26."
+  "project_summary": "T-208 read-only recorder diagnosis completed: provider/session/transport failures and market-status lookup errors correlate with four one-minute NAS100 both-side gaps; 3m builder requires all three minutes and does not fill. No broker writes, orders, restarts, config or code changes. T-209 remains queued for per-bar telemetry."
 }
