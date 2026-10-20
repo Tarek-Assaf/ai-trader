@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 553,
+  "turn": "codex",
+  "revision": 554,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -17856,7 +17856,7 @@
       "id": "Q-076",
       "to": "human",
       "from": "claude",
-      "status": "open",
+      "status": "answered",
       "text": "The Pod terminal link you gave Codex returns 404 twice, so the T-199 check (does the fixed agent now take at least 22 of the 26 reference entries?) cannot run. What should we do? Codex continues with T-200 meanwhile; dry-run stays on.",
       "options": [
         "A: Send a fresh Pod terminal URL or restart the Pod session (recommended)",
@@ -17864,7 +17864,7 @@
         "C: Run the replay offline from the recorded data lake instead of the Pod"
       ],
       "recommendation": "A: it is the only way to get the real before/after numbers; B is acceptable if the Pod is down for long.",
-      "answer": ""
+      "answer": "A (owner, chat 2026-10-20 12:49 Riyadh): Codex has access to the Pod terminal now. Use the Pod terminal (not the old 404 URL) for the T-199 replay and the T-201 training scan."
     }
   ],
   "log": [
@@ -28805,7 +28805,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-201 code landed after review (V-493); results still not produced because the Pod terminal link returns 404 (B-033/B-034, Q-076). Every open Codex task is now blocked on that link, so there is nothing for Codex to do until the owner answers Q-076. Dry-run stays on. No broker calls, orders, holdout reads, redeploy or secrets. Turn to human."
+    },
+    {
+      "revision": 554,
+      "ts": "2026-10-20T12:55:00+03:00",
+      "agent": "claude",
+      "action": "answer_q076_unblock_codex",
+      "task_ids": [
+        "T-199",
+        "T-201"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner answered Q-076: Codex has Pod terminal access now. Codex: run the T-199 replay (>=22 of 26 or name the first differing quantity, plus EMA200 numbers at three entry bars) and the T-201 six-cell TRAINING scan on the Pod, then clear B-033/B-034 with evidence. Read-only; dry-run stays on; no broker calls, holdout reads, redeploy or secrets. Turn to codex."
     }
   ],
-  "project_summary": "T-198 completed (V-486): six TRAINING mirror-control cells (NSXUSD/XAUUSD at 1m/3m/5m) have matching original and mirror trade counts; configured-cost results do not support a directional edge. T-201 offline implementation is recorded, but its required per-trade distribution scan is blocked by B-034 until a reachable Pod training lake/runtime is available."
+  "project_summary": "Owner confirmed Pod terminal access (Q-076 answered). Codex now runs the T-199 replay and the T-201 training cost-in-R scan on the Pod; dry-run stays on."
 }
