@@ -430,8 +430,10 @@ class CapitalComStreamClient:
                 emitted_count += len(batch)
                 passes += 1
                 progressed = any(seen.get(side) != before.get(side) for side in seen)
-                if not batch or not progressed or min(seen.values()) >= (
-                    self._clock().astimezone(UTC) - timedelta(minutes=2)
+                if (
+                    not batch
+                    or not progressed
+                    or min(seen.values()) >= (self._clock().astimezone(UTC) - timedelta(minutes=2))
                 ):
                     break
             _LOG.info(
@@ -458,9 +460,7 @@ class CapitalComStreamClient:
             if now - stamp < _SESSION_RENEWAL_WINDOW_SECONDS
         ]
         if len(self._session_renewals) >= _SESSION_RENEWAL_LIMIT:
-            _LOG.warning(
-                "Capital.com session renewal deferred: max attempts per minute reached"
-            )
+            _LOG.warning("Capital.com session renewal deferred: max attempts per minute reached")
             return False
         self._session_renewals.append(now)
         try:
@@ -550,12 +550,12 @@ class CapitalComStreamClient:
                     self._ping(socket)
                     ping_ok = True
 
-                    def run_backfill() -> None:
+                    def run_backfill(state: dict[str, Any] = backfill_state) -> None:
                         try:
-                            backfill_state["updates"] = self._backfill()
-                            backfill_state["completed"] = True
+                            state["updates"] = self._backfill()
+                            state["completed"] = True
                         except BaseException as exc:  # noqa: BLE001 - hand back to stream loop
-                            backfill_state["error"] = exc
+                            state["error"] = exc
 
                     backfill_started = True
                     backfill_thread = threading.Thread(
@@ -659,4 +659,3 @@ class CapitalComStreamClient:
         except Exception as exc:  # pragma: no cover - defensive worker boundary
             _LOG.warning("Capital.com market expectation unavailable (%s)", type(exc).__name__)
             return False
-
