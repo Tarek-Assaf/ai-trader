@@ -216,6 +216,7 @@ def run_data_recorder() -> None:
                 rest,
                 symbols_by_epic.keys(),
                 recorder.on_update,
+                on_backfill_batch=recorder.on_backfill_batch,
                 on_reconnect=recorder.on_reconnect,
                 data_expected=lambda: any(value is True for value in expected_open.values()),
             )
@@ -311,3 +312,4 @@ def run_data_recorder() -> None:
 
 if __name__ == "__main__":
     run_data_recorder()
+
