@@ -521,7 +521,7 @@ class CapitalDataRecorder:
             self._status["expected_open"] = expected_open
             self._status["stale_epics"] = sorted(stale_epics)
             self._status["last_liveness_at"] = now.isoformat()
-            self._update_feed_stall(now, market_status, expected_open)
+            self._update_feed_stall(now, market_status, expected)
             self._status["status"] = (
                 "healthy"
                 if (ping_reply_ok is True and market_status != "unknown" and not stale_epics)
