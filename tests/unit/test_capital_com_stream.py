@@ -263,8 +263,7 @@ def test_reconnect_logs_context_without_payload_or_credentials(caplog) -> None:
     records = [
         record
         for record in caplog.records
-        if record.levelno == logging.INFO
-        and "Capital.com stream reconnect:" in record.getMessage()
+        if record.levelno == logging.INFO and "Capital.com stream reconnect:" in record.getMessage()
     ]
     assert len(records) == 1
     message = records[0].getMessage()
