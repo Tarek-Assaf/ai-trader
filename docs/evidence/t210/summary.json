@@ -1,0 +1,50 @@
+{
+  "task_id": "T-210",
+  "observed_at": "2026-10-20T21:17:51Z",
+  "image_version": "7f3214f1823c6324bcc5e69889c57e0daadebe2f",
+  "role": "all",
+  "supervisor_programs": ["postgres", "redis", "api", "scheduler"],
+  "running_core": ["supervisord", "postgres", "redis", "api", "recorder", "postgres_backup_loop"],
+  "missing_runtime_workers": ["worker", "autoscaler", "telegram_process", "report_scheduler"],
+  "health": {
+    "status": "healthy",
+    "db": "reachable",
+    "redis": "reachable",
+    "mode": "paper",
+    "broker_env": "demo",
+    "live_enabled": false,
+    "feed_stalled": false,
+    "stale_epics": [],
+    "ticks_received": 588,
+    "last_tick_at": "2026-10-20T21:17:17.985895+00:00",
+    "last_closed_bar_at": "2026-10-20T21:16:00+00:00",
+    "minutes_since_last_bar": 1.8,
+    "reconnect_count": 36,
+    "last_backup_at": "2026-10-20T21:16:14+00:00"
+  },
+  "tai": {
+    "dry_run": false,
+    "experiment": true,
+    "epic": "US100",
+    "positions_file_flat": true,
+    "xauusd_backfill_seen": true,
+    "xauusd_strategy_activity_seen": false
+  },
+  "flags": {
+    "ROLE": "all",
+    "TRADING_MODE": "paper",
+    "BROKER_ENV": "demo",
+    "LIVE_TRADING_ENABLED": "false",
+    "TAI_DEMO_DRY_RUN": "false",
+    "TAI_DEMO_EXPERIMENT": "true",
+    "RUNPOD_CPU_COUNT": "2",
+    "RUNPOD_GPU_COUNT": "0",
+    "RUNPOD_MEM_GB": "4"
+  },
+  "safety": {
+    "orders": 0,
+    "broker_writes": 0,
+    "secrets_printed": false,
+    "changed_anything": false
+  }
+}
