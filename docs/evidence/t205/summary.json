@@ -1,0 +1,49 @@
+{
+  "task": "T-205",
+  "status": "ok",
+  "epic": "NSXUSD",
+  "miss": {
+    "at": "2026-06-30T14:27:00+00:00",
+    "direction": "SELL",
+    "first_difference": "callback ordering/state: port refresh uses prior exit 10:09Z; harness overwrites last_exit_at with same-bar exit 14:27Z before evaluation",
+    "port_entry": "29762.821",
+    "port_stop": "29770.751522703096",
+    "port_atr14": "24.51261351548424",
+    "port_max_prior_high": "29765.849",
+    "runtime_same_bar_hypothetical_stop": "29770.751522703096849",
+    "port_prior_exit_at": "2026-06-30T10:09:00+00:00",
+    "port_same_bar_exit_at": "2026-06-30T14:27:00+00:00",
+    "runtime_last_exit_at_before_signal": "2026-06-30T14:27:00+00:00",
+    "refresh_age_bars_port": ">=3",
+    "refresh_age_bars_runtime_harness": 0,
+    "runtime_same_bar_atr14": "24.51261351548424",
+    "runtime_same_bar_max_prior_high": "29765.849",
+    "nearest_runtime_candidate_at": "2026-06-30T09:51:00+00:00",
+    "nearest_runtime_candidate_relation": "earlier_by_276_minutes",
+    "nearest_runtime_candidate_entry": "29763.442",
+    "nearest_runtime_candidate_stop": "29799.556551589813026",
+    "nearest_runtime_candidate_atr14": "23.23775794906513",
+    "nearest_runtime_candidate_max_prior_high": "29794.909"
+  },
+  "provenance": {
+    "pod_url": "https://pbkmi8nx193x3w-19123.proxy.runpod.net/g48vbjwxh79wjulktan39i062wsvt21n/",
+    "repo_path": "/workspace/t204_src",
+    "app_is_git_repo": false,
+    "lake_path": "/workspace/data/lake",
+    "holdout_read": false,
+    "network_access": false,
+    "broker_calls": 0,
+    "order_calls": 0,
+    "lake_writes": false,
+    "redeploy": false,
+    "secrets": false
+  },
+  "checks": {
+    "compileall": true,
+    "py_compile": true,
+    "diff_check": true,
+    "handoff_validation": "OK; jsonschema unavailable",
+    "pytest": "unavailable on desktop",
+    "make_lint_test": "unavailable on desktop"
+  }
+}

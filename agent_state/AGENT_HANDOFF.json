@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 561,
+  "turn": "claude",
+  "revision": 562,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -47,8 +47,8 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-204",
-    "last_status": "review"
+    "last_task": "T-205",
+    "last_status": "done"
   },
   "requirements": [
     {
@@ -178,7 +178,8 @@
         "T-201",
         "T-202",
         "T-203",
-        "T-204"
+        "T-204",
+        "T-205"
       ]
     },
     {
@@ -6733,7 +6734,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6748,8 +6749,11 @@
         "docs/evidence/t205/"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": ""
+      "evidence": [
+        "docs/evidence/t205/report.md",
+        "docs/evidence/t205/summary.json"
+      ],
+      "completion_note": "Pod replay names the first differing quantity: callback ordering/state, not stop inputs. The port refresh uses the prior 10:09Z exit; the harness applies the same-bar 14:27Z exit before evaluating, so last_exit_at age is 0 and no refresh signal is emitted. Same-bar ATR/swing stop inputs match. No src change proposed."
     }
   ],
   "decisions": [
@@ -29153,6 +29157,22 @@
       ],
       "summary": "Accepted T-204 (25/26), closed T-199, queued T-205 for the last miss. Turn to codex.",
       "turn": "codex"
+    },
+    {
+      "revision": 562,
+      "ts": "2026-10-20T15:30:00+03:00",
+      "agent": "codex",
+      "action": "complete_t205_last_miss_stop_parity",
+      "task_ids": [
+        "T-205"
+      ],
+      "files_changed": [
+        "docs/evidence/t205/report.md",
+        "docs/evidence/t205/summary.json",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Read-only Pod replay on image-supplied repo files (not /app, which is not a git repo) names the first difference as callback ordering/state. The port refresh uses the prior 10:09Z exit; the harness overwrites last_exit_at with the same-bar 14:27Z exit before evaluation, so refresh age is 0 and no signal is emitted. Same-bar ATR14 24.51261351548424, max prior high 29765.849 and stop 29770.751522703096 match. The nearest runtime candidate is the earlier 09:51Z SELL with ATR14 23.23775794906513, max prior high 29794.909 and stop 29799.556551589813026. No broker, holdout, lake-write, redeploy or secret operations. Turn to Claude.",
+      "turn": "claude"
     }
   ],
   "project_summary": "Owner Pod T-204 replay: production provider exit callbacks reproduced 25/26 port entries with no extras; the remaining miss is named in docs/evidence/t204/report.md. Dry-run stays on."
