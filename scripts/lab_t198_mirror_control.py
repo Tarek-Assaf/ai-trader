@@ -46,7 +46,11 @@ def _mirror_one(bars: tuple[Any, ...], original: Any) -> dict[str, Any]:
     exit_index: int | None = None
     reason: str | None = None
     active_stop = stop
-    for i in range(index, len(bars)):
+    # Keep each control on the same entry-to-exit opportunity horizon as its
+    # source trade.  This makes the paired replay linear in the bar series and
+    # prevents an open mirror from consuming the remainder of full history.
+    limit = original.exit_index + 1 if original.exit_index is not None else len(bars)
+    for i in range(index, limit):
         bar = bars[i]
         long = direction == "long"
         hit_stop = bar.low <= active_stop if long else bar.high >= active_stop
