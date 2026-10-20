@@ -1,0 +1,41 @@
+{
+  "task_id": "T-201",
+  "status": "blocked",
+  "blocker": {
+    "id": "B-033/Q-076",
+    "detail": "The owner-provided Pod terminal URL returned HTTP 404. The desktop checkout has no /workspace/data/lake and lacks sqlalchemy/pytest, so the six-year TRAINING per-trade scan cannot run."
+  },
+  "pod_check": {
+    "url": "owner-provided terminal URL",
+    "http_status": 404,
+    "operation": "bounded read-only GET"
+  },
+  "owner_csv": {
+    "path": "docs/evidence/owner/owner_trades_tv_replay_nq1_3m_20261006_20261016.csv",
+    "rows": 108,
+    "distinct_trade_numbers": 54,
+    "spec_trade_count": 31,
+    "comparison_status": "not_asserted_due_to_count_mismatch"
+  },
+  "pine_source": {
+    "path": "docs/evidence/owner/tai_smart_filter_pine_source.txt",
+    "atr_risk_lines": "498-554",
+    "explicit_min_stop_floor": false,
+    "explicit_bar_range_filter": false
+  },
+  "configured_cost_points": {
+    "NSXUSD": 4.0,
+    "XAUUSD": 1.6
+  },
+  "training_cells": "not_run",
+  "net_r_outputs": "not_run",
+  "t200_subset": "unavailable_without_tick_and_min_stop_values",
+  "safety": {
+    "broker_calls": false,
+    "orders": false,
+    "holdout_reads": false,
+    "config_edits": false,
+    "redeploy": false,
+    "secrets_accessed": false
+  }
+}
