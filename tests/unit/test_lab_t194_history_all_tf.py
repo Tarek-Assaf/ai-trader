@@ -1,4 +1,9 @@
-from scripts.lab_t194_history_all_tf import _metrics, _splits
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parents[2]))
+
+from scripts.lab_t194_history_all_tf import _metrics, _splits  # noqa: E402
 
 
 def _trade(entry: str, gross: float, net: float) -> dict[str, object]:

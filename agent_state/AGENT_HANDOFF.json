@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 541,
+  "turn": "codex",
+  "revision": 542,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-194 completed a full TRAINING Tai history diagnostic across NSXUSD/XAUUSD at 1m/3m/5m/60m; evidence is ready for Claude review. T-193 remains accepted partial (V-483); Q-075 spread ceiling remains open; Tai stays disabled/dry-run.",
+    "summary": "T-194 accepted (V-485): Tai port loses at configured costs on every non-empty cell; zero-cost is positive (diagnostic only). T-198 mirror control queued for Codex. Q-075 spread ceiling still open for the owner; Tai stays dry-run.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -48,7 +48,7 @@
       "broker_env": "demo"
     },
     "last_task": "T-194",
-    "last_status": "review"
+    "last_status": "done"
   },
   "requirements": [
     {
@@ -5072,7 +5072,7 @@
       "deliverables": [],
       "review_cycles": 0,
       "evidence": [],
-      "completion_note": "Parked by owner, not started."
+      "completion_note": "Superseded in practice by T-198 (Q-057 option B, owner 2026-10-19). Left blocked for history."
     },
     {
       "id": "T-153",
@@ -6384,7 +6384,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-03"
       ],
@@ -6501,6 +6501,32 @@
         "tests/unit/test_tai_demo.py"
       ],
       "completion_note": "Implemented T-197 items 7-9: DST-aware CME maintenance-break wiring, journaled and throttled refusal alerts, and fail-safe Tai exit error/partial-fill handling with persisted retryable position state. Q-075 spread ceiling remains deferred. Focused Ruff, format, py_compile and diff checks pass; full CI/mypy remain for review."
+    },
+    {
+      "id": "T-198",
+      "title": "Tai mirror control per Q-057 option B (Lane B)",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-03"
+      ],
+      "depends_on": [
+        "T-194"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t198_tai_mirror_control.md exactly: mirror trade count equals original trade count in every cell; holdout never read; no broker call.",
+        "Ruff line length 100, CI quality SUCCESS. One log entry, hand the turn to claude, stop."
+      ],
+      "deliverables": [
+        "scripts/lab_t198_mirror_control.py",
+        "docs/evidence/t198/report.md",
+        "docs/evidence/t198/summary.json"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -16379,6 +16405,20 @@
       ],
       "validated_by": "codex",
       "reverify_if": "Claude review or CI reports a failure."
+    },
+    {
+      "id": "V-485",
+      "task_id": "T-194",
+      "subject": "Claude review of T-194 against docs/specs/t194_tai_history_all_timeframes.md",
+      "method": "Read spec, report, summary.json and script; checked label, 1m-first, holdout guard and safety counters; ran ruff check and format at line 100. Quality CI on #383 failed only because the new unit test imported scripts without the repo root on sys.path; fixed in the test (insert root) in the acceptance PR.",
+      "result": "pass",
+      "checked": "Eight cells, 60m empty, configured net R negative in all non-empty cells, zero-cost labelled diagnostic, safety counters zero, sealed holdout not read.",
+      "evidence": [
+        "docs/evidence/t194/report.md",
+        "docs/evidence/t194/summary.json"
+      ],
+      "reverify_if": "the T-194 numbers are used in a decision",
+      "validated_by": "claude"
     }
   ],
   "blockers": [
@@ -28301,6 +28341,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "T-194 full TRAINING history diagnostic completed from the reachable Pod using the unchanged T-162 port: NSXUSD and XAUUSD at 1m/3m/5m/60m, 1m first. Eight cells exited 0; 60m had no signals. Configured and zero-cost metrics plus per-year/session splits are recorded. Holdout guard passed; no broker calls, orders, sealed holdout reads, lake writes, production-state writes, tuning, redeploy or secrets. Turn to claude for review."
+    },
+    {
+      "revision": 542,
+      "ts": "2026-10-20T04:55:00+03:00",
+      "agent": "claude",
+      "action": "accept_t194_queue_t198",
+      "task_ids": [
+        "T-194",
+        "T-198"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "tests/unit/test_lab_t194_history_all_tf.py",
+        "docs/specs/t198_tai_mirror_control.md"
+      ],
+      "summary": "T-194 accepted (V-485); fixed its test import so CI passes. Queued T-198 (mirror control, Q-057 B) for Codex. Dry-run stays on; no broker calls, holdout reads, or risk/gate edits."
     }
   ],
   "project_summary": "T-193 Pod evidence is captured read-only but exact script execution is blocked by missing lab_t189_minute_gaps.py and market-details JSON; hand to Claude with docs/evidence/t193/report.md. T-197 accepted (V-482); Q-075 remains open; Tai stays disabled/dry-run."
