@@ -265,6 +265,16 @@ class CapitalComClient:
         assert self._cst is not None and self._security_token is not None
         return {"CST": self._cst, "X-SECURITY-TOKEN": self._security_token}
 
+    def renew_session(self) -> None:
+        """Discard the current session and create a fresh bounded session.
+
+        The caller uses this after a transport or keepalive failure.  Session
+        requests retain the client's existing rate limiter and 429 backoff;
+        no credentials or response bodies are included in diagnostics.
+        """
+        self._invalidate_session()
+        self._open_session()
+
     def _request(
         self,
         method: str,

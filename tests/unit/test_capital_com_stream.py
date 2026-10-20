@@ -20,6 +20,7 @@ class FakeRest:
     def __init__(self) -> None:
         self.calls: list[tuple[Any, ...]] = []
         self.ping_calls = 0
+        self.renew_calls = 0
         self.token = "stale-cst"
 
     def _auth_headers(self) -> dict[str, str]:
@@ -30,6 +31,10 @@ class FakeRest:
         if self.ping_calls > 1:
             self.token = "fresh-cst"
         return {"status": "OK"}
+
+    def renew_session(self) -> None:
+        self.renew_calls += 1
+        self.token = "renewed-cst"
 
     def iter_price_history(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
         self.calls.append(args)
@@ -144,6 +149,14 @@ def test_backfill_includes_the_watermark_minute_for_rest_reconciliation() -> Non
     )
 
 
+def test_session_renewal_is_bounded_per_minute() -> None:
+    rest = FakeRest()
+    client = CapitalComStreamClient(rest, ["US100"], lambda _event: None)
+
+    assert [client._renew_session() for _ in range(4)] == [True, True, True, False]
+    assert rest.renew_calls == 3
+
+
 def test_stream_reconnects_resubscribes_and_backfills_lagging_side() -> None:
     rest = FakeRest()
     updates: list[OhlcUpdate] = []
@@ -229,7 +242,12 @@ def test_reconnect_logs_context_without_payload_or_credentials(caplog) -> None:
 
     client.run_forever(stop)
 
-    records = [record for record in caplog.records if record.levelno == logging.INFO]
+    records = [
+        record
+        for record in caplog.records
+        if record.levelno == logging.INFO
+        and "Capital.com stream reconnect:" in record.getMessage()
+    ]
     assert len(records) == 1
     message = records[0].getMessage()
     assert "exception=OSError" in message
@@ -237,6 +255,7 @@ def test_reconnect_logs_context_without_payload_or_credentials(caplog) -> None:
     assert "seconds_since_tick=0.000" in message
     assert "connection_age_seconds=0.000" in message
     assert "forced" not in message
+    assert any("Capital.com stream attempt:" in record.getMessage() for record in caplog.records)
 
 
 def test_connect_failure_reports_reconnect_and_recovers() -> None:

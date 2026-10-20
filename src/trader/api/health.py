@@ -114,6 +114,8 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
     stale_epics = value.get("stale_epics")
     ticks_received = value.get("ticks_received")
     last_tick_at = value.get("last_tick_at")
+    feed_stalled = value.get("feed_stalled")
+    minutes_since_last_bar = value.get("minutes_since_last_bar")
     rejected_candles = value.get("rejected_candles")
     last_reject_reason = value.get("last_reject_reason")
     if not isinstance(ticks_received, int) or ticks_received < 0:
@@ -127,6 +129,17 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
     if not isinstance(stale_epics, list):
         stale_epics = []
     stale_epics = [epic for epic in stale_epics[:10] if isinstance(epic, str) and len(epic) <= 32]
+    if not isinstance(feed_stalled, bool):
+        feed_stalled = False
+    if (
+        not isinstance(minutes_since_last_bar, int | float)
+        or isinstance(minutes_since_last_bar, bool)
+        or minutes_since_last_bar < 0
+        or minutes_since_last_bar > 1_000_000
+    ):
+        minutes_since_last_bar = None
+    elif isinstance(minutes_since_last_bar, int):
+        minutes_since_last_bar = float(minutes_since_last_bar)
     return {
         "configured": value.get("configured") is True,
         "status": (
@@ -152,6 +165,8 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
         "stale_epics": stale_epics,
         "ticks_received": ticks_received,
         "last_tick_at": last_tick_at if isinstance(last_tick_at, str) else None,
+        "feed_stalled": feed_stalled,
+        "minutes_since_last_bar": minutes_since_last_bar,
         "rejected_candles": rejected_candles,
         "last_reject_reason": (
             last_reject_reason

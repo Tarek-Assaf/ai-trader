@@ -180,6 +180,53 @@ def test_tradeable_market_with_stale_ticks_degrades_recorder(tmp_path: Path) -> 
     assert value["last_tick_at"] is None
 
 
+def test_feed_stall_alerts_are_bounded_and_recovery_is_reported(tmp_path: Path) -> None:
+    now = [datetime(2026, 10, 3, 12, 0, tzinfo=UTC)]
+    alerts: list[str] = []
+    recorder = CapitalDataRecorder(
+        ParquetCandleStore(tmp_path / "lake"),
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+        clock=lambda: now[0],
+        on_alert=alerts.append,
+    )
+
+    now[0] += timedelta(minutes=6)
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="TRADEABLE",
+        expected_open_by_epic={"US100": True},
+    )
+    assert len(alerts) == 1
+    assert "feed stalled" in alerts[0]
+    value = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
+    assert value["feed_stalled"] is True
+    assert value["minutes_since_last_bar"] == 6.0
+
+    now[0] += timedelta(minutes=29)
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="TRADEABLE",
+        expected_open_by_epic={"US100": True},
+    )
+    assert len(alerts) == 1
+
+    now[0] += timedelta(minutes=1)
+    recorder.update_liveness(
+        ping_reply_ok=True,
+        market_status="TRADEABLE",
+        expected_open_by_epic={"US100": True},
+    )
+    assert len(alerts) == 2
+    assert "feed stalled" in alerts[1]
+
+    bar = now[0].replace(second=0, microsecond=0)
+    recorder.on_update(_update(bar, "bid"))
+    recorder.on_update(_update(bar, "ask", close=101.0))
+    recorder.on_update(_update(bar + timedelta(minutes=1), "bid"))
+    assert any("feed recovered" in alert for alert in alerts)
+
+
 def test_recorder_health_counts_received_ticks(tmp_path: Path) -> None:
     current = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
     recorder = CapitalDataRecorder(

@@ -15,7 +15,7 @@ from typing import Any
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import ClientConnection, connect
 
-from trader.integrations.capital_com.client import CapitalComClient, Resolution
+from trader.integrations.capital_com.client import CapitalComClient, CapitalComError, Resolution
 
 _LOG = logging.getLogger(__name__)
 logging.getLogger("websockets").setLevel(logging.WARNING)
@@ -23,6 +23,8 @@ _STREAM_URL = "wss://api-streaming-capital.backend-capital.com/connect"
 _PING_INTERVAL = timedelta(minutes=8)
 _REPLY_TIMEOUT_SECONDS = 30.0
 _DEFAULT_DATA_TIMEOUT_SECONDS = 1800.0
+_SESSION_RENEWAL_LIMIT = 3
+_SESSION_RENEWAL_WINDOW_SECONDS = 60.0
 
 
 class StreamProtocolError(RuntimeError):
@@ -102,6 +104,8 @@ class CapitalComStreamClient:
         self._last_data_at: datetime | None = None
         self._last_ping_reply_at: datetime | None = None
         self._connection_started_at: datetime | None = None
+        self._attempt_id = 0
+        self._session_renewals: list[float] = []
 
     @property
     def reconnect_count(self) -> int:
@@ -331,8 +335,9 @@ class CapitalComStreamClient:
                 _LOG.error("Capital.com stream consumer failed (%s)", type(exc).__name__)
             raise _ConsumerCallbackFailure(exc) from exc
 
-    def _backfill(self) -> None:
+    def _backfill(self) -> int:
         end = self._clock().astimezone(UTC)
+        emitted_count = 0
         for epic in self._epics:
             seen = {side: stamp for (item, side), stamp in self._last_seen.items() if item == epic}
             if not seen:
@@ -351,10 +356,65 @@ class CapitalComStreamClient:
                     if update.timestamp in emitted[update.price_type]:
                         continue
                     self._emit(update)
+                    emitted_count += 1
                     emitted[update.price_type].add(update.timestamp)
                     if watermark is None or update.timestamp > watermark:
                         seen[update.price_type] = update.timestamp
                         self._last_seen[(epic, update.price_type)] = update.timestamp
+        return emitted_count
+
+    def _renew_session(self) -> bool:
+        """Refresh REST credentials at most three times per minute."""
+        renew = getattr(self._rest, "renew_session", None)
+        if not callable(renew):
+            return False
+        now = time.monotonic()
+        self._session_renewals = [
+            stamp
+            for stamp in self._session_renewals
+            if now - stamp < _SESSION_RENEWAL_WINDOW_SECONDS
+        ]
+        if len(self._session_renewals) >= _SESSION_RENEWAL_LIMIT:
+            _LOG.warning(
+                "Capital.com session renewal deferred: max attempts per minute reached"
+            )
+            return False
+        self._session_renewals.append(now)
+        try:
+            renew()
+        except Exception as exc:  # noqa: BLE001 - keep reconnect loop alive
+            _LOG.warning("Capital.com session renewal failed (%s)", type(exc).__name__)
+            return False
+        _LOG.info("Capital.com session renewed before reconnect")
+        return True
+
+    def _attempt_log(
+        self,
+        *,
+        attempt_id: int,
+        rest_ping_ok: bool,
+        socket_connected: bool,
+        subscribe_ok: bool,
+        ping_ok: bool,
+        backfill_started: bool,
+        backfill_completed: bool,
+        backfill_updates: int,
+        exception: BaseException | None,
+    ) -> None:
+        _LOG.info(
+            "Capital.com stream attempt: id=%s rest_ping_ok=%s socket_connected=%s "
+            "subscribe_ok=%s ping_ok=%s backfill_started=%s backfill_completed=%s "
+            "backfill_updates=%s exception=%s",
+            attempt_id,
+            rest_ping_ok,
+            socket_connected,
+            subscribe_ok,
+            ping_ok,
+            backfill_started,
+            backfill_completed,
+            backfill_updates,
+            type(exception).__name__ if exception is not None else "none",
+        )
 
     def _handle(self, raw: str | bytes) -> None:
         try:
@@ -378,18 +438,34 @@ class CapitalComStreamClient:
         """Run until stopped; validate replies, reconnect, and REST-backfill gaps."""
         backoff = self._reconnect_min
         while not stop_event.is_set():
+            self._attempt_id += 1
+            attempt_id = self._attempt_id
+            rest_ping_ok = False
+            socket_connected = False
+            subscribe_ok = False
+            ping_ok = False
+            backfill_started = False
+            backfill_completed = False
+            backfill_updates = 0
+            attempt_error: BaseException | None = None
             try:
                 self._rest.ping()
+                rest_ping_ok = True
                 self._connection_started_at = None
                 with self._connect(
                     _STREAM_URL, open_timeout=10, close_timeout=2, ping_interval=None
                 ) as socket:
                     self._connection_started_at = self._clock().astimezone(UTC)
+                    socket_connected = True
                     self._correlation = 0
                     self._reply_status = "missing"
                     self._subscribe(socket)
+                    subscribe_ok = True
                     self._ping(socket)
-                    self._backfill()
+                    ping_ok = True
+                    backfill_started = True
+                    backfill_updates = self._backfill()
+                    backfill_completed = True
                     self._last_data_at = self._clock().astimezone(UTC)
                     backoff = self._reconnect_min
                     last_ping = self._clock()
@@ -418,14 +494,18 @@ class CapitalComStreamClient:
                             self._ping(socket)
                             last_ping = now
             except _ConsumerCallbackFailure as exc:
+                attempt_error = exc.original
                 self._ping_reply_ok = False
                 self._reconnect_count += 1
                 reason = type(exc.original).__name__
                 self._record_reconnect(exc.original, reason)
+                if isinstance(exc.original, CapitalComError):
+                    self._renew_session()
                 if not stop_event.is_set() and self._on_reconnect is not None:
                     self._on_reconnect(self._reconnect_count, reason)
                 raise exc.original from None
             except (ConnectionClosed, OSError, TimeoutError, StreamProtocolError) as exc:
+                attempt_error = exc
                 self._ping_reply_ok = False
                 self._reconnect_count += 1
                 if stop_event.is_set():
@@ -436,14 +516,29 @@ class CapitalComStreamClient:
                 if self._on_reconnect is not None:
                     self._on_reconnect(self._reconnect_count, reason)
             except Exception as exc:
+                attempt_error = exc
                 self._ping_reply_ok = False
                 self._reconnect_count += 1
                 if stop_event.is_set():
                     break
                 self._record_reconnect(exc, type(exc).__name__)
                 _LOG.warning("Capital.com WebSocket reconnecting (%s)", type(exc).__name__)
+                if isinstance(exc, CapitalComError):
+                    self._renew_session()
                 if self._on_reconnect is not None:
                     self._on_reconnect(self._reconnect_count, type(exc).__name__)
+            finally:
+                self._attempt_log(
+                    attempt_id=attempt_id,
+                    rest_ping_ok=rest_ping_ok,
+                    socket_connected=socket_connected,
+                    subscribe_ok=subscribe_ok,
+                    ping_ok=ping_ok,
+                    backfill_started=backfill_started,
+                    backfill_completed=backfill_completed,
+                    backfill_updates=backfill_updates,
+                    exception=attempt_error,
+                )
             if not stop_event.is_set():
                 self._sleep(backoff)
                 backoff = min(backoff * 2, self._reconnect_max)

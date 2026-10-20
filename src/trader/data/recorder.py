@@ -38,6 +38,9 @@ _REJECT_ASK_BELOW_BID = "ask_close_below_bid_close"
 _REJECT_TIMESTAMP = "timestamp_not_timezone_aware"
 _REJECT_SIDE = "invalid_side"
 _REJECT_SOURCE = "invalid_source"
+_STALL_AFTER_SECONDS = 5 * 60
+_STALL_REPEAT_SECONDS = 30 * 60
+_REJECTION_LOG_INTERVAL_SECONDS = 60.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -88,24 +91,31 @@ class ParquetCandleStore:
         self,
         items: list[tuple[str, OhlcUpdate]],
         *,
-        on_reject: Callable[[str], None] | None = None,
+        on_reject: Callable[[str, OhlcUpdate | None], None] | None = None,
     ) -> int:
         """Merge a closed update batch and atomically replace affected month files."""
+        def reject(reason: str, update: OhlcUpdate | None = None) -> None:
+            if not callable(on_reject):
+                return
+            try:
+                on_reject(reason, update)
+            except TypeError:
+                # Preserve compatibility with older one-argument callbacks.
+                on_reject(reason)  # type: ignore[call-arg]
+
+
         grouped: dict[Path, list[tuple[str, OhlcUpdate]]] = defaultdict(list)
         for symbol, update in items:
             try:
                 minute = self._minute(update.timestamp)
             except ValueError:
-                if callable(on_reject):
-                    on_reject(_REJECT_TIMESTAMP)
+                reject(_REJECT_TIMESTAMP, update)
                 continue
             if update.price_type not in {"bid", "ask"}:
-                if callable(on_reject):
-                    on_reject(_REJECT_SIDE)
+                reject(_REJECT_SIDE, update)
                 continue
             if update.source not in _SOURCE_RANK:
-                if callable(on_reject):
-                    on_reject(_REJECT_SOURCE)
+                reject(_REJECT_SOURCE, update)
                 continue
             grouped[self._path(symbol, minute)].append((symbol, update))
         written = 0
@@ -151,8 +161,7 @@ class ParquetCandleStore:
                         else None
                     )
                     if spread is not None and spread < 0:
-                        if callable(on_reject):
-                            on_reject(_REJECT_ASK_BELOW_BID)
+                        reject(_REJECT_ASK_BELOW_BID, update)
                         continue
                     rows[key] = candidate
                     changed_keys.add(key)
@@ -162,8 +171,7 @@ class ParquetCandleStore:
                     ask = rows.get((epic, minute, "ask"))
                     if bid and ask and ask["close"] < bid["close"]:
                         rows.pop((epic, minute, "ask"), None)
-                        if callable(on_reject):
-                            on_reject(_REJECT_ASK_BELOW_BID)
+                        reject(_REJECT_ASK_BELOW_BID)
                 for epic, minute, _side in changed_keys:
                     bid = rows.get((epic, minute, "bid"))
                     ask = rows.get((epic, minute, "ask"))
@@ -209,6 +217,7 @@ class CapitalDataRecorder:
         feed_adapters: Any | None = None,
         closed_minute_callback: Callable[[str, datetime, float, float, float, float], None]
         | None = None,
+        on_alert: Callable[[str], None] | None = None,
     ) -> None:
         self._store = store
         self._symbols = dict(symbols_by_epic)
@@ -216,9 +225,15 @@ class CapitalDataRecorder:
         self._clock = clock
         self._feed_adapters = feed_adapters
         self._closed_minute_callback = closed_minute_callback
+        self._on_alert = on_alert
         self._closed_mid_pending: dict[tuple[str, datetime], dict[str, OhlcUpdate]] = {}
         self._pending: dict[tuple[str, datetime, str], _BufferedUpdate] = {}
         self._last_tick_by_epic: dict[str, datetime] = {}
+        self._last_closed_bar_at: datetime | None = None
+        self._feed_stalled = False
+        self._stall_since: datetime | None = None
+        self._last_stall_alert_at: datetime | None = None
+        self._rejection_log_at: dict[str, datetime] = {}
         self._started_at = self._clock().astimezone(UTC)
         self._lock = threading.RLock()
         self._status: dict[str, Any] = {
@@ -235,6 +250,8 @@ class CapitalDataRecorder:
             "last_reconnect_reason": None,
             "last_update_at": None,
             "last_closed_bar_at": None,
+            "feed_stalled": False,
+            "minutes_since_last_bar": None,
             "last_liveness_at": None,
             "rejected_candles": 0,
             "last_reject_reason": None,
@@ -289,10 +306,19 @@ class CapitalDataRecorder:
         self._store.upsert_many(
             [(item.symbol, item.update) for item in accepted], on_reject=self._record_rejection
         )
-        self._status["last_closed_bar_at"] = max(
+        latest_closed = max(
             item.update.timestamp.astimezone(UTC).replace(second=0, microsecond=0)
             for item in accepted
-        ).isoformat()
+        )
+        self._last_closed_bar_at = latest_closed
+        self._status["last_closed_bar_at"] = latest_closed.isoformat()
+        if self._feed_stalled:
+            self._feed_stalled = False
+            self._stall_since = None
+            self._last_stall_alert_at = None
+            self._status["feed_stalled"] = False
+            self._status["minutes_since_last_bar"] = 0.0
+            self._emit_alert(f"Capital.com feed recovered; last bar {latest_closed.isoformat()}")
         callback_mid = self._closed_minute_callback
         if callable(callback_mid):
             for item in accepted:
@@ -330,7 +356,7 @@ class CapitalDataRecorder:
                 else:
                     callback("1M", bar_id, stamp)
 
-    def _record_rejection(self, reason: str) -> None:
+    def _record_rejection(self, reason: str, update: OhlcUpdate | None = None) -> None:
         """Record a bounded, secret-free data-quality rejection."""
         with self._lock:
             self._status["rejected_candles"] = min(
@@ -338,6 +364,32 @@ class CapitalDataRecorder:
                 _MAX_REJECTED_CANDLES,
             )
             self._status["last_reject_reason"] = reason[:80]
+            now = self._clock().astimezone(UTC)
+            previous = self._rejection_log_at.get(reason)
+            if (
+                previous is None
+                or (now - previous).total_seconds() >= _REJECTION_LOG_INTERVAL_SECONDS
+            ):
+                self._rejection_log_at[reason] = now
+                epic = update.epic if update is not None else "unknown"
+                side = update.price_type if update is not None else "unknown"
+                stamp = update.timestamp.isoformat() if update is not None else "unknown"
+                _LOG.warning(
+                    "Capital.com rejected candle: time=%s epic=%s side=%s reason=%s",
+                    stamp,
+                    epic,
+                    side,
+                    reason[:80],
+                )
+
+    def _emit_alert(self, message: str) -> None:
+        callback = self._on_alert
+        if not callable(callback):
+            return
+        try:
+            callback(message[:240])
+        except Exception:  # noqa: BLE001 - alerts must not stop recording
+            _LOG.warning("Capital.com recorder alert delivery failed")
 
     def register_feed_adapters(self, adapters: Any | None) -> None:
         """Attach the shared runtime trigger adapter after construction."""
@@ -363,7 +415,7 @@ class CapitalDataRecorder:
             return
         reason = self._reject_reason(update)
         if reason is not None:
-            self._record_rejection(reason)
+            self._record_rejection(reason, update)
             self._write_status()
             return
         minute = self._key(update)[1]
@@ -458,12 +510,56 @@ class CapitalDataRecorder:
             self._status["expected_open"] = expected_open
             self._status["stale_epics"] = sorted(stale_epics)
             self._status["last_liveness_at"] = now.isoformat()
+            self._update_feed_stall(now, market_status, expected_open)
             self._status["status"] = (
                 "healthy"
                 if (ping_reply_ok is True and market_status != "unknown" and not stale_epics)
                 else "degraded"
             )
             self._write_status()
+
+    def _update_feed_stall(
+        self, now: datetime, market_status: str, expected_open: dict[str, bool | None]
+    ) -> None:
+        """Track a closed-bar stall and emit bounded stall/recovery alerts."""
+        market_unknown = market_status == "unknown" or any(
+            value is None for value in expected_open.values()
+        )
+        feed_expected = market_unknown or any(
+            value is True for value in expected_open.values()
+        )
+        last_bar = self._last_closed_bar_at
+        age_seconds = (
+            (now - last_bar).total_seconds()
+            if last_bar is not None
+            else (now - self._started_at).total_seconds()
+        )
+        age_seconds = max(0.0, age_seconds)
+        self._status["minutes_since_last_bar"] = round(age_seconds / 60.0, 1)
+        stalled = feed_expected and age_seconds >= _STALL_AFTER_SECONDS
+        was_stalled = self._feed_stalled
+        self._feed_stalled = stalled
+        self._status["feed_stalled"] = stalled
+        if stalled and not was_stalled:
+            self._stall_since = now
+            self._last_stall_alert_at = now
+            self._emit_alert(
+                "Capital.com feed stalled since "
+                f"{now.strftime('%H:%M')} UTC, "
+                f"last bar {last_bar.isoformat() if last_bar else 'never'}"
+            )
+        elif stalled and self._last_stall_alert_at is not None:
+            if (now - self._last_stall_alert_at).total_seconds() >= _STALL_REPEAT_SECONDS:
+                self._last_stall_alert_at = now
+                stall_time = (
+                    self._stall_since.strftime("%H:%M")
+                    if self._stall_since
+                    else now.strftime("%H:%M")
+                )
+                self._emit_alert(
+                    f"Capital.com feed stalled since {stall_time} UTC, "
+                    f"last bar {last_bar.isoformat() if last_bar else 'never'}"
+                )
 
     def watermarks(self) -> dict[tuple[str, str], datetime]:
         """Return persisted side watermarks for stream reconnect REST backfill."""
