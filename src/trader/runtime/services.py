@@ -569,31 +569,30 @@ def _recorder_health_mapping(
 
     if recorder is None:
         return None
-    provider_supplied = status_provider is not None
+    value: object
     if status_provider is not None:
+        # The shared live accessor is authoritative; never fall back to a stale file.
         try:
-            value: object = status_provider()
+            value = status_provider()
         except Exception:
             return unavailable()
-    else:
-        value = None
-    getter = None if provider_supplied else getattr(recorder, "health", None)
-    getter = getter or (getattr(recorder, "status", None) if not provider_supplied else None)
-    if provider_supplied and value is None:
-        return unavailable()
-    if callable(getter):
-        try:
-            value = getter()
-        except Exception:
+        if value is None:
             return unavailable()
     else:
-        path = getattr(recorder, "_status_path", None)
-        if path is None:
-            return unavailable()
-        try:
-            value = json.loads(Path(path).read_text(encoding="utf-8"))
-        except (OSError, ValueError, TypeError):
-            return unavailable()
+        getter = getattr(recorder, "health", None) or getattr(recorder, "status", None)
+        if callable(getter):
+            try:
+                value = getter()
+            except Exception:
+                return unavailable()
+        else:
+            path = getattr(recorder, "_status_path", None)
+            if path is None:
+                return unavailable()
+            try:
+                value = json.loads(Path(path).read_text(encoding="utf-8"))
+            except (OSError, ValueError, TypeError):
+                return unavailable()
     if not isinstance(value, Mapping):
         return unavailable()
     output: dict[str, object] = {}
