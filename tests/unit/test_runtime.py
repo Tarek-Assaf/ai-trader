@@ -237,3 +237,41 @@ def test_cycle_failure_alerts_once_and_returns_no_trade() -> None:
         await runtime.stop()
 
     asyncio.run(run())
+
+
+def test_lease_heartbeat_detects_expiry_between_bars() -> None:
+    async def run() -> None:
+        lease = FakeLease()
+        runtime = RuntimeService(
+            RuntimeComponents(leader=lease, decision_loop=FakeLoop()),
+            control_source=FakeControl(),
+            lease_heartbeat_interval=0.001,
+        )
+        await runtime.start()
+        lease.fail = True
+        await asyncio.sleep(0.01)
+        assert runtime.state.value == "degraded"
+        assert lease.checks >= 2
+        await runtime.stop()
+
+    asyncio.run(run())
+
+
+def test_lease_heartbeat_failure_blocks_entries() -> None:
+    async def run() -> None:
+        lease = FakeLease()
+        loop = FakeLoop()
+        runtime = RuntimeService(
+            RuntimeComponents(leader=lease, decision_loop=loop),
+            control_source=FakeControl(),
+            lease_heartbeat_interval=0.001,
+        )
+        await runtime.start()
+        lease.fail = True
+        await asyncio.sleep(0.01)
+        result = await runtime.run_cycle(Cycle())
+        assert result.reason == "runtime_not_running"
+        assert loop.calls == 0
+        await runtime.stop()
+
+    asyncio.run(run())

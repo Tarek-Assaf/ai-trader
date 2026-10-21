@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
+import re
 from collections import deque
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -23,6 +24,23 @@ from trader.execution.control import ControlMode, ControlSource
 from trader.runtime.soak import RuntimeSoakFeed
 
 LOGGER = logging.getLogger(__name__)
+
+_DEPENDENCY_MESSAGE_LIMIT = 200
+_SENSITIVE_EXCEPTION_PATTERNS = (
+    re.compile(r"(?i)(password|passwd|token|secret|api[_-]?key)=([^\s&]+)"),
+    re.compile(r"(?i)(redis(?:s)?://)([^@\s]+)@"),
+)
+
+
+def _redacted_exception_message(exc: BaseException) -> str:
+    """Return a bounded exception message with common credential forms removed."""
+    message = " ".join(str(exc).split())
+    for pattern in _SENSITIVE_EXCEPTION_PATTERNS:
+        if pattern.pattern.startswith("(?i)(redis"):
+            message = pattern.sub(r"\1[REDACTED]@", message)
+        else:
+            message = pattern.sub(r"\1=[REDACTED]", message)
+    return message[:_DEPENDENCY_MESSAGE_LIMIT]
 
 
 class RuntimeState(StrEnum):
@@ -229,9 +247,12 @@ class RuntimeService:
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         backoff_initial: float = 1.0,
         backoff_max: float = 60.0,
+        lease_heartbeat_interval: float = 10.0,
     ) -> None:
         if backoff_initial <= 0 or backoff_max < backoff_initial:
             raise ValueError("backoff bounds are invalid")
+        if lease_heartbeat_interval <= 0:
+            raise ValueError("lease heartbeat interval must be positive")
         self.components = components
         self.control_source = control_source
         self._alert = alert or (lambda message: LOGGER.error("runtime alert: %s", message))
@@ -239,6 +260,7 @@ class RuntimeService:
         self._sleep = sleep
         self._backoff_initial = backoff_initial
         self._backoff_max = backoff_max
+        self._lease_heartbeat_interval = lease_heartbeat_interval
         self._last_soak_at: datetime | None = None
         self._soak_feed = RuntimeSoakFeed(
             {
@@ -254,7 +276,9 @@ class RuntimeService:
         self._backoff = backoff_initial
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
+        self._heartbeat_task: asyncio.Task[None] | None = None
         self._lease_held = False
+        self._last_dependency_failure: dict[str, str] | None = None
         self.state = RuntimeState.STOPPED
 
     @property
@@ -268,9 +292,9 @@ class RuntimeService:
         self.state = RuntimeState.STARTING
         self._stop.clear()
         try:
-            self.components.leader.acquire()
+            self._dependency_call("leader.acquire", self.components.leader.acquire)
             self._lease_held = True
-            self.components.leader.check()
+            self._dependency_call("leader.check", self.components.leader.check)
             reconcile = getattr(self.components.autoscaler, "reconcile_orphans", None)
             if callable(reconcile):
                 reconcile()
@@ -283,6 +307,7 @@ class RuntimeService:
             return
         self.state = RuntimeState.RUNNING
         self._soak_call("record_restart")
+        self._start_lease_heartbeat()
         if self._cycle_source is not None:
             self._task = asyncio.create_task(self.run_forever(), name="ai-trader-decision-loop")
 
@@ -294,6 +319,13 @@ class RuntimeService:
             task.cancel()
             try:
                 await task
+            except asyncio.CancelledError:
+                pass
+        heartbeat_task, self._heartbeat_task = self._heartbeat_task, None
+        if heartbeat_task is not None and heartbeat_task is not asyncio.current_task():
+            heartbeat_task.cancel()
+            try:
+                await heartbeat_task
             except asyncio.CancelledError:
                 pass
         if self._lease_held:
@@ -310,12 +342,20 @@ class RuntimeService:
         resolved_cycle_id = cycle_id or getattr(cycle, "cycle_id", None)
         if not self.running:
             return RuntimeResult.no_trade("runtime_not_running", resolved_cycle_id)
+        if not self._lease_held:
+            self.state = RuntimeState.DEGRADED
+            self._notify("runtime_dependency_unavailable")
+            return RuntimeResult.no_trade("runtime_dependency_unavailable", resolved_cycle_id)
         try:
-            self.components.leader.check()
-            mode = self.control_source.read()
+            self._dependency_call("leader.check", self.components.leader.check)
+            mode = self._dependency_call("control_source.read", self.control_source.read)
         except Exception:
             # The broad branch is intentional: a dependency failure must never
             # become an exception loop or permit an entry.
+            self.state = RuntimeState.DEGRADED
+            self._notify("runtime_dependency_unavailable")
+            return RuntimeResult.no_trade("runtime_dependency_unavailable", resolved_cycle_id)
+        if not self._lease_held or self._stop.is_set():
             self.state = RuntimeState.DEGRADED
             self._notify("runtime_dependency_unavailable")
             return RuntimeResult.no_trade("runtime_dependency_unavailable", resolved_cycle_id)
@@ -384,22 +424,77 @@ class RuntimeService:
 
     async def _recover(self) -> bool:
         """Re-prove lease/control dependencies before resuming cycles."""
+        if self._stop.is_set():
+            return False
         try:
             if not self._lease_held:
-                self.components.leader.acquire()
+                self._dependency_call("leader.acquire", self.components.leader.acquire)
                 self._lease_held = True
-            self.components.leader.check()
-            mode = self.control_source.read()
+            self._dependency_call("leader.check", self.components.leader.check)
+            mode = self._dependency_call("control_source.read", self.control_source.read)
             if mode is ControlMode.KILL:
                 self._notify("runtime_kill_switch_active")
+                return False
+            if self._stop.is_set():
                 return False
         except Exception:
             self._lease_held = False
             self._notify("runtime_dependency_unavailable")
             return False
         self.state = RuntimeState.RUNNING
+        self._start_lease_heartbeat()
         self._notify("runtime_recovered")
         return True
+
+    def health_snapshot(self) -> dict[str, object]:
+        """Return bounded runtime state for the liveness endpoint."""
+        return {
+            "state": self.state.value,
+            "last_dependency_failure": dict(self._last_dependency_failure)
+            if self._last_dependency_failure is not None
+            else None,
+        }
+
+    def _dependency_call(self, stage: str, callback: Callable[[], Any]) -> Any:
+        try:
+            return callback()
+        except Exception as exc:
+            message = _redacted_exception_message(exc)
+            self._last_dependency_failure = {
+                "stage": stage,
+                "error_type": type(exc).__name__,
+                "message": message,
+                "at": datetime.now(UTC).isoformat(),
+            }
+            LOGGER.error(
+                "runtime dependency failed stage=%s error_type=%s error=%s",
+                stage,
+                type(exc).__name__,
+                message,
+            )
+            raise
+
+    def _start_lease_heartbeat(self) -> None:
+        task = self._heartbeat_task
+        if task is None or task.done():
+            self._heartbeat_task = asyncio.create_task(
+                self._lease_heartbeat_loop(),
+                name="ai-trader-lease-heartbeat",
+            )
+
+    async def _lease_heartbeat_loop(self) -> None:
+        """Renew the lease independently of market-bar arrival."""
+        while not self._stop.is_set() and self._lease_held:
+            await self._wait(self._lease_heartbeat_interval)
+            if self._stop.is_set() or not self._lease_held:
+                return
+            try:
+                self._dependency_call("leader.check", self.components.leader.check)
+            except Exception:
+                self._lease_held = False
+                self.state = RuntimeState.DEGRADED
+                self._notify("runtime_dependency_unavailable")
+                return
 
     async def _wait(self, seconds: float) -> None:
         try:
@@ -474,6 +569,7 @@ def build_runtime(
     control_source: ControlSource,
     alert: Callable[[str], None] | None = None,
     cycle_source: CycleSource | None = None,
+    lease_heartbeat_interval: float = 10.0,
 ) -> RuntimeService:
     """Build the single core runtime from already validated dependencies."""
     return RuntimeService(
@@ -481,6 +577,7 @@ def build_runtime(
         control_source=control_source,
         alert=alert,
         cycle_source=cycle_source,
+        lease_heartbeat_interval=lease_heartbeat_interval,
     )
 
 
