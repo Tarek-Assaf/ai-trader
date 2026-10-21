@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 586,
+  "turn": "human",
+  "revision": 587,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-215 accepted; Tai now evaluates bars (42 evaluations, all no-setup at ha_cross, no entries yet). T-216 queued for Codex: recorder digest wrong (shows starting while /health is healthy), reconnect analysis, log file on volume. Pod on dc2dda5; demo orders on.",
+    "summary": "T-216 accepted (digest fix, volume log, reconnect analysis). Tai evaluates bars, no entries yet. Waiting on owner: deploy the new image (digest and log file); report first Tai entry. Demo orders on.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -7081,7 +7081,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-01",
         "R-12",
@@ -7098,16 +7098,15 @@
       ],
       "review_cycles": 0,
       "evidence": [
-        "src/trader/api/health.py",
-        "src/trader/runtime/services.py",
-        "src/trader/api/app.py",
-        "src/trader/core/logging.py",
-        "tests/unit/test_runtime_services.py",
-        "tests/unit/test_secret_redaction.py",
+        "V-517",
         "docs/evidence/t216/report.md",
-        "Bundled Python compileall and git diff --check pass; Ruff, mypy and pytest are deferred to GitHub Actions quality."
+        "src/trader/runtime/services.py",
+        "src/trader/core/logging.py",
+        "src/trader/api/health.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_secret_redaction.py"
       ],
-      "completion_note": "Implemented the shared live recorder status source for /health and Telegram digests, fail-safe unavailable reporting, a secret-redacted rotating volume log, and read-only reconnect evidence. No trading, risk, gate, dry-run, order, config or secret changes. CI quality is required for Ruff, mypy and pytest; ready for Claude review."
+      "completion_note": "Accepted by Claude: digest reads the shared live status (unavailable when unreadable); redacted rotating log at /workspace/logs/trader.log; reconnect analysis recorded, no reconnect change. Claude fixed one mypy error and a stale-file fallback that overrode the live provider."
     }
   ],
   "decisions": [
@@ -17468,6 +17467,16 @@
       ],
       "validated_by": "codex",
       "reverify_if": "CI quality reports a failure or Claude review requests a change."
+    },
+    {
+      "id": "V-517",
+      "task_id": "T-216",
+      "result": "pass",
+      "evidence": "Reviewed diff and report. Digest now uses data_recorder_status shared with /health; unreadable source gives unavailable. Found and fixed a bug where the stale status file overwrote the live provider value (test_recorder_digest_uses_shared_live_status_provider caught it) and a mypy narrowing error. Log file: RotatingFileHandler 5 MB x3, redaction filter applied, OSError tolerated; secret redaction test added. Reconnect analysis read-only; no logic change. CI quality green. No trading, risk, gate, dry-run, order or secret change.",
+      "reverify_if": false,
+      "subject": "Claude review of T-216",
+      "method": "Diff review; CI quality (ruff, mypy, pytest, validate_handoff)",
+      "validated_by": "claude"
     }
   ],
   "blockers": [
@@ -30184,6 +30193,20 @@
         "docs/evidence/t216/report.md"
       ],
       "summary": "T-216 implementation complete for Claude review: recorder digests now use the shared live status accessor and report unavailable when unreadable; a bounded secret-redacted rotating volume log is added; reconnect analysis is recorded read-only. Bundled compileall and diff checks pass; Ruff, mypy and pytest are deferred to GitHub Actions quality. No trading, risk, gate, dry-run, order, config or secret changes. Turn to Claude."
+    },
+    {
+      "revision": 587,
+      "ts": "2026-10-21T12:40:00+00:00",
+      "agent": "claude",
+      "action": "accept_t216",
+      "task_ids": [
+        "T-216"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/runtime/services.py"
+      ],
+      "summary": "Accepted T-216 (V-517) after fixing a stale-file fallback and a mypy error. Owner to deploy new image. Reconnect cause not proven (no close codes); log file will let Codex correlate. No order, dry-run, risk/gate or secret change. Turn to human."
     }
   ],
   "project_summary": "T-216 implementation is ready for Claude review: live recorder status is shared by /health and Telegram digests, unreadable status is unavailable, and volume logging is bounded and redacted. Reconnect analysis is read-only. No trading, risk/gate, dry-run, order, config or secret changes."
