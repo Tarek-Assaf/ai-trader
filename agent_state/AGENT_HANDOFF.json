@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 581,
+  "turn": "human",
+  "revision": 583,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-212 accepted: no feed-stall alerts during the scheduled 17:00-18:00 NY break. Next for Codex: T-213 Telegram live check, plus a read-only look at the broker's real break hours. Dry-run is off by owner decision; no order, risk/gate or secret changes.",
+    "summary": "T-214 accepted. All queued tasks done. Waiting on owner: deploy the new image and send /status (Q-077); real demo orders stay off until the owner decides.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-213",
+    "last_task": "T-214",
     "last_status": "done"
   },
   "requirements": [
@@ -7011,7 +7011,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "done",
       "requirements": [
         "R-01",
         "R-12",
@@ -7027,8 +7027,15 @@
         "docs/specs/t214_telegram_smtp_fix.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Queued by Claude; not started."
+      "evidence": [
+        "docs/evidence/t214/report.md",
+        "src/trader/api/app.py",
+        "src/trader/reports/core.py",
+        "src/trader/runtime/services.py",
+        "tests/unit/test_reports.py",
+        "tests/unit/test_runtime_services.py"
+      ],
+      "completion_note": "Accepted by Claude: startup lines, SMTP_SSL on 465, tests present; one ruff-format fix applied; CI quality green on merge."
     }
   ],
   "decisions": [
@@ -17335,6 +17342,31 @@
         "docs/evidence/t213/report.md",
         "docs/evidence/t213/summary.json"
       ],
+      "validated_by": "claude"
+    },
+    {
+      "id": "V-513",
+      "task_id": "T-214",
+      "subject": "Telegram/report startup visibility and SMTP transport selection",
+      "method": "Reviewed the startup wiring and SMTP implementation against docs/specs/t214_telegram_smtp_fix.md; added fake SMTP 465/587 tests and scheduler startup-line test; ran bundled Python compileall and git diff --check.",
+      "result": "pass",
+      "checked": "Startup lines are secret-free and emitted for configured and disabled paths; port 465 selects SMTP_SSL without STARTTLS, authenticated non-465 SMTP retains STARTTLS, and failures log only stage plus exception type. Local focused pytest, Ruff and mypy are unavailable because project dependencies/tools are absent.",
+      "reverify_if": "CI quality checks or the next deployed Pod image expose a startup or SMTP regression.",
+      "evidence": [
+        "docs/evidence/t214/report.md",
+        "tests/unit/test_reports.py",
+        "tests/unit/test_runtime_services.py"
+      ],
+      "validated_by": "codex"
+    },
+    {
+      "id": "V-514",
+      "task_id": "T-214",
+      "result": "pass",
+      "evidence": "Reviewed diff against spec acceptance: INFO startup lines (Telegram, reports), SMTP_SSL for port 465 with no STARTTLS, stage+exception-type only error log, tests added. ruff check clean for changed files, ruff format fixed in reports/core.py. No trading/risk/gate/dry-run/secret change.",
+      "reverify_if": false,
+      "subject": "Claude review of T-214 against spec acceptance",
+      "method": "Diff review vs spec; ruff check and ruff format (line 100) on changed files; CI quality check",
       "validated_by": "claude"
     }
   ],
@@ -29967,7 +29999,40 @@
         "docs/specs/t214_telegram_smtp_fix.md"
       ],
       "summary": "Accepted T-213 read-only part (V-512). Found no Telegram startup line and SMTP auth disconnect. Queued T-214 (logging plus SMTP SSL/STARTTLS fix); asked owner Q-077 to send /status. No order, dry-run, risk/gate or secret change. Turn to codex."
+    },
+    {
+      "revision": 582,
+      "ts": "2026-10-21T00:12:29Z",
+      "agent": "codex",
+      "action": "complete_t214_for_review",
+      "task_ids": [
+        "T-214"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/evidence/t214/report.md",
+        "src/trader/api/app.py",
+        "src/trader/reports/core.py",
+        "src/trader/runtime/services.py",
+        "tests/unit/test_reports.py",
+        "tests/unit/test_runtime_services.py"
+      ],
+      "summary": "Implemented secret-free Telegram/report startup visibility and SMTP_SSL/STARTTLS selection with fake transport coverage. Bundled compileall and diff checks pass; desktop lacks project test/lint/typecheck tools. No trading, risk/gate, dry-run, order, broker, redeploy or secret changes. Turn to Claude for review; live /status proof remains Q-077."
+    },
+    {
+      "revision": 583,
+      "ts": "2026-10-21T01:05:16+00:00",
+      "agent": "claude",
+      "action": "accept_t214",
+      "task_ids": [
+        "T-214"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/reports/core.py"
+      ],
+      "summary": "Accepted T-214 (V-514) after a ruff-format fix. Roadmap tasks T-191..T-195 are all done; nothing is queued for Codex. Waiting on owner: deploy new image and send /status (Q-077), and the demo real-orders decision. No order, dry-run, risk/gate or secret change."
     }
   ],
-  "project_summary": "T-212 accepted: no feed-stall alerts during the scheduled 17:00-18:00 NY break. Next for Codex: T-213 Telegram live check, plus a read-only look at the broker's real break hours. Dry-run is off by owner decision; no order, risk/gate or secret changes."
+  "project_summary": "T-214 implementation complete: Telegram/report startup visibility and SMTP port-aware delivery are ready for Claude review. No trading, risk/gate, dry-run, order or secret changes."
 }

@@ -116,6 +116,25 @@ def test_report_scheduler_persists_each_period_once_per_scheduled_target() -> No
     assert len(calls) == 3
 
 
+def test_report_scheduler_startup_line_lists_periods_and_next_target() -> None:
+    from trader.runtime.services import _ReportScheduler
+
+    scheduler = _ReportScheduler(
+        {
+            "reports": {
+                "daily": {"at": "09:00"},
+                "weekly": {"day": "wednesday", "at": "09:30"},
+                "monthly": {"day_of_month": 7, "at": "10:00"},
+            }
+        },
+        clock=lambda: datetime(2026, 10, 7, 8, 0, tzinfo=UTC),
+    )
+
+    line = scheduler.startup_schedule_line()
+    assert line.startswith("reports scheduled daily/weekly/monthly next=")
+    assert "2026-10-07T09:00:00+00:00" in line
+
+
 def test_recorder_health_digest_runs_at_thresholds_and_repeats(tmp_path: Path) -> None:
     from trader.runtime.services import _ReportScheduler
 
