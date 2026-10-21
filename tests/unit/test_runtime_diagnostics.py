@@ -61,6 +61,6 @@ def test_drop_record_contains_exception_chain_and_errno(caplog) -> None:
         if "Capital.com stream reconnect:" in record.getMessage()
     )
     assert "exception_chain=root:RuntimeError" in message
-    assert "cause:OSError" in message
+    assert "cause:ConnectionResetError" in message
     assert "errno=104" in message
     assert "last_frame_type=ohlc.event" in message
