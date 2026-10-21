@@ -132,6 +132,17 @@ class _FakeSMTP:
         self.sent.append(message)
 
 
+class _FakeSMTPSSL(_FakeSMTP):
+    used: ClassVar[int] = 0
+
+    def __init__(self, host: str, port: int, timeout: int) -> None:
+        super().__init__(host, port, timeout)
+        type(self).used += 1
+
+    def starttls(self) -> None:
+        raise AssertionError("SMTP_SSL must not negotiate STARTTLS")
+
+
 def test_smtp_sender_uses_plain_and_html_parts_without_secret_logging() -> None:
     sender = SmtpEmailSender(
         "smtp.example",
@@ -146,6 +157,22 @@ def test_smtp_sender_uses_plain_and_html_parts_without_secret_logging() -> None:
     body = _FakeSMTP.sent[-1].get_body(preferencelist=("plain",))
     assert body is not None
     assert "Daily trading report" in body.get_content()
+
+
+def test_smtp_sender_uses_ssl_for_port_465_without_starttls() -> None:
+    _FakeSMTPSSL.used = 0
+    sender = SmtpEmailSender(
+        "smtp.example",
+        465,
+        "reporter",
+        "secret",
+        "owner@example.com",
+        smtp_factory=cast(Any, _FakeSMTP),
+        smtp_ssl_factory=cast(Any, _FakeSMTPSSL),
+    )
+
+    assert sender.send(build_report(_snapshot()))
+    assert _FakeSMTPSSL.used == 1
 
 
 def test_missing_smtp_configuration_warns_once_and_telegram_still_delivers(caplog: Any) -> None:
@@ -187,3 +214,4 @@ def test_run_report_never_raises_when_snapshot_provider_fails() -> None:
         raise RuntimeError("database offline")
 
     assert run_report("daily", failing_provider, None, None, ["owner"]) is None
+
