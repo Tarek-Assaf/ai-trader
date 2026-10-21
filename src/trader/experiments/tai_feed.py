@@ -8,6 +8,8 @@ second, unconnected recorder instance.
 from __future__ import annotations
 
 import logging
+import threading
+import time
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from datetime import UTC, datetime
@@ -145,6 +147,7 @@ class TaiLakeTailer:
         self._last_progress_at = now
         self._stale = False
         self._polls = 0
+        self._last_step_boundary: datetime | None = None
 
     @property
     def last_seen_minute(self) -> datetime | None:
@@ -155,6 +158,27 @@ class TaiLakeTailer:
         return self._stale
 
     def poll_once(self, now: datetime | None = None) -> int:
+        """Feed new closed minutes and emit one bounded timing line per minute."""
+        started_at = datetime.now(UTC)
+        started = time.monotonic()
+        try:
+            return self._poll_once(now)
+        finally:
+            ended_at = datetime.now(UTC)
+            boundary = ended_at.replace(second=0, microsecond=0)
+            if self._last_step_boundary != boundary:
+                self._last_step_boundary = boundary
+                LOGGER.info(
+                    "tai feed step: boundary_minute=%s step_start=%s step_end=%s "
+                    "step_duration_seconds=%.3f thread=%s",
+                    boundary.isoformat(),
+                    started_at.isoformat(),
+                    ended_at.isoformat(),
+                    time.monotonic() - started,
+                    threading.current_thread().name,
+                )
+
+    def _poll_once(self, now: datetime | None = None) -> int:
         """Feed new closed minutes and update the bounded stale guard."""
         current = _utc_minute(now or self._clock())
         minutes = read_closed_lake_minutes(self.lake_root, self.epic, before=current)
