@@ -241,7 +241,7 @@ class CapitalDataRecorder:
         self._stall_since: datetime | None = None
         self._last_stall_alert_at: datetime | None = None
         self._rejection_log_at: dict[str, datetime] = {}
-        self._started_at = datetime.now(UTC)
+        self._started_at = self._clock().astimezone(UTC)
         self._lock = threading.RLock()
         self._status: dict[str, Any] = {
             "configured": True,
