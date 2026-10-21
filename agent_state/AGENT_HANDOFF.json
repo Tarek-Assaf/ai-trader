@@ -17360,11 +17360,14 @@
       "validated_by": "codex"
     },
     {
-      "id": "V-513",
+      "id": "V-514",
       "task_id": "T-214",
       "result": "pass",
       "evidence": "Reviewed diff against spec acceptance: INFO startup lines (Telegram, reports), SMTP_SSL for port 465 with no STARTTLS, stage+exception-type only error log, tests added. ruff check clean for changed files, ruff format fixed in reports/core.py. No trading/risk/gate/dry-run/secret change.",
-      "reverify_if": false
+      "reverify_if": false,
+      "subject": "Claude review of T-214 against spec acceptance",
+      "method": "Diff review vs spec; ruff check and ruff format (line 100) on changed files; CI quality check",
+      "validated_by": "claude"
     }
   ],
   "blockers": [
@@ -30028,7 +30031,7 @@
         "agent_state/AGENT_HANDOFF.json",
         "src/trader/reports/core.py"
       ],
-      "summary": "Accepted T-214 (V-513) after a ruff-format fix. Roadmap tasks T-191..T-195 are all done; nothing is queued for Codex. Waiting on owner: deploy new image and send /status (Q-077), and the demo real-orders decision. No order, dry-run, risk/gate or secret change."
+      "summary": "Accepted T-214 (V-514) after a ruff-format fix. Roadmap tasks T-191..T-195 are all done; nothing is queued for Codex. Waiting on owner: deploy new image and send /status (Q-077), and the demo real-orders decision. No order, dry-run, risk/gate or secret change."
     }
   ],
   "project_summary": "T-214 implementation complete: Telegram/report startup visibility and SMTP port-aware delivery are ready for Claude review. No trading, risk/gate, dry-run, order or secret changes."
