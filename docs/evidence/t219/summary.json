@@ -1,0 +1,59 @@
+{
+  "task": "T-219",
+  "status": "inconclusive",
+  "pod_read_only": true,
+  "broker_sessions_opened": 0,
+  "orders": 0,
+  "dry_runs": 0,
+  "current_health": "healthy",
+  "tai_demo": {
+    "evaluated": 2,
+    "no_signal": 2,
+    "entry": 0,
+    "exit": 0,
+    "last_signal_gate": "ha_cross"
+  },
+  "lake_endpoints": {
+    "NAS100": "2026-10-21T21:13:00Z",
+    "XAUUSD": "2026-10-21T20:58:00Z"
+  },
+  "bar_window_utc": {
+    "start": "2026-10-21T14:00:00Z",
+    "end_exclusive": "2026-10-21T20:00:00Z",
+    "NAS100": {
+      "rows": 712,
+      "expected": 720,
+      "missing": ["2026-10-21T16:41:00Z", "2026-10-21T19:04:00Z"]
+    },
+    "XAUUSD": {
+      "rows": 693,
+      "expected": 720,
+      "missing": [
+        "2026-10-21T14:18:00Z",
+        "2026-10-21T14:31:00Z",
+        "2026-10-21T15:01:00Z",
+        "2026-10-21T15:13:00Z",
+        "2026-10-21T16:09:00Z",
+        "2026-10-21T16:41:00Z",
+        "2026-10-21T16:47:00Z",
+        "2026-10-21T18:31:00Z",
+        "2026-10-21T18:52:00Z",
+        "2026-10-21T19:13:00Z",
+        "2026-10-21T19:21:00Z"
+      ]
+    }
+  },
+  "parity": {
+    "closed_port_entries_on_2026_10_20_21": 0,
+    "production_replay": "bounded_run_stopped_without_output",
+    "verdict": "inconclusive"
+  },
+  "safety": {
+    "broker_calls": 0,
+    "order_calls": 0,
+    "network_access": false,
+    "lake_writes": false,
+    "runtime_changes": false
+  }
+}
+
