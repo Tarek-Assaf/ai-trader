@@ -214,4 +214,3 @@ def test_run_report_never_raises_when_snapshot_provider_fails() -> None:
         raise RuntimeError("database offline")
 
     assert run_report("daily", failing_provider, None, None, ["owner"]) is None
-
