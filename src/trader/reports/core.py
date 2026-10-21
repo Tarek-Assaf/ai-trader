@@ -288,6 +288,7 @@ class SmtpEmailSender:
         recipient: str | None,
         *,
         smtp_factory: Callable[..., smtplib.SMTP] = smtplib.SMTP,
+        smtp_ssl_factory: Callable[..., smtplib.SMTP_SSL] = smtplib.SMTP_SSL,
     ) -> None:
         self._host = host.strip() if isinstance(host, str) else None
         self._port = port if port is not None else 0
@@ -295,7 +296,13 @@ class SmtpEmailSender:
         self._password = password
         self._recipient = recipient.strip() if isinstance(recipient, str) else None
         self._smtp_factory = smtp_factory
+        self._smtp_ssl_factory = smtp_ssl_factory
         self._warned_missing = False
+
+    @property
+    def enabled(self) -> bool:
+        """Whether the minimum settings needed for email delivery are present."""
+        return bool(self._host and self._port and self._recipient)
 
     @classmethod
     def from_env(cls, environ: Mapping[str, str] | None = None) -> SmtpEmailSender:
@@ -319,7 +326,7 @@ class SmtpEmailSender:
 
     def send(self, document: ReportDocument) -> bool:
         """Send one document; return false for a disabled or failed delivery."""
-        if not self._host or not self._port or not self._recipient:
+        if not self.enabled:
             if not self._warned_missing:
                 LOGGER.warning("report email is not configured; using Telegram only")
                 self._warned_missing = True
@@ -330,14 +337,22 @@ class SmtpEmailSender:
         message["To"] = self._recipient
         message.set_content(document.plain_text)
         message.add_alternative(document.html, subtype="html")
+        stage = "SMTP connection"
         try:
-            with self._smtp_factory(self._host, self._port, timeout=30) as smtp:
+            factory = self._smtp_ssl_factory if self._port == 465 else self._smtp_factory
+            with factory(self._host, self._port, timeout=30) as smtp:
                 if self._user and self._password:
-                    smtp.starttls()
+                    if self._port != 465:
+                        stage = "SMTP STARTTLS"
+                        smtp.starttls()
+                    stage = "SMTP authentication"
                     smtp.login(self._user, self._password)
+                stage = "SMTP message delivery"
                 smtp.send_message(message)
-        except Exception:
-            LOGGER.exception("report email delivery failed")
+        except Exception as exc:  # noqa: BLE001 - delivery must not escape the scheduler
+            LOGGER.warning(
+                "report email delivery failed during %s (%s)", stage, type(exc).__name__
+            )
             return False
         return True
 
@@ -366,3 +381,4 @@ def run_report(
         except Exception:
             LOGGER.exception("report email delivery failed")
     return document
+
