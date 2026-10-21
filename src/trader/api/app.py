@@ -22,6 +22,7 @@ from trader.api.control import router as control_router
 from trader.api.health import (
     health_payload,
     set_runtime_health,
+    set_runtime_status_provider,
     set_tai_demo_health_provider,
 )
 from trader.channels.router import ChatRouter, RoutedIntent
@@ -209,10 +210,12 @@ def _start_runtime_if_configured(
             cycle_source=cycle_source,
         )
         app.state.runtime = runtime
+        set_runtime_status_provider(runtime.health_snapshot)
         # Lifespan is async, so the caller starts the service immediately after
         # this composition hook returns.
     except Exception as exc:
         app.state.runtime = None
+        set_runtime_status_provider(None)
         set_runtime_health("runtime_unavailable", _runtime_failure_detail(exc))
         _LOG.exception("runtime composition unavailable")
 
@@ -614,6 +617,7 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.telegram_stop = None
     _app.state.telegram_thread = None
     _app.state.runtime = None
+    set_runtime_status_provider(None)
     _app.state.runtime_cycle_source = None
     _app.state.runtime_feed_adapters = None
     _app.state.tai_feed_tailer = None
@@ -913,10 +917,11 @@ async def lifespan(_app: FastAPI) -> Any:
             _app.state.telegram_stop = stop_event
             _app.state.telegram_thread = thread
             thread.start()
+            commands = getattr(channel, "COMMANDS", ())
             _LOG.info(
                 "Telegram channel started owner_ids=%d commands=[%s]",
                 len(owner_ids),
-                ",".join(sorted(getattr(TelegramChannel, "COMMANDS", ()))),
+                ",".join(sorted(commands)),
             )
     try:
         yield
@@ -946,6 +951,7 @@ async def lifespan(_app: FastAPI) -> Any:
         if capital_client is not None:
             capital_client.close()
         set_tai_demo_health_provider(None)
+        set_runtime_status_provider(None)
 
 
 app = FastAPI(title="AI Trader", version="0.1.0", lifespan=lifespan)
