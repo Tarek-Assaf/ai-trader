@@ -77,6 +77,32 @@ def test_health_exposes_runtime_unavailable_reason(monkeypatch) -> None:
     health.set_runtime_health(None)
 
 
+def test_health_exposes_live_degraded_runtime(monkeypatch) -> None:
+    """A degraded runtime and its last dependency failure make health degraded."""
+    monkeypatch.setattr(health, "_probe_database", lambda _url: True)
+    monkeypatch.setattr(health, "_probe_redis", lambda _url: True)
+    monkeypatch.setenv("ROLE", "worker")
+    health.set_runtime_status_provider(
+        lambda: {
+            "state": "degraded",
+            "last_dependency_failure": {
+                "stage": "leader.check",
+                "error_type": "LeaseLost",
+                "message": "service lease expired or ownership changed",
+                "at": "2026-10-21T07:00:00+00:00",
+            },
+        }
+    )
+    try:
+        payload = health.health_payload()
+    finally:
+        health.set_runtime_status_provider(None)
+
+    assert payload["status"] == "degraded"
+    assert payload["runtime"]["state"] == "degraded"
+    assert payload["runtime"]["last_dependency_failure"]["stage"] == "leader.check"
+
+
 def test_health_exposes_tai_demo_outcome_counters(monkeypatch) -> None:
     """Tai outcome telemetry is grouped by epic and contains no price data."""
     monkeypatch.setattr(health, "_probe_database", lambda _url: True)
