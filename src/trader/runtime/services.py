@@ -803,6 +803,16 @@ class _ReportScheduler:
         """Attach the shared Telegram channel alert path after startup wiring."""
         self._alert_sender = alert
 
+    def startup_schedule_line(self, now: datetime | None = None) -> str:
+        """Return a bounded, secret-free description of the report schedule."""
+        current = (now or self._clock()).astimezone(UTC)
+        targets = self._targets(current)
+        periods = "/".join(period for period, _target in targets) or "none"
+        future = [target for _period, target in targets if target >= current]
+        next_target = min(future or [target for _period, target in targets], default=None)
+        next_text = next_target.isoformat() if next_target is not None else "none"
+        return f"reports scheduled {periods} next={next_text}"
+
     def run_due(self, now: datetime | None = None) -> tuple[str, ...]:
         """Run each configured period once when its UTC schedule is due."""
         current = (now or self._clock()).astimezone(UTC)
@@ -985,3 +995,4 @@ class _ReportScheduler:
 
 
 __all__ = ["build_runtime_services"]
+
