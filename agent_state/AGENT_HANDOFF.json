@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 585,
+  "turn": "claude",
+  "revision": 586,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -7081,7 +7081,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "todo",
+      "status": "review",
       "requirements": [
         "R-01",
         "R-12",
@@ -7097,8 +7097,17 @@
         "docs/specs/t216_digest_source_and_reconnects.md"
       ],
       "review_cycles": 0,
-      "evidence": [],
-      "completion_note": "Queued by Claude; not started."
+      "evidence": [
+        "src/trader/api/health.py",
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "src/trader/core/logging.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_secret_redaction.py",
+        "docs/evidence/t216/report.md",
+        "Bundled Python compileall and git diff --check pass; Ruff, mypy and pytest are deferred to GitHub Actions quality."
+      ],
+      "completion_note": "Implemented the shared live recorder status source for /health and Telegram digests, fail-safe unavailable reporting, a secret-redacted rotating volume log, and read-only reconnect evidence. No trading, risk, gate, dry-run, order, config or secret changes. CI quality is required for Ruff, mypy and pytest; ready for Claude review."
     }
   ],
   "decisions": [
@@ -17441,6 +17450,24 @@
       "subject": "Claude review of T-215 lease heartbeat and health",
       "method": "Diff review; code read of leader.py; CI quality (ruff, mypy, pytest, validate_handoff)",
       "validated_by": "claude"
+    },
+    {
+      "id": "V-516",
+      "task_id": "T-216",
+      "result": "pass",
+      "subject": "T-216 implementation and read-only evidence",
+      "method": "Reviewed the diff against docs/specs/t216_digest_source_and_reconnects.md; ran bundled Python compileall and git diff --check. CI quality is required for Ruff, mypy and pytest.",
+      "evidence": [
+        "src/trader/api/health.py",
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "src/trader/core/logging.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_secret_redaction.py",
+        "docs/evidence/t216/report.md"
+      ],
+      "validated_by": "codex",
+      "reverify_if": "CI quality reports a failure or Claude review requests a change."
     }
   ],
   "blockers": [
@@ -30137,7 +30164,27 @@
         "docs/specs/t216_digest_source_and_reconnects.md"
       ],
       "summary": "Queued T-216: Telegram recorder digest showed starting/0 ticks while /health was healthy; fix digest source, analyse ~41 reconnects, add rotating log file on the volume. No order, dry-run, risk/gate or secret change. Turn to codex."
+    },
+    {
+      "revision": 586,
+      "ts": "2026-10-21T12:35:00+00:00",
+      "agent": "codex",
+      "action": "complete_t216_for_review",
+      "task_ids": [
+        "T-216"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/api/health.py",
+        "src/trader/runtime/services.py",
+        "src/trader/api/app.py",
+        "src/trader/core/logging.py",
+        "tests/unit/test_runtime_services.py",
+        "tests/unit/test_secret_redaction.py",
+        "docs/evidence/t216/report.md"
+      ],
+      "summary": "T-216 implementation complete for Claude review: recorder digests now use the shared live status accessor and report unavailable when unreadable; a bounded secret-redacted rotating volume log is added; reconnect analysis is recorded read-only. Bundled compileall and diff checks pass; Ruff, mypy and pytest are deferred to GitHub Actions quality. No trading, risk, gate, dry-run, order, config or secret changes. Turn to Claude."
     }
   ],
-  "project_summary": "T-214 implementation complete: Telegram/report startup visibility and SMTP port-aware delivery are ready for Claude review. No trading, risk/gate, dry-run, order or secret changes."
+  "project_summary": "T-216 implementation is ready for Claude review: live recorder status is shared by /health and Telegram digests, unreadable status is unavailable, and volume logging is bounded and redacted. Reconnect analysis is read-only. No trading, risk/gate, dry-run, order, config or secret changes."
 }

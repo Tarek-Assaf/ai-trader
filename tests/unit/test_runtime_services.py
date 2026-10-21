@@ -184,6 +184,68 @@ def test_recorder_health_digest_runs_at_thresholds_and_repeats(tmp_path: Path) -
     assert len(sent) == 3
 
 
+def test_recorder_digest_uses_shared_live_status_provider(tmp_path: Path) -> None:
+    """The digest follows the same live status source as /health."""
+    from trader.runtime.services import _ReportScheduler
+
+    started = datetime(2026, 10, 8, 0, 0, tzinfo=UTC)
+    stale_status_path = tmp_path / "api-recorder.json"
+    stale_status_path.write_text(json.dumps({"status": "starting", "ticks_received": 0}))
+    live_status = {
+        "configured": True,
+        "status": "healthy",
+        "ping_reply_ok": True,
+        "market_status": "TRADEABLE",
+        "expected_open": True,
+        "ticks_received": 720,
+        "last_tick_at": started.isoformat(),
+        "last_closed_bar_at": started.isoformat(),
+        "reconnect_count": 2,
+        "last_reconnect_reason": "ConnectionClosedError",
+        "rejected_candles": 0,
+        "last_reject_reason": None,
+        "stale_epics": [],
+    }
+    recorder = SimpleNamespace(_started_at=started, _status_path=stale_status_path)
+    evidence = tmp_path / "evidence" / "recorder_health.jsonl"
+    scheduler = _ReportScheduler(
+        {"recorder_health": {"digest_hours": [2]}},
+        recorder=recorder,
+        recorder_status_provider=lambda: live_status,
+        evidence_path=evidence,
+        clock=lambda: started.replace(hour=2),
+    )
+
+    assert scheduler.run_due() == ("recorder_health_2h",)
+    payload = json.loads(evidence.read_text(encoding="utf-8"))
+    assert payload["data_recorder"]["status"] == "healthy"
+    assert payload["data_recorder"]["ticks_received"] == 720
+    assert payload["data_recorder"]["market_status"] == "TRADEABLE"
+
+
+def test_recorder_digest_marks_unreadable_shared_status_unavailable(tmp_path: Path) -> None:
+    """An unreadable live source must not fall back to stale starting state."""
+    from trader.runtime.services import _ReportScheduler
+
+    started = datetime(2026, 10, 8, 0, 0, tzinfo=UTC)
+    stale_status_path = tmp_path / "api-recorder.json"
+    stale_status_path.write_text(json.dumps({"status": "starting", "ticks_received": 0}))
+    recorder = SimpleNamespace(_started_at=started, _status_path=stale_status_path)
+    evidence = tmp_path / "evidence" / "recorder_health.jsonl"
+    scheduler = _ReportScheduler(
+        {"recorder_health": {"digest_hours": [2]}},
+        recorder=recorder,
+        recorder_status_provider=lambda: None,
+        evidence_path=evidence,
+        clock=lambda: started.replace(hour=2),
+    )
+
+    assert scheduler.run_due() == ("recorder_health_2h",)
+    payload = json.loads(evidence.read_text(encoding="utf-8"))
+    assert payload["data_recorder"]["status"] == "unavailable"
+    assert payload["data_recorder"]["ticks_received"] == 0
+
+
 def test_recorder_health_alerts_after_degradation_and_recovers(tmp_path: Path) -> None:
     from trader.runtime.services import _ReportScheduler
 

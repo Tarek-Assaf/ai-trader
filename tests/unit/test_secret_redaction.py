@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import sys
 from io import StringIO
+from logging.handlers import RotatingFileHandler
 
 from pydantic import SecretStr
 
@@ -84,3 +85,34 @@ def test_exception_traceback_is_redacted() -> None:
     output = stream.getvalue()
     assert "Traceback" in output
     assert "top-secret" not in output
+
+
+def test_configure_logging_writes_redacted_rotating_volume_log(tmp_path, monkeypatch) -> None:
+    """The optional volume log is bounded and receives the same redaction filter."""
+    path = tmp_path / "logs" / "trader.log"
+    monkeypatch.setenv("TRADER_LOG_PATH", str(path))
+    root = logging.getLogger()
+    old_handlers = root.handlers[:]
+    stream = logging.StreamHandler(StringIO())
+    root.handlers[:] = [stream]
+    logger = logging.getLogger("trader.volume-log-test")
+    logger.setLevel(logging.INFO)
+    logger.propagate = True
+    try:
+        configure_logging(("top-secret",))
+        logger.info("credential=%s", "top-secret")
+        file_handlers = [
+            handler for handler in root.handlers if isinstance(handler, RotatingFileHandler)
+        ]
+        assert len(file_handlers) == 1
+        file_handlers[0].flush()
+        output = path.read_text(encoding="utf-8")
+        assert "top-secret" not in output
+        assert "[REDACTED]" in output
+        assert file_handlers[0].maxBytes == 5 * 1024 * 1024
+        assert file_handlers[0].backupCount == 3
+    finally:
+        for handler in root.handlers:
+            if handler not in old_handlers:
+                handler.close()
+        root.handlers[:] = old_handlers

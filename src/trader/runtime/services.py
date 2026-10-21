@@ -339,6 +339,7 @@ def build_runtime_services(
         or _build_llm_usage_summary(engine, configs),
         state_store=journal,
         recorder=provided.get("recorder"),
+        recorder_status_provider=provided.get("recorder_status_provider"),
         version=os.getenv("GIT_SHA", "unknown"),
     )
     settings_service: Any = provided.get("settings_service")
@@ -550,27 +551,51 @@ def _recorder_started_at(recorder: Any, fallback: datetime) -> datetime:
     return fallback.astimezone(UTC)
 
 
-def _recorder_health_mapping(recorder: Any) -> dict[str, object] | None:
-    """Read the recorder status through its safe object or status-file boundary."""
+def _recorder_health_mapping(
+    recorder: Any,
+    *,
+    status_provider: Callable[[], Mapping[str, object] | None] | None = None,
+) -> dict[str, object] | None:
+    """Read recorder status through the shared live accessor when supplied."""
+
+    def unavailable() -> dict[str, object]:
+        numeric = {"ticks_received", "reconnect_count", "rejected_candles"}
+        return {
+            name: ([] if name == "stale_epics" else 0)
+            if name in numeric | {"stale_epics"}
+            else ("unavailable" if name == "status" else None)
+            for name in _RECORDER_HEALTH_FIELDS
+        } | {"expected_open": None}
+
     if recorder is None:
         return None
-    getter = getattr(recorder, "health", None) or getattr(recorder, "status", None)
-    value: object = None
+    provider_supplied = callable(status_provider)
+    if provider_supplied:
+        try:
+            value: object = status_provider()
+        except Exception:
+            return unavailable()
+    else:
+        value = None
+    getter = None if provider_supplied else getattr(recorder, "health", None)
+    getter = getter or (getattr(recorder, "status", None) if not provider_supplied else None)
+    if provider_supplied and value is None:
+        return unavailable()
     if callable(getter):
         try:
             value = getter()
         except Exception:
-            return None
+            return unavailable()
     else:
         path = getattr(recorder, "_status_path", None)
         if path is None:
-            return None
+            return unavailable()
         try:
             value = json.loads(Path(path).read_text(encoding="utf-8"))
         except (OSError, ValueError, TypeError):
-            return None
+            return unavailable()
     if not isinstance(value, Mapping):
-        return None
+        return unavailable()
     output: dict[str, object] = {}
     for name in _RECORDER_HEALTH_FIELDS:
         raw = value.get(name)
@@ -744,6 +769,7 @@ class _ReportScheduler:
         usage_summary: Any = None,
         state_store: Any = None,
         recorder: Any = None,
+        recorder_status_provider: Callable[[], Mapping[str, object] | None] | None = None,
         version: str | None = None,
         evidence_path: str | Path | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
@@ -752,6 +778,7 @@ class _ReportScheduler:
         self.schedule = schedule
         self._state_store = state_store
         self._recorder = recorder
+        self._recorder_status_provider = recorder_status_provider
         self._clock = clock
         self._version = _safe_health_text(version or os.getenv("GIT_SHA", "unknown"), 80)
         workspace = Path(os.getenv("WORKSPACE_DIR", "/workspace"))
@@ -833,7 +860,10 @@ class _ReportScheduler:
 
     def _run_recorder_health(self, now: datetime) -> list[str]:
         """Emit configured recorder digests and liveness alerts."""
-        status = _recorder_health_mapping(self._recorder)
+        status = _recorder_health_mapping(
+            self._recorder,
+            status_provider=self._recorder_status_provider,
+        )
         if status is None:
             return []
         self._update_recorder_alert(status, now)
