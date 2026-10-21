@@ -381,4 +381,3 @@ def run_report(
         except Exception:
             LOGGER.exception("report email delivery failed")
     return document
-
