@@ -220,4 +220,3 @@ def test_recorder_health_alerts_after_degradation_and_recovers(tmp_path: Path) -
     scheduler.run_due()
     assert len(sent) == 2
     assert sent[1].alert_key == "recorder_health_recovered"
-
