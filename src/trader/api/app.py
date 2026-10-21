@@ -752,6 +752,7 @@ async def lifespan(_app: FastAPI) -> Any:
     report_scheduler = (
         report_scheduler.get("report_scheduler") if isinstance(report_scheduler, dict) else None
     )
+    report_transport: TelegramBotTransport | None = None
     if report_scheduler is not None and hasattr(report_scheduler, "configure_delivery"):
         token = (
             settings.telegram_bot_token.get_secret_value()
@@ -765,15 +766,26 @@ async def lifespan(_app: FastAPI) -> Any:
         )
         report_transport = TelegramBotTransport(token) if token and owner_ids else None
         _app.state.report_telegram_transport = report_transport
+        report_email = (
+            _app.state.runtime_services.get("report_email")
+            if isinstance(_app.state.runtime_services, dict)
+            else None
+        )
         report_scheduler.configure_delivery(
             telegram=report_transport,
-            email=(
-                _app.state.runtime_services.get("report_email")
-                if isinstance(_app.state.runtime_services, dict)
-                else None
-            ),
+            email=report_email,
             owner_chat_ids=owner_ids,
         )
+        schedule_line = getattr(report_scheduler, "startup_schedule_line", None)
+        if callable(schedule_line):
+            schedule_text = schedule_line()
+        else:
+            schedule_text = "reports scheduled unknown next=unknown"
+        email_state = "on" if bool(getattr(report_email, "enabled", False)) else "off"
+        telegram_state = "on" if report_transport is not None else "off"
+        _LOG.info("%s; email=%s telegram=%s", schedule_text, email_state, telegram_state)
+    else:
+        _LOG.info("reports scheduler disabled; email=off telegram=off")
     _start_runtime_if_configured(_app, settings, configs)
     runtime = getattr(_app.state, "runtime", None)
     if runtime is not None:
@@ -824,7 +836,7 @@ async def lifespan(_app: FastAPI) -> Any:
         if not token:
             _LOG.info("Telegram bot token is not configured; Telegram channel disabled")
         elif not owner_ids:
-            _LOG.warning("Telegram owner chat ids are not configured; Telegram channel disabled")
+            _LOG.info("Telegram owner chat ids are not configured; Telegram channel disabled")
         else:
             source = _app.state.execution_control_source
             writer = _app.state.execution_control_writer
@@ -901,6 +913,11 @@ async def lifespan(_app: FastAPI) -> Any:
             _app.state.telegram_stop = stop_event
             _app.state.telegram_thread = thread
             thread.start()
+            _LOG.info(
+                "Telegram channel started owner_ids=%d commands=[%s]",
+                len(owner_ids),
+                ",".join(sorted(TelegramChannel.COMMANDS)),
+            )
     try:
         yield
     finally:
@@ -939,3 +956,4 @@ app.include_router(control_router)
 def health() -> dict[str, Any]:
     """Expose role and dependency health without credentials or sensitive details."""
     return health_payload()
+
