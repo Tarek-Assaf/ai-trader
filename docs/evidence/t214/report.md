@@ -22,4 +22,3 @@ Unit coverage adds a fake SSL SMTP factory that fails if STARTTLS is attempted o
 - `git diff --check`: pass.
 - Focused pytest, Ruff, mypy and `make check` were unavailable in this desktop runtime because the checkout has no installed pytest/Ruff/mypy toolchain and the bundled Python lacks project dependencies (`sqlalchemy` import unavailable). CI remains the required full validation.
 - Live `/status` proof remains owner follow-up Q-077 after deployment.
-
