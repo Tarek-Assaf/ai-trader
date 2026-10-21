@@ -350,9 +350,7 @@ class SmtpEmailSender:
                 stage = "SMTP message delivery"
                 smtp.send_message(message)
         except Exception as exc:  # noqa: BLE001 - delivery must not escape the scheduler
-            LOGGER.warning(
-                "report email delivery failed during %s (%s)", stage, type(exc).__name__
-            )
+            LOGGER.warning("report email delivery failed during %s (%s)", stage, type(exc).__name__)
             return False
         return True
 
