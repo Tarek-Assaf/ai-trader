@@ -271,7 +271,10 @@ def test_reconnect_logs_context_without_payload_or_credentials(caplog) -> None:
     assert "seconds_since_ping_reply=0.000" in message
     assert "seconds_since_tick=0.000" in message
     assert "connection_age_seconds=0.000" in message
-    assert "forced" not in message
+    # The exception text is logged (redacted, bounded) inside the chain; frame payloads and
+    # credentials must never appear.
+    assert "exception_chain=root:OSError(message=forced" in message
+    assert "1791021600000" not in message
     assert any("Capital.com stream attempt:" in record.getMessage() for record in caplog.records)
 
 
