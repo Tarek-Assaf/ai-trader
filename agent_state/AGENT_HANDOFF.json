@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 584,
+  "turn": "codex",
+  "revision": 585,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-215 accepted (lease heartbeat fix: Tai evaluator was blocked because the lease expired between bars). Waiting on owner: deploy the new image, then send the /health JSON so Codex can confirm bars are evaluated. Demo orders are on; no trades yet.",
+    "summary": "T-215 accepted; Tai now evaluates bars (42 evaluations, all no-setup at ha_cross, no entries yet). T-216 queued for Codex: recorder digest wrong (shows starting while /health is healthy), reconnect analysis, log file on volume. Pod on dc2dda5; demo orders on.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -65,7 +65,8 @@
         "T-150",
         "T-213",
         "T-214",
-        "T-215"
+        "T-215",
+        "T-216"
       ]
     },
     {
@@ -408,7 +409,8 @@
         "T-111",
         "T-213",
         "T-214",
-        "T-215"
+        "T-215",
+        "T-216"
       ]
     },
     {
@@ -479,7 +481,8 @@
         "T-212",
         "T-213",
         "T-214",
-        "T-215"
+        "T-215",
+        "T-216"
       ]
     },
     {
@@ -7071,6 +7074,31 @@
         "tests/unit/test_health.py"
       ],
       "completion_note": "Accepted by Claude: heartbeat every 10 s (lease TTL 30 s) fails closed and stop wins; health reports degraded; CI quality green on merge. Root cause: lease was only renewed when a bar cycle ran, so it expired between bars and the loop sat in DEGRADED."
+    },
+    {
+      "id": "T-216",
+      "title": "Recorder digest uses live source; reconnect analysis; log file on volume",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [
+        "R-01",
+        "R-12",
+        "R-18"
+      ],
+      "depends_on": [
+        "T-215"
+      ],
+      "acceptance_criteria": [
+        "Follow docs/specs/t216_digest_source_and_reconnects.md exactly. No trading, risk, gate, dry-run or order change; no secrets printed. Ruff (100), mypy, CI green. One log entry, turn to claude, stop."
+      ],
+      "deliverables": [
+        "docs/specs/t216_digest_source_and_reconnects.md"
+      ],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Queued by Claude; not started."
     }
   ],
   "decisions": [
@@ -30095,6 +30123,20 @@
         "tests/unit/test_health.py"
       ],
       "summary": "Accepted T-215 (V-515): lease heartbeat renews independently of bars (fail closed, stop wins), stage-level redacted dependency logging, /health shows runtime state. Q-077 answered (/status works). Normalized Codex CRLF files to LF. Owner to deploy new image; then verify Tai bars are evaluated. No order, dry-run, risk/gate or secret change."
+    },
+    {
+      "revision": 585,
+      "ts": "2026-10-21T11:30:00+00:00",
+      "agent": "claude",
+      "action": "queue_t216",
+      "task_ids": [
+        "T-216"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "docs/specs/t216_digest_source_and_reconnects.md"
+      ],
+      "summary": "Queued T-216: Telegram recorder digest showed starting/0 ticks while /health was healthy; fix digest source, analyse ~41 reconnects, add rotating log file on the volume. No order, dry-run, risk/gate or secret change. Turn to codex."
     }
   ],
   "project_summary": "T-214 implementation complete: Telegram/report startup visibility and SMTP port-aware delivery are ready for Claude review. No trading, risk/gate, dry-run, order or secret changes."
