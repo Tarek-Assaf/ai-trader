@@ -275,7 +275,7 @@ class CapitalComStreamClient:
 
     def _record_frame(self, raw: str | bytes) -> None:
         """Record frame type/count metadata without logging payloads."""
-        stamp = self._clock().astimezone(UTC)
+        stamp = datetime.now(UTC)
         minute = stamp.replace(second=0, microsecond=0)
         if self._frame_minute is not None and minute != self._frame_minute:
             self._flush_frame_counts()
@@ -660,13 +660,13 @@ class CapitalComStreamClient:
                             raise backfill_error
                         backfill_updates = int(backfill_state.get("updates", 0))
                         backfill_completed = bool(backfill_state.get("completed", False))
-                        receive_started_at = self._clock().astimezone(UTC)
+                        receive_started_at = datetime.now(UTC)
                         receive_started = time.monotonic()
                         try:
                             raw = socket.recv(timeout=1)
                         except TimeoutError:
                             raw = None
-                        receive_ended_at = self._clock().astimezone(UTC)
+                        receive_ended_at = datetime.now(UTC)
                         self._record_boundary(
                             receive_started_at,
                             receive_ended_at,

@@ -21,7 +21,7 @@ def test_exception_chain_is_single_line_bounded_and_redacted() -> None:
     rendered = exception_chain(error)
 
     assert "RuntimeError" in rendered
-    assert "OSError" in rendered
+    assert "ConnectionRefusedError" in rendered
     assert "errno=111" in rendered
     assert "top-secret" not in rendered
     assert "another-secret" not in rendered

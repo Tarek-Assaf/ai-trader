@@ -159,12 +159,12 @@ class TaiLakeTailer:
 
     def poll_once(self, now: datetime | None = None) -> int:
         """Feed new closed minutes and emit one bounded timing line per minute."""
-        started_at = self._clock().astimezone(UTC)
+        started_at = datetime.now(UTC)
         started = time.monotonic()
         try:
             return self._poll_once(now)
         finally:
-            ended_at = self._clock().astimezone(UTC)
+            ended_at = datetime.now(UTC)
             boundary = ended_at.replace(second=0, microsecond=0)
             if self._last_step_boundary != boundary:
                 self._last_step_boundary = boundary

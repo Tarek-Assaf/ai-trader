@@ -241,7 +241,7 @@ class CapitalDataRecorder:
         self._stall_since: datetime | None = None
         self._last_stall_alert_at: datetime | None = None
         self._rejection_log_at: dict[str, datetime] = {}
-        self._started_at = self._clock().astimezone(UTC)
+        self._started_at = datetime.now(UTC)
         self._lock = threading.RLock()
         self._status: dict[str, Any] = {
             "configured": True,
@@ -301,12 +301,12 @@ class CapitalDataRecorder:
     def _commit(self, updates: list[_BufferedUpdate]) -> None:
         if not updates:
             return
-        started_at = self._clock().astimezone(UTC)
+        started_at = datetime.now(UTC)
         started = time.monotonic()
         try:
             self._commit_updates(updates)
         finally:
-            ended_at = self._clock().astimezone(UTC)
+            ended_at = datetime.now(UTC)
             boundary = ended_at.replace(second=0, microsecond=0)
             _LOG.info(
                 "Capital.com bar commit: boundary_minute=%s commit_start=%s commit_end=%s "
