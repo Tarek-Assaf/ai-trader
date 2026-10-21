@@ -569,8 +569,8 @@ def _recorder_health_mapping(
 
     if recorder is None:
         return None
-    provider_supplied = callable(status_provider)
-    if provider_supplied:
+    provider_supplied = status_provider is not None
+    if status_provider is not None:
         try:
             value: object = status_provider()
         except Exception:
