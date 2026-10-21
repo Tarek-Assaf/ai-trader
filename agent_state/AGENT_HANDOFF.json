@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 583,
+  "turn": "claude",
+  "revision": 584,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-214 accepted. All queued tasks done. Waiting on owner: deploy the new image and send /status (Q-077); real demo orders stay off until the owner decides.",
+    "summary": "T-215 implementation complete: runtime lease heartbeat, dependency diagnostics and degraded health are ready for Claude review. No restart or operational lease change, and no risk/gate/order/secret changes.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,8 +47,8 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-214",
-    "last_status": "done"
+    "last_task": "T-215",
+    "last_status": "review"
   },
   "requirements": [
     {
@@ -406,7 +406,8 @@
         "T-092",
         "T-111",
         "T-213",
-        "T-214"
+        "T-214",
+        "T-215"
       ]
     },
     {
@@ -526,7 +527,8 @@
         "T-092",
         "T-093",
         "T-210",
-        "T-211"
+        "T-211",
+        "T-215"
       ]
     },
     {
@@ -1186,7 +1188,7 @@
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover \u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u0639\u2018\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00be\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00b9\u00e2\u20ac\u06a9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b9\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a5\u0623\u00a2\u00e2\u201a\u00ac\u00e2\u201e\u00a2\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a3\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u0639\u2018\u0637\u00a2\u0622\u00ac\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00a5\u00e2\u20ac\u2122\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b9\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a9\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u0639\u2018\u0637\u00a2\u0622\u00ac\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u0686\u0637\u00a2\u0622\u00a21 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ´ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ´ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ£ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ£ط·آ·ط¢آ¢ط·آ¢ط¢آ¹ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ·ط·آ¥أ¢â‚¬â„¢ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ط·آ·ط¢آ¹ط·آ¢ط¢آ©ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â‚¬â€چط¢آ¢1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner chose a follow-up task, Q-039): see T-083. Empirical acceptance stays blocked on B-007.",
       "legacy_reference": {
         "repo": "github.com/Tarek-Assaf/AI-Agent-Trading",
         "commit": "52b4dda",
@@ -5290,7 +5292,7 @@
         "docs/evidence/t157_rule_by_rule.csv",
         "docs/evidence/t157_report.md"
       ],
-      "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in \u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b13 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in \u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b13 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
+      "completion_note": "Completed the diagnostic-only T-157 replay on the owner's 31 entries using recorded NAS100 mid, bid and ask 1m data. The forming-Wilder-SMA-EMA UTC baseline passes 0/31 at the entry bar and 0/31 anywhere in ط·آ¢ط¢آ±3 bars. First baseline failures: ha_state 20, ema_side 3, adx_di 3, dont_chase 1, missing_bar 4. The best registered switch (closed HA, simple rolling ADX/DI, UTC VWAP) reaches only 1/31 in ط·آ¢ط¢آ±3 bars; all price bases remain 0/31. The compact CSV indexes center-bar baseline rows and the full 5,104-row Pod artifact is reproducible by the script. No broker, holdout, gate, cost, ledger, promotion or lake writes."
     },
     {
       "id": "T-158",
@@ -6852,7 +6854,7 @@
         "docs/evidence/t208/report.md",
         "docs/evidence/t208/summary.json"
       ],
-      "completion_note": "Completed read-only Pod diagnosis. Recorder was degraded: 251 precise reconnect observations (202 CapitalComError, 49 ConnectionClosedError), repeated ping ConnectError and unknown market status, with an HTTP 429 session response at startup. The direct NAS100 lake query found four one-minute both-side gaps (12:41Z, 12:45Z, 13:42Z, 14:11Z) in the 12:33Z\u201314:34Z window. Stream REST backfill exists after successful connect/subscribe/ping but can be interrupted by the observed failures; recorder and Tai 3m code do not synthesize missing minutes. Rejected-candle telemetry is aggregate-only (10, last ask_close_below_bid_close), so per-event attribution is unavailable. Proposed smallest fix: bounded reconnect subscribe/backfill outcome telemetry in stream.py; no code or broker changes made. Accepted (V-505); follow-up T-211."
+      "completion_note": "Completed read-only Pod diagnosis. Recorder was degraded: 251 precise reconnect observations (202 CapitalComError, 49 ConnectionClosedError), repeated ping ConnectError and unknown market status, with an HTTP 429 session response at startup. The direct NAS100 lake query found four one-minute both-side gaps (12:41Z, 12:45Z, 13:42Z, 14:11Z) in the 12:33Z–14:34Z window. Stream REST backfill exists after successful connect/subscribe/ping but can be interrupted by the observed failures; recorder and Tai 3m code do not synthesize missing minutes. Rejected-candle telemetry is aggregate-only (10, last ask_close_below_bid_close), so per-event attribution is unavailable. Proposed smallest fix: bounded reconnect subscribe/backfill outcome telemetry in stream.py; no code or broker changes made. Accepted (V-505); follow-up T-211."
     },
     {
       "id": "T-209",
@@ -7036,6 +7038,39 @@
         "tests/unit/test_runtime_services.py"
       ],
       "completion_note": "Accepted by Claude: startup lines, SMTP_SSL on 465, tests present; one ruff-format fix applied; CI quality green on merge."
+    },
+    {
+      "id": "T-215",
+      "title": "Runtime lease heartbeat, dependency diagnostics and degraded health",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-12",
+        "R-21"
+      ],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Add redacted stage diagnostics for leader acquire/check and control reads; renew the lease independently of bar arrival with bounded fail-closed behavior; expose live runtime state and the last dependency failure in /health; add lease-expiry, heartbeat-failure and degraded-health tests; do not change risk or gate files."
+      ],
+      "deliverables": [
+        "src/trader/runtime/composition.py",
+        "src/trader/api/health.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime.py",
+        "tests/unit/test_health.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "src/trader/runtime/composition.py",
+        "src/trader/api/health.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime.py",
+        "tests/unit/test_health.py",
+        "794596e"
+      ],
+      "completion_note": "Implemented the runtime lease heartbeat and redacted dependency diagnostics, blocked entries after renewal failure, and wired live runtime state plus the last dependency failure into /health. Added the three requested tests. Bundled compileall and git diff --check pass; pytest, Ruff and mypy are unavailable locally, so CI quality is required. No restart, lease-key/TTL, risk, gate, order or secret changes. Turn to Claude for review."
     }
   ],
   "decisions": [
@@ -8477,7 +8512,7 @@
       "subject": "T-080/Q-024 pod import and whole-lake QA",
       "method": "Reconciled the owner-provided per-month import lineage reports to the symbol summaries; read Parquet metadata for row counts, checked timestamp uniqueness in every monthly file, compared adjacent month ranges, and counted timestamp deltas greater than 60 seconds within files and across file seams.",
       "result": "pass",
-      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives \u0637\u00b7\u0622\u00a3\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u20ac\u0691\u0622\u00ac\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00b9\u0637\u00a2\u0622\u00be\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00ab\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00b7\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b8\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00a3\u0622\u00a2\u0623\u00a2\u00e2\u201a\u00ac\u0639\u2018\u0637\u00a2\u0622\u00ac\u0637\u00b7\u0622\u00b7\u0637\u00a2\u0622\u00a2\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00a4 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
+      "evidence": "docs/evidence/q024_histdata_pod_import.md. Exact duplicate counts reconcile to 360 per symbol (six October archives ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¢آ¢ط·آ¹ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ«ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ·ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ 60). Invalid/conflicting duplicates: zero. Reruns: zero rows read/written. NSXUSD: 5,285,557 rows; zero duplicate timestamps/range overlaps; 114,753 raw gap intervals totaling 3,056,482 absent minutes. XAUUSD: 6,140,206 rows; zero duplicate timestamps/range overlaps; 35,668 raw gap intervals totaling 3,078,854 absent minutes. Gaps remain unclassified against market hours.",
       "validated_by": "codex",
       "date": "2026-10-04",
       "reverify_if": "The Q-024 evidence report, imported Parquet partitions, or timestamp/gap QA method changes."
@@ -10873,7 +10908,7 @@
           "evaluating:0/20:XAUUSD:5m": 69.76982349902391,
           "evaluating:20/20:XAUUSD:5m": 0.009928140789270401,
           "holdout:XAUUSD:5m": 0.11121419817209244,
-          "done": 0.0
+          "done": 0
         },
         "results_table": [
           {
@@ -10895,7 +10930,7 @@
               "neighbor_parameters_not_profitable"
             ],
             "median_gross_per_trade": -0.126666,
-            "median_cost_per_trade": 4.0,
+            "median_cost_per_trade": 4,
             "median_win_rate": 0.557169,
             "median_trades_per_day": 7.737984
           },
@@ -10917,7 +10952,7 @@
               "neighbor_parameters_not_profitable"
             ],
             "median_gross_per_trade": 0.803324,
-            "median_cost_per_trade": 4.0,
+            "median_cost_per_trade": 4,
             "median_win_rate": 0.461614,
             "median_trades_per_day": 4.974783
           },
@@ -10936,7 +10971,7 @@
               "neighbor_parameters_not_profitable"
             ],
             "median_gross_per_trade": 0.494288,
-            "median_cost_per_trade": 4.0,
+            "median_cost_per_trade": 4,
             "median_win_rate": 0.450749,
             "median_trades_per_day": 7.420747
           },
@@ -10959,7 +10994,7 @@
               "neighbor_parameters_not_profitable"
             ],
             "median_gross_per_trade": -0.243546,
-            "median_cost_per_trade": 4.0,
+            "median_cost_per_trade": 4,
             "median_win_rate": 0.573055,
             "median_trades_per_day": 11.178791
           },
@@ -10982,7 +11017,7 @@
               "neighbor_parameters_not_profitable"
             ],
             "median_gross_per_trade": -0.423662,
-            "median_cost_per_trade": 4.0,
+            "median_cost_per_trade": 4,
             "median_win_rate": 0.540409,
             "median_trades_per_day": 14.304063
           },
@@ -11169,7 +11204,7 @@
             "trades_per_day": 0.944902,
             "win_rate": 0.376577,
             "gross_per_trade": 4.019209,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11181,7 +11216,7 @@
             "trades_per_day": 0.621422,
             "win_rate": 0.387215,
             "gross_per_trade": 5.830464,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11193,7 +11228,7 @@
             "trades_per_day": 0.6515,
             "win_rate": 0.397213,
             "gross_per_trade": 8.772927,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11205,7 +11240,7 @@
             "trades_per_day": 0.47387,
             "win_rate": 0.421557,
             "gross_per_trade": 13.012672,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11217,7 +11252,7 @@
             "trades_per_day": 1.718417,
             "win_rate": 0.356671,
             "gross_per_trade": 1.921229,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11229,7 +11264,7 @@
             "trades_per_day": 0.998816,
             "win_rate": 0.364773,
             "gross_per_trade": 2.985059,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11241,7 +11276,7 @@
             "trades_per_day": 1.12537,
             "win_rate": 0.374181,
             "gross_per_trade": 5.331349,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11253,7 +11288,7 @@
             "trades_per_day": 0.737762,
             "win_rate": 0.396923,
             "gross_per_trade": 8.569775,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11265,7 +11300,7 @@
             "trades_per_day": 1.484603,
             "win_rate": 0.362003,
             "gross_per_trade": 2.407821,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11277,7 +11312,7 @@
             "trades_per_day": 0.916527,
             "win_rate": 0.36904,
             "gross_per_trade": 3.579301,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11289,7 +11324,7 @@
             "trades_per_day": 1.012436,
             "win_rate": 0.386211,
             "gross_per_trade": 6.711386,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11301,7 +11336,7 @@
             "trades_per_day": 0.683848,
             "win_rate": 0.404979,
             "gross_per_trade": 9.600112,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11313,7 +11348,7 @@
             "trades_per_day": 0.707116,
             "win_rate": 0.336276,
             "gross_per_trade": 1.46255,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11325,7 +11360,7 @@
             "trades_per_day": 0.477275,
             "win_rate": 0.349584,
             "gross_per_trade": 3.761796,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11337,7 +11372,7 @@
             "trades_per_day": 0.504515,
             "win_rate": 0.353206,
             "gross_per_trade": 7.116067,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11349,7 +11384,7 @@
             "trades_per_day": 0.363206,
             "win_rate": 0.3625,
             "gross_per_trade": 8.959976,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11361,7 +11396,7 @@
             "trades_per_day": 1.339321,
             "win_rate": 0.345339,
             "gross_per_trade": 0.846033,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11373,7 +11408,7 @@
             "trades_per_day": 0.762732,
             "win_rate": 0.359375,
             "gross_per_trade": 2.978442,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11385,7 +11420,7 @@
             "trades_per_day": 0.919364,
             "win_rate": 0.35679,
             "gross_per_trade": 4.080712,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11397,7 +11432,7 @@
             "trades_per_day": 0.554456,
             "win_rate": 0.370522,
             "gross_per_trade": 7.739031,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11409,7 +11444,7 @@
             "trades_per_day": 1.140693,
             "win_rate": 0.340299,
             "gross_per_trade": 0.968902,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11421,7 +11456,7 @@
             "trades_per_day": 0.692361,
             "win_rate": 0.355738,
             "gross_per_trade": 3.311269,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11433,7 +11468,7 @@
             "trades_per_day": 0.80416,
             "win_rate": 0.354975,
             "gross_per_trade": 4.457329,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11445,7 +11480,7 @@
             "trades_per_day": 0.510191,
             "win_rate": 0.368187,
             "gross_per_trade": 8.115732,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "failures": 1,
             "survivors": 0
           },
@@ -11860,7 +11895,7 @@
           "evaluating:0/55:XAUUSD:5m": 180.291229961,
           "evaluating:55/55:XAUUSD:5m": 0.015875492,
           "holdout:XAUUSD:5m": 0.116983856,
-          "done": 0.0
+          "done": 0
         },
         "coverage": [
           {
@@ -11939,7 +11974,7 @@
             "trades_per_day": 0.473869957693,
             "win_rate": 0.421556886228,
             "gross_per_trade": 13.012672184496,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 7525.581274054361,
             "diag_oos_net_pnl": -721.159745839948,
             "gate_metrics": {
@@ -11974,7 +12009,7 @@
             "trades_per_day": 0.683848262299,
             "win_rate": 0.404979253112,
             "gross_per_trade": 9.600112329352,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 6748.135356868797,
             "diag_oos_net_pnl": -1298.238575838121,
             "gate_metrics": {
@@ -12010,7 +12045,7 @@
             "trades_per_day": 0.73776161078,
             "win_rate": 0.396923076923,
             "gross_per_trade": 8.569775194459,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 5940.707752797129,
             "diag_oos_net_pnl": -1453.371988921441,
             "gate_metrics": {
@@ -12046,7 +12081,7 @@
             "trades_per_day": 0.651500253211,
             "win_rate": 0.397212543554,
             "gross_per_trade": 8.772927050858,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 5479.320254385018,
             "diag_oos_net_pnl": -637.87469027159,
             "gate_metrics": {
@@ -12081,7 +12116,7 @@
             "trades_per_day": 1.012435933562,
             "win_rate": 0.386210762332,
             "gross_per_trade": 6.711385858419,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 4837.112371419657,
             "diag_oos_net_pnl": -861.285129753644,
             "gate_metrics": {
@@ -12117,7 +12152,7 @@
             "trades_per_day": 0.510190529301,
             "win_rate": 0.368186874305,
             "gross_per_trade": 8.115732298573,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 3700.043336417044,
             "diag_oos_net_pnl": -2665.340475847552,
             "gate_metrics": {
@@ -12152,7 +12187,7 @@
             "trades_per_day": 0.554456225947,
             "win_rate": 0.370522006141,
             "gross_per_trade": 7.739030779675,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 3653.033071742344,
             "diag_oos_net_pnl": -2984.835828082662,
             "gate_metrics": {
@@ -12187,7 +12222,7 @@
             "trades_per_day": 0.363205716076,
             "win_rate": 0.3625,
             "gross_per_trade": 8.959976191812,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 3174.384762759552,
             "diag_oos_net_pnl": -3431.411306430306,
             "gate_metrics": {
@@ -12223,7 +12258,7 @@
             "trades_per_day": 0.504515439987,
             "win_rate": 0.353205849269,
             "gross_per_trade": 7.11606689036,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 2770.183465529652,
             "diag_oos_net_pnl": -5637.975997756392,
             "gate_metrics": {
@@ -12259,7 +12294,7 @@
             "trades_per_day": 1.125370210904,
             "win_rate": 0.374180534544,
             "gross_per_trade": 5.3313492694,
-            "cost_per_trade": 4.0,
+            "cost_per_trade": 4,
             "diag_net_pnl": 2640.065601222041,
             "diag_oos_net_pnl": -662.493166054,
             "gate_metrics": {
@@ -12683,8 +12718,8 @@
                 "out_of_sample_trades": null,
                 "walk_forward_windows": null,
                 "validation_periods": null,
-                "out_of_sample_profit_factor": 0.0,
-                "holdout_profit_factor": 0.0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
                 "profitable_walk_forward_share": null,
                 "profitable_regimes": null,
                 "backtest_drawdown_pct": 0.19833482390193968,
@@ -12706,8 +12741,8 @@
                 "out_of_sample_trades": null,
                 "walk_forward_windows": null,
                 "validation_periods": null,
-                "out_of_sample_profit_factor": 0.0,
-                "holdout_profit_factor": 0.0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
                 "profitable_walk_forward_share": null,
                 "profitable_regimes": null,
                 "backtest_drawdown_pct": 0.22291188390156882,
@@ -12729,11 +12764,11 @@
                 "out_of_sample_trades": null,
                 "walk_forward_windows": null,
                 "validation_periods": null,
-                "out_of_sample_profit_factor": 0.0,
-                "holdout_profit_factor": 0.0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
                 "profitable_walk_forward_share": null,
                 "profitable_regimes": null,
-                "backtest_drawdown_pct": 0.0,
+                "backtest_drawdown_pct": 0,
                 "top5pct_trades_profit_share": null,
                 "neighbor_parameters_profitable": null,
                 "multiple_testing_correction": null,
@@ -12752,11 +12787,11 @@
                 "out_of_sample_trades": null,
                 "walk_forward_windows": null,
                 "validation_periods": null,
-                "out_of_sample_profit_factor": 0.0,
-                "holdout_profit_factor": 0.0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
                 "profitable_walk_forward_share": null,
                 "profitable_regimes": null,
-                "backtest_drawdown_pct": 0.0,
+                "backtest_drawdown_pct": 0,
                 "top5pct_trades_profit_share": null,
                 "neighbor_parameters_profitable": null,
                 "multiple_testing_correction": null,
@@ -12775,11 +12810,11 @@
                 "out_of_sample_trades": null,
                 "walk_forward_windows": null,
                 "validation_periods": null,
-                "out_of_sample_profit_factor": 0.0,
-                "holdout_profit_factor": 0.0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
                 "profitable_walk_forward_share": null,
                 "profitable_regimes": null,
-                "backtest_drawdown_pct": 0.0,
+                "backtest_drawdown_pct": 0,
                 "top5pct_trades_profit_share": null,
                 "neighbor_parameters_profitable": null,
                 "multiple_testing_correction": null,
@@ -12798,11 +12833,11 @@
                 "out_of_sample_trades": null,
                 "walk_forward_windows": null,
                 "validation_periods": null,
-                "out_of_sample_profit_factor": 0.0,
-                "holdout_profit_factor": 0.0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
                 "profitable_walk_forward_share": null,
                 "profitable_regimes": null,
-                "backtest_drawdown_pct": 0.0,
+                "backtest_drawdown_pct": 0,
                 "top5pct_trades_profit_share": null,
                 "neighbor_parameters_profitable": null,
                 "multiple_testing_correction": null,
@@ -13444,7 +13479,7 @@
               "gross_per_trade": 0.08879486201991604,
               "cost_per_trade": 1.6,
               "oos_pf": 0.8118788732555198,
-              "wf_share": 0.0,
+              "wf_share": 0,
               "regimes": 0,
               "drawdown_pct": 14.063258072307798,
               "neighbors": false,
@@ -13460,7 +13495,7 @@
               "gross_per_trade": 0.08976867941987088,
               "cost_per_trade": 1.6,
               "oos_pf": 0.8109867021100936,
-              "wf_share": 0.0,
+              "wf_share": 0,
               "regimes": 0,
               "drawdown_pct": 14.78053454100144,
               "neighbors": false,
@@ -13476,7 +13511,7 @@
               "gross_per_trade": 0.07300593983268326,
               "cost_per_trade": 1.6,
               "oos_pf": 0.8028721996808702,
-              "wf_share": 0.0,
+              "wf_share": 0,
               "regimes": 0,
               "drawdown_pct": 15.51422407645802,
               "neighbors": false,
@@ -13492,7 +13527,7 @@
               "trades": 835,
               "win_rate": 0.4215568862275449,
               "gross_per_trade": 13.01267218449624,
-              "cost_per_trade": 4.0,
+              "cost_per_trade": 4,
               "oos_pf": 0.94155400659018,
               "wf_share": 0.625,
               "regimes": 3,
@@ -13508,7 +13543,7 @@
               "trades": 1205,
               "win_rate": 0.4049792531120332,
               "gross_per_trade": 9.600112329351699,
-              "cost_per_trade": 4.0,
+              "cost_per_trade": 4,
               "oos_pf": 0.9248658171241985,
               "wf_share": 0.625,
               "regimes": 3,
@@ -13524,7 +13559,7 @@
               "trades": 1300,
               "win_rate": 0.39692307692307693,
               "gross_per_trade": 8.56977519445933,
-              "cost_per_trade": 4.0,
+              "cost_per_trade": 4,
               "oos_pf": 0.921422743215245,
               "wf_share": 0.625,
               "regimes": 3,
@@ -13542,7 +13577,7 @@
               "trades": 649,
               "win_rate": 0.4067796610169492,
               "gross_per_trade": 10.794728850641526,
-              "cost_per_trade": 4.0,
+              "cost_per_trade": 4,
               "oos_pf": 1.0774193163428178,
               "wf_share": 0.625,
               "regimes": 3,
@@ -13558,7 +13593,7 @@
               "trades": 974,
               "win_rate": 0.3932238193018481,
               "gross_per_trade": 8.267912159536,
-              "cost_per_trade": 4.0,
+              "cost_per_trade": 4,
               "oos_pf": 1.0309176534749567,
               "wf_share": 0.625,
               "regimes": 3,
@@ -13574,7 +13609,7 @@
               "trades": 971,
               "win_rate": 0.3861997940267765,
               "gross_per_trade": 7.29259890375009,
-              "cost_per_trade": 4.0,
+              "cost_per_trade": 4,
               "oos_pf": 0.9681256497056251,
               "wf_share": 0.625,
               "regimes": 2,
@@ -15635,7 +15670,7 @@
       "subject": "T-151 owner-trade forming-candle replay and Pod evidence",
       "method": "Read docs/specs/t151_owner_trades_comparison.md, reviewed the script and CI-importable unit tests, ran ruff format/check, py_compile and git diff --check locally, then ran the script read-only in the reachable owner-provided Pod against the NAS100 Capital.com 1m lake and owner CSV.",
       "result": "pass",
-      "checked": "Pod run completed with 31 owner entries, 9 groups, 0 same-direction hits at \u0637\u00a2\u0622\u00b11/\u0637\u00a2\u0622\u00b12/\u0637\u00a2\u0622\u00b15 for every group, forming variant extra-signal counts of 5\u0623\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u015312, price basis matched_entries=27/missing_entry_minutes=4, and safety flags showing zero broker calls/orders and no holdout/gate/cost/ledger writes. Primary owner endpoint remained ERR_BLOCKED_BY_CLIENT; alternate owner endpoint supplied in the task was used.",
+      "checked": "Pod run completed with 31 owner entries, 9 groups, 0 same-direction hits at ط¢آ±1/ط¢آ±2/ط¢آ±5 for every group, forming variant extra-signal counts of 5أ¢â‚¬â€œ12, price basis matched_entries=27/missing_entry_minutes=4, and safety flags showing zero broker calls/orders and no holdout/gate/cost/ledger writes. Primary owner endpoint remained ERR_BLOCKED_BY_CLIENT; alternate owner endpoint supplied in the task was used.",
       "evidence": [
         "scripts/lab_t151_owner_trades.py",
         "tests/unit/test_t151_owner_trades.py",
@@ -15766,7 +15801,7 @@
       "subject": "T-157 rule-by-rule replay and timing switches",
       "method": "Ran scripts/lab_t157_rule_by_rule.py on the owner-provided Pod with the NAS100 lake and owner CSV; inspected the report and artifact hashes; ran py_compile and git diff --check; verified the script has no broker, holdout or production-state access.",
       "result": "pass",
-      "checked": "Pod run exited 0 with 31 entries, 5,103 data rows plus header, mid/bid/ask bases and nine registered switches. The forming-Wilder-SMA-EMA UTC baseline passed 0/31 at center and in \u0637\u00a2\u0622\u00b13 bars; the best registered switch passed 1/31 in \u0637\u00a2\u0622\u00b13 bars, below the 20/31 stop threshold. Baseline first-failure counts were ha_state 20, ema_side 3, adx_di 3, dont_chase 1 and four missing bars. Pod CSV SHA-256 b365f36b34199c1b21a2806f4fd541e98c04ff3236bc2aa2fdb82f97230e81a1; report SHA-256 d22698d39eef079f25c1e50d0561496c7dee2d4fc762bb64a3a03f16e53756df. No broker calls, orders, sealed holdout reads, gate, cost, ledger, promotion or lake writes.",
+      "checked": "Pod run exited 0 with 31 entries, 5,103 data rows plus header, mid/bid/ask bases and nine registered switches. The forming-Wilder-SMA-EMA UTC baseline passed 0/31 at center and in ط¢آ±3 bars; the best registered switch passed 1/31 in ط¢آ±3 bars, below the 20/31 stop threshold. Baseline first-failure counts were ha_state 20, ema_side 3, adx_di 3, dont_chase 1 and four missing bars. Pod CSV SHA-256 b365f36b34199c1b21a2806f4fd541e98c04ff3236bc2aa2fdb82f97230e81a1; report SHA-256 d22698d39eef079f25c1e50d0561496c7dee2d4fc762bb64a3a03f16e53756df. No broker calls, orders, sealed holdout reads, gate, cost, ledger, promotion or lake writes.",
       "evidence": [
         "scripts/lab_t157_rule_by_rule.py",
         "docs/evidence/t157_rule_by_rule.csv",
@@ -15876,7 +15911,7 @@
         "docs/evidence/t162_report.md",
         "docs/evidence/t162_port.json",
         "docs/evidence/t162_entries.csv",
-        "pass with stop: closed 1/31 exact/\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b11/\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b12 and forming 0/31 exact/\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b11/\u0637\u00b7\u0622\u00a2\u0637\u00a2\u0622\u00b12; the 25/31 bar was not met. Pod exited 0; broker calls, orders, sealed-holdout reads, lake writes, production-state writes and gate evaluation were all zero/false; 54 owner exit rows parsed."
+        "pass with stop: closed 1/31 exact/ط·آ¢ط¢آ±1/ط·آ¢ط¢آ±2 and forming 0/31 exact/ط·آ¢ط¢آ±1/ط·آ¢ط¢آ±2; the 25/31 bar was not met. Pod exited 0; broker calls, orders, sealed-holdout reads, lake writes, production-state writes and gate evaluation were all zero/false; 54 owner exit rows parsed."
       ],
       "reverify_if": "The owner supplies a corrected Pine/TradingView alignment or requests a reviewed replay change."
     },
@@ -17368,6 +17403,16 @@
       "subject": "Claude review of T-214 against spec acceptance",
       "method": "Diff review vs spec; ruff check and ruff format (line 100) on changed files; CI quality check",
       "validated_by": "claude"
+    },
+    {
+      "id": "V-515",
+      "task_id": "T-214",
+      "result": "pass",
+      "evidence": "Reviewed diff against spec acceptance: INFO startup lines (Telegram, reports), SMTP_SSL for port 465 with no STARTTLS, stage+exception-type only error log, tests added. ruff check clean for changed files, ruff format fixed in reports/core.py. No trading/risk/gate/dry-run/secret change.",
+      "reverify_if": false,
+      "subject": "Claude review of T-214 against spec acceptance",
+      "method": "Diff review vs spec; ruff check and ruff format (line 100) on changed files; CI quality check",
+      "validated_by": "claude"
     }
   ],
   "blockers": [
@@ -17595,7 +17640,7 @@
       "task_id": "T-187",
       "raised_by": "codex",
       "status": "resolved",
-      "text": "T-187 bounded read-only replay cannot start: the owner-provided Pod terminal URL returned \u0623\u00a2\u00e2\u201a\u00ac\u0625\u201cWaiting for service to respond \u0623\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u200c The service on this port is either still initializing or not running.\u0623\u00a2\u00e2\u201a\u00ac\u00e2\u20ac\u0152 No lake was read and no evidence run was started; retry only after the owner supplies a reachable Pod terminal/service.",
+      "text": "T-187 bounded read-only replay cannot start: the owner-provided Pod terminal URL returned أ¢â‚¬إ“Waiting for service to respond أ¢â‚¬â€‌ The service on this port is either still initializing or not running.أ¢â‚¬â€Œ No lake was read and no evidence run was started; retry only after the owner supplies a reachable Pod terminal/service.",
       "resolution": "Owner Pod became reachable. The required T-187 replay completed at status=ok; exact comparison failed and is recorded in docs/evidence/t187/report.md and summary.json.",
       "resolved_by": "codex",
       "resolved_at": "2026-10-19"
@@ -19723,7 +19768,7 @@
         "docs/evidence/q024_histdata_pod_import.md",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019\u20132024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
+      "summary": "Completed the owner-run Q-024 Pod import/rerun and whole-lake QA for T-080. Explained the 360-row difference as exact duplicates (60 each in Oct 2019–2024 per symbol), with zero invalid/conflicting rows; both reruns read/wrote zero. Lake QA: NSXUSD 5,285,557 rows/191 monthly files, XAUUSD 6,140,206/211; zero duplicate timestamps and zero adjacent month-range overlaps. Raw >60s gaps and absent-minute totals are recorded, not market-calendar classified (V-081). Updated evidence, answered Q-024 and set T-080 to review. No Pod data was changed during QA. Handing to Claude for Light review."
     },
     {
       "revision": 64,
@@ -23744,7 +23789,7 @@
               "slow_trend": [
                 {
                   "source": "seed:slow_trend_long_96_3_6_ny",
-                  "diag_net_pnl": 5783.0,
+                  "diag_net_pnl": 5783,
                   "trades": 456,
                   "oos_pf": 1.148,
                   "wf_share": 0.625,
@@ -24095,7 +24140,7 @@
                 },
                 {
                   "source": "seed:range_revert_long_25_2_4_ny",
-                  "diag_net_pnl": -550.0,
+                  "diag_net_pnl": -550,
                   "trades": 0,
                   "oos_pf": 0,
                   "wf_share": 0,
@@ -24165,7 +24210,7 @@
                 },
                 {
                   "source": "seed:level_orb_long_trend_2_4",
-                  "diag_net_pnl": -3475.0,
+                  "diag_net_pnl": -3475,
                   "trades": 0,
                   "oos_pf": 0,
                   "wf_share": 0,
@@ -24178,7 +24223,7 @@
               "level_retest": [
                 {
                   "source": "seed:level_retest_long_ny_2_4",
-                  "diag_net_pnl": -2254.0,
+                  "diag_net_pnl": -2254,
                   "trades": 0,
                   "oos_pf": 0,
                   "wf_share": 0,
@@ -24545,7 +24590,7 @@
                 "out_of_sample_profit_factor": 0.86928701814636,
                 "holdout_profit_factor": 0.86928701814636,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 15.2438943290513,
                 "neighbor_parameters_profitable": false,
@@ -24565,7 +24610,7 @@
                 "out_of_sample_profit_factor": 0.8667164466467139,
                 "holdout_profit_factor": 0.8667164466467139,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 15.774612367058886,
                 "neighbor_parameters_profitable": false,
@@ -24585,7 +24630,7 @@
                 "out_of_sample_profit_factor": 0.8537700013601648,
                 "holdout_profit_factor": 0.8537700013601648,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 16.18741072321327,
                 "neighbor_parameters_profitable": false,
@@ -24603,7 +24648,7 @@
                 "out_of_sample_trades": 459,
                 "diag_win_rate": 0.4147514698022448,
                 "diag_avg_gross_per_trade": 5.909361222580215,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.1117015523821776,
                 "holdout_profit_factor": 1.1117015523821776,
                 "walk_forward_windows": 8,
@@ -24623,7 +24668,7 @@
                 "out_of_sample_trades": 410,
                 "diag_win_rate": 0.41921664626682986,
                 "diag_avg_gross_per_trade": 5.790196377732319,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.1807627418330993,
                 "holdout_profit_factor": 1.1807627418330993,
                 "walk_forward_windows": 8,
@@ -24643,7 +24688,7 @@
                 "out_of_sample_trades": 328,
                 "diag_win_rate": 0.42254601226993865,
                 "diag_avg_gross_per_trade": 6.165381397785315,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.0942596900276167,
                 "holdout_profit_factor": 1.0942596900276167,
                 "walk_forward_windows": 8,
@@ -24665,7 +24710,7 @@
                 "out_of_sample_trades": 251,
                 "diag_win_rate": 0.4436958614051973,
                 "diag_avg_gross_per_trade": 7.402385376815479,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.239825577082608,
                 "holdout_profit_factor": 1.239825577082608,
                 "walk_forward_windows": 8,
@@ -24685,7 +24730,7 @@
                 "out_of_sample_trades": 335,
                 "diag_win_rate": 0.4346879535558781,
                 "diag_avg_gross_per_trade": 6.513956327393401,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.152933875639154,
                 "holdout_profit_factor": 1.152933875639154,
                 "walk_forward_windows": 8,
@@ -24705,7 +24750,7 @@
                 "out_of_sample_trades": 325,
                 "diag_win_rate": 0.41697416974169743,
                 "diag_avg_gross_per_trade": 5.061100713669693,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.1864780424886188,
                 "holdout_profit_factor": 1.1864780424886188,
                 "walk_forward_windows": 8,
@@ -24731,7 +24776,7 @@
                 "out_of_sample_profit_factor": 0.3096015785045472,
                 "holdout_profit_factor": 0.3096015785045472,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 0.4761917324602546,
                 "neighbor_parameters_profitable": false,
@@ -24751,7 +24796,7 @@
                 "out_of_sample_profit_factor": 0.28767861611567147,
                 "holdout_profit_factor": 0.28767861611567147,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 0.5022225481959612,
                 "neighbor_parameters_profitable": false,
@@ -24771,7 +24816,7 @@
                 "out_of_sample_profit_factor": 1.0934123388756547,
                 "holdout_profit_factor": 1.0934123388756547,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 0.5539131517720088,
                 "neighbor_parameters_profitable": false,
@@ -24789,7 +24834,7 @@
                 "out_of_sample_trades": 907,
                 "diag_win_rate": 0.37649945474372953,
                 "diag_avg_gross_per_trade": 3.3215551704163166,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9760218740945162,
                 "holdout_profit_factor": 0.9760218740945162,
                 "walk_forward_windows": 8,
@@ -24797,7 +24842,7 @@
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 6.395210463467927,
                 "neighbor_parameters_profitable": false,
-                "p_value": 1.0,
+                "p_value": 1,
                 "cost_stress_net_positive": false,
                 "reason": "out_of_sample_profit_factor_below_gate,walk_forward_share_below_gate,too_few_profitable_regimes,neighbor_parameters_not_profitable,adjusted_significance_failed,"
               },
@@ -24813,7 +24858,7 @@
                 "out_of_sample_profit_factor": 0.8448400295363183,
                 "holdout_profit_factor": 0.8448400295363183,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 3.3818281808178288,
                 "neighbor_parameters_profitable": false,
@@ -24833,7 +24878,7 @@
                 "out_of_sample_profit_factor": 0.9243915541732236,
                 "holdout_profit_factor": 0.9243915541732236,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 3.5918003187795984,
                 "neighbor_parameters_profitable": false,
@@ -24855,7 +24900,7 @@
                 "out_of_sample_profit_factor": 0.8030837945471522,
                 "holdout_profit_factor": 0.8030837945471522,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 3.10058229262878,
                 "neighbor_parameters_profitable": false,
@@ -24875,7 +24920,7 @@
                 "out_of_sample_profit_factor": 1.0729896107918775,
                 "holdout_profit_factor": 1.0729896107918775,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 1,
                 "backtest_drawdown_pct": 3.1442942474556914,
                 "neighbor_parameters_profitable": false,
@@ -24891,7 +24936,7 @@
                 "out_of_sample_trades": 633,
                 "diag_win_rate": 0.40153096729297144,
                 "diag_avg_gross_per_trade": 2.790872264977835,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.0350605922154383,
                 "holdout_profit_factor": 1.0350605922154383,
                 "walk_forward_windows": 8,
@@ -24937,7 +24982,7 @@
                 "out_of_sample_profit_factor": 0.6948684397365986,
                 "holdout_profit_factor": 0.6948684397365986,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 3.3389868736942736,
                 "neighbor_parameters_profitable": false,
@@ -24957,7 +25002,7 @@
                 "out_of_sample_profit_factor": 0.7540884821335619,
                 "holdout_profit_factor": 0.7540884821335619,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 3.5005304652010962,
                 "neighbor_parameters_profitable": false,
@@ -24990,7 +25035,7 @@
                 "out_of_sample_trades": 528,
                 "diag_win_rate": 0.4951590594744122,
                 "diag_avg_gross_per_trade": 4.687295385504329,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.0869226035999668,
                 "holdout_profit_factor": 1.0869226035999668,
                 "walk_forward_windows": 8,
@@ -25010,7 +25055,7 @@
                 "out_of_sample_trades": 526,
                 "diag_win_rate": 0.49351251158480075,
                 "diag_avg_gross_per_trade": 4.314291473443032,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.0977849383519098,
                 "holdout_profit_factor": 1.0977849383519098,
                 "walk_forward_windows": 8,
@@ -25030,7 +25075,7 @@
                 "out_of_sample_trades": 526,
                 "diag_win_rate": 0.4939309056956116,
                 "diag_avg_gross_per_trade": 4.2186151060825665,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.0968835215184531,
                 "holdout_profit_factor": 1.0968835215184531,
                 "walk_forward_windows": 8,
@@ -25052,11 +25097,11 @@
                 "out_of_sample_trades": 217,
                 "diag_win_rate": 0.49176728869374314,
                 "diag_avg_gross_per_trade": 10.347934110277881,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.0021084397505169,
                 "holdout_profit_factor": 1.0021084397505169,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 1.0,
+                "profitable_walk_forward_share": 1,
                 "profitable_regimes": 3,
                 "backtest_drawdown_pct": 1.5209990597927827,
                 "neighbor_parameters_profitable": true,
@@ -25072,7 +25117,7 @@
                 "out_of_sample_trades": 236,
                 "diag_win_rate": 0.49190283400809715,
                 "diag_avg_gross_per_trade": 9.294761980056062,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9605393184472653,
                 "holdout_profit_factor": 0.9605393184472653,
                 "walk_forward_windows": 8,
@@ -25092,7 +25137,7 @@
                 "out_of_sample_trades": 249,
                 "diag_win_rate": 0.4507042253521127,
                 "diag_avg_gross_per_trade": 8.906050968282267,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.1275179153797315,
                 "holdout_profit_factor": 1.1275179153797315,
                 "walk_forward_windows": 8,
@@ -25114,7 +25159,7 @@
                 "out_of_sample_trades": 137,
                 "diag_win_rate": 0.5457685664939551,
                 "diag_avg_gross_per_trade": 14.381388916360251,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9864573268482175,
                 "holdout_profit_factor": 0.9864573268482175,
                 "walk_forward_windows": 8,
@@ -25134,7 +25179,7 @@
                 "out_of_sample_trades": 106,
                 "diag_win_rate": 0.5217391304347826,
                 "diag_avg_gross_per_trade": 15.411280109115397,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.8854441630692395,
                 "holdout_profit_factor": 0.8854441630692395,
                 "walk_forward_windows": 8,
@@ -25154,7 +25199,7 @@
                 "out_of_sample_trades": 185,
                 "diag_win_rate": 0.5332326283987915,
                 "diag_avg_gross_per_trade": 10.523180348889815,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9219801787081434,
                 "holdout_profit_factor": 0.9219801787081434,
                 "walk_forward_windows": 8,
@@ -25176,7 +25221,7 @@
                 "out_of_sample_trades": 50,
                 "diag_win_rate": 0.46120689655172414,
                 "diag_avg_gross_per_trade": 4.344240310046614,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.3483332939110808,
                 "holdout_profit_factor": 1.3483332939110808,
                 "walk_forward_windows": 8,
@@ -25196,7 +25241,7 @@
                 "out_of_sample_trades": 24,
                 "diag_win_rate": 0.4225352112676056,
                 "diag_avg_gross_per_trade": 2.862372787333249,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9771470593880989,
                 "holdout_profit_factor": 0.9771470593880989,
                 "walk_forward_windows": 8,
@@ -25216,7 +25261,7 @@
                 "out_of_sample_trades": 24,
                 "diag_win_rate": 0.45588235294117646,
                 "diag_avg_gross_per_trade": 2.260582648327553,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.8897998091474605,
                 "holdout_profit_factor": 0.8897998091474605,
                 "walk_forward_windows": 8,
@@ -25238,7 +25283,7 @@
                 "out_of_sample_trades": 356,
                 "diag_win_rate": 0.44689655172413795,
                 "diag_avg_gross_per_trade": 7.674980714715294,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.8507665932657731,
                 "holdout_profit_factor": 0.8507665932657731,
                 "walk_forward_windows": 8,
@@ -25258,7 +25303,7 @@
                 "out_of_sample_trades": 456,
                 "diag_win_rate": 0.407244785949506,
                 "diag_avg_gross_per_trade": 6.525450534047958,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.8789701960613088,
                 "holdout_profit_factor": 0.8789701960613088,
                 "walk_forward_windows": 8,
@@ -25278,7 +25323,7 @@
                 "out_of_sample_trades": 491,
                 "diag_win_rate": 0.406187624750499,
                 "diag_avg_gross_per_trade": 5.79387700205054,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9061540669885889,
                 "holdout_profit_factor": 0.9061540669885889,
                 "walk_forward_windows": 8,
@@ -25295,60 +25340,60 @@
               {
                 "instrument": "NSXUSD",
                 "source": "seed:level_orb_long_any_1.5_3",
-                "diag_net_pnl": 0.0,
+                "diag_net_pnl": 0,
                 "trades": 0,
                 "out_of_sample_trades": 0,
-                "diag_win_rate": 0.0,
-                "diag_avg_gross_per_trade": 0.0,
-                "diag_avg_cost_per_trade": 0.0,
-                "out_of_sample_profit_factor": 0.0,
-                "holdout_profit_factor": 0.0,
+                "diag_win_rate": 0,
+                "diag_avg_gross_per_trade": 0,
+                "diag_avg_cost_per_trade": 0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
-                "backtest_drawdown_pct": 0.0,
+                "backtest_drawdown_pct": 0,
                 "neighbor_parameters_profitable": false,
-                "p_value": 1.0,
+                "p_value": 1,
                 "cost_stress_net_positive": false,
                 "reason": "too_few_trades,too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,walk_forward_share_below_gate,too_few_profitable_regimes,neighbor_parameters_"
               },
               {
                 "instrument": "NSXUSD",
                 "source": "seed:level_orb_long_trend_1.5_3",
-                "diag_net_pnl": 0.0,
+                "diag_net_pnl": 0,
                 "trades": 0,
                 "out_of_sample_trades": 0,
-                "diag_win_rate": 0.0,
-                "diag_avg_gross_per_trade": 0.0,
-                "diag_avg_cost_per_trade": 0.0,
-                "out_of_sample_profit_factor": 0.0,
-                "holdout_profit_factor": 0.0,
+                "diag_win_rate": 0,
+                "diag_avg_gross_per_trade": 0,
+                "diag_avg_cost_per_trade": 0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
-                "backtest_drawdown_pct": 0.0,
+                "backtest_drawdown_pct": 0,
                 "neighbor_parameters_profitable": false,
-                "p_value": 1.0,
+                "p_value": 1,
                 "cost_stress_net_positive": false,
                 "reason": "too_few_trades,too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,walk_forward_share_below_gate,too_few_profitable_regimes,neighbor_parameters_"
               },
               {
                 "instrument": "NSXUSD",
                 "source": "seed:level_orb_long_any_2_4",
-                "diag_net_pnl": 0.0,
+                "diag_net_pnl": 0,
                 "trades": 0,
                 "out_of_sample_trades": 0,
-                "diag_win_rate": 0.0,
-                "diag_avg_gross_per_trade": 0.0,
-                "diag_avg_cost_per_trade": 0.0,
-                "out_of_sample_profit_factor": 0.0,
-                "holdout_profit_factor": 0.0,
+                "diag_win_rate": 0,
+                "diag_avg_gross_per_trade": 0,
+                "diag_avg_cost_per_trade": 0,
+                "out_of_sample_profit_factor": 0,
+                "holdout_profit_factor": 0,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
-                "backtest_drawdown_pct": 0.0,
+                "backtest_drawdown_pct": 0,
                 "neighbor_parameters_profitable": false,
-                "p_value": 1.0,
+                "p_value": 1,
                 "cost_stress_net_positive": false,
                 "reason": "too_few_trades,too_few_out_of_sample_trades,out_of_sample_profit_factor_below_gate,walk_forward_share_below_gate,too_few_profitable_regimes,neighbor_parameters_"
               }
@@ -25362,7 +25407,7 @@
                 "out_of_sample_trades": 292,
                 "diag_win_rate": 0.4405144694533762,
                 "diag_avg_gross_per_trade": 6.909598827068618,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.8189242370690164,
                 "holdout_profit_factor": 0.8189242370690164,
                 "walk_forward_windows": 8,
@@ -25382,7 +25427,7 @@
                 "out_of_sample_trades": 357,
                 "diag_win_rate": 0.4073587385019711,
                 "diag_avg_gross_per_trade": 6.184748303804001,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.8469895724655964,
                 "holdout_profit_factor": 0.8469895724655964,
                 "walk_forward_windows": 8,
@@ -25402,7 +25447,7 @@
                 "out_of_sample_trades": 424,
                 "diag_win_rate": 0.4,
                 "diag_avg_gross_per_trade": 5.165745438442324,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9075750441581686,
                 "holdout_profit_factor": 0.9075750441581686,
                 "walk_forward_windows": 8,
@@ -25443,7 +25488,7 @@
                 "out_of_sample_profit_factor": 0.8118788732555198,
                 "holdout_profit_factor": 0.8118788732555198,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 14.063258072307798,
                 "neighbor_parameters_profitable": false,
@@ -25463,7 +25508,7 @@
                 "out_of_sample_profit_factor": 0.8109867021100936,
                 "holdout_profit_factor": 0.8109867021100936,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 14.78053454100144,
                 "neighbor_parameters_profitable": false,
@@ -25483,7 +25528,7 @@
                 "out_of_sample_profit_factor": 0.8028721996808702,
                 "holdout_profit_factor": 0.8028721996808702,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 15.51422407645802,
                 "neighbor_parameters_profitable": false,
@@ -25501,7 +25546,7 @@
                 "out_of_sample_trades": 224,
                 "diag_win_rate": 0.4215568862275449,
                 "diag_avg_gross_per_trade": 13.01267218449624,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.94155400659018,
                 "holdout_profit_factor": 0.94155400659018,
                 "walk_forward_windows": 8,
@@ -25521,7 +25566,7 @@
                 "out_of_sample_trades": 315,
                 "diag_win_rate": 0.4049792531120332,
                 "diag_avg_gross_per_trade": 9.600112329351699,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9248658171241985,
                 "holdout_profit_factor": 0.9248658171241985,
                 "walk_forward_windows": 8,
@@ -25541,7 +25586,7 @@
                 "out_of_sample_trades": 342,
                 "diag_win_rate": 0.39692307692307693,
                 "diag_avg_gross_per_trade": 8.56977519445933,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.921422743215245,
                 "holdout_profit_factor": 0.921422743215245,
                 "walk_forward_windows": 8,
@@ -25563,7 +25608,7 @@
                 "out_of_sample_trades": 146,
                 "diag_win_rate": 0.4067796610169492,
                 "diag_avg_gross_per_trade": 10.794728850641526,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.0774193163428178,
                 "holdout_profit_factor": 1.0774193163428178,
                 "walk_forward_windows": 8,
@@ -25583,7 +25628,7 @@
                 "out_of_sample_trades": 222,
                 "diag_win_rate": 0.3932238193018481,
                 "diag_avg_gross_per_trade": 8.267912159536332,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.0309176534749567,
                 "holdout_profit_factor": 1.0309176534749567,
                 "walk_forward_windows": 8,
@@ -25603,7 +25648,7 @@
                 "out_of_sample_trades": 240,
                 "diag_win_rate": 0.3861997940267765,
                 "diag_avg_gross_per_trade": 7.29259890375009,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9681256497056251,
                 "holdout_profit_factor": 0.9681256497056251,
                 "walk_forward_windows": 8,
@@ -25691,7 +25736,7 @@
                 "out_of_sample_profit_factor": 0.8447863389747505,
                 "holdout_profit_factor": 0.8447863389747505,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 2.598611060656971,
                 "neighbor_parameters_profitable": false,
@@ -25711,7 +25756,7 @@
                 "out_of_sample_profit_factor": 0.8687097061860138,
                 "holdout_profit_factor": 0.8687097061860138,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 2.687258120277518,
                 "neighbor_parameters_profitable": false,
@@ -25727,7 +25772,7 @@
                 "out_of_sample_trades": 760,
                 "diag_win_rate": 0.35949177877429,
                 "diag_avg_gross_per_trade": 2.9198886870667313,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 0.9167251730733615,
                 "holdout_profit_factor": 0.9167251730733615,
                 "walk_forward_windows": 8,
@@ -25735,7 +25780,7 @@
                 "profitable_regimes": 1,
                 "backtest_drawdown_pct": 4.605878888522944,
                 "neighbor_parameters_profitable": false,
-                "p_value": 1.0,
+                "p_value": 1,
                 "cost_stress_net_positive": false,
                 "reason": "out_of_sample_profit_factor_below_gate,walk_forward_share_below_gate,too_few_profitable_regimes,neighbor_parameters_not_profitable,adjusted_significance_failed,"
               }
@@ -25749,7 +25794,7 @@
                 "out_of_sample_trades": 580,
                 "diag_win_rate": 0.39536807278742764,
                 "diag_avg_gross_per_trade": 4.348994169758347,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.036555978321354,
                 "holdout_profit_factor": 1.036555978321354,
                 "walk_forward_windows": 8,
@@ -25769,7 +25814,7 @@
                 "out_of_sample_trades": 471,
                 "diag_win_rate": 0.3979848866498741,
                 "diag_avg_gross_per_trade": 4.143713298465301,
-                "diag_avg_cost_per_trade": 4.0,
+                "diag_avg_cost_per_trade": 4,
                 "out_of_sample_profit_factor": 1.0582143255068173,
                 "holdout_profit_factor": 1.0582143255068173,
                 "walk_forward_windows": 8,
@@ -25793,7 +25838,7 @@
                 "out_of_sample_profit_factor": 0.9555382362952841,
                 "holdout_profit_factor": 0.9555382362952841,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 1.5053444544541417,
                 "neighbor_parameters_profitable": false,
@@ -25815,7 +25860,7 @@
                 "out_of_sample_profit_factor": 0.7574024365962106,
                 "holdout_profit_factor": 0.7574024365962106,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 1.6973153419042355,
                 "neighbor_parameters_profitable": false,
@@ -25855,7 +25900,7 @@
                 "out_of_sample_profit_factor": 0.8101321942930696,
                 "holdout_profit_factor": 0.8101321942930696,
                 "walk_forward_windows": 8,
-                "profitable_walk_forward_share": 0.0,
+                "profitable_walk_forward_share": 0,
                 "profitable_regimes": 0,
                 "backtest_drawdown_pct": 2.2088870265665466,
                 "neighbor_parameters_profitable": false,
@@ -27394,7 +27439,7 @@
         "docs/evidence/t151_owner_trades_summary.json",
         "docs/evidence/t151_owner_trades_report.md"
       ],
-      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity. Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at \u00b11/\u00b12/\u00b15, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
+      "summary": "Started T-151 from the newest accepted T-154 handoff. The diagnostic will implement the pre-registered forming-candle replay, owner-entry tolerance matching and price-basis report before the read-only Pod run. No broker, order, holdout, gate, cost, ledger or promotion activity. Completed the T-151 diagnostic-only owner-trade replay on the reachable owner-provided Pod. The 31-entry owner CSV was compared across all 9 pre-registered variants/anchors; every group had 0 same-direction hits at ±1/±2/±5, while forming variants added unmatched signals. Committed redacted summary/report evidence and handed the PR to Claude. No broker, order, holdout, gate, cost, ledger or promotion activity."
     },
     {
       "revision": 421,
@@ -27542,7 +27587,7 @@
         "docs/evidence/t156_entry_feature_dump.csv",
         "docs/evidence/t156_report.md"
       ],
-      "summary": "Completed T-156 from the accepted T-155 dependency. The read-only Pod diagnostic generated raw feature windows for all 31 owner entries, condition shortfalls and sign counts, 1m coverage diagnostics, and bid/ask/mid sensitivity. The committed CSV is a compact center-bar index and the script regenerates the full \u00b13 window JSON. Pod output exited 0 with zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. Handed T-156 to Claude for review."
+      "summary": "Completed T-156 from the accepted T-155 dependency. The read-only Pod diagnostic generated raw feature windows for all 31 owner entries, condition shortfalls and sign counts, 1m coverage diagnostics, and bid/ask/mid sensitivity. The committed CSV is a compact center-bar index and the script regenerates the full ±3 window JSON. Pod output exited 0 with zero broker calls/orders/holdout/gate/cost/ledger/promotion/lake writes. Handed T-156 to Claude for review."
     },
     {
       "revision": 431,
@@ -27585,7 +27630,7 @@
         "docs/evidence/t157_rule_by_rule.csv",
         "docs/evidence/t157_report.md"
       ],
-      "summary": "Completed T-157 from accepted T-156. Read-only Pod replay evaluated each Tai rule for all 31 owner entries across \u00b13 bars and mid/bid/ask bases, tested nine registered HA/VWAP/ADX/DI/EMA/timestamp switches, and stopped under the 20/31 threshold. Baseline first failures: HA 20, EMA 3, ADX/DI 3, dont-chase 1, four missing bars; baseline and all price bases pass 0/31, best switch passes 1/31 in \u00b13. Pod artifact hashes and compact-index caveat are recorded. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
+      "summary": "Completed T-157 from accepted T-156. Read-only Pod replay evaluated each Tai rule for all 31 owner entries across ±3 bars and mid/bid/ask bases, tested nine registered HA/VWAP/ADX/DI/EMA/timestamp switches, and stopped under the 20/31 threshold. Baseline first failures: HA 20, EMA 3, ADX/DI 3, dont-chase 1, four missing bars; baseline and all price bases pass 0/31, best switch passes 1/31 in ±3. Pod artifact hashes and compact-index caveat are recorded. No broker, order, holdout, gate, cost, ledger, promotion or lake writes."
     },
     {
       "revision": 434,
@@ -28890,7 +28935,7 @@
         "scripts/report_t190_dry_run_day.py",
         "tests/unit/test_t190_dry_run_report.py"
       ],
-      "summary": "Started T-190 on the authoritative claude/t190-queue branch. Implementing the real builder/provider replay with recorded bid/ask shadow fills, known-answer fixture tests and report outputs. No broker calls, orders, holdout reads, lake writes, redeploy or secrets; Pod run still required. | Completed T-190 read-only shadow replay/report and known-answer fixture tests. Bounded Pod run (US100, 2026-10-19T15:00Z\u201317:23Z) loaded the lake and produced 0 signals/trades, 0 journal matches, 2 missing minutes; no broker calls, orders, network, holdout or lake writes. USD unavailable without recorded value-per-point. Ruff and compile checks pass; desktop pytest unavailable. Turn to Claude for review."
+      "summary": "Started T-190 on the authoritative claude/t190-queue branch. Implementing the real builder/provider replay with recorded bid/ask shadow fills, known-answer fixture tests and report outputs. No broker calls, orders, holdout reads, lake writes, redeploy or secrets; Pod run still required. | Completed T-190 read-only shadow replay/report and known-answer fixture tests. Bounded Pod run (US100, 2026-10-19T15:00Z–17:23Z) loaded the lake and produced 0 signals/trades, 0 journal matches, 2 missing minutes; no broker calls, orders, network, holdout or lake writes. USD unavailable without recorded value-per-point. Ruff and compile checks pass; desktop pytest unavailable. Turn to Claude for review."
     },
     {
       "revision": 513,
@@ -30032,7 +30077,25 @@
         "src/trader/reports/core.py"
       ],
       "summary": "Accepted T-214 (V-514) after a ruff-format fix. Roadmap tasks T-191..T-195 are all done; nothing is queued for Codex. Waiting on owner: deploy new image and send /status (Q-077), and the demo real-orders decision. No order, dry-run, risk/gate or secret change."
+    },
+    {
+      "revision": 584,
+      "ts": "2026-10-21T08:20:00Z",
+      "agent": "codex",
+      "action": "complete_t215_runtime_lease_health",
+      "task_ids": [
+        "T-215"
+      ],
+      "files_changed": [
+        "src/trader/runtime/composition.py",
+        "src/trader/api/health.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_runtime.py",
+        "tests/unit/test_health.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Implemented the owner-approved T-215 runtime lease heartbeat, redacted dependency-stage diagnostics and degraded health reporting with focused tests. CI quality is required because local pytest/Ruff/mypy are unavailable. No restart or operational lease change was made; no risk, gate, order or secret changes. Turn to Claude for review."
     }
   ],
-  "project_summary": "T-214 implementation complete: Telegram/report startup visibility and SMTP port-aware delivery are ready for Claude review. No trading, risk/gate, dry-run, order or secret changes."
+  "project_summary": "T-215 implementation complete: runtime lease heartbeat, dependency diagnostics and degraded health are ready for Claude review. No restart or operational lease change, and no risk/gate/order/secret changes."
 }
