@@ -916,7 +916,7 @@ async def lifespan(_app: FastAPI) -> Any:
             _LOG.info(
                 "Telegram channel started owner_ids=%d commands=[%s]",
                 len(owner_ids),
-                ",".join(sorted(TelegramChannel.COMMANDS)),
+                ",".join(sorted(getattr(TelegramChannel, "COMMANDS", ()))),
             )
     try:
         yield
