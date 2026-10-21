@@ -22,6 +22,7 @@ RECORDER_STATUS_PATH = Path(
 )
 _RUNTIME_HEALTH_REASON: str | None = None
 _RUNTIME_HEALTH_DETAIL: str | None = None
+_RUNTIME_STATUS_PROVIDER: Callable[[], Mapping[str, Any]] | None = None
 _TAI_DEMO_HEALTH_PROVIDER: Callable[[], Mapping[str, Any]] | None = None
 
 
@@ -42,6 +43,48 @@ def set_tai_demo_health_provider(
     """Register the in-process Tai telemetry source used by ``/health``."""
     global _TAI_DEMO_HEALTH_PROVIDER
     _TAI_DEMO_HEALTH_PROVIDER = provider
+
+
+def set_runtime_status_provider(
+    provider: Callable[[], Mapping[str, Any]] | None,
+) -> None:
+    """Register the live runtime state source used by ``/health``."""
+    global _RUNTIME_STATUS_PROVIDER
+    _RUNTIME_STATUS_PROVIDER = provider
+
+
+def _runtime_status() -> dict[str, Any] | None:
+    provider = _RUNTIME_STATUS_PROVIDER
+    if provider is None:
+        return None
+    try:
+        value = provider()
+    except Exception:  # noqa: BLE001 - health output must never break the endpoint
+        return None
+    if not isinstance(value, Mapping):
+        return None
+    state = value.get("state")
+    if state not in {"stopped", "starting", "running", "degraded"}:
+        state = "unknown"
+    failure = value.get("last_dependency_failure")
+    safe_failure: dict[str, str] | None = None
+    if isinstance(failure, Mapping):
+        stage = failure.get("stage")
+        error_type = failure.get("error_type")
+        message = failure.get("message")
+        at = failure.get("at")
+        if all(isinstance(item, str) for item in (stage, error_type, message, at)):
+            assert isinstance(stage, str)
+            assert isinstance(error_type, str)
+            assert isinstance(message, str)
+            assert isinstance(at, str)
+            safe_failure = {
+                "stage": stage[:64],
+                "error_type": error_type[:80],
+                "message": message[:200],
+                "at": at[:64],
+            }
+    return {"state": state, "last_dependency_failure": safe_failure}
 
 
 def _tai_demo_health() -> dict[str, Any] | None:
@@ -283,15 +326,25 @@ def health_payload() -> dict[str, Any]:
     )
     runtime_reason = _RUNTIME_HEALTH_REASON
     runtime_detail = _RUNTIME_HEALTH_DETAIL
+    runtime = _runtime_status()
     tai_demo = _tai_demo_health()
+    runtime_degraded = runtime is not None and runtime.get("state") == "degraded"
     return {
         "status": (
             "healthy"
-            if database_ok and redis_ok and backup_ok and recorder_ok and runtime_reason is None
+            if (
+                database_ok
+                and redis_ok
+                and backup_ok
+                and recorder_ok
+                and runtime_reason is None
+                and not runtime_degraded
+            )
             else "degraded"
         ),
         "runtime_reason": runtime_reason,
         "runtime_detail": runtime_detail,
+        "runtime": runtime,
         "role": settings.role,
         "version": os.getenv("GIT_SHA", "unknown"),
         "last_backup_at": last_backup_at,
