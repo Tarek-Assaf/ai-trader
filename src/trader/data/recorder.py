@@ -7,6 +7,7 @@ import logging
 import os
 import tempfile
 import threading
+import time
 from collections import defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -298,6 +299,27 @@ class CapitalDataRecorder:
         return None
 
     def _commit(self, updates: list[_BufferedUpdate]) -> None:
+        if not updates:
+            return
+        started_at = self._clock().astimezone(UTC)
+        started = time.monotonic()
+        try:
+            self._commit_updates(updates)
+        finally:
+            ended_at = self._clock().astimezone(UTC)
+            boundary = ended_at.replace(second=0, microsecond=0)
+            _LOG.info(
+                "Capital.com bar commit: boundary_minute=%s commit_start=%s commit_end=%s "
+                "commit_duration_seconds=%.3f updates=%s thread=%s",
+                boundary.isoformat(),
+                started_at.isoformat(),
+                ended_at.isoformat(),
+                time.monotonic() - started,
+                len(updates),
+                threading.current_thread().name,
+            )
+
+    def _commit_updates(self, updates: list[_BufferedUpdate]) -> None:
         if not updates:
             return
         accepted: list[_BufferedUpdate] = []

@@ -15,6 +15,7 @@ from typing import Any
 from websockets.exceptions import ConnectionClosed
 from websockets.sync.client import ClientConnection, connect
 
+from trader.core.diagnostics import bounded_text, exception_chain
 from trader.integrations.capital_com.client import CapitalComClient, CapitalComError, Resolution
 
 _LOG = logging.getLogger(__name__)
@@ -110,6 +111,12 @@ class CapitalComStreamClient:
         self._connection_started_at: datetime | None = None
         self._attempt_id = 0
         self._session_renewals: list[float] = []
+        self._frame_minute: datetime | None = None
+        self._frame_counts: dict[str, int] = {}
+        self._last_frame_type = "none"
+        self._last_frame_at: datetime | None = None
+        self._last_boundary_minute: datetime | None = None
+        self._next_lag_sample: float | None = None
 
     @property
     def reconnect_count(self) -> int:
@@ -170,6 +177,7 @@ class CapitalComStreamClient:
                 raw = socket.recv(timeout=remaining)
             except TimeoutError:
                 raise StreamProtocolError(f"Capital.com {destination} reply timed out") from None
+            self._record_frame(raw)
             try:
                 message = json.loads(raw)
             except (TypeError, json.JSONDecodeError):
@@ -247,10 +255,12 @@ class CapitalComStreamClient:
         else:
             close_reason = close_reason[:160]
         connection_age = age_seconds(self._connection_started_at)
+        frame_at = self._last_frame_at.isoformat() if self._last_frame_at is not None else "none"
         _LOG.info(
             "Capital.com stream reconnect: exception=%s reason=%s close_code=%s "
             "close_reason=%s seconds_since_ping_reply=%s seconds_since_tick=%s "
-            "connection_age_seconds=%s",
+            "connection_age_seconds=%s last_frame_type=%s last_frame_at=%s "
+            "exception_chain=%s",
             type(exc).__name__,
             reason,
             close_code,
@@ -258,7 +268,83 @@ class CapitalComStreamClient:
             age_seconds(self._last_ping_reply_at),
             age_seconds(self._last_data_at),
             connection_age,
+            self._last_frame_type,
+            frame_at,
+            exception_chain(exc),
         )
+
+    def _record_frame(self, raw: str | bytes) -> None:
+        """Record frame type/count metadata without logging payloads."""
+        stamp = self._clock().astimezone(UTC)
+        minute = stamp.replace(second=0, microsecond=0)
+        if self._frame_minute is not None and minute != self._frame_minute:
+            self._flush_frame_counts()
+        if self._frame_minute != minute:
+            self._frame_minute = minute
+            self._frame_counts = {}
+        message_type = "malformed"
+        try:
+            message = json.loads(raw)
+        except (TypeError, json.JSONDecodeError):
+            message = None
+        if isinstance(message, Mapping):
+            destination = message.get("destination")
+            if isinstance(destination, str) and destination:
+                message_type = bounded_text(destination, limit=80)
+            else:
+                message_type = "unknown"
+        self._frame_counts[message_type] = self._frame_counts.get(message_type, 0) + 1
+        self._last_frame_type = message_type
+        self._last_frame_at = stamp
+
+    def _flush_frame_counts(self) -> None:
+        """Emit one aggregate line for the completed frame minute."""
+        if self._frame_minute is None or not self._frame_counts:
+            return
+        for message_type, count in sorted(self._frame_counts.items()):
+            _LOG.info(
+                "Capital.com stream frame counts: minute=%s message_type=%s count=%s",
+                self._frame_minute.isoformat(),
+                message_type,
+                count,
+            )
+        self._frame_counts = {}
+
+    def _record_boundary(self, started_at: datetime, ended_at: datetime, elapsed: float) -> None:
+        """Log the receive block that crossed each UTC minute boundary."""
+        boundary = ended_at.replace(second=0, microsecond=0)
+        if self._last_boundary_minute is None:
+            self._last_boundary_minute = boundary
+            return
+        if boundary <= self._last_boundary_minute:
+            return
+        self._last_boundary_minute = boundary
+        _LOG.info(
+            "Capital.com stream boundary: minute=%s reader_block_start=%s "
+            "reader_block_end=%s reader_block_duration_seconds=%.3f thread=%s",
+            boundary.isoformat(),
+            started_at.isoformat(),
+            ended_at.isoformat(),
+            elapsed,
+            threading.current_thread().name,
+        )
+
+    def _sample_loop_lag(self, now: float) -> None:
+        """Sample scheduler delay once per second and log only material lag."""
+        if self._next_lag_sample is None:
+            self._next_lag_sample = now + 1.0
+            return
+        if now < self._next_lag_sample:
+            return
+        lag = now - self._next_lag_sample
+        while self._next_lag_sample <= now:
+            self._next_lag_sample += 1.0
+        if lag > 0.250:
+            _LOG.warning(
+                "Capital.com stream event-loop lag: lag_seconds=%.3f thread=%s",
+                lag,
+                threading.current_thread().name,
+            )
 
     @staticmethod
     def _number(value: object) -> float:
@@ -574,11 +660,21 @@ class CapitalComStreamClient:
                             raise backfill_error
                         backfill_updates = int(backfill_state.get("updates", 0))
                         backfill_completed = bool(backfill_state.get("completed", False))
+                        receive_started_at = self._clock().astimezone(UTC)
+                        receive_started = time.monotonic()
                         try:
                             raw = socket.recv(timeout=1)
                         except TimeoutError:
                             raw = None
+                        receive_ended_at = self._clock().astimezone(UTC)
+                        self._record_boundary(
+                            receive_started_at,
+                            receive_ended_at,
+                            time.monotonic() - receive_started,
+                        )
+                        self._sample_loop_lag(time.monotonic())
                         if raw is not None:
+                            self._record_frame(raw)
                             self._handle(raw)
                         now = self._clock()
                         expected = self._is_data_expected()
