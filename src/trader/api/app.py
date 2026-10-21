@@ -20,6 +20,7 @@ from fastapi import FastAPI
 
 from trader.api.control import router as control_router
 from trader.api.health import (
+    data_recorder_status,
     health_payload,
     set_runtime_health,
     set_runtime_status_provider,
@@ -525,6 +526,7 @@ def _install_runtime_services(
     *,
     recorder: CapitalDataRecorder | None,
     capital_client: CapitalComClient | None,
+    recorder_status_provider: Callable[[], Mapping[str, object] | None] | None = None,
 ) -> None:
     """Build and register the complete runtime service mapping."""
     app.state.runtime_services = build_runtime_services(
@@ -534,6 +536,7 @@ def _install_runtime_services(
             "control_source": app.state.execution_control_source,
             "control_writer": app.state.execution_control_writer,
             "recorder": recorder,
+            "recorder_status_provider": recorder_status_provider or data_recorder_status,
             "instrument_mapper": app.state.instrument_mapper,
             "market_details_client": capital_client,
             "soak_monitor": app.state.soak_monitor,
@@ -569,6 +572,7 @@ async def _runtime_retry_loop(
     *,
     recorder: CapitalDataRecorder | None,
     capital_client: CapitalComClient | None,
+    recorder_status_provider: Callable[[], Mapping[str, object] | None] | None = None,
     sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
     jitter: Callable[[float, float], float] = random.uniform,
 ) -> None:
@@ -585,6 +589,7 @@ async def _runtime_retry_loop(
                 configs,
                 recorder=recorder,
                 capital_client=capital_client,
+                recorder_status_provider=recorder_status_provider,
             )
             _start_runtime_if_configured(app, settings, configs)
             runtime = getattr(app.state, "runtime", None)
@@ -730,6 +735,7 @@ async def lifespan(_app: FastAPI) -> Any:
             configs,
             recorder=recorder,
             capital_client=capital_client,
+            recorder_status_provider=data_recorder_status,
         )
     except Exception as exc:
         # Keep controls available while recording one clear fail-safe alert;
@@ -746,6 +752,7 @@ async def lifespan(_app: FastAPI) -> Any:
                     configs,
                     recorder=recorder,
                     capital_client=capital_client,
+                    recorder_status_provider=data_recorder_status,
                 )
             )
 
@@ -809,6 +816,7 @@ async def lifespan(_app: FastAPI) -> Any:
                         configs,
                         recorder=recorder,
                         capital_client=capital_client,
+                        recorder_status_provider=data_recorder_status,
                     )
                 )
     elif runtime_expected and runtime_retry_task is None:
@@ -820,6 +828,7 @@ async def lifespan(_app: FastAPI) -> Any:
                 configs,
                 recorder=recorder,
                 capital_client=capital_client,
+                recorder_status_provider=data_recorder_status,
             )
         )
     # Keep the loaded schedule available to the report runner and channel wiring.

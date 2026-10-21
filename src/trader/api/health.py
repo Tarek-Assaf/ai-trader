@@ -165,7 +165,7 @@ def _backup_freshness(
     return backup_time.isoformat(), age_seconds, age_seconds <= BACKUP_MAX_AGE_SECONDS
 
 
-def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
+def data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
     """Expose a small allowlist of recorder liveness fields without leaking file contents."""
     try:
         value = json.loads((path or RECORDER_STATUS_PATH).read_text(encoding="utf-8"))
@@ -262,6 +262,12 @@ def _data_recorder_status(path: Path | None = None) -> dict[str, Any] | None:
     }
 
 
+# Keep the old private name for callers and tests while exposing the same
+# accessor to runtime services.  The API health payload and recorder digest
+# must read one live worker status source.
+_data_recorder_status = data_recorder_status
+
+
 def _recorder_liveness_ok(
     recorder: dict[str, Any] | None,
     *,
@@ -312,7 +318,7 @@ def health_payload() -> dict[str, Any]:
     redis_ok = _probe_redis(redis_url)
     last_backup_at, backup_age, backup_fresh = _backup_freshness()
     backup_ok = settings.role != "all" or backup_fresh
-    recorder = _data_recorder_status()
+    recorder = data_recorder_status()
     recorder_credentials = all(
         value is not None and bool(value.get_secret_value())
         for value in (

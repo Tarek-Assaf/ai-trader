@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import logging
+import os
 import traceback
 from collections.abc import Iterable
+from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from typing import Any
 
 
@@ -60,7 +63,7 @@ class SecretRedactionFilter(logging.Filter):
 
 
 def configure_logging(secrets: Iterable[str] = ()) -> None:
-    """Apply secret redaction to handlers so propagated child-logger records are covered."""
+    """Configure redacted console logging and a bounded volume log."""
     logging.getLogger("websockets").setLevel(logging.WARNING)
     root_logger = logging.getLogger()
     redactor = SecretRedactionFilter(secrets)
@@ -70,5 +73,33 @@ def configure_logging(secrets: Iterable[str] = ()) -> None:
     for name in ("uvicorn", "uvicorn.access", "uvicorn.error"):
         logger = logging.getLogger(name)
         handlers.update({id(handler): handler for handler in logger.handlers})
+    log_path = Path(os.getenv("TRADER_LOG_PATH", "/workspace/logs/trader.log"))
+    try:
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        existing_file = next(
+            (
+                handler
+                for handler in root_logger.handlers
+                if isinstance(handler, RotatingFileHandler)
+                and Path(handler.baseFilename).resolve() == log_path.resolve()
+            ),
+            None,
+        )
+        if existing_file is None:
+            existing_file = RotatingFileHandler(
+                log_path,
+                maxBytes=5 * 1024 * 1024,
+                backupCount=3,
+                encoding="utf-8",
+            )
+            existing_file.setFormatter(
+                logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s")
+            )
+            root_logger.addHandler(existing_file)
+        handlers[id(existing_file)] = existing_file
+    except OSError:
+        # The API must remain available when the optional volume is absent or
+        # read-only; container output remains the primary log sink.
+        pass
     for handler in handlers.values():
         handler.addFilter(redactor)
