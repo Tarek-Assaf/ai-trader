@@ -956,4 +956,3 @@ app.include_router(control_router)
 def health() -> dict[str, Any]:
     """Expose role and dependency health without credentials or sensitive details."""
     return health_payload()
-
