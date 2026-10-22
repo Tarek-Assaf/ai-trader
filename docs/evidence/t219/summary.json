@@ -51,11 +51,17 @@
     "production_replay_entries_on_2026_10_21": 0,
     "target_bar_utc": "2026-10-21T22:30:00Z",
     "target_bar_close": "29674.2",
-    "owner_chart_instrument": "NQ1!",
-    "pod_instrument": "US100",
-    "instrument_mismatch": true,
+    "owner_chart_instrument": "US 100 Cash CFD (TradingView, NAS100 3m)",
+    "pod_instrument": "US100 (Capital.com recorder)",
+    "instrument_mismatch": false,
     "incomplete_minute_utc": "2026-10-21T22:18:00Z",
-    "verdict": "both_quiet_different_instruments"
+    "verdict": "same_symbol_label_but_feed_or_implementation_parity_unresolved",
+    "owner_screenshot_shows_sell": true,
+    "parity_blockers": [
+      "TradingView US100 Cash CFD bars versus recorded Capital.com US100 bars have not been proven identical",
+      "Smart Filter uses 54-minute request.security values and supports Open/Close and Renko modes",
+      "Production replay currently uses the session-anchored Heikin-Ashi path and a zero-volume VWAP fallback"
+    ]
   },
   "safety": {
     "broker_calls": 0,
