@@ -46,10 +46,20 @@ The 22:30Z closed bar built from the Pod lake was:
 open 29661.5, high 29679.6, low 29656.7, close 29674.2
 ```
 
-The owner's chart evidence is `NQ1!`, entry 29,858.25. These are different
-instruments/data feeds, not two views of the same bar. The price difference is
-~184 points, so a signal seen on NQ1! cannot be used as a parity oracle for the
-Pod's Capital.com US100 runner.
+The owner subsequently supplied a screenshot whose header is explicitly
+`US 100 Cash CFD` and whose chart timeframe is `NAS100 3m`. That corrects the
+earlier assumption that the reference was `NQ1!`. The screenshot does show
+SELL markers in the reported window, so the zero-entry replay cannot be
+explained by an NQ1-versus-US100 instrument mismatch.
+
+The remaining parity question is the feed and implementation. The screenshot
+is a TradingView US100 Cash CFD view, while the Pod replay uses recorded
+Capital.com US100 minutes. The supplied Smart Filter script also computes a
+54-minute higher-timeframe signal (`3m * tfmult 18`) and supports both
+Open/Close Heikin-Ashi and Renko modes. The production provider currently
+reconstructs only the session-anchored Heikin-Ashi path; its 18-bar grouping,
+TradingView `request.security(..., lookahead_off)` timing, volume-weighted VWAP
+and Renko option must be compared directly before claiming parity.
 
 Across 21:00-23:30Z the lake had 145 minute stamps; exactly one minute
 (`22:18Z`) was incomplete (one of bid/ask was absent). The target 22:30Z bar
@@ -63,12 +73,14 @@ after 22:35Z, after the target bar.
 
 ## Why the displayed non-trade occurred
 
-The evidence does not show a strategy mismatch or a missing stop calculation.
-It shows an instrument mismatch: the chart was NQ1! while the Pod was running
-US100. The safe fix is to compare like with like: either use a TradingView
-chart for the Capital.com US100 feed, or provide a licensed NQ1! feed and map
-the runner to that broker instrument. Renaming `US100` to `NQ1!` would be unsafe
-because the Capital.com adapter does not trade the futures contract.
+The earlier instrument-mismatch verdict is withdrawn. The screenshot confirms
+that the chart and runner are intended to represent US100, but equal symbol
+names do not prove equal historical bars or indicator semantics. The likely
+failure is parity between the Smart Filter script and the production provider:
+the script's 54-minute `request.security` alignment/lookahead behavior, its
+Open/Close versus Renko setup, and TradingView volume VWAP can each change the
+SELL gate. No behavior change is applied until those same-bars comparisons are
+completed.
 
 The indicator's stop is dynamic, not a fixed 50-point constant. For a SELL it
 uses the highest high of the previous five closed 3M bars plus `0.20 * ATR`;
