@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 492569)
-... 921700 bytes omitted ...
+Warning: truncated output (original token count: 499967)
+... 951292 bytes omitted ...
 
 {
   "meta": {
@@ -37,7 +37,7 @@ Warning: truncated output (original token count: 492569)
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-219 completed read-only parity: both port and production are quiet on Pod US100; owner evidence is NQ1!, so the displayed non-trade is a cross-instrument/feed mismatch. No behavior or Pod state changed.",
+    "summary": "Pod on 16c4c2f (T-217 instrumentation). Tai evaluates bars; no entries for a full US session. T-219 queued (read-only parity on recorded live bars: quiet day or live-path defect). T-218 (drop analysis) waits for 1-2 h of logs after the redeploy. Demo orders on.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -50,8 +50,8 @@ Warning: truncated output (original token count: 492569)
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-219",
-    "last_status": "review"
+    "last_task": "T-217",
+    "last_status": "done"
   },
   "requirements": [
     {
@@ -1204,10 +1204,7 @@ Warning: truncated output (original token count: 492569)
         "V-145",
         "V-147"
       ],
-      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ´ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ´ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ£ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ£ط·آ·ط¢آ¢ط·آ¢ط¢آ¹ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ·ط·آ¥أ¢â‚¬â„¢ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â€ڑآ¬ط¥â€™ط·آ·ط¢آ¹ط·آ¢ط¢آ©ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط£آ¢أ¢â‚¬â€چط¢آ¢1 hour behavior, cost-model export has lineage and minimum-sample refusal, the Parquet runner is one command, and tick percentiles use bounded reservoirs. Empirical acceptance remains blocked by the missing Capital.com recorder overlap window under B-007; no values or PaperBroker costs were guessed. Tooling review cycle 2 passed with follow-ups (owner cho…237152 tokens truncated…k from the live path and added dry_run=True to the two failing tests, kept the earlier mypy fixes, and merged only on green CI. Codex: next is T-192 (docs/specs/t192_tai_pre_enable_audit.md, read-only audit with a final ready-to-enable yes/no line), then T-196. Start from current main. No broker calls, orders, holdout reads, redeploy or secrets. Turn to codex."
-    },
-    {
-      "revision": 529,
+      "completion_note": "Addressed V-146: generator inputs are safe, Capital.com spreads are bid-only, all three metrics are reported per session, MarketHours labels can be supplied, shifted timezone fixtures cover ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ´ط·آ·ط¢آ£ط·آ¢ط¢آ¢ط·آ£ط¢آ¢ط£آ¢أ¢â‚¬ع‘ط¢آ¬ط·آ¢ط¢آ¢ط·آ·ط¢آ¹ط·آ¢ط¢آ¾ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ´ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¢ط·آ·ط¢آ¢ط·آ¢ط¢آ¤ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ²ط·آ·ط¢آ·ط·آ¢ط¢آ·ط·آ·ط¢آ¢ط·آ¢ط¢آ¸ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â€کط·آ¢ط¢آ¬ط·آ·ط¢آ·ط·آ¢ط¢آ¸ط·آ£ط¢آ¢ط£آ¢أ¢â€ڑآ¬ط¹â…237152 tokens truncated…     "revision": 529,
       "ts": "2026-10-20T00:18:00+03:00",
       "agent": "codex",
       "action": "complete_t192_rebase_handoff_claude",
@@ -1727,7 +1724,7 @@ Warning: truncated output (original token count: 492569)
         "docs/evidence/t204/"
       ],
       "summary": "Accepted T-204 (25/26), closed T-199, queued T-205 for the last miss. Turn to codex.",
-      "turn": "codex"
+      "turn": "claude"
     },
     {
       "revision": 561,
@@ -1933,7 +1930,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 574,
-      "ts": "2026-10-20T22:02:31+03:00",
+      "ts": "2026-10-20T19:02:31+00:00",
       "agent": "codex",
       "action": "complete_t209_bar_outcome_telemetry",
       "task_ids": [
@@ -1952,7 +1949,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 575,
-      "ts": "2026-10-21T01:10:00+03:00",
+      "ts": "2026-10-20T22:10:00+00:00",
       "agent": "claude",
       "action": "accept_t209_next_t210",
       "task_ids": [
@@ -2000,7 +1997,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 578,
-      "ts": "2026-10-21T00:25:00+03:00",
+      "ts": "2026-10-20T21:25:00+00:00",
       "agent": "codex",
       "action": "complete_t212_quiet_stall_alert",
       "task_ids": [
@@ -2015,7 +2012,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 579,
-      "ts": "2026-10-21T00:50:00+03:00",
+      "ts": "2026-10-20T21:50:00+00:00",
       "agent": "claude",
       "action": "accept_t212_next_t213",
       "task_ids": [
@@ -2047,7 +2044,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 581,
-      "ts": "2026-10-21T01:06:27+03:00",
+      "ts": "2026-10-20T22:06:27+00:00",
       "agent": "claude",
       "action": "accept_t213_queue_t214",
       "task_ids": [
@@ -2083,7 +2080,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 583,
-      "ts": "2026-10-21T04:05:16+03:00",
+      "ts": "2026-10-21T01:05:16+00:00",
       "agent": "claude",
       "action": "accept_t214",
       "task_ids": [
@@ -2097,7 +2094,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 584,
-      "ts": "2026-10-21T11:10:00+03:00",
+      "ts": "2026-10-21T08:10:00+00:00",
       "agent": "claude",
       "action": "accept_t215",
       "task_ids": [
@@ -2115,7 +2112,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 585,
-      "ts": "2026-10-21T14:30:00+03:00",
+      "ts": "2026-10-21T11:30:00+00:00",
       "agent": "claude",
       "action": "queue_t216",
       "task_ids": [
@@ -2129,7 +2126,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 586,
-      "ts": "2026-10-21T15:35:00+03:00",
+      "ts": "2026-10-21T12:35:00+00:00",
       "agent": "codex",
       "action": "complete_t216_for_review",
       "task_ids": [
@@ -2149,7 +2146,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 587,
-      "ts": "2026-10-21T15:40:00+03:00",
+      "ts": "2026-10-21T12:40:00+00:00",
       "agent": "claude",
       "action": "accept_t216",
       "task_ids": [
@@ -2163,7 +2160,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 588,
-      "ts": "2026-10-21T19:30:00+03:00",
+      "ts": "2026-10-21T16:30:00+00:00",
       "agent": "claude",
       "action": "queue_t217",
       "task_ids": [
@@ -2177,7 +2174,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 589,
-      "ts": "2026-10-21T19:30:34.587558+03:00",
+      "ts": "2026-10-21T16:30:34.587558+00:00",
       "agent": "codex",
       "action": "complete_t217_reconnect_instrumentation",
       "task_ids": [
@@ -2195,7 +2192,7 @@ Warning: truncated output (original token count: 492569)
     },
     {
       "revision": 590,
-      "ts": "2026-10-21T20:06:09+03:00",
+      "ts": "2026-10-21T17:06:09+00:00",
       "agent": "claude",
       "action": "accept_t217",
       "task_ids": [
@@ -2213,8 +2210,8 @@ Warning: truncated output (original token count: 492569)
       "summary": "Accepted T-217 (V-518) after rebuilding the handoff on main. Queued T-218 (blocked) and asked Q-078: owner redeploy of the Pod so the new logging runs. Turn to human because only the owner redeploys."
     },
     {
-      "revision": 591,
-      "ts": "2026-10-22T00:10:00+03:00",
+      "revision": 592,
+      "ts": "2026-10-21T21:10:00+00:00",
       "agent": "claude",
       "action": "queue_t219",
       "task_ids": [
@@ -2225,21 +2222,6 @@ Warning: truncated output (original token count: 492569)
         "docs/specs/t219_live_day_parity.md"
       ],
       "summary": "Owner reports no Tai entries since 2026-10-20 and a full US session passed. Queued T-219: read-only parity of closed port vs production runner on recorded 2026-10-20/21 bars plus bar-builder check. Owner is away; Codex to run T-218 after 1-2 h of drop logs. No order, dry-run, risk/gate or secret change. Turn to codex."
-    },
-    {
-      "revision": 592,
-      "ts": "2026-10-22T07:50:00+03:00",
-      "agent": "codex",
-      "action": "complete_t219",
-      "task_ids": [
-        "T-219"
-      ],
-      "files_changed": [
-        "agent_state/AGENT_HANDOFF.json",
-        "docs/evidence/t219/report.md",
-        "docs/evidence/t219/summary.json"
-      ],
-      "summary": "T-219 completed read-only. Both replays are quiet on Pod US100; target chart is NQ1!, so the displayed non-trade is a cross-instrument comparison. Target bar built at 22:33:33Z; one incomplete minute at 22:18Z; no reconnect before target. No behavior or Pod state changed. Turn to claude."
     }
   ],
   "project_summary": "T-216 implementation is ready for Claude review: live recorder status is shared by /health and Telegram digests, unreadable status is unavailable, and volume logging is bounded and redacted. Reconnect analysis is read-only. No trading, risk/gate, dry-run, order, config or secret changes."
