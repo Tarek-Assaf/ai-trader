@@ -30,6 +30,52 @@ of CPU time without writing an output file. No network or broker call was made.
 The subsequent health check was still healthy, so the replay process did not
 disturb the recorder.
 
+## Corrected 2026-10-21 21:00-23:30Z replay
+
+The target-day replay was rerun against the current NAS100 lake with the
+explicit `--epic NAS100` selector (the Pod stores the rows under
+`NAS100/1m_capital`, while the recorded row label is `US100`). Both the closed
+session-anchored port and the production `TaiSignalProvider` produced **zero
+entries** for 2026-10-21, including the 22:30Z bar. The dry-run runner made
+zero broker/order calls. The replay therefore agrees with the Pod runner, but
+it does not reproduce the owner's TradingView signal.
+
+The 22:30Z closed bar built from the Pod lake was:
+
+```text
+open 29661.5, high 29679.6, low 29656.7, close 29674.2
+```
+
+The owner's chart evidence is `NQ1!`, entry 29,858.25. These are different
+instruments/data feeds, not two views of the same bar. The price difference is
+~184 points, so a signal seen on NQ1! cannot be used as a parity oracle for the
+Pod's Capital.com US100 runner.
+
+Across 21:00-23:30Z the lake had 145 minute stamps; exactly one minute
+(`22:18Z`) was incomplete (one of bid/ask was absent). The target 22:30Z bar
+was present and closed. The log shows the runner built it at `22:33:33.941Z`
+with `warmup_bars=5173`; the 22:30Z bar itself was not late by a feed stall,
+but it was delivered after the three-minute boundary. The only outcome summary
+in the requested window was at 22:00:27Z: `evaluated=18`, `no_signal=18`,
+`stale_or_incomplete=0`, `market_closed_or_break=0`, `entry=0`, `exit=0`.
+There were no `last_no_signal_gate` records. Reconnect/backfill activity began
+after 22:35Z, after the target bar.
+
+## Why the displayed non-trade occurred
+
+The evidence does not show a strategy mismatch or a missing stop calculation.
+It shows an instrument mismatch: the chart was NQ1! while the Pod was running
+US100. The safe fix is to compare like with like: either use a TradingView
+chart for the Capital.com US100 feed, or provide a licensed NQ1! feed and map
+the runner to that broker instrument. Renaming `US100` to `NQ1!` would be unsafe
+because the Capital.com adapter does not trade the futures contract.
+
+The indicator's stop is dynamic, not a fixed 50-point constant. For a SELL it
+uses the highest high of the previous five closed 3M bars plus `0.20 * ATR`;
+the candidate is rejected when risk exceeds `2.0 * ATR`. A chart distance near
+49.7 points is therefore an output of that bar's ATR/swing state, not a rule
+that should be hard-coded as 50.
+
 ## Current runner outcome
 
 At the final health sample (2026-10-21 21:13:33Z):
@@ -75,4 +121,5 @@ both replays against that temporary lake with an explicit `--epic NAS100` and a
 small date window. Capture the port/runtime entry lists and the live bar-builder
 commit records side by side. This does not open a second Capital.com session or
 touch the recorder.
+
 
