@@ -12,6 +12,7 @@ from trader.experiments.tai_demo import (
 )
 from trader.experiments.tai_feed import TaiLakeTailer, read_closed_lake_minutes
 from trader.experiments.tai_wiring import (
+    HA_MODES,
     CapitalBalanceProvider,
     CapitalInstrumentRulesProvider,
     TaiDemoRuntimeAdapter,
@@ -35,6 +36,7 @@ __all__ = [
     "TaiSignal",
     "CapitalBalanceProvider",
     "CapitalInstrumentRulesProvider",
+    "HA_MODES",
     "TaiDemoRuntimeAdapter",
     "TaiMinuteBar",
     "TaiOrderFactory",

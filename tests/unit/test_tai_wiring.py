@@ -287,6 +287,88 @@ def test_signal_features_match_t162_closed_fixture_with_buy_and_sell() -> None:
     assert any(ours["sell"])
 
 
+def test_signal_features_forming_ha_exposes_current_54m_prefix() -> None:
+    """Realtime mode updates the 54m HA close before the group is complete."""
+    start = datetime(2026, 10, 1, 22, 0, tzinfo=UTC)
+    bars = tuple(
+        ClosedBar(
+            start + timedelta(minutes=index * 3),
+            "NSXUSD",
+            Decimal("100") + Decimal(index) / Decimal("10"),
+            Decimal("101") + Decimal(index) / Decimal("10"),
+            Decimal("99") + Decimal(index) / Decimal("10"),
+            Decimal("100.5") + Decimal(index) / Decimal("10"),
+        )
+        for index in range(36)
+    )
+
+    closed = _features(bars)
+    forming = _features(bars, ha_mode="forming")
+
+    assert closed["buy"][0:18] == (False,) * 18
+    assert closed["sell"][0:18] == (False,) * 18
+    assert all(value is None for value in _ha_values(closed, "open", 18))
+    assert all(value is not None for value in _ha_values(forming, "close", 18))
+    assert len(set(_ha_values(forming, "close", 18))) > 1
+
+
+def test_forming_ha_can_cross_before_the_54m_group_closes() -> None:
+    """A live-style SELL can appear in the current group before closed mode can."""
+    start = datetime(2026, 10, 1, 22, 0, tzinfo=UTC)
+    first_group = tuple(
+        ClosedBar(
+            start + timedelta(minutes=index * 3),
+            "NSXUSD",
+            Decimal("100"),
+            Decimal("112"),
+            Decimal("99"),
+            Decimal("110"),
+        )
+        for index in range(18)
+    )
+    second_group = tuple(
+        ClosedBar(
+            start + timedelta(minutes=(18 + index) * 3),
+            "NSXUSD",
+            Decimal("110"),
+            Decimal("111"),
+            Decimal("108"),
+            Decimal("110"),
+        )
+        for index in range(17)
+    ) + (
+        ClosedBar(
+            start + timedelta(minutes=35 * 3),
+            "NSXUSD",
+            Decimal("110"),
+            Decimal("111"),
+            Decimal("90"),
+            Decimal("91"),
+        ),
+    )
+    bars = first_group + second_group
+
+    closed = _features(bars)
+    forming = _features(bars, ha_mode="forming")
+
+    assert not any(closed["sell"][18:])
+    assert forming["sell"][35]
+
+
+def _ha_values(
+    features: dict[str, tuple[object, ...]], name: str, count: int
+) -> tuple[object, ...]:
+    """Read the private HA arrays exposed by the forming-mode test fixture."""
+    # The production feature map intentionally keeps these values private. This
+    # test only needs a stable projection to check the mode's prefix behavior.
+    return tuple(features[f"ha_{name}"][:count])
+
+
+def test_signal_provider_rejects_unknown_ha_mode() -> None:
+    with pytest.raises(ValueError, match="ha_mode"):
+        TaiSignalProvider(ha_mode="unknown")
+
+
 def test_signal_provider_keeps_ema_seed_across_long_series_and_restart() -> None:
     start = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
     bars = []
@@ -337,7 +419,10 @@ def test_signal_provider_refreshes_only_after_post_exit_delay(
         for index in range(300)
     )
 
-    def features(current: tuple[ClosedBar, ...]) -> dict[str, tuple[object, ...]]:
+    def features(
+        current: tuple[ClosedBar, ...], *, ha_mode: str = "closed"
+    ) -> dict[str, tuple[object, ...]]:
+        assert ha_mode == "closed"
         size = len(current)
         return {
             "ema": (99.0,) * size,
