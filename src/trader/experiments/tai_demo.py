@@ -891,6 +891,7 @@ class TaiDemoRunner:
 
     def health_snapshot(self) -> dict[str, dict[str, object]]:
         """Return secret-free outcome counters grouped by epic."""
+        ha_mode = getattr(self._signal, "ha_mode", None)
         return {
             epic: {
                 "evaluated": values.evaluated,
@@ -901,6 +902,7 @@ class TaiDemoRunner:
                 "entry": values.entry,
                 "exit": values.exit,
                 "last_no_signal_gate": values.last_no_signal_gate,
+                "ha_mode": ha_mode if isinstance(ha_mode, str) else None,
             }
             for epic, values in self._outcomes.items()
         }

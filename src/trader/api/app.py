@@ -282,10 +282,11 @@ def _build_tai_demo_runtime(
         if previous_tai_runtime is not None
         else None
     )
+    ha_mode = str(getattr(settings, "tai_demo_ha_mode", "forming"))
     signal = (
         previous_signal
-        if isinstance(previous_signal, TaiSignalProvider)
-        else TaiSignalProvider.from_lake(lake_root, epic)
+        if isinstance(previous_signal, TaiSignalProvider) and previous_signal.ha_mode == ha_mode
+        else TaiSignalProvider.from_lake(lake_root, epic, ha_mode=ha_mode)
     )
     previous_builder = getattr(previous_tai_runtime, "builder", None)
     builder = (

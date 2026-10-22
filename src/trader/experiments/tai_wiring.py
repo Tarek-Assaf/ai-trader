@@ -47,6 +47,7 @@ MAX_RISK_ATR = 2.0
 VWAP_DISTANCE_ATR = 1.5
 GROUP_BARS = 18
 REFRESH_BARS = 12
+HA_MODES = frozenset(("closed", "forming"))
 EXPERIMENT_LABEL = "Tai port, owner-directed demo experiment, loosely matched to the owner"
 
 
@@ -210,7 +211,9 @@ def _ema(values: Sequence[float], period: int) -> tuple[float | None, ...]:
     return tuple(result)
 
 
-def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[Any, ...]]:
+def _features(bars: Sequence[ClosedBar], *, ha_mode: str = "closed") -> dict[str, tuple[Any, ...]]:
+    if ha_mode not in HA_MODES:
+        raise ValueError(f"ha_mode must be one of {sorted(HA_MODES)}")
     closes = [float(bar.close) for bar in bars]
     highs = [float(bar.high) for bar in bars]
     lows = [float(bar.low) for bar in bars]
@@ -297,25 +300,62 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[Any, ...]]:
             bars[a].at + timedelta(minutes=3) == bars[b].at
             for a, b in zip(indices[:-1], indices[1:], strict=True)
         )
-        # The closed T-162/T-182 series exposes the completed prior 54m HA
-        # value on every bar of the current group, including a still-forming
-        # live group, so there is no look-ahead into the group itself.
-        if previous is not None:
-            for index in indices:
-                ha_open[index], ha_close[index] = previous
-        if not complete:
+        if ha_mode == "closed":
+            # request.security(..., lookahead_off) exposes the completed prior
+            # 54m value throughout the current group. This is the deterministic
+            # backtest mode and preserves the pre-existing port behavior.
+            if previous is not None:
+                for index in indices:
+                    ha_open[index], ha_close[index] = previous
+            if not complete:
+                continue
+            raw_open, raw_close = float(bars[indices[0]].open), float(bars[indices[-1]].close)
+            final_close = (
+                raw_open
+                + max(float(bars[i].high) for i in indices)
+                + min(float(bars[i].low) for i in indices)
+                + raw_close
+            ) / 4.0
+            open_price = (
+                (raw_open + raw_close) / 2.0
+                if previous is None
+                else (previous[0] + previous[1]) / 2.0
+            )
+            previous = open_price, final_close
             continue
-        raw_open, raw_close = float(bars[indices[0]].open), float(bars[indices[-1]].close)
-        final_close = (
-            raw_open
-            + max(float(bars[i].high) for i in indices)
-            + min(float(bars[i].low) for i in indices)
-            + raw_close
-        ) / 4.0
-        open_price = (
-            (raw_open + raw_close) / 2.0 if previous is None else (previous[0] + previous[1]) / 2.0
-        )
-        previous = open_price, final_close
+
+        # In realtime Pine request.security returns the developing higher-timeframe
+        # value. Build the same prefix for each closed 3m bar so a live signal can
+        # occur before the 54m group closes. Only a complete group advances the
+        # confirmed state used as the next group's Heikin-Ashi open.
+        for position, index in enumerate(indices):
+            prefix = indices[: position + 1]
+            raw_open, raw_close = float(bars[prefix[0]].open), float(bars[prefix[-1]].close)
+            ha_open[index] = (
+                (raw_open + raw_close) / 2.0
+                if previous is None
+                else (previous[0] + previous[1]) / 2.0
+            )
+            ha_close[index] = (
+                raw_open
+                + max(float(bars[i].high) for i in prefix)
+                + min(float(bars[i].low) for i in prefix)
+                + raw_close
+            ) / 4.0
+        if complete:
+            raw_open, raw_close = float(bars[indices[0]].open), float(bars[indices[-1]].close)
+            previous = (
+                (raw_open + raw_close) / 2.0
+                if previous is None
+                else (previous[0] + previous[1]) / 2.0,
+                (
+                    raw_open
+                    + max(float(bars[i].high) for i in indices)
+                    + min(float(bars[i].low) for i in indices)
+                    + raw_close
+                )
+                / 4.0,
+            )
     buy = [False] * len(bars)
     sell = [False] * len(bars)
     for index in range(1, len(bars)):
@@ -332,6 +372,8 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[Any, ...]]:
         "plus_di": tuple(plus_di),
         "minus_di": tuple(minus_di),
         "vwap": tuple(vwap),
+        "ha_open": tuple(ha_open),
+        "ha_close": tuple(ha_close),
         "buy": tuple(buy),
         "sell": tuple(sell),
     }
@@ -340,10 +382,19 @@ def _features(bars: Sequence[ClosedBar]) -> dict[str, tuple[Any, ...]]:
 class TaiSignalProvider:
     """Pure, session-anchored copy of the T-162 Tai signal gates."""
 
-    def __init__(self, history: Iterable[ClosedBar] = (), *, minimum_history: int = 300) -> None:
+    def __init__(
+        self,
+        history: Iterable[ClosedBar] = (),
+        *,
+        minimum_history: int = 300,
+        ha_mode: str = "closed",
+    ) -> None:
         if minimum_history < EMA_PERIOD:
             raise ValueError("minimum_history must support EMA200 warmup")
+        if ha_mode not in HA_MODES:
+            raise ValueError(f"ha_mode must be one of {sorted(HA_MODES)}")
         self.minimum_history = minimum_history
+        self._ha_mode = ha_mode
         # Keep the complete available series.  The closed T-162 port seeds EMA200
         # from the first 200 bars in its input and then carries that state forward.
         # Truncating this deque at 600 bars reseeded EMA200 (and the recursive
@@ -363,6 +414,11 @@ class TaiSignalProvider:
         """Return the persisted exit anchor used by the refresh trigger."""
         return self._last_exit_at
 
+    @property
+    def ha_mode(self) -> str:
+        """Return the higher-timeframe Heikin-Ashi evaluation mode."""
+        return self._ha_mode
+
     def note_exit(self, at: datetime) -> None:
         """Anchor the refresh countdown after a position closes."""
         self._last_exit_at = _minute_stamp(at)
@@ -373,7 +429,12 @@ class TaiSignalProvider:
 
     @classmethod
     def from_lake(
-        cls, lake_root: str | Path, epic: str, *, minimum_history: int = 300
+        cls,
+        lake_root: str | Path,
+        epic: str,
+        *,
+        minimum_history: int = 300,
+        ha_mode: str = "closed",
     ) -> TaiSignalProvider:
         """Load recent 1m bid/ask mid bars and aggregate them for warm-up."""
         try:
@@ -427,7 +488,7 @@ class TaiSignalProvider:
         # Retain the full lake series so a restart resumes the same EMA/HA/ADX
         # state as the closed port.  ``minimum_history`` is a readiness gate, not
         # a truncation boundary; the feed tailer starts after the final bar below.
-        return cls(bars, minimum_history=minimum_history)
+        return cls(bars, minimum_history=minimum_history, ha_mode=ha_mode)
 
     @property
     def history(self) -> tuple[ClosedBar, ...]:
@@ -449,7 +510,7 @@ class TaiSignalProvider:
             return None
         bars = tuple(self._bars)
         index = len(bars) - 1
-        features = _features(bars)
+        features = _features(bars, ha_mode=self._ha_mode)
         atr = features["atr"][index]
         ema = features["ema"][index]
         adx = features["adx"][index]
@@ -786,6 +847,7 @@ def build_tai_demo_runtime(
                 "bars": signal.warmup_bars,
                 "required": signal.minimum_history,
                 "ready": signal.warmup_ready,
+                "ha_mode": signal.ha_mode,
             }
         )
     runner = TaiDemoRunner(
@@ -824,6 +886,7 @@ __all__ = [
     "TaiSignalProvider",
     "ThreeMinuteBarBuilder",
     "REFRESH_BARS",
+    "HA_MODES",
     "minute_bar_from_candle",
     "parse_tai_instrument_rules",
 ]
