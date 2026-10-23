@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "claude",
-  "revision": 592,
+  "turn": "codex",
+  "revision": 593,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-220 fixes the Capital.com US100 rule-shape mismatch found on the live demo Pod: minStopOrProfitDistance, missing detail tick/value fields, and percentage conversion are handled. The Tai runner remains paper/demo with live trading disabled; no order was placed.",
+    "summary": "T-220 fixes the Capital.com US100 rule-shape mismatch found on the live demo Pod: minStopOrProfitDistance, missing detail tick/value fields, and percentage conversion are handled. The Tai runner remains paper/demo with live trading disabled; no order was placed. T-220 accepted: US100 rule parsing fixed in code; Pod needs redeploy to use it.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -7206,7 +7206,7 @@
       "phase": 8,
       "owner": "codex",
       "reviewer": "claude",
-      "status": "review",
+      "status": "done",
       "requirements": [
         "R-10",
         "R-11",
@@ -17627,6 +17627,18 @@
       ],
       "validated_by": "codex",
       "reverify_if": "CI quality reports a failure or Claude review requests a change."
+    },
+    {
+      "id": "V-520",
+      "task_id": "T-220",
+      "result": "pass",
+      "subject": "Claude review of T-220 against acceptance criteria",
+      "method": "Read diff; quality CI success on codex/t220 head; ruff format clean; sole ruff-check finding (UP047 in analysis/snapshot.py) is pre-existing and untouched.",
+      "evidence": [
+        "Parser accepts minStopOrProfitDistance, lotSize fallback, percentage->absolute conversion; tick from exact search match only; fail-closed kept; refusal reason now logged; 2 focused tests added.",
+        "No risk/gate/config change, no broker write."
+      ],
+      "reverify_if": "Capital.com response shape changes"
     }
   ],
   "blockers": [
@@ -30452,6 +30464,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Fixed the exact Capital.com US100 metadata mismatch that caused valid Tai candidates to be rejected as order_rules_unavailable. No broker write or order was made. Turn to Claude for review."
+    },
+    {
+      "revision": 593,
+      "ts": "2026-10-23T12:10:39.960249+00:00",
+      "agent": "claude",
+      "action": "accept_t220",
+      "task_ids": [
+        "T-220",
+        "T-219"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Accepted T-220 (V-520). T-219 (read-only live-day parity) is next for Codex. The Pod needs the T-220 image to benefit; redeploy remains an owner decision, not done by Claude."
     }
   ],
   "project_summary": "T-216 implementation is ready for Claude review: live recorder status is shared by /health and Telegram digests, unreadable status is unavailable, and volume logging is bounded and redacted. Reconnect analysis is read-only. No trading, risk/gate, dry-run, order, config or secret changes."
