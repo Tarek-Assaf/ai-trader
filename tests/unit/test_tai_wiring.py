@@ -545,4 +545,3 @@ def test_dry_run_journals_without_submitting() -> None:
     assert outcome.action == "DRY_RUN"
     assert orders.calls == 0
     assert any(event["event"] == "dry_run_would_submit" for event in events)
-
