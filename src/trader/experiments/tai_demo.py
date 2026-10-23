@@ -920,7 +920,7 @@ class TaiDemoRunner:
         epic = self._last_epic or self._epic or "unknown"
         bar = self._last_bar
         if bar is not None:
-            values = {
+            audit = {
                 "at": bar.at.astimezone(UTC).isoformat(),
                 "epic": bar.epic,
                 "open": str(bar.open),
@@ -934,7 +934,7 @@ class TaiDemoRunner:
                 "volume": str(bar.volume),
             }
             fingerprint = sha256(
-                json.dumps(values, sort_keys=True, separators=(",", ":")).encode("utf-8")
+                json.dumps(audit, sort_keys=True, separators=(",", ":")).encode("utf-8")
             ).hexdigest()
             self._journal_event(
                 cycle_id,
@@ -942,7 +942,7 @@ class TaiDemoRunner:
                 action=action,
                 reason=reason,
                 bar_fingerprint=fingerprint,
-                **values,
+                **audit,
             )
         values = self._outcomes.setdefault(epic, self._blank_outcomes())
         values.evaluated += 1
