@@ -17,6 +17,7 @@ from trader.experiments.tai_demo import (
     TaiSignal,
 )
 from trader.experiments.tai_wiring import (
+    CapitalInstrumentRulesProvider,
     REFRESH_BARS,
     TaiMinuteBar,
     TaiOrderFactory,
@@ -95,6 +96,53 @@ def test_capital_rules_parser_preserves_snapshot_quote() -> None:
     rules = parse_tai_instrument_rules(payload)
     assert rules.bid == Decimal("19999.8")
     assert rules.ask == Decimal("20000.0")
+
+
+def test_capital_rules_parser_accepts_live_capital_us100_shape() -> None:
+    payload = {
+        "instrument": {"epic": "US100", "lotSize": 1},
+        "dealingRules": {
+            "minDealSize": {"value": "0.001", "unit": "POINTS"},
+            "minSizeIncrement": {"value": "0.001", "unit": "POINTS"},
+            "minStopOrProfitDistance": {"value": "0.01", "unit": "PERCENTAGE"},
+        },
+        "snapshot": {
+            "bid": "28928.1",
+            "offer": "28929.9",
+            "decimalPlacesFactor": 1,
+        },
+    }
+
+    rules = parse_tai_instrument_rules(payload)
+
+    assert rules.tick_size == Decimal("0.1")
+    assert rules.value_per_point == Decimal("1")
+    assert rules.min_stop_distance == Decimal("2.89299")
+    assert rules.min_limit_distance == Decimal("2.89299")
+
+
+def test_capital_rules_provider_enriches_tick_from_market_search() -> None:
+    class Client:
+        def search_markets(self, epic: str) -> list[dict[str, object]]:
+            assert epic == "US100"
+            return [{"epic": epic, "tickSize": "0.1"}]
+
+        def market_details(self, epic: str) -> dict[str, object]:
+            assert epic == "US100"
+            return {
+                "instrument": {"epic": epic, "lotSize": 1},
+                "dealingRules": {
+                    "minDealSize": {"value": "0.001", "unit": "POINTS"},
+                    "minSizeIncrement": {"value": "0.001", "unit": "POINTS"},
+                    "minStopOrProfitDistance": {"value": "0.01", "unit": "PERCENTAGE"},
+                },
+                "snapshot": {"bid": "28928.1", "offer": "28929.9"},
+            }
+
+    rules = CapitalInstrumentRulesProvider(Client(), "US100")()
+
+    assert rules.tick_size == Decimal("0.1")
+    assert rules.min_stop_distance == Decimal("2.89299")
 
 
 def test_order_factory_rounds_price_levels_and_rejects_short_stop() -> None:
@@ -497,3 +545,4 @@ def test_dry_run_journals_without_submitting() -> None:
     assert outcome.action == "DRY_RUN"
     assert orders.calls == 0
     assert any(event["event"] == "dry_run_would_submit" for event in events)
+
