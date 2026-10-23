@@ -535,6 +535,12 @@ class TaiDemoRunner:
             requested_size = self._requested_size(rules)
             order = self._build_order(signal, cycle_id, requested_size)
         except (TaiDemoRefused, ValueError) as exc:
+            LOGGER.warning(
+                "tai demo order refused epic=%s cycle_id=%s reason=%s",
+                bar.epic,
+                cycle_id,
+                str(exc),
+            )
             self._journal_event(cycle_id, "order_refused", epic=bar.epic, reason=str(exc))
             return self._outcome(cycle_id, "REJECTED", "order_rules_unavailable")
         if requested_size is not None and order.size != requested_size:
@@ -958,3 +964,4 @@ __all__ = [
     "TaiDemoSettings",
     "TaiSignal",
 ]
+
