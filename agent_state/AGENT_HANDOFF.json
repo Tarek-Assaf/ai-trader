@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 597,
+  "turn": "claude",
+  "revision": 599,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-221 accepted as inconclusive: parity with the owner's TradingView SELL on 2026-10-21 cannot be tested without a same-window US100 3m OHLCV export (Q-079). Q-078 (Pod redeploy for T-217 logging) is also open. All remaining Codex tasks are blocked on these owner answers.",
+    "summary": "T-222 implementation is ready for review: Capital.com keepalive is bounded to 45 seconds, WebSocket updates are queued outside persistence, and every evaluated closed 3M bar has a deterministic audit fingerprint. Pod remains untouched; no broker orders were placed.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -47,7 +47,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-221",
+    "last_task": "T-222",
     "last_status": "review"
   },
   "requirements": [
@@ -370,7 +370,8 @@
         "T-096",
         "T-097",
         "T-098",
-        "T-220"
+        "T-220",
+        "T-222"
       ]
     },
     {
@@ -524,7 +525,8 @@
       "covered_by": [
         "T-004",
         "T-092",
-        "T-110"
+        "T-110",
+        "T-222"
       ]
     },
     {
@@ -547,7 +549,8 @@
         "T-092",
         "T-093",
         "T-210",
-        "T-211"
+        "T-211",
+        "T-222"
       ]
     },
     {
@@ -7268,6 +7271,46 @@
         "docs/evidence/t221/summary.json"
       ],
       "completion_note": "Completed the bounded read-only Smart Filter parity investigation. The temporary NAS100 slice was created and the deployed utilities were run; the Smart Filter utility emitted no US100/NAS100 group, and the port replay could not run because the required TradingView CSV is absent. No gate cause or production fix is claimed. Exact owner data needed is a TradingView US 100 Cash CFD/NAS100 3m OHLCV export for 2026-10-21 21:00\u201323:30Z."
+    },
+    {
+      "id": "T-222",
+      "title": "Capital feed reliability, closed-bar decision audit, and live/replay parity",
+      "phase": 1,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "review",
+      "requirements": [
+        "R-10",
+        "R-20",
+        "R-21"
+      ],
+      "depends_on": [
+        "T-221"
+      ],
+      "acceptance_criteria": [
+        "Capital.com keepalive stays alive through a 10-minute fake-socket soak with pings at or below 60 seconds",
+        "WebSocket receive loop does not perform blocking backfill or parquet persistence",
+        "Every evaluated closed 3M bar records a deterministic decision audit with candle fingerprint and reason",
+        "Replay of the screenshot bar and a live-shaped update produce identical decisions",
+        "Existing recorder and stream tests pass"
+      ],
+      "deliverables": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/workers/recorder.py",
+        "src/trader/data/recorder.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_tai_demo.py",
+        "docs/evidence/t222/report.md",
+        "docs/evidence/t222/summary.json"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "docs/evidence/t222/report.md",
+        "docs/evidence/t222/summary.json"
+      ],
+      "completion_note": "Implemented the 45-second Capital.com keepalive, moved WebSocket updates off the Parquet write path, and added deterministic closed-bar decision audits. Compile and diff checks pass; focused pytest and full make check remain for CI because this desktop checkout has no uv/pytest/ruff/mypy environment."
     }
   ],
   "decisions": [
@@ -17731,6 +17774,20 @@
       "checked": "Read-only and secret-free (no broker/order/config/risk/gate changes). Spec items 1-3 could not run: deployed Smart Filter utility emits no US100/NAS100 group and the port replay needs a TradingView CSV for this window. Verdict honest: inconclusive, needs owner data (Q-079). Accepted as evidence; no defect claimed.",
       "reverify_if": "Owner supplies the US100 3m OHLCV CSV (Q-079).",
       "validated_by": "claude"
+    },
+    {
+      "id": "V-525",
+      "task_id": "T-222",
+      "result": "pass",
+      "subject": "T-222 implementation safety and static verification",
+      "method": "Reviewed the isolated branch diff, ran Python compileall over src/tests, and ran git diff --check.",
+      "evidence": [
+        "docs/evidence/t222/report.md",
+        "docs/evidence/t222/summary.json"
+      ],
+      "checked": "No Pod or broker mutation occurred. No order was placed. The patch keeps paper/demo/live safety gates unchanged. Focused pytest could not run because pytest is absent from this desktop checkout.",
+      "reverify_if": "CI or a development checkout with uv sync --extra dev is available.",
+      "validated_by": "codex"
     }
   ],
   "blockers": [
@@ -30645,6 +30702,40 @@
         "docs/evidence/t221/summary.json"
       ],
       "summary": "Accepted T-221 (V-523) as inconclusive evidence. No unblocked task remains for Codex; turn to human for Q-079 (TradingView CSV) and Q-078 (Pod redeploy)."
+    },
+    {
+      "revision": 598,
+      "ts": "2026-10-23T19:20:00Z",
+      "agent": "human",
+      "action": "override_handoff_queue_t222",
+      "task_ids": [
+        "T-222"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner explicitly authorized overriding the human turn to queue T-222 for Codex. Work must remain off-Pod until validation; no broker orders."
+    },
+    {
+      "revision": 599,
+      "ts": "2026-10-23T20:00:00Z",
+      "agent": "codex",
+      "action": "complete_t222_feed_reliability_patch",
+      "task_ids": [
+        "T-222"
+      ],
+      "files_changed": [
+        "src/trader/integrations/capital_com/stream.py",
+        "src/trader/workers/recorder.py",
+        "src/trader/data/recorder.py",
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_capital_com_stream.py",
+        "tests/unit/test_data_recorder.py",
+        "tests/unit/test_tai_demo.py",
+        "docs/evidence/t222/report.md",
+        "docs/evidence/t222/summary.json"
+      ],
+      "summary": "Owner-authorized implementation complete. Static verification passed; CI dependency installation and post-deploy read-only soak remain before merge."
     }
   ],
   "project_summary": "T-216 implementation is ready for Claude review: live recorder status is shared by /health and Telegram digests, unreadable status is unavailable, and volume logging is bounded and redacted. Reconnect analysis is read-only. No trading, risk/gate, dry-run, order, config or secret changes."
