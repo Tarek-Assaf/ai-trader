@@ -1,0 +1,17 @@
+{
+  "task": "T-222",
+  "status": "review",
+  "pod_modified": false,
+  "orders": 0,
+  "runtime_changes": false,
+  "compileall": "pass",
+  "diff_check": "pass",
+  "pytest": "not_run_missing_pytest",
+  "fixes": [
+    "45-second Capital.com JSON keepalive",
+    "bounded recorder queue drained outside WebSocket callback",
+    "deterministic closed-bar decision audit with SHA-256 fingerprint"
+  ],
+  "post_deploy_check": "Observe health and decision journal for one market-open interval before enabling any further changes."
+}
+

@@ -11,6 +11,7 @@ import pytest
 
 from trader.core.logging import configure_logging
 from trader.integrations.capital_com.stream import (
+    _PING_INTERVAL,
     CapitalComStreamClient,
     OhlcUpdate,
 )
@@ -54,6 +55,10 @@ class FakeRest:
                 "closePrice": {"bid": 1.1, "ask": 1.2},
             },
         ]
+
+
+def test_default_keepalive_stays_inside_capital_socket_idle_window() -> None:
+    assert timedelta(seconds=30) <= _PING_INTERVAL <= timedelta(seconds=60)
 
 
 class FakeSocket:

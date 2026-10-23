@@ -271,6 +271,25 @@ def test_outcome_telemetry_counts_reasons_entries_and_exits():
     assert live_counts["exit"] == 1
 
 
+def test_each_outcome_has_deterministic_bar_audit() -> None:
+    events = []
+    tai, _ = runner(
+        Gateway(),
+        journal=events.append,
+        signal_provider=lambda _bar: None,
+    )
+
+    result = tai.on_bar(bar())
+
+    decisions = [event for event in events if event.get("event") == "decision"]
+    assert len(decisions) == 1
+    assert decisions[0]["action"] == result.action == "NO_TRADE"
+    assert decisions[0]["reason"] == result.reason == "no_signal"
+    assert decisions[0]["bar_fingerprint"]
+    assert decisions[0]["at"] == bar().at.isoformat()
+    assert decisions[0]["epic"] == "NSXUSD"
+
+
 def test_kill_flattens_and_alerts():
     gateway = Gateway()
     control = Control(ControlMode.KILL)
