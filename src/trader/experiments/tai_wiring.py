@@ -605,27 +605,69 @@ def _raw_rule(raw: Mapping[str, Any], *names: str) -> tuple[Decimal, str]:
 
 
 def parse_tai_instrument_rules(payload: Mapping[str, Any]) -> TaiInstrumentRules:
-    """Parse recorded Capital.com market details with no fallback defaults."""
+    """Parse Capital.com market details without inventing broker terms.
+
+    Capital.com does not return ``tickSize`` or ``valuePerPoint`` in every
+    ``/markets/{epic}`` response.  The search response supplies the tick and
+    ``instrument.lotSize`` is the contract value-per-point fallback for the
+    index CFDs used by this experiment.  The API also calls the protective
+    distance ``minStopOrProfitDistance`` and commonly expresses it as a
+    percentage of the current quote.
+    """
     instrument = payload.get("instrument")
     rules = payload.get("dealingRules")
     if not isinstance(instrument, Mapping) or not isinstance(rules, Mapping):
         raise InstrumentDataError("broker market details require instrument and dealingRules")
-    tick = _as_decimal(instrument.get("tickSize"), "tickSize")
+    snapshot = payload.get("snapshot")
+    tick_raw = instrument.get("tickSize")
+    if tick_raw is None and isinstance(snapshot, Mapping):
+        decimal_places = snapshot.get("decimalPlacesFactor")
+        if isinstance(decimal_places, int) and decimal_places >= 0:
+            tick_raw = Decimal("1").scaleb(-decimal_places)
+    tick = _as_decimal(tick_raw, "tickSize")
     minimum, min_unit = _raw_rule(rules, "minDealSize")
     step, step_unit = _raw_rule(rules, "minSizeIncrement")
-    stop, stop_unit = _raw_rule(rules, "minStopOrLimitDistance", "minStopDistance", "minDistance")
+    stop, stop_unit = _raw_rule(
+        rules,
+        "minStopOrLimitDistance",
+        "minNormalStopOrLimitDistance",
+        "minStopOrProfitDistance",
+        "minStopDistance",
+        "minDistance",
+    )
     try:
         limit, limit_unit = _raw_rule(rules, "minLimitDistance")
     except InstrumentDataError:
         limit, limit_unit = stop, stop_unit
     if min_unit != step_unit:
         raise InstrumentDataError("broker size rule units do not match")
-    value = _as_decimal(instrument.get("valuePerPoint"), "valuePerPoint")
+    value_raw = instrument.get("valuePerPoint")
+    if value_raw is None:
+        value_raw = instrument.get("lotSize")
+    value = _as_decimal(value_raw, "valuePerPoint")
     # Capital distance rules are normally POINTS.  Preserve a non-point unit
-    # in the metadata and convert only the known tick/point representation.
-    stop_distance = stop * tick if stop_unit in {"POINT", "POINTS"} else stop
-    limit_distance = limit * tick if limit_unit in {"POINT", "POINTS"} else limit
-    snapshot = payload.get("snapshot")
+    # in the metadata and convert only known tick/point and quote-percentage
+    # representations into absolute price distances.
+    reference = None
+    if isinstance(snapshot, Mapping):
+        raw_bid = snapshot.get("bid")
+        raw_offer = snapshot.get("offer", snapshot.get("ask"))
+        if raw_offer is not None:
+            reference = _as_decimal(raw_offer, "offer")
+        elif raw_bid is not None:
+            reference = _as_decimal(raw_bid, "bid")
+
+    def distance(value: Decimal, unit: str, field: str) -> Decimal:
+        if unit in {"POINT", "POINTS"}:
+            return value * tick
+        if unit in {"PERCENT", "PERCENTAGE"}:
+            if reference is None:
+                raise InstrumentDataError(f"broker {field} percentage needs a quote")
+            return reference * value / Decimal("100")
+        return value
+
+    stop_distance = distance(stop, stop_unit, "minimum stop distance")
+    limit_distance = distance(limit, limit_unit, "minimum limit distance")
     bid = (
         _as_decimal(snapshot["bid"], "bid")
         if isinstance(snapshot, Mapping) and snapshot.get("bid") is not None
@@ -659,6 +701,21 @@ class CapitalInstrumentRulesProvider:
         details = self._client.market_details(target)
         if not isinstance(details, Mapping):
             raise TaiDemoRefused("broker instrument rules are unavailable")
+        # ``tickSize`` is present in the exact market-search result even when
+        # the details endpoint omits it.  Enrich a copy so the parser remains
+        # pure and we do not substitute a hard-coded instrument default.
+        instrument = details.get("instrument")
+        if isinstance(instrument, Mapping) and instrument.get("tickSize") is None:
+            search = self._client.search_markets(target)
+            matches = [
+                item for item in search if isinstance(item, Mapping) and item.get("epic") == target
+            ]
+            if len(matches) == 1 and matches[0].get("tickSize") is not None:
+                enriched = dict(details)
+                enriched_instrument = dict(instrument)
+                enriched_instrument["tickSize"] = matches[0]["tickSize"]
+                enriched["instrument"] = enriched_instrument
+                details = enriched
         return parse_tai_instrument_rules(details)
 
 
