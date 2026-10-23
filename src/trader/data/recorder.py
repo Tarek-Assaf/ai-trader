@@ -13,6 +13,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from queue import Empty, SimpleQueue
 from typing import Any
 
 import pyarrow as pa  # type: ignore[import-untyped]
@@ -235,6 +236,7 @@ class CapitalDataRecorder:
         self._market_hours_by_epic = dict(market_hours_by_epic or {})
         self._closed_mid_pending: dict[tuple[str, datetime], dict[str, OhlcUpdate]] = {}
         self._pending: dict[tuple[str, datetime, str], _BufferedUpdate] = {}
+        self._queued_updates: SimpleQueue[OhlcUpdate] = SimpleQueue()
         self._last_tick_by_epic: dict[str, datetime] = {}
         self._last_closed_bar_at: datetime | None = None
         self._feed_stalled = False
@@ -483,6 +485,29 @@ class CapitalDataRecorder:
         """Keep partial values in memory until their minute closes or REST confirms it."""
         self._on_updates((update,))
 
+    def enqueue_update(self, update: OhlcUpdate) -> None:
+        """Queue a WebSocket update so the receive loop never writes Parquet."""
+        self._queued_updates.put(update)
+
+    def drain_updates(self, *, max_updates: int = 256) -> int:
+        """Persist queued WebSocket updates in one bounded batch.
+
+        The worker owns this drain, keeping the Capital.com receive thread
+        responsive while retaining the synchronous ``on_update`` API used by
+        unit tests and backfill reconciliation.
+        """
+        if max_updates <= 0:
+            raise ValueError("max_updates must be positive")
+        updates: list[OhlcUpdate] = []
+        for _ in range(max_updates):
+            try:
+                updates.append(self._queued_updates.get_nowait())
+            except Empty:
+                break
+        if updates:
+            self._on_updates(updates)
+        return len(updates)
+
     def on_backfill_batch(self, updates: Iterable[OhlcUpdate]) -> None:
         """Persist a REST backfill page/epic with one store upsert."""
         self._on_updates(updates)
@@ -627,3 +652,4 @@ class CapitalDataRecorder:
                 for side in ("bid", "ask"):
                     latest.setdefault((epic, side), watermark)
         return latest
+

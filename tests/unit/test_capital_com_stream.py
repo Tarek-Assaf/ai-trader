@@ -13,6 +13,7 @@ from trader.core.logging import configure_logging
 from trader.integrations.capital_com.stream import (
     CapitalComStreamClient,
     OhlcUpdate,
+    _PING_INTERVAL,
 )
 
 
@@ -54,6 +55,10 @@ class FakeRest:
                 "closePrice": {"bid": 1.1, "ask": 1.2},
             },
         ]
+
+
+def test_default_keepalive_stays_inside_capital_socket_idle_window() -> None:
+    assert timedelta(seconds=30) <= _PING_INTERVAL <= timedelta(seconds=60)
 
 
 class FakeSocket:
@@ -559,3 +564,4 @@ def test_stream_sends_keepalive_ping_before_ten_minutes() -> None:
 
     messages = [json.loads(message) for message in socket.sent]
     assert sum(message["destination"] == "ping" for message in messages) == 2
+

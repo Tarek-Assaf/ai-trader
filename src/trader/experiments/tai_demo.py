@@ -16,6 +16,7 @@ import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
+from hashlib import sha256
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from pathlib import Path
 from typing import Protocol
@@ -322,6 +323,7 @@ class TaiDemoRunner:
         self._startup_blocked = False
         self._state_corrupt = False
         self._last_epic: str | None = epic
+        self._last_bar: ClosedBar | None = None
         self._last_summary_hour: datetime | None = None
         self._outcomes: dict[str, _EpicOutcomes] = {}
         persisted_state = self._load_state()
@@ -483,6 +485,7 @@ class TaiDemoRunner:
         """Process exactly one closed 3m bar; never trade an incomplete bar."""
 
         self._last_epic = bar.epic
+        self._last_bar = bar
         cycle_id = f"tai-demo-{bar.at.astimezone(UTC).strftime('%Y%m%dT%H%M%S')}-{bar.epic}"
         if not bar.closed:
             return self._outcome(cycle_id, "NO_TRADE", "bar_not_closed")
@@ -915,6 +918,32 @@ class TaiDemoRunner:
 
     def _outcome(self, cycle_id: str, action: str, reason: str) -> DemoOutcome:
         epic = self._last_epic or self._epic or "unknown"
+        bar = self._last_bar
+        if bar is not None:
+            values = {
+                "at": bar.at.astimezone(UTC).isoformat(),
+                "epic": bar.epic,
+                "open": str(bar.open),
+                "high": str(bar.high),
+                "low": str(bar.low),
+                "close": str(bar.close),
+                "timeframe_minutes": bar.timeframe_minutes,
+                "closed": bar.closed,
+                "market_open": bar.market_open,
+                "in_break": bar.in_break,
+                "volume": str(bar.volume),
+            }
+            fingerprint = sha256(
+                json.dumps(values, sort_keys=True, separators=(",", ":")).encode("utf-8")
+            ).hexdigest()
+            self._journal_event(
+                cycle_id,
+                "decision",
+                action=action,
+                reason=reason,
+                bar_fingerprint=fingerprint,
+                **values,
+            )
         values = self._outcomes.setdefault(epic, self._blank_outcomes())
         values.evaluated += 1
         if reason == "no_signal":
@@ -964,3 +993,4 @@ __all__ = [
     "TaiDemoSettings",
     "TaiSignal",
 ]
+

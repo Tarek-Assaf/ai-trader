@@ -6,6 +6,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pyarrow.parquet as pq
+import pytest
 
 from trader.data.market_hours import MarketHours
 from trader.data.recorder import CapitalDataRecorder, ParquetCandleStore
@@ -88,6 +89,36 @@ def test_backfill_batch_commits_once_to_the_store(tmp_path: Path) -> None:
 
     assert len(store.calls) == 1
     assert len(store.calls[0]) == 4
+
+
+def test_queued_updates_are_drained_as_one_batch(tmp_path: Path) -> None:
+    current = datetime(2026, 10, 3, 12, 2, tzinfo=UTC)
+    store = CountingStore()
+    recorder = CapitalDataRecorder(
+        store,
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+        clock=lambda: current,
+    )
+
+    recorder.enqueue_update(_update(current - timedelta(minutes=1), "bid"))
+    recorder.enqueue_update(_update(current - timedelta(minutes=1), "ask", close=101.0))
+
+    assert recorder.drain_updates() == 2
+    assert len(store.calls) == 1
+    assert len(store.calls[0]) == 2
+    assert recorder.drain_updates() == 0
+
+
+def test_drain_updates_rejects_non_positive_limit(tmp_path: Path) -> None:
+    recorder = CapitalDataRecorder(
+        CountingStore(),
+        {"US100": "NAS100"},
+        tmp_path / "status.json",
+    )
+
+    with pytest.raises(ValueError, match="max_updates"):
+        recorder.drain_updates(max_updates=0)
 
 
 def test_upsert_is_idempotent_and_rest_wins_for_same_minute(tmp_path: Path) -> None:
@@ -386,3 +417,4 @@ def test_bad_spread_is_quarantined_without_stopping_recorder(tmp_path: Path) -> 
     status = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
     assert status["rejected_candles"] == 1
     assert status["last_reject_reason"] == "ask_close_below_bid_close"
+
