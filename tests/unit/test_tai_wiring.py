@@ -17,8 +17,8 @@ from trader.experiments.tai_demo import (
     TaiSignal,
 )
 from trader.experiments.tai_wiring import (
-    CapitalInstrumentRulesProvider,
     REFRESH_BARS,
+    CapitalInstrumentRulesProvider,
     TaiMinuteBar,
     TaiOrderFactory,
     TaiSignalProvider,
