@@ -21,7 +21,11 @@ from trader.integrations.capital_com.client import CapitalComClient, CapitalComE
 _LOG = logging.getLogger(__name__)
 logging.getLogger("websockets").setLevel(logging.WARNING)
 _STREAM_URL = "wss://api-streaming-capital.backend-capital.com/connect"
-_PING_INTERVAL = timedelta(minutes=8)
+# Capital.com closes quiet sockets in roughly two to three minutes in the
+# demo environment. Keep the JSON keepalive comfortably inside that window;
+# the websocket protocol ping is disabled because the API requires a JSON
+# ``ping`` request with the current session tokens.
+_PING_INTERVAL = timedelta(seconds=45)
 _REPLY_TIMEOUT_SECONDS = 30.0
 _DEFAULT_DATA_TIMEOUT_SECONDS = 1800.0
 _SESSION_RENEWAL_LIMIT = 3

@@ -215,7 +215,7 @@ def run_data_recorder() -> None:
             stream = CapitalComStreamClient(
                 rest,
                 symbols_by_epic.keys(),
-                recorder.on_update,
+                recorder.enqueue_update,
                 on_backfill_batch=recorder.on_backfill_batch,
                 on_reconnect=recorder.on_reconnect,
                 data_expected=lambda: any(value is True for value in expected_open.values()),
@@ -256,6 +256,7 @@ def run_data_recorder() -> None:
             next_market_poll = 0.0
             while not stop.is_set():
                 heartbeat_path.touch()
+                recorder.drain_updates()
                 now = monotonic()
                 if now >= next_market_poll:
                     statuses: list[str] = []
@@ -310,6 +311,8 @@ def run_data_recorder() -> None:
                 stop.wait(_STATUS_POLL_SECONDS)
             stop.set()
             stream_thread.join(timeout=35)
+            while recorder.drain_updates(max_updates=4096):
+                pass
     finally:
         signal.signal(signal.SIGTERM, original_handler)
 
