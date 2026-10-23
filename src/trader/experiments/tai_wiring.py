@@ -707,7 +707,9 @@ class CapitalInstrumentRulesProvider:
         instrument = details.get("instrument")
         if isinstance(instrument, Mapping) and instrument.get("tickSize") is None:
             search = self._client.search_markets(target)
-            matches = [item for item in search if isinstance(item, Mapping) and item.get("epic") == target]
+            matches = [
+                item for item in search if isinstance(item, Mapping) and item.get("epic") == target
+            ]
             if len(matches) == 1 and matches[0].get("tickSize") is not None:
                 enriched = dict(details)
                 enriched_instrument = dict(instrument)
