@@ -17638,7 +17638,8 @@
         "Parser accepts minStopOrProfitDistance, lotSize fallback, percentage->absolute conversion; tick from exact search match only; fail-closed kept; refusal reason now logged; 2 focused tests added.",
         "No risk/gate/config change, no broker write."
       ],
-      "reverify_if": "Capital.com response shape changes"
+      "reverify_if": "Capital.com response shape changes",
+      "validated_by": "claude"
     }
   ],
   "blockers": [
