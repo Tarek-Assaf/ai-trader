@@ -16,8 +16,8 @@ import tempfile
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
-from hashlib import sha256
 from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
+from hashlib import sha256
 from pathlib import Path
 from typing import Protocol
 
@@ -993,4 +993,3 @@ __all__ = [
     "TaiDemoSettings",
     "TaiSignal",
 ]
-

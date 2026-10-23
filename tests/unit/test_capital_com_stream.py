@@ -11,9 +11,9 @@ import pytest
 
 from trader.core.logging import configure_logging
 from trader.integrations.capital_com.stream import (
+    _PING_INTERVAL,
     CapitalComStreamClient,
     OhlcUpdate,
-    _PING_INTERVAL,
 )
 
 
@@ -564,4 +564,3 @@ def test_stream_sends_keepalive_ping_before_ten_minutes() -> None:
 
     messages = [json.loads(message) for message in socket.sent]
     assert sum(message["destination"] == "ping" for message in messages) == 2
-
