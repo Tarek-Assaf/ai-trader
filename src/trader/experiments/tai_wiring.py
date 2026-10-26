@@ -46,6 +46,9 @@ SWING_LOOKBACK = 5
 MAX_RISK_ATR = 2.0
 VWAP_DISTANCE_ATR = 1.5
 GROUP_BARS = 18
+# A 54m group with at most two recorder holes still closes like TradingView's, which
+# has every bar; a shorter group (session end, long outage) is not a full block.
+GROUP_MIN_BARS = GROUP_BARS - 2
 REFRESH_BARS = 12
 HA_MODES = frozenset(("closed", "forming"))
 EXPERIMENT_LABEL = "Tai port, owner-directed demo experiment, loosely matched to the owner"
@@ -296,10 +299,7 @@ def _features(bars: Sequence[ClosedBar], *, ha_mode: str = "closed") -> dict[str
         groups[(origin, elapsed // 54)].append(index)
     previous: tuple[float, float] | None = None
     for indices in groups.values():
-        complete = len(indices) == GROUP_BARS and all(
-            bars[a].at + timedelta(minutes=3) == bars[b].at
-            for a, b in zip(indices[:-1], indices[1:], strict=True)
-        )
+        complete = len(indices) >= GROUP_MIN_BARS
         if ha_mode == "closed":
             # request.security(..., lookahead_off) exposes the completed prior
             # 54m value throughout the current group. This is the deterministic
