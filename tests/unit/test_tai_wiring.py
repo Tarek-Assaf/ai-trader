@@ -1,4 +1,3 @@
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -578,9 +577,7 @@ def test_signal_provider_chain_matches_t162_port_entries(
     flags = tuple(rnd.random() < 0.04 for _ in range(count))
     candles = tuple(Candle(at, o, h, low_, c, 0.0) for at, o, h, low_, c in raw)
     closed = tuple(
-        ClosedBar(
-            at, "X", Decimal(str(o)), Decimal(str(h)), Decimal(str(low_)), Decimal(str(c))
-        )
+        ClosedBar(at, "X", Decimal(str(o)), Decimal(str(h)), Decimal(str(low_)), Decimal(str(c)))
         for at, o, h, low_, c in raw
     )
 
