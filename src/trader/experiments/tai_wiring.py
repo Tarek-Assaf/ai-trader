@@ -379,6 +379,44 @@ def _features(bars: Sequence[ClosedBar], *, ha_mode: str = "closed") -> dict[str
     }
 
 
+@dataclass(slots=True)
+class _VirtualTrade:
+    """The indicator's own simulated position (T-223).
+
+    The Pine script tracks a simulated trade on every chart, whether or not the owner
+    takes it.  Refresh entries are allowed 12 bars after *that* trade exits, so the
+    runtime must follow the same chain to know when a refresh is possible.  Management
+    mirrors the T-162 port: targets are tested first, TP1/TP2 move the stop to entry.
+    """
+
+    direction: Direction
+    entry: float
+    risk: float
+    active_stop: float
+    highest: int = 0
+
+    def manage(self, high: float, low: float) -> bool:
+        """Apply one closed bar; return True when the simulated trade has closed."""
+        long = self.direction is Direction.BUY
+        hit_stop = low <= self.active_stop if long else high >= self.active_stop
+
+        def reached(multiple: int) -> bool:
+            if long:
+                return high >= self.entry + self.risk * multiple
+            return low <= self.entry - self.risk * multiple
+
+        hit1, hit2, hit3 = reached(1), reached(2), reached(3)
+        if hit3:
+            return True
+        if hit2:
+            self.highest, self.active_stop = 2, self.entry
+            return False
+        if self.highest == 0 and hit1:
+            self.highest, self.active_stop = 1, self.entry
+            return False
+        return hit_stop
+
+
 class TaiSignalProvider:
     """Pure, session-anchored copy of the T-162 Tai signal gates."""
 
@@ -403,6 +441,11 @@ class TaiSignalProvider:
         self._bars: deque[ClosedBar] = deque(history)
         self._last_exit_at: datetime | None = None
         self._last_failure_gate: str | None = None
+        # T-223: virtual trade chain.  Rebuilt deterministically from the bars (no
+        # persistence needed); index of the next bar the chain has not yet processed.
+        self._chain_next = 0
+        self._chain_trade: _VirtualTrade | None = None
+        self._chain_last_exit_index: int | None = None
 
     @property
     def last_failure_gate(self) -> str | None:
@@ -511,86 +554,113 @@ class TaiSignalProvider:
         bars = tuple(self._bars)
         index = len(bars) - 1
         features = _features(bars, ha_mode=self._ha_mode)
-        atr = features["atr"][index]
-        ema = features["ema"][index]
-        adx = features["adx"][index]
-        plus = features["plus_di"][index]
-        minus = features["minus_di"][index]
-        vwap = features["vwap"][index]
-        if ema is None:
-            self._last_failure_gate = "ema200"
-            return None
-        if adx is None or plus is None or minus is None:
-            self._last_failure_gate = "adx"
-            return None
+        # Catch the virtual chain up over any history it has not seen (warm-up),
+        # then evaluate the current bar.  Only an entry of the chain is a signal.
+        while self._chain_next < index:
+            self._step_chain(bars, features, self._chain_next)
+            self._chain_next += 1
+        signal, gate = self._step_chain(bars, features, index)
+        self._chain_next = index + 1
+        self._last_failure_gate = gate
+        return signal
+
+    def _step_chain(
+        self, bars: tuple[ClosedBar, ...], features: Mapping[str, Any], index: int
+    ) -> tuple[TaiSignal | None, str | None]:
+        """Advance the virtual chain by one bar; return the entry (if any) and a gate."""
+        bar = bars[index]
+        exit_index = self._chain_last_exit_index
+        refresh_ready = exit_index is not None and index - exit_index >= REFRESH_BARS
+        in_trade_at_start = self._chain_trade is not None
+        signal, gate = self._evaluate(bars, features, index, refresh_ready)
+        entered: TaiSignal | None = None
+        if self._chain_trade is None and signal is not None:
+            risk = abs(float(signal.entry) - float(signal.stop))
+            self._chain_trade = _VirtualTrade(
+                signal.direction, float(signal.entry), risk, float(signal.stop)
+            )
+            entered = signal
+        elif signal is not None:
+            gate = "chain_in_trade"
+        trade = self._chain_trade
+        if trade is not None and trade.manage(float(bar.high), float(bar.low)):
+            self._chain_trade = None
+        if in_trade_at_start and self._chain_trade is None:
+            self._chain_last_exit_index = index
+        return entered, (None if entered is not None else gate)
+
+    def _evaluate(
+        self,
+        bars: tuple[ClosedBar, ...],
+        features: Mapping[str, Any],
+        index: int,
+        refresh_ready: bool,
+    ) -> tuple[TaiSignal | None, str | None]:
+        """Evaluate cross and refresh candidates on one bar (T-162 port order)."""
+        if features["ema"][index] is None:
+            return None, "ema200"
+        if (
+            features["adx"][index] is None
+            or features["plus_di"][index] is None
+            or features["minus_di"][index] is None
+        ):
+            return None, "adx"
+        atr, vwap = features["atr"][index], features["vwap"][index]
         if atr is None or vwap is None or atr <= 0:
-            self._last_failure_gate = "vwap_distance"
-            return None
+            return None, "vwap_distance"
+        candidates: list[Direction] = []
+        if features["buy"][index]:
+            candidates.append(Direction.BUY)
+        if features["sell"][index]:
+            candidates.append(Direction.SELL)
+        if refresh_ready:
+            candidates.extend((Direction.BUY, Direction.SELL))
+        if not candidates:
+            return None, "ha_cross"
+        first_gate: str | None = None
+        for candidate in candidates:
+            signal, gate = self._candidate(bars, features, index, candidate)
+            if signal is not None:
+                return signal, None
+            first_gate = first_gate or gate
+        return None, first_gate
 
-        def smart_ok(candidate: Direction) -> bool:
-            if candidate is Direction.BUY:
-                return (
-                    bar.close > Decimal(str(ema))
-                    and float(adx) >= 20
-                    and float(plus) > float(minus)
-                    and bar.close > Decimal(str(vwap))
-                )
-            return (
-                bar.close < Decimal(str(ema))
-                and float(adx) >= 20
-                and float(minus) > float(plus)
-                and bar.close < Decimal(str(vwap))
-            )
-
-        direction: Direction | None = None
-        if features["buy"][index] and smart_ok(Direction.BUY):
-            direction = Direction.BUY
-        elif features["sell"][index] and smart_ok(Direction.SELL):
-            direction = Direction.SELL
-        if direction is None and self._last_exit_at is not None:
-            exit_index = max(
-                (i for i, item in enumerate(bars) if item.at <= self._last_exit_at),
-                default=-1,
-            )
-            if exit_index >= 0 and index - exit_index >= REFRESH_BARS:
-                for candidate in (Direction.BUY, Direction.SELL):
-                    if smart_ok(candidate):
-                        direction = candidate
-                        break
-        if direction is None:
-            if features["buy"][index] or features["sell"][index]:
-                if (features["buy"][index] and bar.close <= Decimal(str(ema))) or (
-                    features["sell"][index] and bar.close >= Decimal(str(ema))
-                ):
-                    self._last_failure_gate = "ema200"
-                elif (
-                    float(adx) < 20
-                    or (features["buy"][index] and float(plus) <= float(minus))
-                    or (features["sell"][index] and float(minus) <= float(plus))
-                ):
-                    self._last_failure_gate = "adx"
-                else:
-                    self._last_failure_gate = "vwap_distance"
-            else:
-                self._last_failure_gate = "ha_cross"
-            return None
-        if abs(float(bar.close) - float(vwap)) / float(atr) > VWAP_DISTANCE_ATR:
-            self._last_failure_gate = "vwap_distance"
-            return None
+    @staticmethod
+    def _candidate(
+        bars: tuple[ClosedBar, ...],
+        features: Mapping[str, Any],
+        index: int,
+        direction: Direction,
+    ) -> tuple[TaiSignal | None, str | None]:
+        bar = bars[index]
+        ema = Decimal(str(features["ema"][index]))
+        adx = float(features["adx"][index])
+        plus = float(features["plus_di"][index])
+        minus = float(features["minus_di"][index])
+        atr = float(features["atr"][index])
+        vwap = float(features["vwap"][index])
+        buy = direction is Direction.BUY
+        if (buy and bar.close <= ema) or (not buy and bar.close >= ema):
+            return None, "ema200"
+        if adx < 20 or (buy and plus <= minus) or (not buy and minus <= plus):
+            return None, "adx"
+        vwap_decimal = Decimal(str(vwap))
+        if (buy and bar.close <= vwap_decimal) or (not buy and bar.close >= vwap_decimal):
+            return None, "vwap_distance"
+        if abs(float(bar.close) - vwap) / atr > VWAP_DISTANCE_ATR:
+            return None, "vwap_distance"
         if index < SWING_LOOKBACK:
-            self._last_failure_gate = "swing"
-            return None
+            return None, "swing"
         previous = bars[index - SWING_LOOKBACK : index]
         stop = (
-            min(item.low for item in previous) - Decimal(str(float(atr) * 0.20))
-            if direction is Direction.BUY
-            else max(item.high for item in previous) + Decimal(str(float(atr) * 0.20))
+            min(item.low for item in previous) - Decimal(str(atr * 0.20))
+            if buy
+            else max(item.high for item in previous) + Decimal(str(atr * 0.20))
         )
-        risk = bar.close - stop if direction is Direction.BUY else stop - bar.close
-        if risk <= 0 or float(risk) / float(atr) > MAX_RISK_ATR:
-            self._last_failure_gate = "risk"
-            return None
-        return TaiSignal(direction, bar.close, stop)
+        risk = bar.close - stop if buy else stop - bar.close
+        if risk <= 0 or float(risk) / atr > MAX_RISK_ATR:
+            return None, "risk"
+        return TaiSignal(direction, bar.close, stop), None
 
 
 def _raw_rule(raw: Mapping[str, Any], *names: str) -> tuple[Decimal, str]:
