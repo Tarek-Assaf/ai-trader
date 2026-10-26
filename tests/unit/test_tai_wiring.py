@@ -404,6 +404,35 @@ def test_forming_ha_can_cross_before_the_54m_group_closes() -> None:
     assert forming["sell"][35]
 
 
+def _group_bars(skip: set[int], count: int = 36) -> tuple[ClosedBar, ...]:
+    start = datetime(2026, 10, 1, 22, 0, tzinfo=UTC)
+    return tuple(
+        ClosedBar(
+            start + timedelta(minutes=index * 3),
+            "NSXUSD",
+            Decimal("100") + Decimal(index) / Decimal("10"),
+            Decimal("101") + Decimal(index) / Decimal("10"),
+            Decimal("99") + Decimal(index) / Decimal("10"),
+            Decimal("100.5") + Decimal(index) / Decimal("10"),
+        )
+        for index in range(count)
+        if index not in skip
+    )
+
+
+def test_ha_group_with_small_recorder_hole_still_advances_ha_state() -> None:
+    """One missing 3m bar must not freeze the 54m HA chain (TradingView has no holes)."""
+    holed = _features(_group_bars({5}))
+    assert all(value is not None for value in holed["ha_open"][17:])
+    assert all(value is not None for value in holed["ha_close"][17:])
+
+
+def test_ha_group_with_big_hole_is_still_incomplete() -> None:
+    """A group missing more than two bars is not a full 54m block."""
+    holed = _features(_group_bars({3, 4, 5}))
+    assert all(value is None for value in holed["ha_open"][15:])
+
+
 def _ha_values(
     features: dict[str, tuple[object, ...]], name: str, count: int
 ) -> tuple[object, ...]:
