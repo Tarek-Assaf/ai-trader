@@ -1,11 +1,12 @@
-from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 
 import pytest
+from scripts import lab_t162_pine_port as port
 
 import trader.experiments.tai_wiring as tai_wiring
+from trader.data.resample import Candle
 from trader.execution.brokers.base import Direction
 from trader.execution.control import ControlMode
 from trader.experiments.tai_demo import (
@@ -451,21 +452,19 @@ def test_signal_provider_keeps_ema_seed_across_long_series_and_restart() -> None
     assert _features(restarted.history)["ema"][-1] == pytest.approx(reference)
 
 
-def test_signal_provider_refreshes_only_after_post_exit_delay(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    start = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
-    bars = tuple(
-        ClosedBar(
-            start + timedelta(minutes=index * 3),
-            "NSXUSD",
-            Decimal("101"),
-            Decimal("102"),
-            Decimal("100"),
-            Decimal("101"),
-        )
-        for index in range(300)
+def _chain_bar(start: datetime, index: int, *, low: str = "100") -> ClosedBar:
+    return ClosedBar(
+        start + timedelta(minutes=index * 3),
+        "NSXUSD",
+        Decimal("101"),
+        Decimal("102"),
+        Decimal(low),
+        Decimal("101"),
     )
+
+
+def _patch_chain_features(monkeypatch: pytest.MonkeyPatch, crosses: set[int]) -> None:
+    """Constant bullish features; a Heikin-Ashi buy cross only at the given indexes."""
 
     def features(
         current: tuple[ClosedBar, ...], *, ha_mode: str = "closed"
@@ -479,19 +478,147 @@ def test_signal_provider_refreshes_only_after_post_exit_delay(
             "plus_di": (30.0,) * size,
             "minus_di": (10.0,) * size,
             "vwap": (100.0,) * size,
-            "buy": (False,) * size,
+            "buy": tuple(index in crosses for index in range(size)),
             "sell": (False,) * size,
         }
 
     monkeypatch.setattr(tai_wiring, "_features", features)
-    provider = TaiSignalProvider(bars, minimum_history=300)
-    provider.note_exit(bars[-1].at)
-    for index in range(REFRESH_BARS - 1):
-        next_bar = replace(bars[-1], at=bars[-1].at + timedelta(minutes=3 * (index + 1)))
-        assert provider(next_bar) is None
-    signal = provider(replace(bars[-1], at=bars[-1].at + timedelta(minutes=3 * REFRESH_BARS)))
-    assert signal is not None
-    assert signal.direction is Direction.BUY
+
+
+def test_signal_provider_refreshes_after_the_virtual_chain_exit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T-223: the refresh anchor is the indicator's simulated exit, not our own fills."""
+    start = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    history = tuple(_chain_bar(start, index) for index in range(300))
+    _patch_chain_features(monkeypatch, {300})
+    provider = TaiSignalProvider(history, minimum_history=300)
+
+    entry = provider(_chain_bar(start, 300))
+    assert entry is not None
+    assert entry.direction is Direction.BUY
+    assert entry.stop == Decimal("99.8")
+
+    # The next bar trades through the stop, so the simulated trade exits at index 301.
+    assert provider(_chain_bar(start, 301, low="99")) is None
+    for index in range(302, 301 + REFRESH_BARS):
+        assert provider(_chain_bar(start, index)) is None
+        assert provider.last_failure_gate == "ha_cross"
+    refresh = provider(_chain_bar(start, 301 + REFRESH_BARS))
+    assert refresh is not None
+    assert refresh.direction is Direction.BUY
+
+
+def test_signal_provider_blocks_a_second_signal_while_the_virtual_trade_is_open(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    start = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    history = tuple(_chain_bar(start, index) for index in range(300))
+    _patch_chain_features(monkeypatch, {300, 301})
+    provider = TaiSignalProvider(history, minimum_history=300)
+    assert provider(_chain_bar(start, 300)) is not None
+    assert provider(_chain_bar(start, 301)) is None
+    assert provider.last_failure_gate == "chain_in_trade"
+
+
+def test_signal_provider_does_not_refresh_from_a_real_exit_alone(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    start = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    history = tuple(_chain_bar(start, index) for index in range(300))
+    _patch_chain_features(monkeypatch, set())
+    provider = TaiSignalProvider(history, minimum_history=300)
+    provider.note_exit(history[-1].at)
+    for index in range(300, 300 + REFRESH_BARS + 5):
+        assert provider(_chain_bar(start, index)) is None
+        assert provider.last_failure_gate == "ha_cross"
+
+
+def test_signal_provider_replays_the_chain_over_warmup_history(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A restart must land on the same chain: an exit inside history enables refresh."""
+    start = datetime(2026, 1, 1, 0, 0, tzinfo=UTC)
+    bars = [_chain_bar(start, index) for index in range(300)]
+    bars[290] = _chain_bar(start, 290, low="99")  # simulated stop-out of the entry at 289
+    _patch_chain_features(monkeypatch, {289})
+    provider = TaiSignalProvider(tuple(bars), minimum_history=300)
+    # Refresh is due at 290 + REFRESH_BARS = 302; indexes 300 and 301 are still too early.
+    assert provider(_chain_bar(start, 300)) is None
+    assert provider(_chain_bar(start, 301)) is None
+    refresh = provider(_chain_bar(start, 302))
+    assert refresh is not None
+    assert refresh.direction is Direction.BUY
+
+
+def test_signal_provider_chain_matches_t162_port_entries(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """T-223: with identical indicator inputs the runtime chain equals the closed port.
+
+    Indicator maths is covered by the T-166 conformance tests; here the feature arrays are
+    injected (long-only, random Heikin-Ashi crosses) so the test compares only the entry,
+    12-bar refresh and target/stop management logic over many simulated trades.
+    """
+    import random
+
+    rnd = random.Random(7)
+    count = 1500
+    start = datetime(2026, 3, 2, 0, 0, tzinfo=UTC)
+    raw = []
+    price = 20000.0
+    for index in range(count):
+        open_ = price
+        close = open_ + rnd.gauss(0, 3.0)
+        high = max(open_, close) + abs(rnd.gauss(0, 2.0))
+        low = min(open_, close) - abs(rnd.gauss(0, 2.0))
+        raw.append((start + timedelta(minutes=3 * index), open_, high, low, close))
+        price = close
+    flags = tuple(rnd.random() < 0.04 for _ in range(count))
+    candles = tuple(Candle(at, o, h, low_, c, 0.0) for at, o, h, low_, c in raw)
+    closed = tuple(
+        ClosedBar(at, "X", Decimal(str(o)), Decimal(str(h)), Decimal(str(low_)), Decimal(str(c)))
+        for at, o, h, low_, c in raw
+    )
+
+    def port_features(bars: tuple[Candle, ...], *_args: object) -> port.Features:
+        size = len(bars)
+        return port.Features(
+            ema=tuple(bar.close - 5 for bar in bars),
+            atr=(2.0,) * size,
+            adx=(30.0,) * size,
+            plus_di=(30.0,) * size,
+            minus_di=(10.0,) * size,
+            vwap=tuple(bar.close - 0.5 for bar in bars),
+            ha_open=(None,) * size,
+            ha_close=(None,) * size,
+            buy_cross=flags[:size],
+            sell_cross=(False,) * size,
+        )
+
+    def wiring_features(
+        bars: tuple[ClosedBar, ...], *, ha_mode: str = "closed"
+    ) -> dict[str, tuple[object, ...]]:
+        size = len(bars)
+        return {
+            "ema": tuple(float(bar.close) - 5 for bar in bars),
+            "atr": (2.0,) * size,
+            "adx": (30.0,) * size,
+            "plus_di": (30.0,) * size,
+            "minus_di": (10.0,) * size,
+            "vwap": tuple(float(bar.close) - 0.5 for bar in bars),
+            "buy": flags[:size],
+            "sell": (False,) * size,
+        }
+
+    monkeypatch.setattr(port, "compute_features", port_features)
+    monkeypatch.setattr(tai_wiring, "_features", wiring_features)
+    trades, _ = port.replay(candles, "closed", "session_1800_ny", "session_1800_ny")
+    expected = [trade.entry_time for trade in trades if trade.entry_time >= closed[299].at]
+    provider = TaiSignalProvider(minimum_history=300)
+    actual = [bar.at for bar in closed if provider(bar) is not None]
+    assert len(expected) > 20
+    assert actual == expected
 
 
 def test_dry_run_journals_without_submitting() -> None:
