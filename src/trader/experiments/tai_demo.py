@@ -592,12 +592,15 @@ class TaiDemoRunner:
             return self._outcome(cycle_id, "DRY_RUN", "order_would_submit")
         try:
             receipt = self._orders.submit(cycle_id, order)
-        except ExecutionPaused:
-            self._journal_event(cycle_id, "guardian_veto", epic=bar.epic)
-            self._send_alert(f"entry vetoed for {bar.epic}")
+        except ExecutionPaused as exc:
+            reason = str(exc) or "execution_paused"
+            self._journal_event(cycle_id, "guardian_veto", epic=bar.epic, reason=reason)
+            self._send_alert(f"entry vetoed for {bar.epic}: {reason}")
             return self._outcome(cycle_id, "REJECTED", "guardian_veto")
         if receipt is None:
-            self._journal_event(cycle_id, "guardian_veto", epic=bar.epic)
+            self._journal_event(
+                cycle_id, "guardian_veto", epic=bar.epic, reason="no_receipt_from_order_manager"
+            )
             return self._outcome(cycle_id, "REJECTED", "guardian_veto")
         position = getattr(receipt, "position", None)
         if not isinstance(position, Position):

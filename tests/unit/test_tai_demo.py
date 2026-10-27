@@ -6,6 +6,7 @@ import pytest
 
 from trader.execution.brokers.base import Direction, OrderReceipt, OrderRequest, Position
 from trader.execution.control import ControlMode
+from trader.execution.manager import ExecutionPaused
 from trader.experiments.tai_demo import (
     ClosedBar,
     TaiDemoRefused,
@@ -52,10 +53,13 @@ class Manager:
     def __init__(self, gateway, veto=False):
         self.gateway = gateway
         self.veto = veto
+        self.raises = None
         self.submits = []
 
     def submit(self, cycle_id, order):
         self.submits.append((cycle_id, order))
+        if self.raises is not None:
+            raise self.raises
         if self.veto:
             return None
         position = Position(
@@ -239,6 +243,20 @@ def test_guardian_veto_and_market_closed_are_journaled_without_entry():
     assert any(event["event"] == "guardian_veto" for event in events)
     blocked = runner(Gateway())[0]
     assert blocked.on_bar(bar(market_open=False)).reason == "market_closed_or_blackout"
+
+
+def test_paused_order_manager_reason_reaches_alert_and_journal():
+    events = []
+    alerts = []
+    tai, manager = runner(Gateway(), journal=events.append, alerts=alerts)
+    manager.raises = ExecutionPaused("execution lease is unavailable")
+    result = tai.on_bar(bar())
+    assert result.reason == "guardian_veto"
+    assert any(
+        event["event"] == "guardian_veto" and event["reason"] == "execution lease is unavailable"
+        for event in events
+    )
+    assert any("execution lease is unavailable" in alert for alert in alerts)
 
 
 def test_outcome_telemetry_counts_reasons_entries_and_exits():
