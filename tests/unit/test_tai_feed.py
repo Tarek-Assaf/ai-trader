@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from trader.experiments.tai_feed import TaiLakeTailer
+from trader.experiments.tai_feed import TaiLakeTailer, read_closed_lake_minutes
 from trader.experiments.tai_wiring import TaiMinuteBar, ThreeMinuteBarBuilder
 
 
@@ -95,6 +95,37 @@ def test_tailer_skips_incomplete_minutes_and_restart_seed(tmp_path: Path) -> Non
         start + timedelta(minutes=3),
         start + timedelta(minutes=4),
         start + timedelta(minutes=5),
+    ]
+
+
+def test_read_with_after_returns_only_recent_minutes(tmp_path: Path) -> None:
+    """The incremental read matches the full read for the same recent window."""
+    start = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
+    _write_fixture(tmp_path / "NSXUSD" / "1m_capital" / "2026" / "10.parquet", start, 120)
+    before = start + timedelta(hours=3)
+    cutoff = start + timedelta(minutes=100)
+
+    full = read_closed_lake_minutes(tmp_path, "NSXUSD", before=before)
+    recent = read_closed_lake_minutes(tmp_path, "NSXUSD", before=before, after=cutoff)
+
+    assert len(full) == 120
+    assert [item.at for item in recent] == [item.at for item in full if item.at >= cutoff]
+    assert len(recent) == 20
+
+
+def test_tailer_reads_only_recent_rows_after_the_first_poll(tmp_path: Path) -> None:
+    """After the seed, each poll still feeds every new minute exactly once."""
+    start = datetime(2026, 10, 19, 8, 0, tzinfo=UTC)
+    path = tmp_path / "NSXUSD" / "1m_capital" / "2026" / "10.parquet"
+    _write_fixture(path, start, 60)
+    consumer = Consumer()
+    tailer = TaiLakeTailer(tmp_path, "NSXUSD", consumer)
+
+    assert tailer.poll_once(start + timedelta(minutes=60)) == 60
+    _write_fixture(path, start, 90)
+    assert tailer.poll_once(start + timedelta(minutes=90)) == 30
+    assert [item.at for item in consumer.minutes] == [
+        start + timedelta(minutes=offset) for offset in range(90)
     ]
 
 
