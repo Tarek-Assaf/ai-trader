@@ -248,11 +248,15 @@ class RuntimeService:
         backoff_initial: float = 1.0,
         backoff_max: float = 60.0,
         lease_heartbeat_interval: float = 10.0,
+        execution_tick_interval: float = 5.0,
     ) -> None:
         if backoff_initial <= 0 or backoff_max < backoff_initial:
             raise ValueError("backoff bounds are invalid")
         if lease_heartbeat_interval <= 0:
             raise ValueError("lease heartbeat interval must be positive")
+        if execution_tick_interval <= 0:
+            raise ValueError("execution tick interval must be positive")
+        self._execution_tick_interval = execution_tick_interval
         self.components = components
         self.control_source = control_source
         self._alert = alert or (lambda message: LOGGER.error("runtime alert: %s", message))
@@ -277,6 +281,7 @@ class RuntimeService:
         self._stop = asyncio.Event()
         self._task: asyncio.Task[None] | None = None
         self._heartbeat_task: asyncio.Task[None] | None = None
+        self._execution_task: asyncio.Task[None] | None = None
         self._lease_held = False
         self._last_dependency_failure: dict[str, str] | None = None
         self.state = RuntimeState.STOPPED
@@ -308,6 +313,7 @@ class RuntimeService:
         self.state = RuntimeState.RUNNING
         self._soak_call("record_restart")
         self._start_lease_heartbeat()
+        self._start_execution_supervisor()
         if self._cycle_source is not None:
             self._task = asyncio.create_task(self.run_forever(), name="ai-trader-decision-loop")
 
@@ -328,6 +334,19 @@ class RuntimeService:
                 await heartbeat_task
             except asyncio.CancelledError:
                 pass
+        execution_task, self._execution_task = self._execution_task, None
+        if execution_task is not None and execution_task is not asyncio.current_task():
+            execution_task.cancel()
+            try:
+                await execution_task
+            except asyncio.CancelledError:
+                pass
+        manager_shutdown = getattr(self.components.order_manager, "shutdown", None)
+        if callable(manager_shutdown):
+            try:
+                manager_shutdown()
+            except Exception:
+                self._notify("runtime_execution_shutdown_failed")
         if self._lease_held:
             try:
                 self.components.leader.release()
@@ -443,6 +462,7 @@ class RuntimeService:
             return False
         self.state = RuntimeState.RUNNING
         self._start_lease_heartbeat()
+        self._start_execution_supervisor()
         self._notify("runtime_recovered")
         return True
 
@@ -481,6 +501,47 @@ class RuntimeService:
                 self._lease_heartbeat_loop(),
                 name="ai-trader-lease-heartbeat",
             )
+
+    def _start_execution_supervisor(self) -> None:
+        manager = self.components.order_manager
+        if not callable(getattr(manager, "startup", None)) or not callable(
+            getattr(manager, "tick", None)
+        ):
+            return
+        task = self._execution_task
+        if task is None or task.done():
+            self._execution_task = asyncio.create_task(
+                self._execution_supervisor(),
+                name="ai-trader-execution-supervisor",
+            )
+
+    async def _execution_supervisor(self) -> None:
+        """Start the order manager once, then keep its leases and controls ticking.
+
+        Without this the manager never starts (every entry is refused with
+        "execution has not started") and its own lease would expire between orders.
+        Both calls block on the broker and Redis, so they run off the event loop.
+        """
+        manager: Any = self.components.order_manager
+        try:
+            await asyncio.to_thread(manager.startup)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            LOGGER.error("order manager startup failed; entries stay paused")
+            self._notify("runtime_execution_startup_failed")
+            return
+        LOGGER.info("order manager started")
+        while not self._stop.is_set():
+            await self._wait(self._execution_tick_interval)
+            if self._stop.is_set():
+                return
+            try:
+                await asyncio.to_thread(manager.tick)
+            except asyncio.CancelledError:
+                raise
+            except Exception:
+                LOGGER.error("order manager tick failed")
 
     async def _lease_heartbeat_loop(self) -> None:
         """Renew the lease independently of market-bar arrival."""
@@ -570,6 +631,7 @@ def build_runtime(
     alert: Callable[[str], None] | None = None,
     cycle_source: CycleSource | None = None,
     lease_heartbeat_interval: float = 10.0,
+    execution_tick_interval: float = 5.0,
 ) -> RuntimeService:
     """Build the single core runtime from already validated dependencies."""
     return RuntimeService(
@@ -578,6 +640,7 @@ def build_runtime(
         alert=alert,
         cycle_source=cycle_source,
         lease_heartbeat_interval=lease_heartbeat_interval,
+        execution_tick_interval=execution_tick_interval,
     )
 
 
