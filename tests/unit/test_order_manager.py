@@ -577,3 +577,69 @@ def test_persistent_pause_reason_alerts_once_until_resume(tmp_path):
     assert alerts.count("execution_lease_lost") == 1
     manager._pause("broker_state_mismatch")
     assert alerts.count("broker_state_mismatch") == 1
+
+
+def _tai_runner(manager, broker, alerts):
+    from trader.experiments.tai_demo import (
+        TaiDemoRunner,
+        TaiDemoSettings,
+        TaiSignal,
+    )
+
+    signal = TaiSignal(Direction.BUY, Decimal("100"), Decimal("90"))
+    return TaiDemoRunner(
+        settings=TaiDemoSettings("demo", "paper", False, True),
+        order_manager=manager,
+        position_gateway=broker,
+        signal_provider=lambda _bar: signal,
+        order_factory=lambda sig, cycle_id: OrderRequest(
+            cycle_id,
+            "US100",
+            sig.direction,
+            Decimal("1"),
+            sig.entry,
+            sig.stop,
+            sig.levels()[2],
+        ),
+        control=type("C", (), {"read": lambda self: ControlMode.RUN})(),
+        alert=alerts.append,
+    )
+
+
+def _tai_bar():
+    from datetime import UTC, datetime
+
+    from trader.experiments.tai_demo import ClosedBar
+
+    return ClosedBar(
+        datetime(2026, 10, 19, 8, 0, tzinfo=UTC),
+        "US100",
+        Decimal("100"),
+        Decimal("100"),
+        Decimal("100"),
+        Decimal("100"),
+        closed=True,
+        market_open=True,
+        in_break=False,
+    )
+
+
+def test_tai_signal_reaches_the_broker_through_the_real_order_manager(tmp_path):
+    manager, broker, _journal, _lease, alerts, _order = setup(tmp_path)
+    runner = _tai_runner(manager, broker, alerts)
+    outcome = runner.on_bar(_tai_bar())
+    assert outcome.action == "SUBMITTED"
+    assert broker.calls == 1
+    assert len(broker.get_positions()) == 1
+    manager.tick()
+    assert not manager.paused
+    assert runner.on_bar(_tai_bar()).reason == "one_position_rule"
+    assert broker.calls == 1
+
+
+def test_tai_signal_is_refused_when_the_manager_is_not_started(tmp_path):
+    manager, broker, _journal, _lease, alerts, _order = setup(tmp_path)
+    manager.shutdown()
+    outcome = _tai_runner(manager, broker, alerts).on_bar(_tai_bar())
+    assert outcome.action != "SUBMITTED"
+    assert broker.calls == 0
