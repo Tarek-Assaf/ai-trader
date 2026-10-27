@@ -544,9 +544,7 @@ def _canonical_symbol_resolver(configs: Mapping[str, Any]) -> Callable[[str], st
     return lambda epic: names.get(str(epic).upper(), str(epic))
 
 
-def _guarded_order_manager(
-    app: FastAPI, manager: Any, canonical: Callable[[str], str]
-) -> Any:
+def _guarded_order_manager(app: FastAPI, manager: Any, canonical: Callable[[str], str]) -> Any:
     """Route deterministic-strategy entries through the Risk Guardian first."""
     from trader.runtime.approval import GuardedEntrySubmitter, RuntimeApproval
 
