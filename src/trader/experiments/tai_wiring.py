@@ -546,6 +546,11 @@ class TaiSignalProvider:
     def warmup_bars(self) -> int:
         return len(self._bars)
 
+    @property
+    def latest_atr(self) -> Decimal | None:
+        """ATR of the last evaluated bar, used as the Guardian's volatility input."""
+        return getattr(self, "_latest_atr", None)
+
     def __call__(self, bar: ClosedBar) -> TaiSignal | None:
         self._last_failure_gate = None
         self._bars.append(bar)
@@ -564,6 +569,8 @@ class TaiSignalProvider:
         signal, gate = self._step_chain(bars, features, index)
         self._chain_next = index + 1
         self._last_failure_gate = gate
+        latest_atr = features["atr"][index]
+        self._latest_atr = Decimal(str(latest_atr)) if latest_atr else None
         LOGGER.info(
             "tai signal compute seconds=%.3f bars=%d", time.monotonic() - started, len(bars)
         )
@@ -831,6 +838,47 @@ def _round_price(value: Decimal, tick: Decimal, direction: Direction, *, stop: b
     ratio = value / tick
     mode = ROUND_FLOOR if direction is Direction.BUY else ROUND_CEILING
     return ratio.to_integral_value(rounding=mode) * tick
+
+
+class TaiMarketSource:
+    """Live quote and volatility for the Risk Guardian's market snapshot.
+
+    Bid and ask come from the broker market details fetched for this epic, ATR from
+    the Tai signal provider's last evaluated bar.  Anything missing raises, so the
+    Guardian rejects instead of approving on a guess.
+    """
+
+    def __init__(
+        self,
+        rules_provider: Callable[[str], TaiInstrumentRules],
+        signal: Any,
+        epic: str,
+        *,
+        clock: Callable[[], datetime] = lambda: datetime.now(UTC),
+    ) -> None:
+        self._rules = rules_provider
+        self._signal = signal
+        self._epic = epic
+        self._clock = clock
+
+    def __call__(self, _instrument: str) -> Any:
+        from trader.risk.guardian import MarketSnapshot
+        from trader.runtime.context import ContextUnavailable
+
+        rules = self._rules(self._epic)
+        atr = getattr(self._signal, "latest_atr", None)
+        if rules.bid is None or rules.ask is None or rules.bid <= 0 or rules.ask < rules.bid:
+            raise ContextUnavailable("broker quote is unavailable")
+        if not isinstance(atr, Decimal) or atr <= 0:
+            raise ContextUnavailable("ATR is unavailable")
+        return MarketSnapshot(
+            latest_data_at=self._clock(),
+            market_open=True,
+            in_break=False,
+            bid=rules.bid,
+            ask=rules.ask,
+            atr=atr,
+        )
 
 
 class TaiOrderFactory:

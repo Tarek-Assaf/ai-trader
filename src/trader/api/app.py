@@ -258,6 +258,7 @@ def _build_tai_demo_runtime(
     from trader.experiments.tai_wiring import (
         CapitalBalanceProvider,
         CapitalInstrumentRulesProvider,
+        TaiMarketSource,
         TaiSignalProvider,
         ThreeMinuteBarBuilder,
         build_tai_demo_runtime,
@@ -317,16 +318,23 @@ def _build_tai_demo_runtime(
 
             send_alert(Alert("tai_demo", message[:240]))
 
+    rules_provider = CapitalInstrumentRulesProvider(capital_client, epic)
+    app.state.tai_market_source = TaiMarketSource(rules_provider, signal, epic)
     runtime_adapter = build_tai_demo_runtime(
         settings,
         epic=epic,
-        order_manager=cast(Any, components.order_manager),
+        order_manager=cast(
+            Any,
+            _guarded_order_manager(
+                app, components.order_manager, _canonical_symbol_resolver(configs)
+            ),
+        ),
         position_gateway=cast(Any, components.broker),
         control=app.state.execution_control_source,
         source=cycle_source,
         builder=builder,
         balance_provider=CapitalBalanceProvider(capital_client),
-        rules_provider=CapitalInstrumentRulesProvider(capital_client, epic),
+        rules_provider=rules_provider,
         signal_provider=signal,
         managed_state=previous_state,
         pending_bars=pending_bars,
@@ -520,6 +528,49 @@ def _build_chat_router(
     )
 
 
+def _canonical_symbol_resolver(configs: Mapping[str, Any]) -> Callable[[str], str]:
+    """Map a broker epic or alias (US100) to its configured canonical symbol (NAS100)."""
+    raw = configs.get("instruments")
+    dump = getattr(raw, "model_dump", None)
+    values = dump() if callable(dump) else raw
+    instruments = values.get("instruments", values) if isinstance(values, dict) else {}
+    names: dict[str, str] = {}
+    for symbol, item in instruments.items():
+        names[str(symbol).upper()] = str(symbol)
+        if isinstance(item, dict):
+            for alias in (item.get("capital_epic"), *(item.get("aliases") or ())):
+                if alias:
+                    names[str(alias).upper()] = str(symbol)
+    return lambda epic: names.get(str(epic).upper(), str(epic))
+
+
+def _guarded_order_manager(
+    app: FastAPI, manager: Any, canonical: Callable[[str], str]
+) -> Any:
+    """Route deterministic-strategy entries through the Risk Guardian first."""
+    from trader.runtime.approval import GuardedEntrySubmitter, RuntimeApproval
+
+    approval = (getattr(app.state, "runtime_services", None) or {}).get("approval")
+    if not isinstance(approval, RuntimeApproval):
+        _LOG.warning("Guardian approval adapter unavailable; strategy entries stay unguarded")
+        return manager
+    return GuardedEntrySubmitter(approval, manager, canonical)
+
+
+def _lazy_market_source(app: FastAPI) -> Callable[[str], Any]:
+    """Market snapshot for the Guardian, filled in once the Tai runtime exists."""
+
+    def source(instrument: str) -> Any:
+        from trader.runtime.context import ContextUnavailable
+
+        provider = getattr(app.state, "tai_market_source", None)
+        if provider is None:
+            raise ContextUnavailable("market snapshot source is not ready")
+        return provider(instrument)
+
+    return source
+
+
 def _install_runtime_services(
     app: FastAPI,
     settings: EnvironmentSettings,
@@ -540,6 +591,7 @@ def _install_runtime_services(
             "recorder_status_provider": recorder_status_provider or data_recorder_status,
             "instrument_mapper": app.state.instrument_mapper,
             "market_details_client": capital_client,
+            "market_context_source": _lazy_market_source(app),
             "soak_monitor": app.state.soak_monitor,
             **(getattr(app.state, "runtime_service_overrides", None) or {}),
         },
