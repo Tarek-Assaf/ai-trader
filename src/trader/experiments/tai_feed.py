@@ -12,7 +12,7 @@ import threading
 import time
 from collections import defaultdict
 from collections.abc import Callable, Mapping
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
 from typing import Any, Protocol
@@ -20,6 +20,8 @@ from typing import Any, Protocol
 from trader.experiments.tai_wiring import TaiMinuteBar
 
 LOGGER = logging.getLogger(__name__)
+# Re-read this much behind the last fed minute so a late second side is still paired.
+RECENT_WINDOW = timedelta(minutes=10)
 
 
 class TaiMinuteConsumer(Protocol):
@@ -50,17 +52,32 @@ def _lake_paths(lake_root: Path, epic: str) -> tuple[Path, ...]:
     return tuple(lake_root.glob("*/1m_capital/*/*.parquet"))
 
 
+def _tail_only(table: Any, after: datetime) -> Any:
+    """Keep only rows at or after ``after`` using Arrow (no per-row Python work)."""
+    import pyarrow as pa  # type: ignore[import-untyped]
+    import pyarrow.compute as pc  # type: ignore[import-untyped]
+
+    try:
+        column = table["ts_utc"]
+        return table.filter(pc.greater_equal(column, pa.scalar(after, type=column.type)))
+    except (KeyError, TypeError, ValueError, pa.ArrowException):
+        return table
+
+
 def read_closed_lake_minutes(
     lake_root: str | Path,
     epic: str,
     *,
     before: datetime,
+    after: datetime | None = None,
 ) -> tuple[TaiMinuteBar, ...]:
     """Read complete bid/ask mid minutes strictly before ``before``.
 
     A minute is emitted only when both sides exist.  Applying the closed-minute
     boundary before constructing the output keeps the currently forming minute
-    out of the runtime even when one side has already been persisted.
+    out of the runtime even when one side has already been persisted.  When ``after``
+    is given, older rows are dropped in Arrow before they are turned into Python
+    objects, so a poll costs the recent minutes, not the whole lake.
     """
     try:
         import pyarrow.parquet as pq  # type: ignore[import-untyped]
@@ -74,10 +91,13 @@ def read_closed_lake_minutes(
     paired: dict[datetime, dict[str, Mapping[str, Any]]] = defaultdict(dict)
     for path in _lake_paths(Path(lake_root), epic):
         try:
-            rows = pq.read_table(
+            table = pq.read_table(
                 path,
                 columns=["epic", "ts_utc", "side", "open", "high", "low", "close"],
-            ).to_pylist()
+            )
+            if after is not None:
+                table = _tail_only(table, _utc_minute(after))
+            rows = table.to_pylist()
         except (OSError, ValueError):
             continue
         for row in rows:
@@ -181,7 +201,13 @@ class TaiLakeTailer:
     def _poll_once(self, now: datetime | None = None) -> int:
         """Feed new closed minutes and update the bounded stale guard."""
         current = _utc_minute(now or self._clock())
-        minutes = read_closed_lake_minutes(self.lake_root, self.epic, before=current)
+        last_seen = self._last_seen_minute
+        minutes = read_closed_lake_minutes(
+            self.lake_root,
+            self.epic,
+            before=current,
+            after=None if last_seen is None else last_seen - RECENT_WINDOW,
+        )
         pending = tuple(
             minute
             for minute in minutes
