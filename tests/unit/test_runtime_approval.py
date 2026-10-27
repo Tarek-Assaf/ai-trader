@@ -553,3 +553,147 @@ def test_loss_guard_keeps_shared_baseline_fields_and_peak() -> None:
     assert journal.snapshot["peak_equity"] == "120"
     assert journal.snapshot["consecutive_losses"] == 2
     assert journal.snapshot["last_loss_at"] == "2026-10-07T10:00:00+00:00"
+
+
+def _guarded_stack(tmp_path, *, bid="99.95", ask="100.05"):
+    """Real Guardian + RuntimeApproval + GuardedEntrySubmitter + OrderManager + paper broker."""
+    from sqlalchemy import create_engine
+
+    from trader.core.db import tables
+    from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
+    from trader.execution.control import ControlMode
+    from trader.execution.journal import ExecutionJournal
+    from trader.execution.manager import OrderManager
+    from trader.risk.guardian import RiskGuardian, RiskLimits
+    from trader.runtime.approval import GuardedEntrySubmitter
+
+    class Audit:
+        def append(self, _event: object) -> None: ...
+
+    class Lease:
+        def acquire(self) -> None: ...
+
+        def check(self) -> None: ...
+
+    class Controls:
+        def read(self) -> ControlMode:
+            return ControlMode.RUN
+
+        def set(self, _mode: ControlMode) -> None: ...
+
+    class Broker(PaperBroker):
+        calls = 0
+
+        def place_order(self, order):
+            self.calls += 1
+            return super().place_order(order)
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'guarded.db'}")
+    tables["trade_intents"].create(engine)
+    tables["snapshots"].create(engine)
+    journal = ExecutionJournal(engine)
+    broker = Broker(
+        starting_cash=Decimal("10000"),
+        currency="USD",
+        costs=PaperExecutionCosts(
+            spread_points={"US100": Decimal("0.1")},
+            slippage_points={"US100": Decimal("0")},
+        ),
+    )
+    limits = RiskLimits(
+        risk_per_trade_pct=Decimal("0.5"),
+        max_daily_loss_pct=Decimal("2"),
+        max_weekly_loss_pct=Decimal("5"),
+        max_drawdown_pct=Decimal("10"),
+        max_open_positions_total=3,
+        max_open_positions_per_instrument=2,
+        max_combined_risk_pct=Decimal("1"),
+        max_margin_usage_pct=Decimal("40"),
+        max_effective_leverage=Decimal("5"),
+        min_reward_risk=Decimal("1.5"),
+        min_stop_atr=Decimal("0.5"),
+        max_stop_atr=Decimal("3"),
+        max_spread_atr_ratio=Decimal("0.2"),
+        stale_data_max_seconds=20,
+        max_orders_per_hour=600,
+        blackout_before_min=30,
+        blackout_after_min=15,
+        consecutive_loss_pause=4,
+        loss_cooldown_minutes=30,
+        min_trade_quality_score=Decimal("0.7"),
+    )
+    guardian = RiskGuardian(limits, Audit(), canonical_symbols={"NAS100"})
+    base = _inputs()
+    market = replace(base.market, bid=Decimal(bid), ask=Decimal(ask))
+    context = replace(base, market=market)
+    approval = RuntimeApproval(guardian, context_provider=lambda *_args: context)
+    controls = Controls()
+    manager = OrderManager(
+        broker,
+        journal,
+        Lease(),
+        Lease(),
+        approval,
+        PnlLossGuard(
+            broker,
+            max_daily_loss_pct=Decimal("2"),
+            max_weekly_loss_pct=Decimal("5"),
+            control_writer=controls,
+            alert=lambda _message: None,
+            journal=journal,
+        ),
+        lambda _message: None,
+        controls,
+        controls,
+        ProtectivePositionManager(broker, control_writer=controls, alert=lambda _message: None),
+    )
+    manager.startup()
+    submitter = GuardedEntrySubmitter(approval, manager, lambda epic: "NAS100")
+    return submitter, manager, broker
+
+
+def _us100_order(size="3"):
+    return OrderRequest(
+        "cycle-1",
+        "US100",
+        Direction.BUY,
+        Decimal(size),
+        Decimal("100"),
+        Decimal("99"),
+        Decimal("102"),
+    )
+
+
+def test_strategy_entry_is_guardian_approved_capped_and_reaches_the_broker(tmp_path) -> None:
+    submitter, manager, broker = _guarded_stack(tmp_path)
+    receipt = submitter.submit("cycle-1", _us100_order("3"))
+    assert receipt is not None
+    assert broker.calls == 1
+    assert receipt.position.epic == "US100"
+    assert receipt.position.size == Decimal("1")  # capped at the Guardian's approved size
+    assert not manager.paused
+
+
+def test_guardian_refusal_is_a_veto_not_a_latched_pause(tmp_path) -> None:
+    import pytest
+
+    from trader.execution.manager import ExecutionPaused
+
+    # a 1.0-wide quote against ATR 1 breaks the 0.2 spread/ATR rule
+    submitter, manager, broker = _guarded_stack(tmp_path, bid="99.5", ask="100.5")
+    with pytest.raises(ExecutionPaused, match="guardian rejected"):
+        submitter.submit("cycle-1", _us100_order("1"))
+    assert broker.calls == 0
+    assert not manager.paused
+
+
+def test_direct_manager_submit_without_guardian_binding_is_refused(tmp_path) -> None:
+    """Documents the old defect: no Guardian evaluation means no approval."""
+    import pytest
+
+    from trader.execution.manager import ExecutionPaused
+
+    _submitter, manager, broker = _guarded_stack(tmp_path)
+    with pytest.raises(ExecutionPaused):
+        manager.submit("cycle-1", _us100_order("1"))
+    assert broker.calls == 0

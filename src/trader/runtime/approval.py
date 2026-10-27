@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
@@ -154,6 +154,11 @@ class RuntimeApproval:
     async def evaluate(
         self, intent: GraphTradeIntent, context: object, cycle_id: str
     ) -> GuardianDecision:
+        return self.evaluate_sync(intent, context, cycle_id)
+
+    def evaluate_sync(
+        self, intent: GraphTradeIntent, context: object, cycle_id: str
+    ) -> GuardianDecision:
         inputs = self._context(cycle_id, context, intent)
         if inputs is None or inputs.sizing is None:
             return _reject("guardian_context_or_sizing_missing")
@@ -203,6 +208,65 @@ class RuntimeApproval:
                 ),
             )
         return bound
+
+
+class GuardedEntrySubmitter:
+    """Ask the Risk Guardian about an exact order, then submit through OrderManager.
+
+    Deterministic strategies (the Tai demo) build an order themselves and used to
+    call ``OrderManager.submit`` directly, which then found no stored Guardian
+    approval and latched a pause.  This adapter runs the same Guardian evaluation
+    the agent graph uses, caps the size at the Guardian's approved size, binds the
+    approval to the exact order, and only then calls the manager.  A Guardian
+    refusal is raised before the manager is touched, so it never latches a pause.
+    """
+
+    def __init__(
+        self,
+        approval: RuntimeApproval,
+        manager: Any,
+        canonical: Callable[[str], str] = lambda epic: epic,
+    ) -> None:
+        self._approval = approval
+        self._manager = manager
+        self._canonical = canonical
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._manager, name)
+
+    def submit(self, cycle_id: str, order: OrderRequest) -> Any:
+        if order.stop_level is None or order.profit_level is None:
+            raise ExecutionPaused("guardian rejected: stop and target are required")
+        try:
+            intent = GraphTradeIntent(
+                instrument=self._canonical(order.epic),
+                direction=order.direction.value,
+                entry_type="market",
+                entry_level=order.reference_price,
+                stop_level=order.stop_level,
+                target_levels=(order.profit_level,),
+                time_horizon="intraday",
+                thesis="deterministic strategy entry",
+                confidence=1.0,
+            )
+        except (TypeError, ValueError):
+            raise ExecutionPaused("guardian rejected: order could not be described") from None
+        decision = self._approval.evaluate_sync(intent, None, cycle_id)
+        bound = self._approval._bound.pop(cycle_id, None)
+        if not decision.approved or decision.approved_size is None or bound is None:
+            reasons = ",".join(decision.reasons) or "no_reason"
+            raise ExecutionPaused(f"guardian rejected: {reasons}")
+        size = min(order.size, decision.approved_size)
+        if size <= 0:
+            raise ExecutionPaused("guardian rejected: approved size is zero")
+        final = replace(order, size=size)
+        self._approval._bound[cycle_id] = BoundApproval(
+            final, cycle_id, replace(bound.decision, approved_size=size)
+        )
+        try:
+            return self._manager.submit(cycle_id, final)
+        finally:
+            self._approval._bound.pop(cycle_id, None)
 
 
 class RuntimeExecutor:
