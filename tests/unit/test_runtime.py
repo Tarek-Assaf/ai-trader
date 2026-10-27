@@ -275,3 +275,63 @@ def test_lease_heartbeat_failure_blocks_entries() -> None:
         await runtime.stop()
 
     asyncio.run(run())
+
+
+class FakeManager:
+    def __init__(self, *, fail_startup: bool = False) -> None:
+        self.fail_startup = fail_startup
+        self.startups = 0
+        self.ticks = 0
+        self.shutdowns = 0
+
+    def startup(self) -> None:
+        self.startups += 1
+        if self.fail_startup:
+            raise RuntimeError("no lease")
+
+    def tick(self) -> None:
+        self.ticks += 1
+
+    def shutdown(self) -> None:
+        self.shutdowns += 1
+
+
+def execution_service(manager: FakeManager, alerts: list[str]) -> RuntimeService:
+    return RuntimeService(
+        RuntimeComponents(leader=FakeLease(), decision_loop=FakeLoop(), order_manager=manager),
+        control_source=FakeControl(),
+        alert=alerts.append,
+        execution_tick_interval=0.01,
+    )
+
+
+def test_runtime_starts_ticks_and_shuts_down_the_order_manager() -> None:
+    async def run() -> None:
+        manager = FakeManager()
+        runtime = execution_service(manager, [])
+        await runtime.start()
+        await asyncio.sleep(0.15)
+        assert manager.startups == 1
+        assert manager.ticks >= 2
+        await runtime.stop()
+        assert manager.shutdowns == 1
+        ticks = manager.ticks
+        await asyncio.sleep(0.05)
+        assert manager.ticks == ticks
+
+    asyncio.run(run())
+
+
+def test_failed_order_manager_startup_alerts_and_never_ticks() -> None:
+    async def run() -> None:
+        manager = FakeManager(fail_startup=True)
+        alerts: list[str] = []
+        runtime = execution_service(manager, alerts)
+        await runtime.start()
+        await asyncio.sleep(0.1)
+        assert manager.startups == 1
+        assert manager.ticks == 0
+        assert "runtime_execution_startup_failed" in alerts
+        await runtime.stop()
+
+    asyncio.run(run())

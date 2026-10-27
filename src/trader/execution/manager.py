@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -61,9 +62,12 @@ class OrderManager:
         manage_positions: Callable[[Sequence[Position]], None],
         *,
         reconcile_interval_seconds: int = 5,
+        startup_lease_wait_seconds: float = 0.0,
     ) -> None:
         if reconcile_interval_seconds <= 0:
             raise ValueError("reconciliation interval must be positive")
+        if startup_lease_wait_seconds < 0:
+            raise ValueError("startup lease wait must not be negative")
         self._broker = broker
         self._journal = journal
         self._execution_lease = execution_lease
@@ -83,6 +87,9 @@ class OrderManager:
         self._kill_alerted = False
         self._external_pause_latched = False
         self._order_without_server_side_stop: bool | None = None
+        self._startup_lease_wait = startup_lease_wait_seconds
+        self._shutdown_event = threading.Event()
+        self._last_pause_alert: str | None = None
 
     @property
     def paused(self) -> bool:
@@ -98,17 +105,41 @@ class OrderManager:
             self._journal.save_pause(reason)
         except Exception:
             pass
+        if reason == self._last_pause_alert:
+            # The periodic tick re-reports a persistent fault; alert once per reason.
+            return
+        self._last_pause_alert = reason
         try:
             self._alert(reason)
         except Exception:
             # A broken notification channel cannot permit a new order.
             pass
 
-    def startup(self) -> None:
-        with self._mutex:
+    def _acquire_leases(self) -> None:
+        """Take both leases, waiting out a previous process's unexpired lease."""
+        deadline = time.monotonic() + self._startup_lease_wait
+        while True:
             try:
                 self._execution_lease.acquire()
                 self._guardian_lease.acquire()
+                return
+            except Exception:
+                if time.monotonic() >= deadline or self._shutdown_event.is_set():
+                    raise
+                # Wait without holding the mutex so a bar cycle is never blocked on us.
+                self._shutdown_event.wait(1.0)
+
+    def startup(self) -> None:
+        self._shutdown_event.clear()
+        try:
+            self._acquire_leases()
+        except Exception:
+            with self._mutex:
+                self._pause("execution_startup_failed")
+            raise ExecutionPaused("execution startup failed") from None
+        with self._mutex:
+            self._last_pause_alert = None
+            try:
                 self._started = True
                 mode = self._read_controls()
                 if mode is ControlMode.KILL or self._journal.is_killed():
@@ -124,6 +155,20 @@ class OrderManager:
             except Exception:
                 self._pause("execution_startup_failed")
                 raise ExecutionPaused("execution startup failed") from None
+
+    def shutdown(self) -> None:
+        """Stop accepting entries and hand both leases back for the next process."""
+        self._shutdown_event.set()
+        with self._mutex:
+            self._started = False
+            self._paused = True
+            for lease in (self._execution_lease, self._guardian_lease):
+                release = getattr(lease, "release", None)
+                if callable(release):
+                    try:
+                        release()
+                    except Exception:
+                        pass  # the lease simply expires on its own
 
     def reconcile(self) -> bool:
         """Poll broker truth and heal the read model; a mismatch stays paused."""
@@ -230,6 +275,7 @@ class OrderManager:
             self._journal.clear_pause()
             self._paused = False
             self._external_pause_latched = False
+            self._last_pause_alert = None
             self._kill_alerted = False
 
     def _read_controls(self) -> ControlMode:

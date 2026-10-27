@@ -22,6 +22,7 @@ from trader.core.settings import EnvironmentSettings
 from trader.runtime.factory import RuntimeDependencyUnavailable
 
 LOGGER = logging.getLogger(__name__)
+EXECUTION_LEASE_TTL_MS = 120_000
 
 
 def build_runtime_services(
@@ -131,8 +132,13 @@ def build_runtime_services(
     attach_journal = getattr(soak_monitor, "attach_journal", None)
     if callable(attach_journal):
         attach_journal(journal)
-    execution_lease = RedisLeaderLease(redis_client, "ai-trader:execution:lease")
-    guardian_lease = RedisLeaderLease(redis_client, "ai-trader:guardian:lease")
+    # The manager ticks every few seconds; a two-minute lease rides out disk and VM stalls.
+    execution_lease = RedisLeaderLease(
+        redis_client, "ai-trader:execution:lease", ttl_ms=EXECUTION_LEASE_TTL_MS
+    )
+    guardian_lease = RedisLeaderLease(
+        redis_client, "ai-trader:guardian:lease", ttl_ms=EXECUTION_LEASE_TTL_MS
+    )
 
     # Reports are a read-only view over the same objects used by the runtime.
     # Build these providers here, rather than in the LLM/router layer, so a
@@ -312,6 +318,7 @@ def build_runtime_services(
             control_source,
             control_writer,
             position_manager,
+            startup_lease_wait_seconds=EXECUTION_LEASE_TTL_MS / 1000 + 10,
         )
 
     reconciler: Any = provided.get("reconciler") or RuntimeReconciler(

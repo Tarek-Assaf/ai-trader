@@ -520,3 +520,60 @@ def test_resume_resets_external_alert_latches_for_second_pause(tmp_path):
     writer.set(ControlMode.PAUSE)
     manager.tick()
     assert alerts.count("external_pause") == 2
+
+
+class PreviousOwnerLease(Lease):
+    """A lease still held by the previous process for a few more attempts."""
+
+    def __init__(self, failures: int) -> None:
+        self.failures = failures
+
+    def acquire(self):
+        if self.failures > 0:
+            self.failures -= 1
+            raise RuntimeError("held by the previous process")
+
+
+def test_startup_waits_for_a_lease_the_previous_process_still_holds(tmp_path):
+    manager, _, _, _, alerts, _ = setup(tmp_path)
+    manager._started = False
+    manager._paused = True
+    manager._execution_lease = PreviousOwnerLease(1)
+    manager._startup_lease_wait = 5.0
+    manager.startup()
+    assert manager._started and not manager.paused
+    assert "execution_startup_failed" not in alerts
+
+
+def test_startup_without_wait_pauses_when_the_lease_is_held(tmp_path):
+    manager, _, _, _, alerts, _ = setup(tmp_path)
+    manager._started = False
+    manager._execution_lease = PreviousOwnerLease(1)
+    with pytest.raises(ExecutionPaused):
+        manager.startup()
+    assert manager.paused and "execution_startup_failed" in alerts
+
+
+def test_shutdown_releases_both_leases_and_refuses_entries(tmp_path):
+    manager, _, _, _, _, order = setup(tmp_path)
+    released = []
+
+    class ReleasingLease(Lease):
+        def release(self):
+            released.append(True)
+
+    manager._execution_lease = ReleasingLease()
+    manager._guardian_lease = ReleasingLease()
+    manager.shutdown()
+    assert len(released) == 2 and manager.paused
+    with pytest.raises(ExecutionPaused, match="not started"):
+        manager.submit("cycle-after-shutdown", order)
+
+
+def test_persistent_pause_reason_alerts_once_until_resume(tmp_path):
+    manager, _, _, _, alerts, _ = setup(tmp_path)
+    manager._pause("execution_lease_lost")
+    manager._pause("execution_lease_lost")
+    assert alerts.count("execution_lease_lost") == 1
+    manager._pause("broker_state_mismatch")
+    assert alerts.count("broker_state_mismatch") == 1
