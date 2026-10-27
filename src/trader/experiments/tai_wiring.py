@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import math
+import time
 from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -553,6 +554,7 @@ class TaiSignalProvider:
             return None
         bars = tuple(self._bars)
         index = len(bars) - 1
+        started = time.monotonic()
         features = _features(bars, ha_mode=self._ha_mode)
         # Catch the virtual chain up over any history it has not seen (warm-up),
         # then evaluate the current bar.  Only an entry of the chain is a signal.
@@ -562,6 +564,9 @@ class TaiSignalProvider:
         signal, gate = self._step_chain(bars, features, index)
         self._chain_next = index + 1
         self._last_failure_gate = gate
+        LOGGER.info(
+            "tai signal compute seconds=%.3f bars=%d", time.monotonic() - started, len(bars)
+        )
         return signal
 
     def _step_chain(
@@ -940,7 +945,15 @@ class TaiDemoRuntimeAdapter:
         )
         if self._feed_stale:
             return DemoOutcome("NO_TRADE", "feed_stale", event_id)
-        return self.runner.on_bar(bar)
+        started = time.monotonic()
+        outcome = self.runner.on_bar(bar)
+        LOGGER.info(
+            "tai demo cycle seconds=%.3f outcome=%s reason=%s",
+            time.monotonic() - started,
+            outcome.action,
+            outcome.reason,
+        )
+        return outcome
 
 
 def build_tai_demo_runtime(
