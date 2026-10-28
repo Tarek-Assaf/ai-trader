@@ -134,10 +134,18 @@ def build_runtime_services(
         attach_journal(journal)
     # The manager ticks every few seconds; a two-minute lease rides out disk and VM stalls.
     execution_lease = RedisLeaderLease(
-        redis_client, "ai-trader:execution:lease", ttl_ms=EXECUTION_LEASE_TTL_MS
+        redis_client,
+        "ai-trader:execution:lease",
+        ttl_ms=EXECUTION_LEASE_TTL_MS,
+        retries=5,
+        retake_when_expired=True,
     )
     guardian_lease = RedisLeaderLease(
-        redis_client, "ai-trader:guardian:lease", ttl_ms=EXECUTION_LEASE_TTL_MS
+        redis_client,
+        "ai-trader:guardian:lease",
+        ttl_ms=EXECUTION_LEASE_TTL_MS,
+        retries=5,
+        retake_when_expired=True,
     )
 
     # Reports are a read-only view over the same objects used by the runtime.
