@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+import pytest
+
 from trader.agents.graph import TradeIntent
 from trader.data.instruments import InstrumentTerms
 from trader.execution.brokers.base import Direction, Position
@@ -264,3 +266,62 @@ def test_paper_stage_cap_exists_only_for_paper_mode_on_the_demo_environment() ->
     assert cap is not None and cap(sizing) == Decimal("0.5")
     assert _paper_stage_cap(SimpleNamespace(trading_mode="auto", broker_env="demo")) is None
     assert _paper_stage_cap(SimpleNamespace(trading_mode="paper", broker_env="live")) is None
+
+
+def test_tight_stop_is_scaled_down_to_the_margin_and_leverage_limits() -> None:
+    from dataclasses import replace as dc_replace
+
+    terms = dc_replace(
+        _terms(),
+        min_size=Decimal("0.001"),
+        size_step=Decimal("0.001"),
+        max_size=Decimal("100"),
+    )
+    account = AccountContextSource(Broker(), Journal(), clock=lambda: NOW)()
+    intent = TradeIntent(
+        instrument="NAS100",
+        direction="BUY",
+        entry_type="market",
+        entry_level=Decimal("29800"),
+        stop_level=Decimal("29788"),  # 12 points: risk sizing alone asks for ~4 units
+        target_levels=(Decimal("29836"),),
+        time_horizon="intraday",
+        thesis="t",
+        confidence=1.0,
+    )
+    source = SizingContextSource(
+        lambda _i: terms,
+        SizingLimits(Decimal("0.5"), Decimal("40"), Decimal("5")),
+        account_currency=lambda _a: "USD",
+    )
+    estimate = source(intent, account, ())
+    assert Decimal("0") < estimate.size < Decimal("4")
+    assert estimate.size * Decimal("29800") <= Decimal("5") * account.equity
+    assert estimate.risk_amount <= account.equity * Decimal("0.005")
+
+
+def test_sizing_still_rejects_when_even_the_minimum_size_breaks_the_limits() -> None:
+    from dataclasses import replace as dc_replace
+
+    terms = dc_replace(
+        _terms(), min_size=Decimal("5"), size_step=Decimal("5"), max_size=Decimal("50")
+    )
+    account = AccountContextSource(Broker(), Journal(), clock=lambda: NOW)()
+    intent = TradeIntent(
+        instrument="NAS100",
+        direction="BUY",
+        entry_type="market",
+        entry_level=Decimal("29800"),
+        stop_level=Decimal("29700"),
+        target_levels=(Decimal("30100"),),
+        time_horizon="intraday",
+        thesis="t",
+        confidence=1.0,
+    )
+    source = SizingContextSource(
+        lambda _i: terms,
+        SizingLimits(Decimal("0.5"), Decimal("40"), Decimal("5")),
+        account_currency=lambda _a: "USD",
+    )
+    with pytest.raises(ContextUnavailable):
+        source(intent, account, ())
