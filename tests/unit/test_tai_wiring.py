@@ -755,11 +755,11 @@ def test_external_signal_uses_the_five_bars_before_the_signal_bar_for_the_stop()
     provider._latest_atr = Decimal("10")
     # 12:12:05 -> the signal bar started 12:09, so the bars before it end at 12:06
     now = datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
-    buy = provider.external_signal(Direction.BUY, _quote_rules("29810", "29811.8"), now)
-    assert buy.entry == Decimal("29811.8")
+    buy = provider.external_signal(Direction.BUY, _quote_rules("600", "601.8"), now)
+    assert buy.entry == Decimal("601.8")
     assert buy.stop == Decimal("235") - Decimal("2.0")
-    sell = provider.external_signal(Direction.SELL, _quote_rules("29810", "29811.8"), now)
-    assert sell.entry == Decimal("29810")
+    sell = provider.external_signal(Direction.SELL, _quote_rules("600", "601.8"), now)
+    assert sell.entry == Decimal("600")
     assert sell.stop == Decimal("999") + Decimal("6") + Decimal("2.0")
 
 
