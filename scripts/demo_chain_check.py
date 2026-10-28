@@ -122,13 +122,22 @@ def run(settings: EnvironmentSettings, client: Any | None = None) -> dict[str, A
                 f"take-profit not retained: asked {target}, got {position.profit_level}"
             )
 
-        new_stop = _quantize(
-            position.stop_level + (position.level - position.stop_level) / 2,
+        # Tighten by a quarter of the way: far enough from the market to be accepted.
+        stop_only = _quantize(
+            position.stop_level + (position.level - position.stop_level) / 4,
             rules.tick_size,
             ROUND_FLOOR,
         )
+        broker.modify_position(deal_id, stop_level=stop_only)
+        kept = [p for p in broker.get_positions() if p.deal_id == deal_id]
+        step(
+            "stop_only_modify",
+            stop=stop_only,
+            target_kept=bool(kept) and kept[0].profit_level == target,
+        )
+        new_stop = stop_only + rules.tick_size * 2
         broker.modify_position(deal_id, stop_level=new_stop, profit_level=target)
-        step("stop_tightened", stop=new_stop)
+        step("stop_and_target_modify", stop=new_stop, target=target)
 
         broker.close_partial(deal_id, partial)
         left = _wait_for(
@@ -156,7 +165,8 @@ def run(settings: EnvironmentSettings, client: Any | None = None) -> dict[str, A
         step("account_after", equity=account["equity"], available=account["available"])
         report["result"] = "pass"
     except Exception as exc:  # noqa: BLE001 - report, then clean up
-        report["error"] = f"{type(exc).__name__}: {exc}"
+        code = getattr(exc, "error_code", None)
+        report["error"] = f"{type(exc).__name__}: {exc}" + (f" [{code}]" if code else "")
         print(f"FAIL {report['error']}", flush=True)
     finally:
         try:
