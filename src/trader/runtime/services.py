@@ -490,6 +490,36 @@ def _baseline_balance(path: Path, period: str, balance: Decimal, now: datetime) 
     return balance
 
 
+_HISTORY_MIN_GAP = timedelta(seconds=60)
+_HISTORY_MAX_POINTS = 6000
+
+
+def _equity_history(path: Path, equity: Decimal, now: datetime) -> tuple[Any, ...]:
+    """Load persisted equity points, add this observation (at most one a minute), save."""
+    from trader.execution.pnl import EquityPoint
+
+    points: list[EquityPoint] = []
+    try:
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        for at, value in stored if isinstance(stored, list) else []:
+            points.append(EquityPoint(datetime.fromisoformat(at), Decimal(str(value))))
+    except (OSError, ValueError, TypeError, ArithmeticError):
+        points = []
+    points.sort(key=lambda point: point.timestamp)
+    if not points or now - points[-1].timestamp >= _HISTORY_MIN_GAP:
+        points.append(EquityPoint(now, equity))
+        points = points[-_HISTORY_MAX_POINTS:]
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(
+                json.dumps([[p.timestamp.isoformat(), str(p.equity)] for p in points]),
+                encoding="utf-8",
+            )
+        except OSError:
+            LOGGER.warning("equity history could not be saved")
+    return tuple(points)
+
+
 def _broker_pnl_provider(broker: Any, baseline_path: Path | None = None) -> Any:
     """Return a fail-closed P&L provider using explicit broker account fields.
 
@@ -525,12 +555,20 @@ def _broker_pnl_provider(broker: Any, baseline_path: Path | None = None) -> Any:
             notional_exposure=Decimal(str(values["notional_exposure"])),
         )
         now = datetime.now(UTC)
+        history = (
+            _equity_history(baseline_path.with_name("equity_history.json"), figures.equity, now)
+            if baseline_path is not None
+            else ()
+        )
+        # Every stored point is at or before ``now``; the engine appends the current one.
+        history = tuple(point for point in history if point.timestamp < now)
         report = PnlEngine.calculate(
             (),
             starting_balance=figures.balance,
             currency=figures.currency,
             broker=figures,
             as_of=now,
+            equity_history=history,
         )
         start = (
             _baseline_balance(baseline_path, period, figures.balance, now)

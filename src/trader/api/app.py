@@ -438,7 +438,16 @@ def _tai_market_open(capital_client: Any, epic: str) -> Callable[[datetime], boo
 
 async def _tai_feed_loop(app: FastAPI) -> None:
     """Tail the recorder lake without coupling the API to the worker stream."""
+    last_equity_sample = 0.0
     while True:
+        if time.monotonic() - last_equity_sample >= 300:
+            last_equity_sample = time.monotonic()
+            sampler = getattr(app.state, "pnl_provider", None)
+            if callable(sampler):
+                try:
+                    await asyncio.to_thread(sampler)  # records one equity point
+                except Exception:  # noqa: BLE001 - sampling must not stop the feed
+                    _LOG.warning("equity sample failed", exc_info=True)
         tailers = getattr(app.state, "tai_feed_tailers", None) or []
         if tailers:
             for tailer in tuple(tailers):
