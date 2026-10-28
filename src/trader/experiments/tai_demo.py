@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import tempfile
+import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
@@ -323,6 +324,9 @@ class TaiDemoRunner:
         self._startup_blocked = False
         self._state_corrupt = False
         self._last_epic: str | None = epic
+        self._lock = threading.RLock()
+        # True when TradingView alerts, not the local signal port, open entries.
+        self.external_signals_only = False
         self._last_bar: ClosedBar | None = None
         self._last_summary_hour: datetime | None = None
         self._outcomes: dict[str, _EpicOutcomes] = {}
@@ -483,7 +487,10 @@ class TaiDemoRunner:
 
     def on_bar(self, bar: ClosedBar) -> DemoOutcome:
         """Process exactly one closed 3m bar; never trade an incomplete bar."""
+        with self._lock:
+            return self._on_bar(bar)
 
+    def _on_bar(self, bar: ClosedBar) -> DemoOutcome:
         self._last_epic = bar.epic
         self._last_bar = bar
         cycle_id = f"tai-demo-{bar.at.astimezone(UTC).strftime('%Y%m%dT%H%M%S')}-{bar.epic}"
@@ -516,42 +523,95 @@ class TaiDemoRunner:
         if self._startup_blocked:
             return self._outcome(cycle_id, "REJECTED", "startup_reconciliation_failed")
         signal = self._signal(bar)
+        if self.external_signals_only:
+            return self._outcome(cycle_id, "NO_TRADE", "awaiting_tradingview_alert")
         if signal is None:
             return self._outcome(cycle_id, "NO_TRADE", "no_signal")
+        return self._attempt_entry(signal, bar.epic, cycle_id)
+
+    def on_external_signal(self, direction: Direction, source: str = "tradingview") -> DemoOutcome:
+        """Enter on a signal produced outside this process (the owner's TradingView alert).
+
+        The entry follows the same path as a local signal: spread guard, order factory,
+        Guardian approval, OrderManager.  Only the decision that a signal exists is external.
+        """
+        with self._lock:
+            epic = self._epic or self._last_epic
+            now = datetime.now(UTC)
+            cycle_id = f"tai-tv-{now.strftime('%Y%m%dT%H%M%S')}-{epic}"
+            if epic is None:
+                return self._outcome(cycle_id, "REJECTED", "no_epic_yet")
+            mode = self._control.read()
+            if mode is ControlMode.KILL:
+                self._flatten(cycle_id)
+                return self._outcome(cycle_id, "NO_TRADE", "kill_switch_active")
+            if mode is not ControlMode.RUN:
+                return self._outcome(cycle_id, "NO_TRADE", "execution_paused")
+            bar = self._last_bar
+            if bar is not None and (not bar.market_open or bar.in_break):
+                return self._outcome(cycle_id, "NO_TRADE", "market_closed_or_blackout")
+            positions = (
+                tuple(p for p in self._positions.get_positions() if p.epic == epic)
+                if not self._dry_run
+                else ()
+            )
+            if positions or (
+                self._dry_run and any(state.epic == epic for state in self._managed.values())
+            ):
+                self._journal_event(cycle_id, "position_open", epic=epic, source=source)
+                return self._outcome(cycle_id, "NO_TRADE", "one_position_rule")
+            if self._startup_blocked:
+                return self._outcome(cycle_id, "REJECTED", "startup_reconciliation_failed")
+            self._journal_event(
+                cycle_id, "external_signal", epic=epic, source=source, direction=direction.value
+            )
+            try:
+                rules = self._rules_provider(epic) if self._rules_provider is not None else None
+                build = getattr(self._signal, "external_signal", None)
+                if rules is None or not callable(build):
+                    raise TaiDemoRefused("external signals need broker rules and a signal builder")
+                signal = build(direction, rules)
+            except (TaiDemoRefused, ValueError) as exc:
+                self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
+                self._send_alert(f"{source} {direction.value} not traded: {str(exc)[:120]}")
+                return self._outcome(cycle_id, "REJECTED", "external_signal_unusable")
+            return self._attempt_entry(signal, epic, cycle_id)
+
+    def _attempt_entry(self, signal: TaiSignal, epic: str, cycle_id: str) -> DemoOutcome:
         try:
-            rules = self._rules_provider(bar.epic) if self._rules_provider is not None else None
+            rules = self._rules_provider(epic) if self._rules_provider is not None else None
             refusal = self._spread_refusal(signal, rules)
             if refusal is not None:
                 reason, details = refusal
                 self._journal_event(
                     cycle_id,
                     "order_refused",
-                    epic=bar.epic,
+                    epic=epic,
                     reason=reason,
                     **details,
                 )
-                alert_key = (bar.epic, reason)
+                alert_key = (epic, reason)
                 if alert_key not in self._spread_alerted:
                     self._spread_alerted.add(alert_key)
-                    self._send_alert(f"entry refused for {bar.epic}: {reason}")
+                    self._send_alert(f"entry refused for {epic}: {reason}")
                 return self._outcome(cycle_id, "REJECTED", reason)
             requested_size = self._requested_size(rules)
             order = self._build_order(signal, cycle_id, requested_size)
         except (TaiDemoRefused, ValueError) as exc:
             LOGGER.warning(
                 "tai demo order refused epic=%s cycle_id=%s reason=%s",
-                bar.epic,
+                epic,
                 cycle_id,
                 str(exc),
             )
-            self._journal_event(cycle_id, "order_refused", epic=bar.epic, reason=str(exc))
+            self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
             return self._outcome(cycle_id, "REJECTED", "order_rules_unavailable")
         if requested_size is not None and order.size != requested_size:
             order = replace(order, size=requested_size)
         allows_price_rounding = bool(getattr(self._order_factory, "allows_price_rounding", False))
         if (
             order.client_order_id != cycle_id
-            or order.epic != bar.epic
+            or order.epic != epic
             or order.reference_price != signal.entry
             or (
                 not allows_price_rounding
@@ -563,7 +623,7 @@ class TaiDemoRunner:
         if self._dry_run:
             shadow_id = f"shadow:{cycle_id}"
             self._managed[shadow_id] = _ManagedPosition(
-                epic=bar.epic,
+                epic=epic,
                 entry=signal.entry,
                 risk=abs(signal.entry - signal.stop),
                 direction=signal.direction,
@@ -582,24 +642,24 @@ class TaiDemoRunner:
             self._journal_event(
                 cycle_id,
                 "dry_run_would_submit",
-                epic=bar.epic,
+                epic=epic,
                 direction=order.direction.value,
                 size=order.size,
                 stop_level=order.stop_level,
                 profit_level=order.profit_level,
             )
-            self._send_alert(f"entry {signal.direction.value} {bar.epic}")
+            self._send_alert(f"entry {signal.direction.value} {epic}")
             return self._outcome(cycle_id, "DRY_RUN", "order_would_submit")
         try:
             receipt = self._orders.submit(cycle_id, order)
         except ExecutionPaused as exc:
             reason = str(exc) or "execution_paused"
-            self._journal_event(cycle_id, "guardian_veto", epic=bar.epic, reason=reason)
-            self._send_alert(f"entry vetoed for {bar.epic}: {reason}")
+            self._journal_event(cycle_id, "guardian_veto", epic=epic, reason=reason)
+            self._send_alert(f"entry vetoed for {epic}: {reason}")
             return self._outcome(cycle_id, "REJECTED", "guardian_veto")
         if receipt is None:
             self._journal_event(
-                cycle_id, "guardian_veto", epic=bar.epic, reason="no_receipt_from_order_manager"
+                cycle_id, "guardian_veto", epic=epic, reason="no_receipt_from_order_manager"
             )
             return self._outcome(cycle_id, "REJECTED", "guardian_veto")
         position = getattr(receipt, "position", None)
@@ -608,7 +668,7 @@ class TaiDemoRunner:
             return self._outcome(cycle_id, "REJECTED", "receipt_missing_position")
         risk = abs(signal.entry - signal.stop)
         self._managed[position.deal_id] = _ManagedPosition(
-            epic=bar.epic,
+            epic=epic,
             entry=signal.entry,
             risk=risk,
             direction=signal.direction,
@@ -624,12 +684,12 @@ class TaiDemoRunner:
         self._journal_event(
             cycle_id,
             "entry",
-            epic=bar.epic,
+            epic=epic,
             deal_id=position.deal_id,
             one_r_value=self._managed[position.deal_id].one_r_value,
         )
         self._persist_state()
-        self._send_alert(f"entry {signal.direction.value} {bar.epic}")
+        self._send_alert(f"entry {signal.direction.value} {epic}")
         return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
 
     def _manage_exits(self, bar: ClosedBar, cycle_id: str) -> None:

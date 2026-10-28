@@ -610,3 +610,85 @@ def test_break_even_stop_never_sits_on_the_wrong_side_of_the_fill():
     )
     instance.on_bar(bar(high="101"))
     assert gateway.modified[0][1] == Decimal("99.5")
+
+
+class _ExternalSignals:
+    """Signal source that only knows how to build an entry for an outside decision."""
+
+    def __call__(self, _bar):
+        return TaiSignal(Direction.BUY, Decimal("100"), Decimal("99"))
+
+    def external_signal(self, direction, rules):
+        entry = rules.ask if direction is Direction.BUY else rules.bid
+        stop = entry - Decimal("10") if direction is Direction.BUY else entry + Decimal("10")
+        return TaiSignal(direction, entry, stop)
+
+
+def _external_runner(gateway, **kwargs):
+    return runner(
+        gateway,
+        signal_provider=_ExternalSignals(),
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="100.5"),
+        epic="NSXUSD",
+        **kwargs,
+    )
+
+
+def test_external_signal_enters_through_the_order_manager() -> None:
+    gateway = Gateway()
+    tai, manager = _external_runner(gateway)
+    outcome = tai.on_external_signal(Direction.BUY)
+    assert (outcome.action, outcome.reason) == ("SUBMITTED", "entry_submitted")
+    cycle_id, order = manager.submits[0]
+    assert cycle_id.startswith("tai-tv-")
+    assert order.direction is Direction.BUY and order.reference_price == Decimal("100.5")
+    assert order.stop_level == Decimal("90.5")
+
+
+def test_external_signal_respects_one_position_kill_and_pause() -> None:
+    gateway = Gateway()
+    tai, manager = _external_runner(gateway)
+    assert tai.on_external_signal(Direction.BUY).action == "SUBMITTED"
+    again = tai.on_external_signal(Direction.SELL)
+    assert (again.action, again.reason) == ("NO_TRADE", "one_position_rule")
+    assert len(manager.submits) == 1
+
+    paused, paused_manager = _external_runner(Gateway(), control=Control(ControlMode.PAUSE))
+    assert paused.on_external_signal(Direction.BUY).reason == "execution_paused"
+    assert paused_manager.submits == []
+
+    killed_gateway = Gateway()
+    killed, killed_manager = _external_runner(killed_gateway, control=Control(ControlMode.KILL))
+    assert killed.on_external_signal(Direction.BUY).reason == "kill_switch_active"
+    assert killed_manager.submits == []
+
+
+def test_tradingview_mode_never_opens_an_entry_from_the_local_signal() -> None:
+    gateway = Gateway()
+    tai, manager = _external_runner(gateway)
+    tai.external_signals_only = True
+    outcome = tai.on_bar(bar())
+    assert (outcome.action, outcome.reason) == ("NO_TRADE", "awaiting_tradingview_alert")
+    assert manager.submits == []
+
+
+def test_external_signal_that_cannot_be_built_is_refused_not_traded() -> None:
+    gateway = Gateway()
+    alerts = []
+
+    class Broken(_ExternalSignals):
+        def external_signal(self, direction, rules):
+            raise ValueError("ATR is not ready for an external signal")
+
+    tai, manager = runner(
+        gateway,
+        signal_provider=Broken(),
+        alerts=alerts,
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="100.5"),
+        epic="NSXUSD",
+    )
+    outcome = tai.on_external_signal(Direction.BUY)
+    assert (outcome.action, outcome.reason) == ("REJECTED", "external_signal_unusable")
+    assert manager.submits == [] and alerts
