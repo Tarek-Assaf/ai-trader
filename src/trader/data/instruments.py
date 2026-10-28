@@ -91,6 +91,20 @@ def _rule_value(rules: Mapping[str, Any], name: str) -> tuple[Decimal, str]:
     return value, unit.strip().upper()
 
 
+def _optional_point_value(instrument: Mapping[str, Any], contract_size: Decimal) -> Decimal:
+    """Broker point value: ``valuePerPoint`` when present, else ``lotSize`` (T-220 rule).
+
+    Capital.com's market details carry no cash point value for index CFDs; one size unit
+    pays ``lotSize`` quote-currency units per point. Config can still override this.
+    """
+    raw = instrument.get("valuePerPoint")
+    if raw is not None:
+        value = _positive_decimal(raw, "instrument.valuePerPoint")
+        assert value is not None
+        return value
+    return contract_size
+
+
 def _config_decimal(value: object, field: str) -> Decimal | None:
     if value is None:
         return None
@@ -269,7 +283,8 @@ class InstrumentMapper:
             size_unit=min_unit,
             margin_factor=margin_factor,
             margin_factor_unit=margin_unit.strip().upper(),
-            value_per_point=definition.value_per_point,
+            value_per_point=definition.value_per_point
+            or _optional_point_value(instrument, contract_size),
             currency=currency,
             market_status=status,
             updated_at=self._clock().astimezone(UTC),
