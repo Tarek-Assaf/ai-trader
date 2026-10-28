@@ -256,6 +256,62 @@ class CapitalComBroker:
             self._require_accepted(self._client.confirm_deal(reference), "position close")
             return reference
 
+    def close_partial(self, deal_id: str, size: Decimal) -> str:
+        """Reduce a position by ``size``.
+
+        Capital.com has no partial-close call. With hedging off, an opposite-direction
+        market order of that size nets against the open position. The result is verified
+        from the broker's own position list; any other outcome is undone and raises.
+        """
+        if not deal_id.strip() or not isinstance(size, Decimal) or not size.is_finite():
+            raise ValueError("deal_id and a finite Decimal size are required")
+        if size <= 0:
+            raise ValueError("partial close size must be positive")
+        if not self._enable_demo_orders:
+            raise TradingDisabledError("demo order placement is disabled")
+        with self._write_lock:
+            before = {p.deal_id: p for p in self.get_positions()}
+            existing = before.get(deal_id)
+            if existing is None:
+                raise BrokerError("position is not open")
+            if size >= existing.size:
+                raise ValueError("partial close must be smaller than the open position")
+            opposite = Direction.SELL if existing.direction is Direction.BUY else Direction.BUY
+            created = self._client.open_position(
+                {
+                    "epic": existing.epic,
+                    "direction": opposite.value,
+                    "size": float(size),
+                    "guaranteedStop": False,
+                }
+            )
+            reference = _required_text(created.get("dealReference"), "dealReference")
+            self._require_accepted(self._client.confirm_deal(reference), "partial close")
+            after = {p.deal_id: p for p in self.get_positions()}
+            reduced = after.get(deal_id)
+            stray = [
+                p
+                for key, p in after.items()
+                if key not in before and p.epic == existing.epic and p.direction is opposite
+            ]
+            if (
+                reduced is not None
+                and not stray
+                and reduced.size == existing.size - size
+                and reduced.direction is existing.direction
+                and reduced.stop_level == existing.stop_level
+            ):
+                return reference
+            for extra in stray:
+                try:
+                    self._client.close_position(extra.deal_id)
+                except Exception:
+                    pass
+            raise BrokerProtocolError(
+                "Capital.com did not net the opposite order into the open position; "
+                "stray opposite positions were closed"
+            )
+
     def cancel_working_order(self, deal_id: str) -> str:
         if not deal_id.strip():
             raise ValueError("deal_id must not be empty")

@@ -659,21 +659,21 @@ class TaiDemoRunner:
             if state is None:
                 continue
             current_size = position.size
+            if 1 in state.hit and not state.entry_stop_moved:
+                # An earlier attempt failed (price too close, broker busy): retry each bar.
+                self._move_stop_to_entry(position, state, cycle_id)
             for index, target in enumerate(state.targets, start=1):
                 if index in state.hit or not self._target_hit(state.direction, bar, target):
                     continue
                 state.hit.add(index)
                 if index == 1 and not state.entry_stop_moved:
-                    self._positions.modify_position(
-                        position.deal_id,
-                        stop_level=state.entry,
-                        profit_level=state.targets[2],
-                    )
-                    state.entry_stop_moved = True
-                    self._journal_event(cycle_id, "stop_to_entry", deal_id=position.deal_id)
-                    self._send_alert(f"stop moved to entry for {bar.epic}")
+                    self._move_stop_to_entry(position, state, cycle_id)
                 if index == 3:
-                    self._positions.close_position(position.deal_id)
+                    try:
+                        self._positions.close_position(position.deal_id)
+                    except Exception as exc:  # noqa: BLE001 - the broker target still closes it
+                        self._exit_failed(position.deal_id, "close_failed", exc, cycle_id)
+                        break
                     self._managed.pop(position.deal_id, None)
                     self._last_exit_at = bar.at
                     note_exit = getattr(self._signal, "note_exit", None)
@@ -690,7 +690,11 @@ class TaiDemoRunner:
                 if callable(close_partial):
                     amount = self._partial_amount(state, current_size, index)
                     if amount > 0 and amount < current_size:
-                        close_partial(position.deal_id, amount)
+                        try:
+                            close_partial(position.deal_id, amount)
+                        except Exception as exc:  # noqa: BLE001 - stop and target still protect it
+                            self._exit_failed(position.deal_id, "scale_out_failed", exc, cycle_id)
+                            continue
                         current_size -= amount
                         self._journal_event(
                             cycle_id,
@@ -709,6 +713,34 @@ class TaiDemoRunner:
                             target=index,
                         )
                 self._persist_state()
+
+    def _move_stop_to_entry(
+        self, position: Position, state: _ManagedPosition, cycle_id: str
+    ) -> None:
+        """Move the protective stop to break-even; a refusal is logged and retried."""
+        stop = state.entry
+        if state.direction is Direction.BUY and stop > position.level:
+            stop = position.level
+        elif state.direction is Direction.SELL and stop < position.level:
+            stop = position.level
+        try:
+            self._positions.modify_position(
+                position.deal_id, stop_level=stop, profit_level=state.targets[2]
+            )
+        except Exception as exc:  # noqa: BLE001 - the original stop still protects it
+            self._exit_failed(position.deal_id, "stop_to_entry_failed", exc, cycle_id)
+            return
+        state.entry_stop_moved = True
+        self._journal_event(cycle_id, "stop_to_entry", deal_id=position.deal_id)
+        self._send_alert(f"stop moved to entry for {position.epic}")
+
+    def _exit_failed(self, deal_id: str, event: str, exc: Exception, cycle_id: str) -> None:
+        LOGGER.warning("tai demo %s deal=%s reason=%s", event, deal_id, type(exc).__name__)
+        self._journal_event(cycle_id, event, deal_id=deal_id, reason=str(exc)[:200])
+        key = (deal_id, event)
+        if key not in self._spread_alerted:
+            self._spread_alerted.add(key)
+            self._send_alert(f"{event} for {deal_id}: {str(exc)[:120]}")
 
     def _manage_shadow_exits(self, bar: ClosedBar, cycle_id: str) -> None:
         for deal_id, state in tuple(self._managed.items()):
