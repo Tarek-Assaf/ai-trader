@@ -154,7 +154,7 @@ def build_runtime_services(
     # failed model can never prevent an owner command from returning facts.
     if "pnl_provider" not in provided:
         provided["pnl_provider"] = _broker_pnl_provider(
-            broker, Decimal(str(getattr(settings, "tai_demo_start_balance", "") or "10000"))
+            broker, Path(os.getenv("WORKSPACE_DIR", "/workspace")) / "state" / "pnl_baselines.json"
         )
     if "risk_provider" not in provided:
         risk_values = _dump_mapping(configs.get("risk"))
@@ -457,10 +457,48 @@ def _dump_mapping(value: object) -> dict[str, Any]:
     return dict(raw) if isinstance(raw, Mapping) else {}
 
 
-def _broker_pnl_provider(broker: Any, start_balance: Decimal = Decimal("10000")) -> Any:
-    """Return a fail-closed P&L provider using explicit broker account fields."""
+def _period_key(period: str, now: datetime) -> str:
+    day = now.date()
+    if period == "weekly":
+        day = day - timedelta(days=day.weekday())
+    elif period == "monthly":
+        day = day.replace(day=1)
+    return f"{period}:{day.isoformat()}"
 
-    def provider() -> Any:
+
+def _baseline_balance(path: Path, period: str, balance: Decimal, now: datetime) -> Decimal:
+    """Balance at the start of the period; the first balance seen in a period starts it."""
+    key = _period_key(period, now)
+    try:
+        stored = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(stored, dict):
+            stored = {}
+    except (OSError, ValueError):
+        stored = {}
+    if key in stored:
+        try:
+            return Decimal(str(stored[key]))
+        except ArithmeticError:
+            pass
+    stored = {k: v for k, v in stored.items() if not k.startswith(f"{period}:")}
+    stored[key] = str(balance)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(stored, sort_keys=True), encoding="utf-8")
+    except OSError:
+        LOGGER.warning("P&L baseline could not be saved")
+    return balance
+
+
+def _broker_pnl_provider(broker: Any, baseline_path: Path | None = None) -> Any:
+    """Return a fail-closed P&L provider using explicit broker account fields.
+
+    No trade ledger feeds the engine, so the broker's own figures are the truth:
+    realized = balance now minus balance at the start of the period (day by default),
+    floating = equity minus balance.
+    """
+
+    def provider(period: str = "daily") -> Any:
         from trader.execution.pnl import BrokerAccountFigures, PnlEngine
 
         account = broker.get_account()
@@ -486,16 +524,20 @@ def _broker_pnl_provider(broker: Any, start_balance: Decimal = Decimal("10000"))
             margin_used=Decimal(str(values["margin_used"])),
             notional_exposure=Decimal(str(values["notional_exposure"])),
         )
+        now = datetime.now(UTC)
         report = PnlEngine.calculate(
             (),
             starting_balance=figures.balance,
             currency=figures.currency,
             broker=figures,
-            as_of=datetime.now(UTC),
+            as_of=now,
         )
-        # No trade ledger feeds this engine, so the broker's own figures are the
-        # truth: realized = balance - start, floating = equity - balance.
-        realized = figures.balance - start_balance
+        start = (
+            _baseline_balance(baseline_path, period, figures.balance, now)
+            if baseline_path is not None
+            else figures.balance
+        )
+        realized = figures.balance - start
         floating = figures.equity - figures.balance
         return replace(
             report,
@@ -503,9 +545,20 @@ def _broker_pnl_provider(broker: Any, start_balance: Decimal = Decimal("10000"))
             realized_net=realized,
             unrealized_gross=floating,
             unrealized_net=floating,
-            peak_equity=max(report.peak_equity, start_balance),
+            peak_equity=max(report.peak_equity, start),
+            margin_used=figures.margin_used,
+            total_exposure=figures.notional_exposure,
+            margin_usage_pct=(
+                figures.margin_used / figures.equity * Decimal(100)
+                if figures.equity
+                else Decimal(0)
+            ),
+            effective_leverage=(
+                figures.notional_exposure / figures.equity if figures.equity else Decimal(0)
+            ),
         )
 
+    provider.accepts_period = True  # type: ignore[attr-defined]
     return provider
 
 
@@ -739,7 +792,12 @@ def _build_report_snapshot_provider(
     from trader.reports.core import ReportSnapshot
 
     def provider(period: str) -> ReportSnapshot:
-        pnl = pnl_provider() if callable(pnl_provider) else None
+        if not callable(pnl_provider):
+            pnl = None
+        elif getattr(pnl_provider, "accepts_period", False):
+            pnl = pnl_provider(period)
+        else:
+            pnl = pnl_provider()
         if pnl is None:
             raise RuntimeError("P&L provider is unavailable")
         now = datetime.now(UTC)

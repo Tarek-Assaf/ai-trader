@@ -298,7 +298,7 @@ def _build_tai_demo_runtime(
 
             # One key per message: the limiter exists for flapping conditions, and a trade's
             # entry, partial exit and stop move can follow each other within seconds.
-            send_alert(Alert(f"tai_demo:{time.time_ns()}", message[:240]))
+            send_alert(Alert(f"tai_demo:{time.time_ns()}", message[:900]))
 
     guarded_manager = cast(
         Any,
