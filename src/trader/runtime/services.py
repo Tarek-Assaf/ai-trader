@@ -288,7 +288,11 @@ def build_runtime_services(
         )
         if callable(account_source) and callable(market_source) and callable(sizing_source):
             context_provider = RuntimeContextProvider(
-                account_source, market_source, sizing_source, positions_source
+                account_source,
+                market_source,
+                sizing_source,
+                positions_source,
+                stage_cap=_paper_stage_cap(settings),
             )
         else:
 
@@ -1044,3 +1048,23 @@ class _ReportScheduler:
 
 
 __all__ = ["build_runtime_services"]
+
+
+def _paper_stage_cap(settings: Any) -> Any:
+    """Stage size cap for the paper stage on the demo environment, else none (fail closed).
+
+    The paper stage trades demo money, so config defines no stage capital for it (only for
+    micro_live and live). Its ceiling is therefore the risk-sized position itself; the
+    sizer still enforces risk per trade, margin usage and leverage. Micro-live and live
+    stages are unreachable and get no cap here, so the Guardian keeps rejecting them.
+    """
+    if (
+        getattr(settings, "trading_mode", None) != "paper"
+        or getattr(settings, "broker_env", None) != "demo"
+    ):
+        return None
+
+    def cap(sizing: Any) -> Decimal:
+        return Decimal(sizing.size)
+
+    return cap

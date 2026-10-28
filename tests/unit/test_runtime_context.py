@@ -232,3 +232,35 @@ def test_context_provider_logs_why_it_returned_nothing(caplog) -> None:
     with caplog.at_level(logging.WARNING):
         assert provider("cycle-1", _intent()) is None
     assert "consecutive_losses is unavailable" in caplog.text
+
+
+def test_provider_passes_the_stage_cap_derived_from_the_sizing() -> None:
+    from types import SimpleNamespace
+
+    sizing = SimpleNamespace(size=Decimal("0.002"))
+    provider = RuntimeContextProvider(
+        lambda: "account",
+        lambda _i: "market",
+        lambda *_a: sizing,
+        lambda: (),
+        stage_cap=lambda estimate: estimate.size,
+        clock=lambda: NOW,
+    )
+    context = provider("cycle-1", _intent())
+    assert context is not None and context.stage_size_cap == Decimal("0.002")
+    no_cap = RuntimeContextProvider(
+        lambda: "account", lambda _i: "market", lambda *_a: sizing, lambda: (), clock=lambda: NOW
+    )("cycle-1", _intent())
+    assert no_cap is not None and no_cap.stage_size_cap is None
+
+
+def test_paper_stage_cap_exists_only_for_paper_mode_on_the_demo_environment() -> None:
+    from types import SimpleNamespace
+
+    from trader.runtime.services import _paper_stage_cap
+
+    sizing = SimpleNamespace(size=Decimal("0.5"))
+    cap = _paper_stage_cap(SimpleNamespace(trading_mode="paper", broker_env="demo"))
+    assert cap is not None and cap(sizing) == Decimal("0.5")
+    assert _paper_stage_cap(SimpleNamespace(trading_mode="auto", broker_env="demo")) is None
+    assert _paper_stage_cap(SimpleNamespace(trading_mode="paper", broker_env="live")) is None

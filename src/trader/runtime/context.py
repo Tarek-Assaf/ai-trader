@@ -345,8 +345,10 @@ class RuntimeContextProvider:
         ],
         positions: Callable[[], Sequence[OpenPosition]],
         *,
+        stage_cap: Callable[[SizingEstimate], Decimal | None] | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
+        self.stage_cap = stage_cap
         self.account = account
         self.market = market
         self.sizing = sizing
@@ -357,11 +359,13 @@ class RuntimeContextProvider:
         try:
             account = self.account()
             positions = tuple(self.positions())
+            sizing = self.sizing(intent, account, positions)
             return GuardianInputs(
                 market=self.market(intent.instrument),
                 account=account,
                 open_positions=positions,
-                sizing=self.sizing(intent, account, positions),
+                sizing=sizing,
+                stage_size_cap=self.stage_cap(sizing) if self.stage_cap is not None else None,
                 trade_quality_score=Decimal("1"),
                 now=self.clock(),
             )
