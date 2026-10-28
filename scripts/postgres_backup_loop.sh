@@ -7,6 +7,7 @@ HOURLY_DATABASE_MARKER=/workspace/state/.backup-upload-database-hourly
 STAGE_TRIGGER=${BACKUP_STAGE_TRIGGER_FILE:-/workspace/state/.backup-stage-trigger}
 STAGE_DONE=${BACKUP_STAGE_DONE_FILE:-/workspace/state/.backup-stage-uploaded}
 UPLOAD_LOCK=/workspace/state/.backup-upload.lock
+POSTGRES_READY=/workspace/.postgres-restore-ready
 mkdir -p "$(dirname "$NIGHTLY_MARKER")"
 
 run_backup_upload() {
@@ -72,7 +73,13 @@ trap shutdown TERM INT
 
 READY=false
 for _ in $(seq 1 60); do
-    if pg_isready -h 127.0.0.1 -p 5432 -U trader >/dev/null 2>&1; then
+    # start_postgres.sh briefly starts PostgreSQL to initialize or restore the
+    # cluster, then stops it before exec'ing the long-lived server.  Waiting on
+    # pg_isready alone can race that bootstrap server and make the first dump
+    # fail while PostgreSQL is restarting.  The marker is published only after
+    # restore/verification and immediately before the final exec.
+    if [ -f "$POSTGRES_READY" ] \
+        && pg_isready -h 127.0.0.1 -p 5432 -U trader >/dev/null 2>&1; then
         READY=true
         break
     fi
