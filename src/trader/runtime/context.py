@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Mapping, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -276,6 +277,14 @@ class MarketContextSource:
         )
 
 
+_CAPACITY_REASONS = frozenset(
+    {
+        "projected margin usage exceeds the configured limit",
+        "projected effective leverage exceeds the configured limit",
+    }
+)
+
+
 class SizingContextSource:
     """Call the deterministic risk sizer with broker instrument terms."""
 
@@ -294,6 +303,25 @@ class SizingContextSource:
         self.quote_rate_provider = quote_rate_provider
         self.sizer = sizer
 
+    def _size(
+        self,
+        legacy: TradeIntent,
+        terms: InstrumentTerms,
+        account: AccountState,
+        limits: SizingLimits,
+        quote_rate: Decimal | None,
+    ) -> SizingDecision:
+        return self.sizer(
+            legacy,
+            terms,
+            account_equity=account.equity,
+            account_currency=self.account_currency(account),
+            current_margin_used=account.margin_used,
+            current_notional_exposure=account.notional_exposure,
+            limits=limits,
+            quote_to_account_rate=quote_rate,
+        )
+
     def __call__(
         self, intent: GraphTradeIntent, account: AccountState, positions: tuple[OpenPosition, ...]
     ) -> SizingEstimate:
@@ -306,18 +334,34 @@ class SizingContextSource:
             stop_loss=intent.stop_level,
             take_profit=intent.target_levels[0] if intent.target_levels else None,
         )
-        decision = self.sizer(
-            legacy,
-            terms,
-            account_equity=account.equity,
-            account_currency=self.account_currency(account),
-            current_margin_used=account.margin_used,
-            current_notional_exposure=account.notional_exposure,
-            limits=self.limits,
-            quote_to_account_rate=self.quote_rate_provider(terms)
-            if self.quote_rate_provider is not None
-            else None,
+        quote_rate = (
+            self.quote_rate_provider(terms) if self.quote_rate_provider is not None else None
         )
+        limits = self.limits
+        decision = self._size(legacy, terms, account, limits, quote_rate)
+        # The sizer sizes on the risk budget alone and rejects when that size breaks the
+        # margin or leverage limits.  With a tight stop that is nearly every entry, so scale
+        # the risk budget down to what the limits allow and let the sizer re-check it.
+        for _attempt in range(3):
+            if decision.approved or decision.reason not in _CAPACITY_REASONS:
+                break
+            usage, leverage = (
+                decision.projected_margin_usage_pct,
+                decision.projected_effective_leverage,
+            )
+            ratios = [
+                limit / value
+                for limit, value in (
+                    (limits.max_margin_usage_pct, usage),
+                    (limits.max_effective_leverage, leverage),
+                )
+                if value is not None and value > 0
+            ]
+            if not ratios:
+                break
+            factor = min(min(ratios), Decimal(1)) * Decimal("0.98")
+            limits = replace(limits, risk_per_trade_pct=limits.risk_per_trade_pct * factor)
+            decision = self._size(legacy, terms, account, limits, quote_rate)
         size = decision.size
         risk = decision.estimated_risk
         margin = decision.margin_required
