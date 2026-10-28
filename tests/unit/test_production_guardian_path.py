@@ -77,7 +77,9 @@ class _MarketDetails:
         }
 
 
-def _stack(tmp_path: Path, atr: Decimal) -> tuple[GuardedEntrySubmitter, _Manager]:
+def _stack(
+    tmp_path: Path, atr: Decimal, *, real_manager: bool = False
+) -> tuple[GuardedEntrySubmitter, Any]:
     risk = yaml.safe_load((ROOT / "config" / "risk.yaml").read_text())
     instruments = yaml.safe_load((ROOT / "config" / "instruments.yaml").read_text())
     engine = create_engine(f"sqlite:///{tmp_path / 'ctx.db'}")
@@ -117,7 +119,47 @@ def _stack(tmp_path: Path, atr: Decimal) -> tuple[GuardedEntrySubmitter, _Manage
         RiskLimits.from_mapping(risk), _Audit(), canonical_symbols={"NAS100", "XAUUSD"}
     )
     approval = RuntimeApproval(guardian, context_provider=provider)
-    manager = _Manager()
+    if real_manager:
+        from trader.execution.control import ControlMode
+        from trader.execution.manager import OrderManager
+        from trader.runtime.approval import PnlLossGuard, ProtectivePositionManager
+
+        class Lease:
+            def acquire(self) -> None: ...
+
+            def check(self) -> None: ...
+
+        class Controls:
+            def read(self) -> ControlMode:
+                return ControlMode.RUN
+
+            def set(self, _mode: ControlMode) -> None: ...
+
+        controls = Controls()
+        journal = ExecutionJournal(engine)
+        manager: Any = OrderManager(
+            broker,
+            journal,
+            Lease(),
+            Lease(),
+            approval,
+            PnlLossGuard(
+                broker,
+                max_daily_loss_pct=Decimal("2"),
+                max_weekly_loss_pct=Decimal("5"),
+                control_writer=controls,
+                alert=lambda _m: None,
+                journal=journal,
+            ),
+            lambda _m: None,
+            controls,
+            controls,
+            ProtectivePositionManager(broker, control_writer=controls, alert=lambda _m: None),
+        )
+        manager.startup()
+        manager.capital = capital
+    else:
+        manager = _Manager()
     return GuardedEntrySubmitter(approval, manager, lambda _epic: "NAS100"), manager
 
 
@@ -169,3 +211,15 @@ def test_a_quiet_market_is_refused_by_the_spread_to_atr_rule(tmp_path: Path) -> 
     with pytest.raises(ExecutionPaused, match="spread_atr_limit_exceeded"):
         submitter.submit("cycle-1", _long(Decimal("8")))
     assert manager.orders == []
+
+
+def test_entry_reaches_the_capital_account_through_the_real_order_manager(tmp_path: Path) -> None:
+    submitter, manager = _stack(tmp_path, Decimal("12"), real_manager=True)
+    receipt = submitter.submit("cycle-1", _long(Decimal("12")))
+    assert receipt is not None
+    positions = list(manager.capital.positions.values())
+    assert len(positions) == 1
+    assert positions[0]["epic"] == "US100" and positions[0]["direction"] == "BUY"
+    assert positions[0]["size"] == Decimal("0.002")
+    assert positions[0]["stop"] is not None and positions[0]["limit"] is not None
+    assert not manager.paused
