@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import logging
 import os
 import random
@@ -301,13 +302,9 @@ def _build_tai_demo_runtime(
         and callable(getattr(previous_tai_runtime, "pending_bars", None))
         else None
     )
-    journal_object = (getattr(app.state, "runtime_services", None) or {}).get("journal")
-    append_audit = getattr(journal_object, "append", None)
-
-    def journal(payload: Mapping[str, object]) -> None:
-        if callable(append_audit):
-            event_type = str(payload.get("event", "tai_demo"))
-            append_audit(AuditEvent(event_type, dict(payload)))
+    audit_writer = (getattr(app.state, "runtime_services", None) or {}).get("audit_writer")
+    append_audit = getattr(audit_writer, "append", None)
+    journal = _tai_audit_journal(append_audit)
 
     def alert(message: str) -> None:
         _LOG.error("tai demo alert: %s", message)
@@ -526,6 +523,24 @@ def _build_chat_router(
         control_handler=control_handler,
         command_handlers=command_handlers,
     )
+
+
+def _tai_audit_journal(
+    append_audit: Callable[[Any], Any] | None,
+) -> Callable[[Mapping[str, object]], None]:
+    """Persist Tai decisions to the audit log; never let a storage error stop trading."""
+
+    def journal(payload: Mapping[str, object]) -> None:
+        if not callable(append_audit):
+            return
+        try:
+            event_type = str(payload.get("event", "tai_demo"))
+            plain = json.loads(json.dumps(dict(payload), default=str))
+            append_audit(AuditEvent(event_type, plain))
+        except Exception:  # noqa: BLE001 - audit storage must not break the strategy
+            _LOG.warning("tai demo audit write failed", exc_info=True)
+
+    return journal
 
 
 def _canonical_symbol_resolver(configs: Mapping[str, Any]) -> Callable[[str], str]:
