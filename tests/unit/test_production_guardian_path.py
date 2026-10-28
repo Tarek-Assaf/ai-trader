@@ -56,8 +56,8 @@ class _Manager:
 
 
 class _MarketDetails:
-    def search_markets(self, _term: str) -> list[dict[str, Any]]:
-        return [{"epic": "US100", "tickSize": 0.1}]
+    def search_markets(self, term: str) -> list[dict[str, Any]]:
+        return [{"epic": term, "tickSize": 0.1}]
 
     def market_details(self, epic: str) -> dict[str, Any]:
         return {
@@ -78,7 +78,13 @@ class _MarketDetails:
 
 
 def _stack(
-    tmp_path: Path, atr: Decimal, *, real_manager: bool = False
+    tmp_path: Path,
+    atr: Decimal,
+    *,
+    real_manager: bool = False,
+    epic: str = "US100",
+    canonical: str = "NAS100",
+    quote: tuple[Decimal, Decimal] = (BID, ASK),
 ) -> tuple[GuardedEntrySubmitter, Any]:
     risk = yaml.safe_load((ROOT / "config" / "risk.yaml").read_text())
     instruments = yaml.safe_load((ROOT / "config" / "instruments.yaml").read_text())
@@ -93,9 +99,9 @@ def _stack(
         broker, ExecutionJournal(engine), clock=lambda: NOW, default_consecutive_losses=0
     )
     market = TaiMarketSource(
-        lambda _epic: SimpleNamespace(bid=BID, ask=ASK),
+        lambda _epic: SimpleNamespace(bid=quote[0], ask=quote[1]),
         SimpleNamespace(latest_atr=atr),
-        "US100",
+        epic,
         clock=lambda: NOW,
     )
     sizing = SizingContextSource(
@@ -160,18 +166,18 @@ def _stack(
         manager.capital = capital
     else:
         manager = _Manager()
-    return GuardedEntrySubmitter(approval, manager, lambda _epic: "NAS100"), manager
+    return GuardedEntrySubmitter(approval, manager, lambda _epic: canonical), manager
 
 
-def _long(stop_distance: Decimal) -> OrderRequest:
+def _long(stop_distance: Decimal, *, entry: Decimal = ASK, epic: str = "US100") -> OrderRequest:
     return OrderRequest(
         "cycle-1",
-        "US100",
+        epic,
         Direction.BUY,
         Decimal("0.002"),
-        ASK,
-        ASK - stop_distance,
-        ASK + stop_distance * 3,  # Tai's broker target is TP3 = 3R
+        entry,
+        entry - stop_distance,
+        entry + stop_distance * 3,  # Tai's broker target is TP3 = 3R
     )
 
 
@@ -223,3 +229,20 @@ def test_entry_reaches_the_capital_account_through_the_real_order_manager(tmp_pa
     assert positions[0]["size"] == Decimal("0.002")
     assert positions[0]["stop"] is not None and positions[0]["limit"] is not None
     assert not manager.paused
+
+
+@pytest.mark.parametrize(("atr", "stop_distance"), [("4", "3"), ("6", "5"), ("3", "2.5")])
+def test_a_realistic_gold_long_passes_every_guardian_rule(
+    tmp_path: Path, atr: str, stop_distance: str
+) -> None:
+    gold_bid, gold_ask = Decimal("4031.20"), Decimal("4031.60")
+    submitter, manager = _stack(
+        tmp_path,
+        Decimal(atr),
+        epic="GOLD",
+        canonical="XAUUSD",
+        quote=(gold_bid, gold_ask),
+    )
+    order = _long(Decimal(stop_distance), entry=gold_ask, epic="GOLD")
+    assert submitter.submit("cycle-1", order) == "receipt"
+    assert manager.orders[0].epic == "GOLD"
