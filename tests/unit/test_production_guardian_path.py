@@ -81,6 +81,7 @@ def _stack(tmp_path: Path, atr: Decimal) -> tuple[GuardedEntrySubmitter, _Manage
     risk = yaml.safe_load((ROOT / "config" / "risk.yaml").read_text())
     instruments = yaml.safe_load((ROOT / "config" / "instruments.yaml").read_text())
     engine = create_engine(f"sqlite:///{tmp_path / 'ctx.db'}")
+    tables["trade_intents"].create(engine)
     tables["snapshots"].create(engine)
     capital = FakeCapital()
     capital.balance = capital.available = Decimal("10999.78")
