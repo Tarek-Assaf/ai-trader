@@ -347,6 +347,7 @@ def test_broker_pnl_provider_reports_period_realized_and_floating(tmp_path: Any)
 
     provider = _broker_pnl_provider(Broker(), tmp_path / "state" / "pnl_baselines.json")
     first = provider("daily")
+    provider("monthly")  # the month baseline is the first balance seen that month
     assert first.realized_net == Decimal("0") and first.unrealized_net == Decimal("-2.50")
     balances.pop(0)  # a trade closed: balance moved +12.50 within the same day
     report = provider("daily")
