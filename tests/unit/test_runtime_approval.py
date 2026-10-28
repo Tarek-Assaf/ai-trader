@@ -697,3 +697,37 @@ def test_direct_manager_submit_without_guardian_binding_is_refused(tmp_path) -> 
     with pytest.raises(ExecutionPaused):
         manager.submit("cycle-1", _us100_order("1"))
     assert broker.calls == 0
+
+
+def test_tai_decisions_are_persisted_with_decimal_and_datetime_values() -> None:
+    import json
+
+    from trader.api.app import _tai_audit_journal
+
+    written = []
+
+    def append(event):
+        json.dumps(dict(event.payload), allow_nan=False)  # must be plain JSON
+        written.append(event)
+
+    journal = _tai_audit_journal(append)
+    journal(
+        {
+            "event": "order_refused",
+            "reason": "spread_too_wide",
+            "spread": Decimal("2.1"),
+            "at": datetime(2026, 10, 28, 1, 39, tzinfo=UTC),
+        }
+    )
+    assert written[0].event_type == "order_refused"
+    assert written[0].payload["spread"] == "2.1"
+
+
+def test_tai_audit_write_failure_never_raises() -> None:
+    from trader.api.app import _tai_audit_journal
+
+    def broken(_event):
+        raise OSError("database down")
+
+    _tai_audit_journal(broken)({"event": "entry"})
+    _tai_audit_journal(None)({"event": "entry"})
