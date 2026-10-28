@@ -193,3 +193,42 @@ def test_missing_account_fields_and_stale_market_reject_without_defaults() -> No
         assert "stale" in str(exc)
     else:
         raise AssertionError("stale market data must reject")
+
+
+def test_paper_broker_account_builds_guardian_context_with_a_declared_loss_streak() -> None:
+    """The production paper broker reports no loss streak; the deployment declares one."""
+    from trader.execution.brokers.paper import PaperBroker, PaperExecutionCosts
+
+    broker = PaperBroker(
+        starting_cash=Decimal("1000"),
+        currency="USD",
+        costs=PaperExecutionCosts(
+            spread_points={"US100": Decimal("1")}, slippage_points={"US100": Decimal("0")}
+        ),
+    )
+    strict = AccountContextSource(broker, Journal(), clock=lambda: NOW)
+    try:
+        strict()
+    except ContextUnavailable as exc:
+        assert "consecutive_losses" in str(exc)
+    else:
+        raise AssertionError("an unknown loss streak must reject by default")
+
+    state = AccountContextSource(
+        broker, Journal(), clock=lambda: NOW, default_consecutive_losses=0
+    )()
+    assert state.equity == Decimal("1000")
+    assert state.consecutive_losses == 0
+    assert state.margin_used == Decimal("0")
+
+
+def test_context_provider_logs_why_it_returned_nothing(caplog) -> None:
+    import logging
+
+    def broken_account():
+        raise ContextUnavailable("consecutive_losses is unavailable")
+
+    provider = RuntimeContextProvider(broken_account, lambda _i: None, lambda *_a: None, lambda: ())
+    with caplog.at_level(logging.WARNING):
+        assert provider("cycle-1", _intent()) is None
+    assert "consecutive_losses is unavailable" in caplog.text
