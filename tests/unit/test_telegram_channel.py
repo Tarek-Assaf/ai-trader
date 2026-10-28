@@ -301,3 +301,13 @@ def test_poll_failures_back_off_and_reset(monkeypatch) -> None:
     channel.run(stop=lambda: calls[0] >= 4)
 
     assert delays == [1.0, 2.0, 4.0]
+
+
+def test_alerts_with_distinct_keys_are_not_throttled_together() -> None:
+    from trader.channels.telegram import Alert, AlertLimiter
+
+    limiter = AlertLimiter(interval_seconds=300.0, clock=lambda: 1000.0)
+    assert limiter.allow("tai_demo:1")
+    assert limiter.allow("tai_demo:2")  # a second message in the same second still goes out
+    assert not limiter.allow("tai_demo:1")
+    assert Alert("k", "text").text == "text"
