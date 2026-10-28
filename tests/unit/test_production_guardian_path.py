@@ -136,7 +136,7 @@ def _long(stop_distance: Decimal) -> OrderRequest:
 @pytest.mark.parametrize(
     ("atr", "stop_distance"),
     [
-        ("8", "8"),
+        ("10", "10"),
         ("12", "12"),
         ("20", "14"),
         ("30", "45"),
@@ -161,4 +161,11 @@ def test_a_too_tight_stop_is_still_refused_by_the_guardian(tmp_path: Path) -> No
     submitter, manager = _stack(tmp_path, Decimal("40"))
     with pytest.raises(ExecutionPaused, match="stop_distance_outside_atr_limits"):
         submitter.submit("cycle-1", _long(Decimal("5")))  # 0.125 ATR, below the 0.5 minimum
+    assert manager.orders == []
+
+
+def test_a_quiet_market_is_refused_by_the_spread_to_atr_rule(tmp_path: Path) -> None:
+    submitter, manager = _stack(tmp_path, Decimal("8"))  # 1.8 spread / 8 ATR = 0.225 > 0.20
+    with pytest.raises(ExecutionPaused, match="spread_atr_limit_exceeded"):
+        submitter.submit("cycle-1", _long(Decimal("8")))
     assert manager.orders == []
