@@ -111,6 +111,27 @@ class CapitalComTradingClient(CapitalComClient):
             raise CapitalComError(200, "positions")
         return reply
 
+    def reduce_position(self, payload: Mapping[str, object]) -> Mapping[str, Any]:
+        """Send the opposite-direction market order that nets against an open position.
+
+        Only this narrow call may omit a stop: it must carry no stop or limit, because
+        it reduces an existing position (which keeps its own protective stop). Opening
+        new exposure still goes through ``open_position`` and requires a stop.
+        """
+        if (
+            payload.get("guaranteedStop") is not False
+            or payload.get("direction") not in {"BUY", "SELL"}
+            or not self._valid_stop_value(payload.get("size"))
+            or any(key in payload for key in ("stopLevel", "stopDistance", "profitLevel"))
+        ):
+            raise ValueError("a netting order needs a size and direction and must carry no stop")
+        reply = self._request_trading("POST", "positions", json=payload)
+        if not isinstance(reply, Mapping) or not isinstance(reply.get("dealReference"), str):
+            raise CapitalComError(200, "positions")
+        if not reply["dealReference"].strip():
+            raise CapitalComError(200, "positions")
+        return reply
+
     def confirm_deal(self, deal_reference: str) -> Mapping[str, Any]:
         """Fetch and validate the confirmation object for a trade reference."""
         if not deal_reference.strip():

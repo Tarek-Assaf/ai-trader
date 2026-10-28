@@ -71,6 +71,9 @@ class FakeCapital:
     def get_activity(self, start, end) -> list[dict[str, Any]]:
         return []
 
+    def reduce_position(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.open_position(payload)
+
     def open_position(self, payload: dict[str, Any]) -> dict[str, Any]:
         self._counter += 1
         reference = f"o_{self._counter}"

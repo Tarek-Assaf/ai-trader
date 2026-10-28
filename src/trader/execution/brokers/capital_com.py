@@ -35,6 +35,8 @@ class _CapitalComClient(Protocol):
 
     def open_position(self, payload: Mapping[str, object]) -> Mapping[str, object]: ...
 
+    def reduce_position(self, payload: Mapping[str, object]) -> Mapping[str, object]: ...
+
     def confirm_deal(self, deal_reference: str) -> Mapping[str, object]: ...
 
     def modify_position(
@@ -277,7 +279,7 @@ class CapitalComBroker:
             if size >= existing.size:
                 raise ValueError("partial close must be smaller than the open position")
             opposite = Direction.SELL if existing.direction is Direction.BUY else Direction.BUY
-            created = self._client.open_position(
+            created = self._client.reduce_position(
                 {
                     "epic": existing.epic,
                     "direction": opposite.value,
