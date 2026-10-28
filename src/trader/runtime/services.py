@@ -490,7 +490,7 @@ def _baseline_balance(path: Path, period: str, balance: Decimal, now: datetime) 
     return balance
 
 
-_HISTORY_MIN_GAP = timedelta(seconds=60)
+_HISTORY_MIN_GAP = timedelta(seconds=300)
 _HISTORY_MAX_POINTS = 6000
 
 

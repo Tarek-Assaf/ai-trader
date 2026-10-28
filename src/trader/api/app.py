@@ -410,6 +410,9 @@ def _build_tai_demo_runtime(
     set_tai_demo_health_provider(runtime_adapter.health_snapshot)
     app.state.tai_feed_tailers = tailers
     app.state.tai_feed_tailer = tailers[0]
+    from trader.runtime.market_watch import MarketWatcher
+
+    app.state.market_watcher = MarketWatcher(capital_client, epics, alert)
     return runtime_adapter
 
 
@@ -440,9 +443,16 @@ async def _tai_feed_loop(app: FastAPI) -> None:
     """Tail the recorder lake without coupling the API to the worker stream."""
     last_equity_sample = 0.0
     while True:
-        if time.monotonic() - last_equity_sample >= 300:
+        if time.monotonic() - last_equity_sample >= 60:
             last_equity_sample = time.monotonic()
-            sampler = getattr(app.state, "pnl_provider", None)
+            watcher = getattr(app.state, "market_watcher", None)
+            if watcher is not None:
+                try:
+                    await asyncio.to_thread(watcher.poll)
+                except Exception:  # noqa: BLE001 - never stop the feed
+                    _LOG.warning("market watch failed", exc_info=True)
+            services = getattr(app.state, "runtime_services", None) or {}
+            sampler = services.get("pnl_provider") if hasattr(services, "get") else None
             if callable(sampler):
                 try:
                     await asyncio.to_thread(sampler)  # records one equity point
