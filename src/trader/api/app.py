@@ -241,6 +241,7 @@ def _build_tai_demo_runtime(
         else None
     )
     app.state.tai_feed_tailer = None
+    app.state.tai_feed_tailers = []
     set_tai_demo_health_provider(None)
     if not bool(getattr(settings, "tai_demo_experiment", False)):
         if not getattr(app.state, "tai_startup_logged", False):
@@ -261,6 +262,7 @@ def _build_tai_demo_runtime(
         CapitalBalanceProvider,
         CapitalInstrumentRulesProvider,
         TaiMarketSource,
+        TaiRuntimeGroup,
         TaiSignalProvider,
         ThreeMinuteBarBuilder,
         build_tai_demo_runtime,
@@ -270,39 +272,18 @@ def _build_tai_demo_runtime(
     dump = getattr(raw, "model_dump", None)
     values = dump() if callable(dump) else raw
     instruments = values.get("instruments", values) if isinstance(values, dict) else {}
-    epic = next(
-        (
-            str(item.get("capital_epic"))
-            for item in instruments.values()
-            if isinstance(item, dict) and item.get("capital_epic")
-        ),
-        "US100",
-    )
+    configured: dict[str, str] = {}  # broker epic -> canonical symbol, in config order
+    for symbol, item in instruments.items():
+        if isinstance(item, dict) and item.get("capital_epic"):
+            configured[str(item["capital_epic"])] = str(symbol)
+    if not configured:
+        configured = {"US100": "NAS100"}
+    wanted = [part.strip() for part in os.getenv("TAI_DEMO_EPICS", "").split(",") if part.strip()]
+    epics = [epic for epic in wanted if epic in configured] or [next(iter(configured))]
+    first_epic = epics[0]
     workspace = Path(os.getenv("WORKSPACE_DIR", "/workspace"))
     lake_root = Path(os.getenv("DATA_LAKE_DIR", str(workspace / "data" / "lake")))
-    previous_signal = (
-        getattr(getattr(previous_tai_runtime, "runner", None), "_signal", None)
-        if previous_tai_runtime is not None
-        else None
-    )
     ha_mode = str(getattr(settings, "tai_demo_ha_mode", "forming"))
-    signal = (
-        previous_signal
-        if isinstance(previous_signal, TaiSignalProvider) and previous_signal.ha_mode == ha_mode
-        else TaiSignalProvider.from_lake(lake_root, epic, ha_mode=ha_mode)
-    )
-    previous_builder = getattr(previous_tai_runtime, "builder", None)
-    builder = (
-        previous_builder
-        if isinstance(previous_builder, ThreeMinuteBarBuilder)
-        else ThreeMinuteBarBuilder(epic)
-    )
-    pending_bars = (
-        previous_tai_runtime.pending_bars()
-        if previous_tai_runtime is not None
-        and callable(getattr(previous_tai_runtime, "pending_bars", None))
-        else None
-    )
     audit_writer = (getattr(app.state, "runtime_services", None) or {}).get("audit_writer")
     append_audit = getattr(audit_writer, "append", None)
     journal = _tai_audit_journal(append_audit)
@@ -316,33 +297,76 @@ def _build_tai_demo_runtime(
 
             send_alert(Alert("tai_demo", message[:240]))
 
-    rules_provider = CapitalInstrumentRulesProvider(capital_client, epic)
-    app.state.tai_market_source = TaiMarketSource(rules_provider, signal, epic)
-    runtime_adapter = build_tai_demo_runtime(
-        settings,
-        epic=epic,
-        order_manager=cast(
-            Any,
-            _guarded_order_manager(
-                app, components.order_manager, _canonical_symbol_resolver(configs)
-            ),
-        ),
-        position_gateway=cast(Any, components.broker),
-        control=app.state.execution_control_source,
-        source=cycle_source,
-        builder=builder,
-        balance_provider=CapitalBalanceProvider(capital_client),
-        rules_provider=rules_provider,
-        signal_provider=signal,
-        managed_state=previous_state,
-        pending_bars=pending_bars,
-        journal=journal if callable(append_audit) else None,
-        alert=alert,
-        state_path=workspace / "state" / "tai_demo_positions.json",
+    guarded_manager = cast(
+        Any,
+        _guarded_order_manager(app, components.order_manager, _canonical_symbol_resolver(configs)),
     )
-    if runtime_adapter is not None:
-        app.state.tai_demo_runtime = runtime_adapter
-        set_tai_demo_health_provider(runtime_adapter.health_snapshot)
+    market_sources: dict[str, Any] = {}
+    adapters: dict[str, Any] = {}
+    tailers: list[Any] = []
+    for epic in epics:
+        previous_adapter = (
+            previous_tai_runtime.adapters.get(epic)
+            if isinstance(previous_tai_runtime, TaiRuntimeGroup)
+            else (previous_tai_runtime if epic == first_epic else None)
+        )
+        previous_epic_state = (
+            {k: v for k, v in previous_state.items() if getattr(v, "epic", epic) == epic}
+            if previous_state is not None
+            else None
+        )
+        previous_signal = (
+            getattr(getattr(previous_adapter, "runner", None), "_signal", None)
+            if previous_adapter is not None
+            else None
+        )
+        signal = (
+            previous_signal
+            if isinstance(previous_signal, TaiSignalProvider) and previous_signal.ha_mode == ha_mode
+            else TaiSignalProvider.from_lake(lake_root, epic, ha_mode=ha_mode)
+        )
+        previous_builder = getattr(previous_adapter, "builder", None)
+        builder = (
+            previous_builder
+            if isinstance(previous_builder, ThreeMinuteBarBuilder)
+            else ThreeMinuteBarBuilder(epic)
+        )
+        pending_bars = (
+            previous_adapter.pending_bars()
+            if previous_adapter is not None
+            and callable(getattr(previous_adapter, "pending_bars", None))
+            else None
+        )
+        rules_provider = CapitalInstrumentRulesProvider(capital_client, epic)
+        market_source = TaiMarketSource(rules_provider, signal, epic)
+        market_sources[epic] = market_source
+        market_sources[configured[epic].upper()] = market_source
+        adapter = build_tai_demo_runtime(
+            settings,
+            epic=epic,
+            order_manager=guarded_manager,
+            position_gateway=cast(Any, components.broker),
+            control=app.state.execution_control_source,
+            source=cycle_source,
+            builder=builder,
+            balance_provider=CapitalBalanceProvider(capital_client),
+            rules_provider=rules_provider,
+            signal_provider=signal,
+            managed_state=previous_epic_state,
+            pending_bars=pending_bars,
+            journal=journal if callable(append_audit) else None,
+            alert=alert,
+            state_path=workspace
+            / "state"
+            / (
+                "tai_demo_positions.json"
+                if epic == first_epic
+                else f"tai_demo_positions_{epic}.json"
+            ),
+        )
+        if adapter is None:
+            return None
+        adapters[epic] = adapter
         history = getattr(signal, "history", ())
         # Never replay recorded history as live bars: start after the warm-up, or
         # after the last closed minute when there is no warm-up at all.
@@ -351,12 +375,14 @@ def _build_tai_demo_runtime(
             if history
             else datetime.now(UTC).replace(second=0, microsecond=0) - timedelta(minutes=1)
         )
-        app.state.tai_feed_tailer = TaiLakeTailer(
-            lake_root,
-            epic,
-            runtime_adapter,
-            market_open=_tai_market_open(capital_client, epic),
-            seed_after=seed_after,
+        tailers.append(
+            TaiLakeTailer(
+                lake_root,
+                epic,
+                adapter,
+                market_open=_tai_market_open(capital_client, epic),
+                seed_after=seed_after,
+            )
         )
         if not getattr(app.state, "tai_startup_logged", False):
             _LOG.info(
@@ -369,7 +395,18 @@ def _build_tai_demo_runtime(
                 history[-1].at.isoformat() if history else "none",
                 seed_after.isoformat(),
             )
-            app.state.tai_startup_logged = True
+    app.state.tai_startup_logged = True
+    app.state.tai_market_source = market_sources[first_epic]
+    app.state.tai_market_sources = market_sources
+    runtime_adapter = TaiRuntimeGroup(adapters)
+    if os.getenv("TAI_SIGNAL_SOURCE", "local").strip().lower() == "tradingview":
+        for member in adapters.values():
+            member.runner.external_signals_only = True
+        _LOG.warning("TAI_SIGNAL_SOURCE=tradingview: entries follow the TradingView alerts")
+    app.state.tai_demo_runtime = runtime_adapter
+    set_tai_demo_health_provider(runtime_adapter.health_snapshot)
+    app.state.tai_feed_tailers = tailers
+    app.state.tai_feed_tailer = tailers[0]
     return runtime_adapter
 
 
@@ -399,22 +436,23 @@ def _tai_market_open(capital_client: Any, epic: str) -> Callable[[datetime], boo
 async def _tai_feed_loop(app: FastAPI) -> None:
     """Tail the recorder lake without coupling the API to the worker stream."""
     while True:
-        tailer = getattr(app.state, "tai_feed_tailer", None)
-        if tailer is not None:
-            try:
-                await asyncio.to_thread(tailer.poll_once)
-            except Exception:  # noqa: BLE001 - a lake read must not stop the API
-                _LOG.warning("Tai lake feed poll failed", exc_info=True)
-            await asyncio.sleep(tailer.interval_seconds)
+        tailers = getattr(app.state, "tai_feed_tailers", None) or []
+        if tailers:
+            for tailer in tuple(tailers):
+                try:
+                    await asyncio.to_thread(tailer.poll_once)
+                except Exception:  # noqa: BLE001 - a lake read must not stop the API
+                    _LOG.warning("Tai lake feed poll failed", exc_info=True)
+            await asyncio.sleep(tailers[0].interval_seconds)
         else:
             await asyncio.sleep(1.0)
 
 
 def _start_tai_feed_tailer(app: FastAPI) -> None:
     """Start one API-process tailer only when the gated runtime is composed."""
-    tailer = getattr(app.state, "tai_feed_tailer", None)
+    tailers = getattr(app.state, "tai_feed_tailers", None)
     task = getattr(app.state, "tai_feed_task", None)
-    if tailer is not None and (task is None or task.done()):
+    if tailers and (task is None or task.done()):
         app.state.tai_feed_task = asyncio.create_task(_tai_feed_loop(app), name="tai-lake-feed")
 
 
@@ -606,7 +644,10 @@ def _lazy_market_source(app: FastAPI) -> Callable[[str], Any]:
     def source(instrument: str) -> Any:
         from trader.runtime.context import ContextUnavailable
 
-        provider = getattr(app.state, "tai_market_source", None)
+        sources = getattr(app.state, "tai_market_sources", None) or {}
+        provider = sources.get(str(instrument).upper()) or getattr(
+            app.state, "tai_market_source", None
+        )
         if provider is None:
             raise ContextUnavailable("market snapshot source is not ready")
         return provider(instrument)
@@ -728,6 +769,7 @@ async def lifespan(_app: FastAPI) -> Any:
     _app.state.runtime_cycle_source = None
     _app.state.runtime_feed_adapters = None
     _app.state.tai_feed_tailer = None
+    _app.state.tai_feed_tailers = []
     _app.state.tai_feed_task = None
     _app.state.tai_demo_runtime = None
     set_tai_demo_health_provider(None)

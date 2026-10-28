@@ -701,3 +701,45 @@ def test_dry_run_journals_without_submitting() -> None:
     assert outcome.action == "DRY_RUN"
     assert orders.calls == 0
     assert any(event["event"] == "dry_run_would_submit" for event in events)
+
+
+def test_epic_aliases_cover_both_instruments_and_unknown_epics() -> None:
+    from trader.experiments.tai_wiring import epic_aliases
+
+    assert {"US100", "NAS100", "NSXUSD"} <= epic_aliases("US100")
+    assert {"GOLD", "XAUUSD"} <= epic_aliases("GOLD")
+    assert epic_aliases("DAX") == frozenset({"DAX"})
+
+
+def test_runtime_group_routes_each_bar_to_its_instrument_and_merges_health() -> None:
+    from types import SimpleNamespace
+
+    from trader.experiments.tai_wiring import TaiRuntimeGroup
+
+    def adapter(epic: str):
+        calls = []
+
+        def run(cycle):
+            calls.append(cycle.event_id)
+            return SimpleNamespace(action="NO_TRADE", reason=epic, cycle_id=cycle.event_id)
+
+        return SimpleNamespace(
+            run=run,
+            runner=f"runner-{epic}",
+            health_snapshot=lambda: {epic: {"evaluated": 1}},
+            snapshot_state=lambda: {f"deal-{epic}": epic},
+            pending_bars=lambda: {f"bar:{epic}": epic},
+            calls=calls,
+        )
+
+    us100, gold = adapter("US100"), adapter("GOLD")
+    group = TaiRuntimeGroup({"US100": us100, "GOLD": gold})
+    stamp = "2026-10-28T20:12:00+00:00"
+    assert group.run(SimpleNamespace(event_id=f"bar:3M:GOLD:{stamp}")).reason == "GOLD"
+    assert group.run(SimpleNamespace(event_id=f"bar:3M:US100:{stamp}")).reason == "US100"
+    assert group.run(SimpleNamespace(event_id=f"bar:3M:DAX:{stamp}")).reason == "bar_unavailable"
+    assert gold.calls == [f"bar:3M:GOLD:{stamp}"] and us100.calls == [f"bar:3M:US100:{stamp}"]
+    assert set(group.health_snapshot()) == {"US100", "GOLD"}
+    assert set(group.snapshot_state()) == {"deal-US100", "deal-GOLD"}
+    assert group.runner == "runner-US100" and group.runner_for("GOLD") == "runner-GOLD"
+    assert group.runner_for("DAX") is None
