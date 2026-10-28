@@ -1065,6 +1065,6 @@ def _paper_stage_cap(settings: Any) -> Any:
         return None
 
     def cap(sizing: Any) -> Decimal:
-        return sizing.size
+        return Decimal(sizing.size)
 
     return cap
