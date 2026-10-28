@@ -277,7 +277,7 @@ class CapitalComBroker:
             if size >= existing.size:
                 raise ValueError("partial close must be smaller than the open position")
             opposite = Direction.SELL if existing.direction is Direction.BUY else Direction.BUY
-            created = self._client.open_position(
+            created = self._client.reduce_position(
                 {
                     "epic": existing.epic,
                     "direction": opposite.value,

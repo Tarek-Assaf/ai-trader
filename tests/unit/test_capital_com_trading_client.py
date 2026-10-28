@@ -161,3 +161,39 @@ def test_activity_range_must_be_utc_aware_and_at_most_one_day() -> None:
     finally:
         client.close()
         http.close()
+
+
+def test_reduce_position_sends_a_stopless_netting_order_but_nothing_else() -> None:
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.url.path.endswith("/session"):
+            return httpx.Response(
+                200, headers={"CST": "cst", "X-SECURITY-TOKEN": "token"}, request=request
+            )
+        return httpx.Response(200, json={"dealReference": "net ref"}, request=request)
+
+    client, http = make_client(handler)
+    try:
+        reply = client.reduce_position(
+            {"epic": "US100", "direction": "SELL", "size": 0.001, "guaranteedStop": False}
+        )
+        assert reply["dealReference"] == "net ref"
+        for bad in (
+            {"epic": "US100", "direction": "SELL", "size": 0.001},
+            {"epic": "US100", "direction": "SELL", "size": 0, "guaranteedStop": False},
+            {"epic": "US100", "direction": "HOLD", "size": 1, "guaranteedStop": False},
+            {
+                "epic": "US100",
+                "direction": "SELL",
+                "size": 1,
+                "guaranteedStop": False,
+                "stopLevel": 5,
+            },
+        ):
+            with pytest.raises(ValueError, match="netting order"):
+                client.reduce_position(bad)
+    finally:
+        client.close()
+        http.close()
