@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Collection, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Literal
@@ -590,6 +590,25 @@ class RiskGuardian:
         self._audit_writer = audit_writer
         self._canonical_symbols = frozenset(normalized_symbols)
         self._last_risk_pct: Decimal | None = None
+
+    def with_soft_filters_off(self) -> RiskGuardian:
+        """Copy that leaves out the strategy-quality filters, for an owner-directed signal.
+
+        The signal comes from the owner's own indicator, which already did its filtering.
+        Everything about account safety stays: stop required, risk per trade, daily, weekly and
+        drawdown limits, exposure, margin, leverage, kill and pause.  Only the opinions about
+        the trade itself (stop distance, reward/risk, spread-to-ATR, quality score) are off.
+        """
+        tiny, huge = Decimal("0.0001"), Decimal("100000")
+        limits = replace(
+            self._limits,
+            min_stop_atr=tiny,
+            max_stop_atr=huge,
+            max_spread_atr_ratio=huge,
+            min_reward_risk=tiny,
+            min_trade_quality_score=tiny,
+        )
+        return RiskGuardian(limits, self._audit_writer, canonical_symbols=self._canonical_symbols)
 
     def evaluate(
         self,

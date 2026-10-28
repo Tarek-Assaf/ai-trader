@@ -157,13 +157,17 @@ class RuntimeApproval:
         return self.evaluate_sync(intent, context, cycle_id)
 
     def evaluate_sync(
-        self, intent: GraphTradeIntent, context: object, cycle_id: str
+        self, intent: GraphTradeIntent, context: object, cycle_id: str, *, relaxed: bool = False
     ) -> GuardianDecision:
         inputs = self._context(cycle_id, context, intent)
         if inputs is None or inputs.sizing is None:
             return _reject("guardian_context_or_sizing_missing")
         try:
-            decision = self.guardian.evaluate(
+            guardian = self.guardian
+            if relaxed:
+                make_relaxed = getattr(guardian, "with_soft_filters_off", None)
+                guardian = make_relaxed() if callable(make_relaxed) else guardian
+            decision = guardian.evaluate(
                 legacy_intent(intent),
                 inputs.market,
                 inputs.account,
@@ -234,7 +238,11 @@ class GuardedEntrySubmitter:
     def __getattr__(self, name: str) -> Any:
         return getattr(self._manager, name)
 
-    def submit(self, cycle_id: str, order: OrderRequest) -> Any:
+    def submit_relaxed(self, cycle_id: str, order: OrderRequest) -> Any:
+        """Entry for an owner-directed signal: account-safety rules only (see the Guardian)."""
+        return self.submit(cycle_id, order, relaxed=True)
+
+    def submit(self, cycle_id: str, order: OrderRequest, *, relaxed: bool = False) -> Any:
         if order.stop_level is None or order.profit_level is None:
             raise ExecutionPaused("guardian rejected: stop and target are required")
         try:
@@ -251,7 +259,7 @@ class GuardedEntrySubmitter:
             )
         except (TypeError, ValueError):
             raise ExecutionPaused("guardian rejected: order could not be described") from None
-        decision = self._approval.evaluate_sync(intent, None, cycle_id)
+        decision = self._approval.evaluate_sync(intent, None, cycle_id, relaxed=relaxed)
         bound = self._approval._bound.pop(cycle_id, None)
         if not decision.approved or decision.approved_size is None or bound is None:
             reasons = ",".join(decision.reasons) or "no_reason"
