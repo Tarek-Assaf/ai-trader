@@ -554,3 +554,59 @@ def test_live_missing_position_is_dropped_and_later_signal_can_enter():
     assert len(manager.submits) == 2
     assert any(event["event"] == "reconcile_closed" for event in events)
     assert any("flat" in alert and "broker_closed" in alert for alert in alerts)
+
+
+def test_broker_refusing_a_partial_exit_does_not_crash_the_bar_and_alerts_once():
+    class RefusingGateway(Gateway):
+        def close_partial(self, deal_id, size):
+            raise RuntimeError("broker refused")
+
+    gateway = RefusingGateway()
+    alerts: list[str] = []
+    journal: list[dict] = []
+    instance, _ = runner(gateway, alerts=alerts, journal=journal.append)
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))  # target 1: refused partial, bar must still complete
+    instance.on_bar(bar(high="102"))
+    assert gateway.partial == []
+    assert [e["event"] for e in journal].count("scale_out_failed") == 2
+    assert sum("scale_out_failed" in message for message in alerts) == 1
+
+
+def test_stop_to_entry_is_retried_on_later_bars_after_a_broker_refusal():
+    class FlakyGateway(Gateway):
+        failures = 1
+
+        def modify_position(self, deal_id, *, stop_level, profit_level=None):
+            if self.failures:
+                self.failures -= 1
+                raise ValueError("too close to market")
+            return super().modify_position(
+                deal_id, stop_level=stop_level, profit_level=profit_level
+            )
+
+    gateway = FlakyGateway()
+    instance, _ = runner(gateway)
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))  # target 1 hit, break-even refused
+    assert gateway.modified == []
+    instance.on_bar(bar())  # next bar retries without needing the target again
+    assert gateway.modified == [("deal-1", Decimal("100"), Decimal("103"))]
+
+
+def test_break_even_stop_never_sits_on_the_wrong_side_of_the_fill():
+    gateway = Gateway()
+    instance, manager = runner(gateway)
+    instance.on_bar(bar())
+    # the fill came in better than the signal entry (BUY filled below 100)
+    gateway.positions[0] = Position(
+        "deal-1",
+        "NSXUSD",
+        Direction.BUY,
+        Decimal("3"),
+        Decimal("99.5"),
+        Decimal("99"),
+        Decimal("103"),
+    )
+    instance.on_bar(bar(high="101"))
+    assert gateway.modified[0][1] == Decimal("99.5")

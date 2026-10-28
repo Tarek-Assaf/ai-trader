@@ -38,6 +38,7 @@ from trader.data.recorder import CapitalDataRecorder, ParquetCandleStore
 from trader.execution.control import ControlMode, build_control_sources
 from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
+from trader.integrations.capital_com.trading import CapitalComTradingClient
 from trader.lab.runner import LabJobManager, LabRunner
 from trader.reports.commands import CommandDataService
 from trader.runtime import (
@@ -570,6 +571,35 @@ def _guarded_order_manager(app: FastAPI, manager: Any, canonical: Callable[[str]
     return GuardedEntrySubmitter(approval, manager, canonical)
 
 
+def _capital_execution_enabled(settings: EnvironmentSettings) -> bool:
+    """Real Capital.com DEMO orders need an explicit switch and the demo environment."""
+    return (
+        os.getenv("EXECUTION_BROKER", "paper").strip().lower() == "capital_demo"
+        and settings.broker_env == "demo"
+        and settings.trading_mode == "paper"
+    )
+
+
+def _capital_execution_broker(
+    app: FastAPI, settings: EnvironmentSettings, capital_client: Any
+) -> Any | None:
+    """Build the demo broker used for real Capital.com orders, or None for the simulator."""
+    if not _capital_execution_enabled(settings):
+        return None
+    from trader.execution.brokers.capital_runtime import CapitalRuntimeBroker
+    from trader.integrations.capital_com.trading import CapitalComTradingClient
+
+    fields = getattr(app.state, "capital_account_fields", None)
+    mapper = getattr(app.state, "instrument_mapper", None)
+    if not isinstance(capital_client, CapitalComTradingClient) or fields is None or mapper is None:
+        _LOG.error("Capital.com demo execution requested but its dependencies are unavailable")
+        raise RuntimeError("Capital.com demo execution dependencies are unavailable")
+    _LOG.warning("EXECUTION_BROKER=capital_demo: orders go to the Capital.com DEMO account")
+    return CapitalRuntimeBroker(
+        capital_client, fields, contract_size=lambda epic: mapper.get(epic).contract_size
+    )
+
+
 def _lazy_market_source(app: FastAPI) -> Callable[[str], Any]:
     """Market snapshot for the Guardian, filled in once the Tai runtime exists."""
 
@@ -606,6 +636,12 @@ def _install_runtime_services(
             "market_details_client": capital_client,
             "market_context_source": _lazy_market_source(app),
             "soak_monitor": app.state.soak_monitor,
+            **(
+                {"broker": execution_broker}
+                if (execution_broker := _capital_execution_broker(app, settings, capital_client))
+                is not None
+                else {}
+            ),
             **(getattr(app.state, "runtime_service_overrides", None) or {}),
         },
     )
@@ -757,7 +793,11 @@ async def lifespan(_app: FastAPI) -> Any:
                 "Capital.com account mapping not verified; reconciliation disabled (%s)", exc
             )
         try:
-            capital_client = CapitalComClient(settings)
+            capital_client = (
+                CapitalComTradingClient(settings)
+                if _capital_execution_enabled(settings)
+                else CapitalComClient(settings)
+            )
             _app.state.capital_client = capital_client
             mapper = InstrumentMapper(configs["instruments"].model_dump(), capital_client)
             _app.state.instrument_mapper = mapper
