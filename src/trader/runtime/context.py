@@ -8,6 +8,7 @@ proposal without inventing a market price, account baseline or size.
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable, Mapping, Sequence
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -24,6 +25,8 @@ from trader.risk.guardian import (
 )
 from trader.risk.sizing import SizingDecision, SizingLimits, size_position
 from trader.runtime.approval import GuardianInputs
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ContextUnavailable(RuntimeError):
@@ -49,10 +52,20 @@ def _aware(value: object, field: str) -> datetime:
 class AccountContextSource:
     """Normalize broker account data and durable journal baselines."""
 
-    def __init__(self, broker: Any, journal: Any, *, clock: Callable[[], datetime]) -> None:
+    def __init__(
+        self,
+        broker: Any,
+        journal: Any,
+        *,
+        clock: Callable[[], datetime],
+        default_consecutive_losses: int | None = None,
+    ) -> None:
         self.broker = broker
         self.journal = journal
         self.clock = clock
+        # Neither the broker nor the baseline snapshot records a loss streak yet. A
+        # deployment may declare a starting value; the default stays fail-closed.
+        self.default_consecutive_losses = default_consecutive_losses
 
     def __call__(self) -> AccountState:
         raw = self.broker.get_account()
@@ -83,6 +96,8 @@ class AccountContextSource:
         if not isinstance(orders, int) or isinstance(orders, bool) or orders < 0:
             raise ContextUnavailable("orders_last_hour is unavailable")
         consecutive = raw.get("consecutive_losses", snapshot.get("consecutive_losses"))
+        if consecutive is None:
+            consecutive = self.default_consecutive_losses
         if not isinstance(consecutive, int) or isinstance(consecutive, bool) or consecutive < 0:
             raise ContextUnavailable("consecutive_losses is unavailable")
         last_loss = raw.get("last_loss_at", snapshot.get("last_loss_at"))
@@ -357,7 +372,9 @@ class RuntimeContextProvider:
             RuntimeError,
             TypeError,
             ValueError,
-        ):
+        ) as exc:
+            # Say which input failed; Guardian otherwise only reports "context missing".
+            LOGGER.warning("guardian context unavailable: %s: %s", type(exc).__name__, exc)
             return None
 
 

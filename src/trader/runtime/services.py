@@ -184,7 +184,12 @@ def build_runtime_services(
     if context_provider is None:
         account_source = provided.get("account_context_source")
         if account_source is None:
-            account_source = AccountContextSource(broker, journal, clock=lambda: datetime.now(UTC))
+            account_source = AccountContextSource(
+                broker,
+                journal,
+                clock=lambda: datetime.now(UTC),
+                default_consecutive_losses=0,
+            )
         market_source = provided.get("market_context_source")
         if market_source is None and provided.get("recorder") is not None:
             market_source = MarketContextSource(
