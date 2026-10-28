@@ -298,7 +298,7 @@ def _build_tai_demo_runtime(
 
             # One key per message: the limiter exists for flapping conditions, and a trade's
             # entry, partial exit and stop move can follow each other within seconds.
-            send_alert(Alert(f"tai_demo:{time.time_ns()}", message[:240]))
+            send_alert(Alert(f"tai_demo:{time.time_ns()}", message[:900]))
 
     guarded_manager = cast(
         Any,
@@ -410,6 +410,9 @@ def _build_tai_demo_runtime(
     set_tai_demo_health_provider(runtime_adapter.health_snapshot)
     app.state.tai_feed_tailers = tailers
     app.state.tai_feed_tailer = tailers[0]
+    from trader.runtime.market_watch import MarketWatcher
+
+    app.state.market_watcher = MarketWatcher(capital_client, epics, alert)
     return runtime_adapter
 
 
@@ -438,7 +441,23 @@ def _tai_market_open(capital_client: Any, epic: str) -> Callable[[datetime], boo
 
 async def _tai_feed_loop(app: FastAPI) -> None:
     """Tail the recorder lake without coupling the API to the worker stream."""
+    last_equity_sample = 0.0
     while True:
+        if time.monotonic() - last_equity_sample >= 60:
+            last_equity_sample = time.monotonic()
+            watcher = getattr(app.state, "market_watcher", None)
+            if watcher is not None:
+                try:
+                    await asyncio.to_thread(watcher.poll)
+                except Exception:  # noqa: BLE001 - never stop the feed
+                    _LOG.warning("market watch failed", exc_info=True)
+            services = getattr(app.state, "runtime_services", None) or {}
+            sampler = services.get("pnl_provider") if hasattr(services, "get") else None
+            if callable(sampler):
+                try:
+                    await asyncio.to_thread(sampler)  # records one equity point
+                except Exception:  # noqa: BLE001 - sampling must not stop the feed
+                    _LOG.warning("equity sample failed", exc_info=True)
         tailers = getattr(app.state, "tai_feed_tailers", None) or []
         if tailers:
             for tailer in tuple(tailers):

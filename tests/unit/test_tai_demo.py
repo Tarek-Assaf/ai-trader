@@ -610,3 +610,35 @@ def test_break_even_stop_never_sits_on_the_wrong_side_of_the_fill():
     )
     instance.on_bar(bar(high="101"))
     assert gateway.modified[0][1] == Decimal("99.5")
+
+
+def test_entry_alert_text_carries_the_full_plan() -> None:
+    from decimal import Decimal
+
+    from trader.experiments.tai_demo import Direction, TaiDemoRunner, TaiSignal
+
+    signal = TaiSignal(
+        direction=Direction.SELL,
+        entry=Decimal("26540.0"),
+        stop=Decimal("26542.6"),
+        targets=(Decimal("26537.4"), Decimal("26534.8"), Decimal("26532.2")),
+    )
+    text = TaiDemoRunner._entry_text(
+        object.__new__(TaiDemoRunner),
+        "US100",
+        signal,
+        Decimal("0.11"),
+        Decimal("26540.1"),
+        Decimal("2.86"),
+    )
+    for part in (
+        "ENTRY SELL US100",
+        "Size: 0.11",
+        "Entry: 26540.1",
+        "SL: 26542.6",
+        "1R = $2.86",
+        "TP1: 26537.4",
+        "TP2: 26534.8",
+        "TP3: 26532.2",
+    ):
+        assert part in text

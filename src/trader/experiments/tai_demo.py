@@ -588,7 +588,15 @@ class TaiDemoRunner:
                 stop_level=order.stop_level,
                 profit_level=order.profit_level,
             )
-            self._send_alert(f"entry {signal.direction.value} {bar.epic}")
+            self._send_alert(
+                self._entry_text(
+                    bar.epic,
+                    signal,
+                    order.size,
+                    signal.entry,
+                    self._managed[shadow_id].one_r_value,
+                )
+            )
             return self._outcome(cycle_id, "DRY_RUN", "order_would_submit")
         try:
             receipt = self._orders.submit(cycle_id, order)
@@ -629,7 +637,15 @@ class TaiDemoRunner:
             one_r_value=self._managed[position.deal_id].one_r_value,
         )
         self._persist_state()
-        self._send_alert(f"entry {signal.direction.value} {bar.epic}")
+        self._send_alert(
+            self._entry_text(
+                bar.epic,
+                signal,
+                position.size,
+                position.level,
+                self._managed[position.deal_id].one_r_value,
+            )
+        )
         return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
 
     def _manage_exits(self, bar: ClosedBar, cycle_id: str) -> None:
@@ -683,7 +699,10 @@ class TaiDemoRunner:
                         cycle_id, "exit", deal_id=position.deal_id, reason="target_3"
                     )
                     self._record_exit(bar.epic)
-                    self._send_alert(f"exit {bar.epic} target_3")
+                    self._send_alert(
+                        f"EXIT {bar.epic} TP3 {self._num(target)} reached\n"
+                        f"Closed the remaining {self._num(current_size)}. Trade finished."
+                    )
                     self._persist_state()
                     break
                 close_partial = getattr(self._positions, "close_partial", None)
@@ -704,7 +723,10 @@ class TaiDemoRunner:
                             amount=amount,
                             fraction=str(self._exit_fraction(index)),
                         )
-                        self._send_alert(f"partial exit {bar.epic} target_{index}")
+                        self._send_alert(
+                            f"PARTIAL EXIT {bar.epic} TP{index} {self._num(target)} reached\n"
+                            f"Closed {self._num(amount)}, remaining {self._num(current_size)}"
+                        )
                     else:
                         self._journal_event(
                             cycle_id,
@@ -732,7 +754,10 @@ class TaiDemoRunner:
             return
         state.entry_stop_moved = True
         self._journal_event(cycle_id, "stop_to_entry", deal_id=position.deal_id)
-        self._send_alert(f"stop moved to entry for {position.epic}")
+        self._send_alert(
+            f"STOP MOVED TO ENTRY {position.epic} at {self._num(stop)}\n"
+            "Trade is now risk-free; TP3 stays as the target."
+        )
 
     def _exit_failed(self, deal_id: str, event: str, exc: Exception, cycle_id: str) -> None:
         LOGGER.warning("tai demo %s deal=%s reason=%s", event, deal_id, type(exc).__name__)
@@ -898,6 +923,35 @@ class TaiDemoRunner:
             **details,
         }
         self._journal(payload)
+
+    @staticmethod
+    def _num(value: object) -> str:
+        try:
+            return format(Decimal(str(value)).normalize(), "f")
+        except Exception:  # noqa: BLE001 - display only
+            return str(value)
+
+    def _entry_text(
+        self,
+        epic: str,
+        signal: TaiSignal,
+        size: object,
+        fill: object,
+        one_r_value: Decimal | None,
+        *,
+        prefix: str = "ENTRY",
+    ) -> str:
+        n = self._num
+        tp1, tp2, tp3 = signal.levels()
+        risk = abs(signal.entry - signal.stop)
+        risk_usd = f" (1R = ${n(one_r_value.quantize(Decimal('0.01')))})" if one_r_value else ""
+        return (
+            f"{prefix} {signal.direction.value} {epic}\n"
+            f"Size: {n(size)}  Entry: {n(fill)}\n"
+            f"SL: {n(signal.stop)}  risk {n(risk)} pts{risk_usd}\n"
+            f"TP1: {n(tp1)}  TP2: {n(tp2)}  TP3: {n(tp3)}\n"
+            "Plan: 40% at TP1 (stop to entry), 30% at TP2, 30% at TP3"
+        )
 
     def _send_alert(self, message: str) -> None:
         prefix = "DRY-RUN: " if self._dry_run else ""
