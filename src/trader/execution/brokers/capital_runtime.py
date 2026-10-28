@@ -96,8 +96,10 @@ class CapitalRuntimeBroker:
     def get_activity(self, start: datetime, end: datetime) -> Sequence[Mapping[str, object]]:
         return self._broker.get_activity(start, end)
 
-    def place_order(self, order: OrderRequest) -> OrderReceipt:
-        return self._broker.place_order(order)
+    @property
+    def place_order(self) -> Callable[[OrderRequest], OrderReceipt]:
+        """Expose the inner broker's method; only the OrderManager may call it."""
+        return self._broker.place_order
 
     def modify_position(
         self, deal_id: str, *, stop_level: Decimal, profit_level: Decimal | None = None
