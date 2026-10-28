@@ -12,6 +12,7 @@ import logging
 import os
 import re
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -152,7 +153,9 @@ def build_runtime_services(
     # Build these providers here, rather than in the LLM/router layer, so a
     # failed model can never prevent an owner command from returning facts.
     if "pnl_provider" not in provided:
-        provided["pnl_provider"] = _broker_pnl_provider(broker)
+        provided["pnl_provider"] = _broker_pnl_provider(
+            broker, Decimal(str(getattr(settings, "tai_demo_start_balance", "") or "10000"))
+        )
     if "risk_provider" not in provided:
         risk_values = _dump_mapping(configs.get("risk"))
 
@@ -454,7 +457,7 @@ def _dump_mapping(value: object) -> dict[str, Any]:
     return dict(raw) if isinstance(raw, Mapping) else {}
 
 
-def _broker_pnl_provider(broker: Any) -> Any:
+def _broker_pnl_provider(broker: Any, start_balance: Decimal = Decimal("10000")) -> Any:
     """Return a fail-closed P&L provider using explicit broker account fields."""
 
     def provider() -> Any:
@@ -483,12 +486,24 @@ def _broker_pnl_provider(broker: Any) -> Any:
             margin_used=Decimal(str(values["margin_used"])),
             notional_exposure=Decimal(str(values["notional_exposure"])),
         )
-        return PnlEngine.calculate(
+        report = PnlEngine.calculate(
             (),
             starting_balance=figures.balance,
             currency=figures.currency,
             broker=figures,
             as_of=datetime.now(UTC),
+        )
+        # No trade ledger feeds this engine, so the broker's own figures are the
+        # truth: realized = balance - start, floating = equity - balance.
+        realized = figures.balance - start_balance
+        floating = figures.equity - figures.balance
+        return replace(
+            report,
+            realized_gross=realized,
+            realized_net=realized,
+            unrealized_gross=floating,
+            unrealized_net=floating,
+            peak_equity=max(report.peak_equity, start_balance),
         )
 
     return provider
