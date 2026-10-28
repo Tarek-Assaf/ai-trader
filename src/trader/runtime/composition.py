@@ -12,6 +12,7 @@ import asyncio
 import inspect
 import logging
 import re
+import time
 from collections import deque
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -389,11 +390,28 @@ class RuntimeService:
                 and isinstance(event_id, str)
                 and event_id.startswith("bar:3M:")
             ):
-                value = tai_runtime.run(cycle)
+                runner = tai_runtime.run
+                task_name = "tai_demo_runtime"
             else:
-                value = self.components.decision_loop.run(cycle)
+                runner = self.components.decision_loop.run
+                task_name = "decision_loop"
+            task_started = time.monotonic()
+            if inspect.iscoroutinefunction(runner):
+                value = await runner(cycle)
+            else:
+                # Strategy construction, database journaling and broker adapters are
+                # synchronous today.  Keep them away from the asyncio control plane.
+                value = await asyncio.to_thread(runner, cycle)
             if inspect.isawaitable(value):
                 value = await value
+            task_duration = time.monotonic() - task_started
+            if task_duration >= 1.0:
+                LOGGER.warning(
+                    "runtime task slow: task=%s duration_seconds=%.3f cycle_id=%s",
+                    task_name,
+                    task_duration,
+                    resolved_cycle_id or "unknown",
+                )
             self._backoff = self._backoff_initial
             result = _result(value, resolved_cycle_id)
             self._record_soak(result)

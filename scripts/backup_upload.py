@@ -51,6 +51,7 @@ class BackupOptions:
     keep_hourly: int
     keep_daily: int
     dry_run: bool
+    database_only: bool = False
 
 
 @dataclass(frozen=True)
@@ -532,6 +533,11 @@ def parse_args(argv: Sequence[str] | None = None) -> BackupOptions:
     parser.add_argument("--keep-hourly", type=int, default=24)
     parser.add_argument("--keep-daily", type=int, default=14)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--database-only",
+        action="store_true",
+        help="upload encrypted PostgreSQL dumps to Hugging Face without other datasets",
+    )
     args = parser.parse_args(argv)
     return BackupOptions(
         state_root=args.state_root,
@@ -546,6 +552,7 @@ def parse_args(argv: Sequence[str] | None = None) -> BackupOptions:
         keep_hourly=max(1, args.keep_hourly),
         keep_daily=max(1, args.keep_daily),
         dry_run=args.dry_run,
+        database_only=args.database_only,
     )
 
 
@@ -554,21 +561,43 @@ def main(argv: Sequence[str] | None = None) -> int:
         options = parse_args(argv)
         github_token = _env("GITHUB_BACKUP_TOKEN", "GITHUB_TOKEN")
         hf_token = _env("HF_TOKEN")
-        if not github_token or not hf_token:
-            raise BackupFailure("backup upload requires configured destination tokens")
+        if options.database_only and not hf_token:
+            raise BackupFailure("database backup upload requires a Hugging Face token")
+        if not options.database_only and not github_token and not hf_token:
+            raise BackupFailure("backup upload requires at least one configured destination token")
         with tempfile.TemporaryDirectory(prefix="backup-upload-") as directory:
             temporary = Path(directory)
-            github_files = github_state_files(options)
-            hf_files = huggingface_files(options, temporary / "encrypted")
-            github = _prepare_github(options, github_files, github_token, temporary)
-            huggingface = _prepare_huggingface(options, hf_files, hf_token, temporary)
+            github = None
+            huggingface = None
+            if github_token and not options.database_only:
+                github_files = github_state_files(options)
+                github = _prepare_github(options, github_files, github_token, temporary)
+            if hf_token:
+                hf_files = (
+                    _encrypted_dumps(
+                        options.backup_root,
+                        _env("BACKUP_ENCRYPTION_KEY"),
+                        temporary / "encrypted",
+                    )
+                    if options.database_only
+                    else huggingface_files(options, temporary / "encrypted")
+                )
+                huggingface = _prepare_huggingface(options, hf_files, hf_token, temporary)
             staging = temporary / "staging"
             staging.mkdir(parents=True, exist_ok=True)
-            _stage_changed(github.changed, staging)
-            _stage_changed(huggingface.changed, staging)
+            if github is not None:
+                _stage_changed(github.changed, staging)
+            if huggingface is not None:
+                _stage_changed(huggingface.changed, staging)
             _secret_scan(staging)
-            github_count = _commit_github(options, github, github_token)
-            hf_count = _commit_huggingface(options, huggingface, hf_token)
+            github_count = (
+                _commit_github(options, github, github_token) if github is not None else 0
+            )
+            hf_count = (
+                _commit_huggingface(options, huggingface, hf_token)
+                if huggingface is not None
+                else 0
+            )
         print(
             f"PASS backup upload: github_files={github_count} hf_files={hf_count} "
             "changed files are hash-filtered"

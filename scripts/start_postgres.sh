@@ -28,12 +28,10 @@ fi
 SERVER_PID=$!
 shutdown() {
     trap - TERM INT
-    if [ -n "${BACKUP_PID:-}" ] && kill -0 "$BACKUP_PID" 2>/dev/null; then
-        kill -TERM "$BACKUP_PID" 2>/dev/null || true
-        wait "$BACKUP_PID" || true
+    if [ -n "${SERVER_PID:-}" ]; then
+        kill -TERM "$SERVER_PID" 2>/dev/null || true
+        wait "$SERVER_PID" 2>/dev/null || true
     fi
-    kill -TERM "$SERVER_PID" 2>/dev/null || true
-    wait "$SERVER_PID" || true
     exit 0
 }
 trap shutdown TERM INT
@@ -66,7 +64,7 @@ if [ "$NEW_CLUSTER" = true ]; then
             echo "Skipping an unreadable PostgreSQL backup"
             continue
         fi
-        if "$PG_BIN/pg_restore" --exit-on-error --single-transaction --no-owner --no-privileges --dbname=trader "$backup"; then
+        if "$PG_BIN/pg_restore" --host=127.0.0.1 --username=trader --exit-on-error --single-transaction --no-owner --no-privileges --dbname=trader "$backup"; then
             if AUDIT_OK=$("$PG_BIN/psql" -h 127.0.0.1 -U trader -d trader -Atqc "SELECT verify_audit_log()"); then
                 if [ "$AUDIT_OK" = "t" ]; then
                     echo "Restored PostgreSQL from a verified backup"
@@ -85,16 +83,9 @@ if [ "$NEW_CLUSTER" = true ]; then
     fi
 fi
 
+"$PG_BIN/pg_ctl" -D "$DATA_DIR" -m fast -w stop
+wait "$SERVER_PID" 2>/dev/null || true
+SERVER_PID=
 touch "$RESTORE_READY"
-/app/scripts/postgres_backup_loop.sh &
-BACKUP_PID=$!
-if wait "$SERVER_PID"; then
-    POSTGRES_STATUS=0
-else
-    POSTGRES_STATUS=$?
-fi
-if kill -0 "$BACKUP_PID" 2>/dev/null; then
-    kill -TERM "$BACKUP_PID" 2>/dev/null || true
-    wait "$BACKUP_PID" || true
-fi
-exit "$POSTGRES_STATUS"
+trap - TERM INT
+exec "$PG_BIN/postgres" -D "$DATA_DIR" -c listen_addresses=127.0.0.1 -c port=5432

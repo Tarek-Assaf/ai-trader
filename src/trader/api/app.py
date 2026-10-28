@@ -664,6 +664,7 @@ async def _runtime_retry_loop(
             await runtime.start()
             _start_tai_feed_tailer(app)
             set_runtime_health(None)
+            _send_runtime_alert(app, "Runtime recovered after automatic startup retry.")
             return
         except asyncio.CancelledError:
             raise
@@ -671,7 +672,40 @@ async def _runtime_retry_loop(
             detail = _runtime_failure_detail(exc)
             set_runtime_health("runtime_unavailable", detail)
             _LOG.exception("runtime retry unavailable")
+            if attempt == 0:
+                _send_runtime_alert(
+                    app,
+                    "Runtime failed to start; automatic retry is active and "
+                    "trading remains paused.",
+                )
             attempt = min(attempt + 1, 4)
+
+
+def _send_runtime_alert(app: FastAPI, message: str) -> None:
+    """Best-effort owner notification without coupling retry safety to Telegram."""
+    channel = getattr(app.state, "telegram_channel", None)
+    send_alert = getattr(channel, "send_alert", None)
+    if not callable(send_alert):
+        return
+    try:
+        from trader.channels.telegram import Alert
+
+        send_alert(Alert("runtime", message[:240]))
+    except Exception:  # noqa: BLE001 - alert failure must not stop retrying
+        _LOG.warning("runtime retry Telegram alert failed")
+
+
+async def _event_loop_watchdog(interval_seconds: float = 1.0) -> None:
+    """Report event-loop stalls without carrying delay into later samples."""
+    loop = asyncio.get_running_loop()
+    expected = loop.time() + interval_seconds
+    while True:
+        await asyncio.sleep(interval_seconds)
+        now = loop.time()
+        lag = max(0.0, now - expected)
+        if lag >= 1.0:
+            _LOG.warning("asyncio event-loop task slow: lag_seconds=%.3f", lag)
+        expected = now + interval_seconds
 
 
 @asynccontextmanager
@@ -679,6 +713,13 @@ async def lifespan(_app: FastAPI) -> Any:
     """Fail startup on invalid settings or config; register secret redaction."""
     settings = EnvironmentSettings()
     configure_logging(settings.sensitive_values())
+    loop = asyncio.get_running_loop()
+    loop.set_debug(True)
+    loop.slow_callback_duration = 1.0
+    event_loop_watchdog = asyncio.create_task(
+        _event_loop_watchdog(), name="asyncio-event-loop-watchdog"
+    )
+    _LOG.info("asyncio slow-callback logging enabled threshold_seconds=1.000")
     redis_url = settings.redis_url.get_secret_value() if settings.redis_url is not None else None
     if settings.role == "all":
         redis_url = redis_url or "redis://127.0.0.1:6379/0"
@@ -1000,6 +1041,11 @@ async def lifespan(_app: FastAPI) -> Any:
     try:
         yield
     finally:
+        event_loop_watchdog.cancel()
+        try:
+            await event_loop_watchdog
+        except asyncio.CancelledError:
+            pass
         if runtime_retry_task is not None:
             runtime_retry_task.cancel()
             try:

@@ -17,6 +17,7 @@ from queue import Empty, SimpleQueue
 from typing import Any
 
 import pyarrow as pa  # type: ignore[import-untyped]
+import pyarrow.compute as pc  # type: ignore[import-untyped]
 import pyarrow.parquet as pq  # type: ignore[import-untyped]
 
 from trader.data.market_hours import MarketHours
@@ -44,9 +45,10 @@ _REJECT_ASK_BELOW_BID = "ask_close_below_bid_close"
 _REJECT_TIMESTAMP = "timestamp_not_timezone_aware"
 _REJECT_SIDE = "invalid_side"
 _REJECT_SOURCE = "invalid_source"
-_STALL_AFTER_SECONDS = 5 * 60
+_STALL_AFTER_SECONDS = 60
 _STALL_REPEAT_SECONDS = 30 * 60
 _REJECTION_LOG_INTERVAL_SECONDS = 60.0
+_SLOW_TASK_SECONDS = 1.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,9 +129,33 @@ class ParquetCandleStore:
         written = 0
         with self._lock:
             for path, batch in grouped.items():
-                prior = pq.read_table(path).to_pylist() if path.exists() else []
+                stage_started = time.monotonic()
+                prior_table = (
+                    pq.read_table(path)
+                    if path.exists()
+                    else pa.Table.from_pylist([], schema=_SCHEMA)
+                )
+                self._log_slow_stage("read", stage_started, path, prior_table.num_rows)
+
+                pairs = {(update.epic, self._minute(update.timestamp)) for _symbol, update in batch}
+                pair_mask = pc.equal(prior_table["epic"], pa.scalar("__never__"))
+                timestamp_type = _SCHEMA.field("ts_utc").type
+                for epic, minute in pairs:
+                    current = pc.and_(
+                        pc.equal(prior_table["epic"], pa.scalar(epic)),
+                        pc.equal(
+                            prior_table["ts_utc"],
+                            pa.scalar(minute, type=timestamp_type),
+                        ),
+                    )
+                    pair_mask = pc.or_(pair_mask, current)
+
+                stage_started = time.monotonic()
+                relevant = prior_table.filter(pair_mask).to_pylist()
+                untouched = prior_table.filter(pc.invert(pair_mask))
+                self._log_slow_stage("select", stage_started, path, prior_table.num_rows)
                 rows: dict[tuple[str, datetime, str], dict[str, Any]] = {}
-                for row in prior:
+                for row in relevant:
                     key = (row["epic"], row["ts_utc"], row["side"])
                     rows[key] = row
                 changed_keys: set[tuple[str, datetime, str]] = set()
@@ -171,6 +197,8 @@ class ParquetCandleStore:
                         continue
                     rows[key] = candidate
                     changed_keys.add(key)
+                if not changed_keys:
+                    continue
                 pair_keys = {(epic, minute) for epic, minute, _side in rows}
                 for epic, minute in pair_keys:
                     bid = rows.get((epic, minute, "bid"))
@@ -190,24 +218,46 @@ class ParquetCandleStore:
                         ask["spread_close"] = spread
                     written += 1
                 path.parent.mkdir(parents=True, exist_ok=True)
-                table = pa.Table.from_pylist(
-                    sorted(
-                        rows.values(),
-                        key=lambda row: (row["ts_utc"], row["epic"], row["side"]),
-                    ),
-                    schema=_SCHEMA,
+                stage_started = time.monotonic()
+                replacement = pa.Table.from_pylist(list(rows.values()), schema=_SCHEMA)
+                table = pa.concat_tables([untouched, replacement])
+                indices = pc.sort_indices(
+                    table,
+                    sort_keys=[
+                        ("ts_utc", "ascending"),
+                        ("epic", "ascending"),
+                        ("side", "ascending"),
+                    ],
                 )
+                table = pc.take(table, indices)
+                self._log_slow_stage("merge", stage_started, path, table.num_rows)
                 descriptor, name = tempfile.mkstemp(
                     prefix=f".{path.stem}.", suffix=".tmp", dir=path.parent
                 )
                 os.close(descriptor)
                 temporary = Path(name)
                 try:
+                    stage_started = time.monotonic()
                     pq.write_table(table, temporary)
                     temporary.replace(path)
+                    self._log_slow_stage("write", stage_started, path, table.num_rows)
                 finally:
                     temporary.unlink(missing_ok=True)
         return written
+
+    @staticmethod
+    def _log_slow_stage(stage: str, started: float, path: Path, rows: int) -> None:
+        duration = time.monotonic() - started
+        if duration >= _SLOW_TASK_SECONDS:
+            _LOG.warning(
+                "Capital.com Parquet task slow: stage=%s duration_seconds=%.3f "
+                "rows=%d file=%s thread=%s",
+                stage,
+                duration,
+                rows,
+                path.name,
+                threading.current_thread().name,
+            )
 
 
 class CapitalDataRecorder:
@@ -556,7 +606,7 @@ class CapitalDataRecorder:
                 if is_open is not True:
                     continue
                 last_tick = self._last_tick_by_epic.get(epic, self._started_at)
-                threshold = stale_after.get(epic, 180.0)
+                threshold = stale_after.get(epic, 60.0)
                 if (now - last_tick).total_seconds() >= threshold:
                     stale_epics.append(epic)
             any_open = any(value is True for value in expected.values())

@@ -26,7 +26,7 @@ from trader.integrations.capital_com.stream import CapitalComStreamClient
 _LOG = logging.getLogger(__name__)
 _MARKET_POLL_SECONDS = 60
 _STATUS_POLL_SECONDS = 5
-_DEFAULT_STALE_AFTER_SECONDS = 180.0
+_DEFAULT_STALE_AFTER_SECONDS = 60.0
 _STREAM_RESTART_MIN_SECONDS = 3.0
 _STREAM_RESTART_MAX_SECONDS = 300.0
 _STREAM_HEALTHY_RESET_SECONDS = 300.0
@@ -142,7 +142,8 @@ def _session_settings(path: Path) -> dict[str, dict[str, Any]]:
             "holidays": tuple(holidays),
             "early_closes": early_closes,
             "fallback_zone": zone,
-            "stale_after_seconds": float(stale_after),
+            # Operational policy is stricter than legacy per-instrument values.
+            "stale_after_seconds": min(float(stale_after), 60.0),
         }
     return settings
 

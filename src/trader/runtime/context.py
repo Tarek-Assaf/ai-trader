@@ -204,7 +204,7 @@ class MarketContextSource:
         recorder: object,
         *,
         clock: Callable[[], datetime],
-        stale_after_seconds: float = 180.0,
+        stale_after_seconds: float = 60.0,
         market_open: Callable[[str, datetime], bool | None] | None = None,
         in_break: Callable[[str, datetime], bool] | None = None,
     ) -> None:
