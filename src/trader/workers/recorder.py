@@ -26,7 +26,7 @@ from trader.integrations.capital_com.stream import CapitalComStreamClient
 _LOG = logging.getLogger(__name__)
 _MARKET_POLL_SECONDS = 60
 _STATUS_POLL_SECONDS = 5
-_DEFAULT_STALE_AFTER_SECONDS = 180.0
+_DEFAULT_STALE_AFTER_SECONDS = 60.0
 _STREAM_RESTART_MIN_SECONDS = 3.0
 _STREAM_RESTART_MAX_SECONDS = 300.0
 _STREAM_HEALTHY_RESET_SECONDS = 300.0
@@ -251,7 +251,10 @@ def run_data_recorder() -> None:
             market_status_source = "unknown"
             market_hours_by_epic: dict[str, MarketHours | None] = {}
             stale_after_by_epic = {
-                epic: config["stale_after_seconds"] for epic, config in session_settings.items()
+                # Runtime alert policy is capped at one minute while preserving
+                # the owner-verified value in parsed configuration.
+                epic: min(config["stale_after_seconds"], 60.0)
+                for epic, config in session_settings.items()
             }
             next_market_poll = 0.0
             while not stop.is_set():

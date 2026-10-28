@@ -146,7 +146,7 @@ class TaiLakeTailer:
         consumer: TaiMinuteConsumer,
         *,
         interval_seconds: float = 20.0,
-        stale_after_seconds: float = 300.0,
+        stale_after_seconds: float = 60.0,
         clock: Callable[[], datetime] | None = None,
         market_open: Callable[[datetime], bool] | None = None,
         seed_after: datetime | None = None,

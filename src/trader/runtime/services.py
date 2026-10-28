@@ -190,7 +190,7 @@ def build_runtime_services(
             market_source = MarketContextSource(
                 provided["recorder"],
                 clock=lambda: datetime.now(UTC),
-                stale_after_seconds=float(provided.get("market_stale_after_seconds", 180.0)),
+                stale_after_seconds=float(provided.get("market_stale_after_seconds", 60.0)),
             )
         if market_source is None:
 

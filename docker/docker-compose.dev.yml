@@ -1,6 +1,7 @@
 services:
   postgres:
     image: ${POSTGRES_IMAGE:-postgres:16}
+    stop_grace_period: 60s
     environment:
       POSTGRES_DB: trader
       POSTGRES_USER: trader
@@ -17,6 +18,7 @@ services:
 
   redis:
     image: ${REDIS_IMAGE:-redis:7}
+    stop_grace_period: 60s
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "127.0.0.1:${REDIS_HOST_PORT:-6379}:6379"
@@ -29,6 +31,7 @@ services:
       dockerfile: docker/Dockerfile
       args:
         PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    stop_grace_period: 60s
     environment:
       ROLE: core
       TRADING_MODE: paper
@@ -50,6 +53,7 @@ services:
       dockerfile: docker/Dockerfile
       args:
         PYTHON_IMAGE: ${PYTHON_IMAGE:-python:3.12-slim}
+    stop_grace_period: 60s
     environment:
       ROLE: worker
       TRADING_MODE: paper

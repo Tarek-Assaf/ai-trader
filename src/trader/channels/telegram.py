@@ -10,19 +10,45 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import json
 import logging
+import os
 import secrets
 import time
 from collections import deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from threading import Lock
 from typing import Any, Protocol
 
 from trader.execution.control import ControlMode, ControlWriter
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _closed_market_feed_warning(text: str) -> bool:
+    """Suppress feed warnings only with recent evidence all markets are closed."""
+    prefixes = (
+        "Capital.com feed stalled since ",
+        "Tai feed stale: no new closed minute",
+        "Recorder degraded while the market is expected open.",
+    )
+    if not text.startswith(prefixes):
+        return False
+    path = Path(os.getenv("WORKSPACE_ROOT", "/workspace")) / "data/recorder-status.json"
+    try:
+        status = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(status, dict) or status.get("expected_open") is not False:
+            return False
+        stamp = datetime.fromisoformat(status["last_liveness_at"])
+        if stamp.tzinfo is None:
+            return False
+        age = (datetime.now(UTC) - stamp).total_seconds()
+        return 0 <= age <= 180
+    except (OSError, ValueError, TypeError, KeyError):
+        return False
 
 
 class TelegramTransport(Protocol):
@@ -563,6 +589,9 @@ class TelegramBotTransport:
     def send_message(
         self, chat_id: str, text: str, *, reply_markup: Mapping[str, Any] | None = None
     ) -> None:
+        if _closed_market_feed_warning(text):
+            LOGGER.info("feed notification suppressed: markets confirmed closed")
+            return
         payload: dict[str, Any] = {"chat_id": chat_id, "text": text}
         if reply_markup is not None:
             payload["reply_markup"] = reply_markup

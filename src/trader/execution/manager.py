@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -18,6 +19,8 @@ from trader.execution.control import (
 )
 from trader.execution.journal import ExecutionJournal, restored_order
 from trader.risk.guardian import RiskDecision
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Ownership(Protocol):
@@ -131,6 +134,8 @@ class OrderManager:
 
     def startup(self) -> None:
         self._shutdown_event.clear()
+        self._paused = True
+        LOGGER.info("execution boot gate: paused pending broker reconciliation")
         try:
             self._acquire_leases()
         except Exception:
@@ -147,11 +152,17 @@ class OrderManager:
                     return
                 if not self.reconcile():
                     return
+                LOGGER.info(
+                    "execution boot gate: broker reconciliation complete positions=%d",
+                    len(self._positions),
+                )
                 mode = self._apply_controls()
                 if mode is not ControlMode.RUN:
+                    LOGGER.info("execution boot gate: external control keeps execution paused")
                     return
                 if not self._journal.is_paused() and not self._journal.is_killed():
                     self._paused = False
+                    LOGGER.info("execution boot gate: resumed after broker reconciliation")
             except Exception:
                 self._pause("execution_startup_failed")
                 raise ExecutionPaused("execution startup failed") from None

@@ -341,11 +341,12 @@ class CapitalComStreamClient:
         if now < self._next_lag_sample:
             return
         lag = now - self._next_lag_sample
-        while self._next_lag_sample <= now:
-            self._next_lag_sample += 1.0
-        if lag > 0.250:
+        # Reset from the current observation.  Advancing an old deadline in a
+        # loop carries one long stall into future samples and overstates lag.
+        self._next_lag_sample = now + 1.0
+        if lag >= 1.0:
             _LOG.warning(
-                "Capital.com stream event-loop lag: lag_seconds=%.3f thread=%s",
+                "Capital.com stream event-loop lag (task slow): lag_seconds=%.3f thread=%s",
                 lag,
                 threading.current_thread().name,
             )
