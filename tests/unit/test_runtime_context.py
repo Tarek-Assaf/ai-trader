@@ -325,3 +325,24 @@ def test_sizing_still_rejects_when_even_the_minimum_size_breaks_the_limits() -> 
     )
     with pytest.raises(ContextUnavailable):
         source(intent, account, ())
+
+
+def test_broker_pnl_provider_reports_realized_and_floating_from_account() -> None:
+    from decimal import Decimal
+
+    from trader.runtime.services import _broker_pnl_provider
+
+    class Broker:
+        def get_account(self) -> dict[str, object]:
+            return {
+                "balance": "10012.50",
+                "equity": "10010.00",
+                "currency": "USD",
+                "margin_used": "0",
+                "notional_exposure": "0",
+            }
+
+    report = _broker_pnl_provider(Broker(), Decimal("10000"))()
+    assert report.realized_net == Decimal("12.50")
+    assert report.unrealized_net == Decimal("-2.50")
+    assert report.balance == Decimal("10012.50")
