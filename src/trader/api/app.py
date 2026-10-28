@@ -9,6 +9,7 @@ import logging
 import os
 import random
 import threading
+import time
 import traceback
 from collections.abc import Awaitable, Callable, Mapping
 from contextlib import asynccontextmanager
@@ -314,7 +315,9 @@ def _build_tai_demo_runtime(
         if callable(send_alert):
             from trader.channels.telegram import Alert
 
-            send_alert(Alert("tai_demo", message[:240]))
+            # One key per message: the limiter exists for flapping conditions, and a trade's
+            # entry, partial exit and stop move can follow each other within seconds.
+            send_alert(Alert(f"tai_demo:{time.time_ns()}", message[:240]))
 
     rules_provider = CapitalInstrumentRulesProvider(capital_client, epic)
     app.state.tai_market_source = TaiMarketSource(rules_provider, signal, epic)
