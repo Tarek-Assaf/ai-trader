@@ -346,7 +346,7 @@ class CapitalComStreamClient:
         self._next_lag_sample = now + 1.0
         if lag >= 1.0:
             _LOG.warning(
-                "Capital.com stream task slow: lag_seconds=%.3f thread=%s",
+                "Capital.com stream event-loop lag (task slow): lag_seconds=%.3f thread=%s",
                 lag,
                 threading.current_thread().name,
             )

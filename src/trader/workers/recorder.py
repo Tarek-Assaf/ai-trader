@@ -142,8 +142,7 @@ def _session_settings(path: Path) -> dict[str, dict[str, Any]]:
             "holidays": tuple(holidays),
             "early_closes": early_closes,
             "fallback_zone": zone,
-            # Operational policy is stricter than legacy per-instrument values.
-            "stale_after_seconds": min(float(stale_after), 60.0),
+            "stale_after_seconds": float(stale_after),
         }
     return settings
 
@@ -252,7 +251,10 @@ def run_data_recorder() -> None:
             market_status_source = "unknown"
             market_hours_by_epic: dict[str, MarketHours | None] = {}
             stale_after_by_epic = {
-                epic: config["stale_after_seconds"] for epic, config in session_settings.items()
+                # Runtime alert policy is capped at one minute while preserving
+                # the owner-verified value in parsed configuration.
+                epic: min(config["stale_after_seconds"], 60.0)
+                for epic, config in session_settings.items()
             }
             next_market_poll = 0.0
             while not stop.is_set():
