@@ -434,7 +434,10 @@ def test_trades_command_offers_choice_then_answers() -> None:
             pass
 
     channel = TelegramChannel(
-        Transport(), ["1"], render=lambda command, argument: f"{command}|{argument}"
+        Transport(),
+        ["1"],
+        control_writer=FakeWriter(),
+        render=lambda command, argument: f"{command}|{argument}",
     )
     channel.handle_message("1", "/trades")
     assert sent[-1][0] == "Which would you like to see?"
