@@ -17,7 +17,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Protocol
 
-from trader.experiments.tai_wiring import TaiMinuteBar
+from trader.experiments.tai_wiring import TaiMinuteBar, epic_aliases
 
 LOGGER = logging.getLogger(__name__)
 # Re-read this much behind the last fed minute so a late second side is still paired.
@@ -85,9 +85,7 @@ def read_closed_lake_minutes(
         raise RuntimeError("pyarrow is required for the Tai lake feed") from exc
 
     boundary = _utc_minute(before)
-    accepted_epics = {epic}
-    if epic in {"NSXUSD", "NAS100", "US100"}:
-        accepted_epics.update({"NSXUSD", "NAS100", "US100"})
+    accepted_epics = set(epic_aliases(epic))
     paired: dict[datetime, dict[str, Mapping[str, Any]]] = defaultdict(dict)
     for path in _lake_paths(Path(lake_root), epic):
         try:

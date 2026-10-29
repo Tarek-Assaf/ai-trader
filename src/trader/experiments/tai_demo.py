@@ -547,19 +547,10 @@ class TaiDemoRunner:
                 return self._outcome(cycle_id, "NO_TRADE", "kill_switch_active")
             if mode is not ControlMode.RUN:
                 return self._outcome(cycle_id, "NO_TRADE", "execution_paused")
-            bar = self._last_bar
-            if bar is not None and (not bar.market_open or bar.in_break):
-                return self._outcome(cycle_id, "NO_TRADE", "market_closed_or_blackout")
-            positions = (
-                tuple(p for p in self._positions.get_positions() if p.epic == epic)
-                if not self._dry_run
-                else ()
-            )
-            if positions or (
-                self._dry_run and any(state.epic == epic for state in self._managed.values())
-            ):
-                self._journal_event(cycle_id, "position_open", epic=epic, source=source)
-                return self._outcome(cycle_id, "NO_TRADE", "one_position_rule")
+            # No market-hours gate here: the broker refuses an order in a real closure and
+            # that refusal is alerted; a wrong local flag must never block the owner's signal.
+            if not self._close_for_new_signal(epic, cycle_id, source):
+                return self._outcome(cycle_id, "REJECTED", "close_before_entry_failed")
             if self._startup_blocked:
                 return self._outcome(cycle_id, "REJECTED", "startup_reconciliation_failed")
             self._journal_event(
@@ -575,12 +566,40 @@ class TaiDemoRunner:
                 self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
                 self._send_alert(f"{source} {direction.value} not traded: {str(exc)[:120]}")
                 return self._outcome(cycle_id, "REJECTED", "external_signal_unusable")
-            return self._attempt_entry(signal, epic, cycle_id)
+            return self._attempt_entry(signal, epic, cycle_id, external=True)
 
-    def _attempt_entry(self, signal: TaiSignal, epic: str, cycle_id: str) -> DemoOutcome:
+    def _close_for_new_signal(self, epic: str, cycle_id: str, source: str) -> bool:
+        """A new owner signal replaces the open trade on that instrument."""
+        if self._dry_run:
+            for deal_id, state in tuple(self._managed.items()):
+                if state.shadow and state.epic == epic:
+                    self._managed.pop(deal_id, None)
+            self._persist_state()
+            return True
+        for position in tuple(p for p in self._positions.get_positions() if p.epic == epic):
+            try:
+                self._positions.close_position(position.deal_id)
+            except Exception as exc:  # noqa: BLE001 - never open a second trade on top of it
+                self._exit_failed(position.deal_id, "close_failed", exc, cycle_id)
+                self._send_alert(f"{source} signal: could not close the open {epic} trade first")
+                return False
+            self._managed.pop(position.deal_id, None)
+            note_exit = getattr(self._signal, "note_exit", None)
+            if callable(note_exit):
+                note_exit(datetime.now(UTC))
+            self._journal_event(
+                cycle_id, "closed_for_new_signal", deal_id=position.deal_id, source=source
+            )
+            self._send_alert(f"Closed the open {epic} trade: new {source} signal")
+        self._persist_state()
+        return True
+
+    def _attempt_entry(
+        self, signal: TaiSignal, epic: str, cycle_id: str, *, external: bool = False
+    ) -> DemoOutcome:
         try:
             rules = self._rules_provider(epic) if self._rules_provider is not None else None
-            refusal = self._spread_refusal(signal, rules)
+            refusal = None if external else self._spread_refusal(signal, rules)
             if refusal is not None:
                 reason, details = refusal
                 self._journal_event(
@@ -648,10 +667,22 @@ class TaiDemoRunner:
                 stop_level=order.stop_level,
                 profit_level=order.profit_level,
             )
-            self._send_alert(f"entry {signal.direction.value} {epic}")
+            self._send_alert(
+                self._entry_text(
+                    epic,
+                    signal,
+                    order.size,
+                    signal.entry,
+                    self._managed[shadow_id].one_r_value,
+                )
+            )
             return self._outcome(cycle_id, "DRY_RUN", "order_would_submit")
         try:
-            receipt = self._orders.submit(cycle_id, order)
+            submit_relaxed = getattr(self._orders, "submit_relaxed", None)
+            if external and callable(submit_relaxed):
+                receipt = submit_relaxed(cycle_id, order)
+            else:
+                receipt = self._orders.submit(cycle_id, order)
         except ExecutionPaused as exc:
             reason = str(exc) or "execution_paused"
             self._journal_event(cycle_id, "guardian_veto", epic=epic, reason=reason)
@@ -689,7 +720,15 @@ class TaiDemoRunner:
             one_r_value=self._managed[position.deal_id].one_r_value,
         )
         self._persist_state()
-        self._send_alert(f"entry {signal.direction.value} {epic}")
+        self._send_alert(
+            self._entry_text(
+                epic,
+                signal,
+                position.size,
+                position.level,
+                self._managed[position.deal_id].one_r_value,
+            )
+        )
         return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
 
     def _manage_exits(self, bar: ClosedBar, cycle_id: str) -> None:
@@ -743,7 +782,10 @@ class TaiDemoRunner:
                         cycle_id, "exit", deal_id=position.deal_id, reason="target_3"
                     )
                     self._record_exit(bar.epic)
-                    self._send_alert(f"exit {bar.epic} target_3")
+                    self._send_alert(
+                        f"EXIT {bar.epic} TP3 {self._num(target)} reached\n"
+                        f"Closed the remaining {self._num(current_size)}. Trade finished."
+                    )
                     self._persist_state()
                     break
                 close_partial = getattr(self._positions, "close_partial", None)
@@ -764,7 +806,10 @@ class TaiDemoRunner:
                             amount=amount,
                             fraction=str(self._exit_fraction(index)),
                         )
-                        self._send_alert(f"partial exit {bar.epic} target_{index}")
+                        self._send_alert(
+                            f"PARTIAL EXIT {bar.epic} TP{index} {self._num(target)} reached\n"
+                            f"Closed {self._num(amount)}, remaining {self._num(current_size)}"
+                        )
                     else:
                         self._journal_event(
                             cycle_id,
@@ -792,7 +837,10 @@ class TaiDemoRunner:
             return
         state.entry_stop_moved = True
         self._journal_event(cycle_id, "stop_to_entry", deal_id=position.deal_id)
-        self._send_alert(f"stop moved to entry for {position.epic}")
+        self._send_alert(
+            f"STOP MOVED TO ENTRY {position.epic} at {self._num(stop)}\n"
+            "Trade is now risk-free; TP3 stays as the target."
+        )
 
     def _exit_failed(self, deal_id: str, event: str, exc: Exception, cycle_id: str) -> None:
         LOGGER.warning("tai demo %s deal=%s reason=%s", event, deal_id, type(exc).__name__)
@@ -958,6 +1006,35 @@ class TaiDemoRunner:
             **details,
         }
         self._journal(payload)
+
+    @staticmethod
+    def _num(value: object) -> str:
+        try:
+            return format(Decimal(str(value)).normalize(), "f")
+        except Exception:  # noqa: BLE001 - display only
+            return str(value)
+
+    def _entry_text(
+        self,
+        epic: str,
+        signal: TaiSignal,
+        size: object,
+        fill: object,
+        one_r_value: Decimal | None,
+        *,
+        prefix: str = "ENTRY",
+    ) -> str:
+        n = self._num
+        tp1, tp2, tp3 = signal.levels()
+        risk = abs(signal.entry - signal.stop)
+        risk_usd = f" (1R = ${n(one_r_value.quantize(Decimal('0.01')))})" if one_r_value else ""
+        return (
+            f"{prefix} {signal.direction.value} {epic}\n"
+            f"Size: {n(size)}  Entry: {n(fill)}\n"
+            f"SL: {n(signal.stop)}  risk {n(risk)} pts{risk_usd}\n"
+            f"TP1: {n(tp1)}  TP2: {n(tp2)}  TP3: {n(tp3)}\n"
+            "Plan: 40% at TP1 (stop to entry), 30% at TP2, 30% at TP3"
+        )
 
     def _send_alert(self, message: str) -> None:
         prefix = "DRY-RUN: " if self._dry_run else ""

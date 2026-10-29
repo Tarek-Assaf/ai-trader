@@ -418,6 +418,20 @@ class _VirtualTrade:
         return hit_stop
 
 
+_EPIC_ALIASES = (
+    frozenset({"NSXUSD", "NAS100", "US100"}),
+    frozenset({"GOLD", "XAUUSD", "XAU"}),
+)
+
+
+def epic_aliases(epic: str) -> frozenset[str]:
+    """Names the recorder may use for one instrument (configured symbol or broker epic)."""
+    for group in _EPIC_ALIASES:
+        if epic in group:
+            return group
+    return frozenset({epic})
+
+
 class TaiSignalProvider:
     """Pure, session-anchored copy of the T-162 Tai signal gates."""
 
@@ -509,7 +523,7 @@ class TaiSignalProvider:
                 if (
                     isinstance(stamp, datetime)
                     and side in {"bid", "ask"}
-                    and (not recorded_epic or recorded_epic == epic)
+                    and (not recorded_epic or recorded_epic in epic_aliases(epic))
                 ):
                     by_stamp[stamp.astimezone(UTC).replace(second=0, microsecond=0)][side] = row
         minutes = []
@@ -1032,6 +1046,50 @@ class TaiDemoRuntimeAdapter:
         return outcome
 
 
+class TaiRuntimeGroup:
+    """One Tai runtime per instrument behind the single hook the cycle runtime calls."""
+
+    def __init__(self, adapters: Mapping[str, TaiDemoRuntimeAdapter]) -> None:
+        if not adapters:
+            raise ValueError("at least one Tai runtime is required")
+        self.adapters: dict[str, TaiDemoRuntimeAdapter] = dict(adapters)
+
+    @property
+    def runner(self) -> TaiDemoRunner:
+        """The first instrument's runner (single-instrument callers)."""
+        return next(iter(self.adapters.values())).runner
+
+    def runner_for(self, epic: str) -> TaiDemoRunner | None:
+        adapter = self.adapters.get(epic)
+        return adapter.runner if adapter is not None else None
+
+    def run(self, cycle: object) -> DemoOutcome:
+        event_id = str(getattr(cycle, "event_id", ""))
+        parts = event_id.split(":", 3)
+        adapter = self.adapters.get(parts[2]) if len(parts) == 4 else None
+        if adapter is None:
+            return DemoOutcome("NO_TRADE", "bar_unavailable", event_id)
+        return adapter.run(cycle)
+
+    def health_snapshot(self) -> dict[str, Any]:
+        merged: dict[str, Any] = {}
+        for adapter in self.adapters.values():
+            merged.update(adapter.health_snapshot())
+        return merged
+
+    def snapshot_state(self) -> dict[str, _ManagedPosition]:
+        merged: dict[str, _ManagedPosition] = {}
+        for adapter in self.adapters.values():
+            merged.update(adapter.snapshot_state())
+        return merged
+
+    def pending_bars(self) -> dict[str, ClosedBar]:
+        merged: dict[str, ClosedBar] = {}
+        for adapter in self.adapters.values():
+            merged.update(adapter.pending_bars())
+        return merged
+
+
 def build_tai_demo_runtime(
     settings: object,
     *,
@@ -1093,6 +1151,8 @@ def build_tai_demo_runtime(
 
 
 __all__ = [
+    "TaiRuntimeGroup",
+    "epic_aliases",
     "CapitalBalanceProvider",
     "CapitalInstrumentRulesProvider",
     "build_tai_demo_runtime",

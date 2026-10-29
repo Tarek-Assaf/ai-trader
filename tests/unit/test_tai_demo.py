@@ -646,13 +646,14 @@ def test_external_signal_enters_through_the_order_manager() -> None:
     assert order.stop_level == Decimal("90.5")
 
 
-def test_external_signal_respects_one_position_kill_and_pause() -> None:
+def test_external_signal_replaces_the_open_trade_and_respects_kill_and_pause() -> None:
     gateway = Gateway()
     tai, manager = _external_runner(gateway)
     assert tai.on_external_signal(Direction.BUY).action == "SUBMITTED"
     again = tai.on_external_signal(Direction.SELL)
-    assert (again.action, again.reason) == ("NO_TRADE", "one_position_rule")
-    assert len(manager.submits) == 1
+    assert (again.action, again.reason) == ("SUBMITTED", "entry_submitted")
+    assert gateway.closed == ["deal-1"] and len(manager.submits) == 2
+    assert manager.submits[1][1].direction is Direction.SELL
 
     paused, paused_manager = _external_runner(Gateway(), control=Control(ControlMode.PAUSE))
     assert paused.on_external_signal(Direction.BUY).reason == "execution_paused"
@@ -662,6 +663,26 @@ def test_external_signal_respects_one_position_kill_and_pause() -> None:
     killed, killed_manager = _external_runner(killed_gateway, control=Control(ControlMode.KILL))
     assert killed.on_external_signal(Direction.BUY).reason == "kill_switch_active"
     assert killed_manager.submits == []
+
+
+def test_external_signal_ignores_a_wrong_market_closed_flag_and_the_spread_guard() -> None:
+    gateway = Gateway()
+    tai, manager = _external_runner(gateway)
+    tai.on_bar(bar(market_open=False, in_break=True))
+    outcome = tai.on_external_signal(Direction.SELL)
+    assert (outcome.action, outcome.reason) == ("SUBMITTED", "entry_submitted")
+    assert len(manager.submits) == 1
+
+
+def test_external_signal_uses_the_relaxed_guardian_path_when_available() -> None:
+    gateway = Gateway()
+    tai, manager = _external_runner(gateway)
+    relaxed = []
+    manager.submit_relaxed = lambda cycle_id, order: (
+        relaxed.append(order) or manager.submit(cycle_id, order)
+    )
+    assert tai.on_external_signal(Direction.BUY).action == "SUBMITTED"
+    assert len(relaxed) == 1
 
 
 def test_tradingview_mode_never_opens_an_entry_from_the_local_signal() -> None:
@@ -692,3 +713,35 @@ def test_external_signal_that_cannot_be_built_is_refused_not_traded() -> None:
     outcome = tai.on_external_signal(Direction.BUY)
     assert (outcome.action, outcome.reason) == ("REJECTED", "external_signal_unusable")
     assert manager.submits == [] and alerts
+
+
+def test_entry_alert_text_carries_the_full_plan() -> None:
+    from decimal import Decimal
+
+    from trader.experiments.tai_demo import Direction, TaiDemoRunner, TaiSignal
+
+    signal = TaiSignal(
+        direction=Direction.SELL,
+        entry=Decimal("26540.0"),
+        stop=Decimal("26542.6"),
+        targets=(Decimal("26537.4"), Decimal("26534.8"), Decimal("26532.2")),
+    )
+    text = TaiDemoRunner._entry_text(
+        object.__new__(TaiDemoRunner),
+        "US100",
+        signal,
+        Decimal("0.11"),
+        Decimal("26540.1"),
+        Decimal("2.86"),
+    )
+    for part in (
+        "ENTRY SELL US100",
+        "Size: 0.11",
+        "Entry: 26540.1",
+        "SL: 26542.6",
+        "1R = $2.86",
+        "TP1: 26537.4",
+        "TP2: 26534.8",
+        "TP3: 26532.2",
+    ):
+        assert part in text

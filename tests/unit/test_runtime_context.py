@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Any
 
 import pytest
 
@@ -325,3 +326,57 @@ def test_sizing_still_rejects_when_even_the_minimum_size_breaks_the_limits() -> 
     )
     with pytest.raises(ContextUnavailable):
         source(intent, account, ())
+
+
+def test_broker_pnl_provider_reports_period_realized_and_floating(tmp_path: Any) -> None:
+    from decimal import Decimal
+
+    from trader.runtime.services import _broker_pnl_provider
+
+    balances = ["11000.00", "11012.50"]
+
+    class Broker:
+        def get_account(self) -> dict[str, object]:
+            return {
+                "balance": balances[0],
+                "equity": str(Decimal(balances[0]) - Decimal("2.50")),
+                "currency": "USD",
+                "margin_used": "300",
+                "notional_exposure": "3000",
+            }
+
+    provider = _broker_pnl_provider(Broker(), tmp_path / "state" / "pnl_baselines.json")
+    first = provider("daily")
+    provider("monthly")  # the month baseline is the first balance seen that month
+    assert first.realized_net == Decimal("0") and first.unrealized_net == Decimal("-2.50")
+    balances.pop(0)  # a trade closed: balance moved +12.50 within the same day
+    report = provider("daily")
+    assert report.realized_net == Decimal("12.50")
+    assert report.margin_used == Decimal("300") and report.total_exposure == Decimal("3000")
+    assert provider("monthly").realized_net == Decimal("12.50")
+
+
+def test_broker_pnl_provider_builds_an_equity_curve_over_time(tmp_path: Any) -> None:
+    import json
+    from datetime import UTC, datetime, timedelta
+
+    from trader.runtime.services import _broker_pnl_provider
+
+    path = tmp_path / "state" / "pnl_baselines.json"
+    old = datetime.now(UTC) - timedelta(minutes=10)
+    history = tmp_path / "state" / "equity_history.json"
+    history.parent.mkdir(parents=True)
+    history.write_text(json.dumps([[old.isoformat(), "11000.00"]]), encoding="utf-8")
+
+    class Broker:
+        def get_account(self) -> dict[str, object]:
+            return {
+                "balance": "11010",
+                "equity": "11010",
+                "currency": "USD",
+                "margin_used": "0",
+                "notional_exposure": "0",
+            }
+
+    report = _broker_pnl_provider(Broker(), path)("daily")
+    assert [float(point.equity) for point in report.equity_curve] == [11000.0, 11010.0]
