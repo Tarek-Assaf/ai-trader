@@ -13,7 +13,7 @@ import trader.api.tradingview as tv
 from trader.api.app import app as real_app
 from trader.execution.brokers.base import Direction
 
-SECRET = "s3cret-token-for-tests-0123456789"
+SECRET = "test_" + "x" * 30  # not a real secret
 
 
 class _Runner:
