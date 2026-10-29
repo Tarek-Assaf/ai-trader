@@ -418,3 +418,33 @@ def test_feed_warnings_are_muted_only_with_fresh_closed_market_evidence(
     assert _closed_market_feed_warning(warning) is False  # old evidence
     write(True, 30)
     assert _closed_market_feed_warning(warning) is False  # market expected open
+
+
+def test_trades_command_offers_choice_then_answers() -> None:
+    sent: list[tuple[str, object]] = []
+
+    class Transport:
+        def send_message(self, chat_id, text, *, reply_markup=None):
+            sent.append((text, reply_markup))
+
+        def send_photo(self, chat_id, photo, *, caption=""):
+            pass
+
+        def answer_callback(self, callback_id, text=""):
+            pass
+
+    channel = TelegramChannel(
+        Transport(),
+        ["1"],
+        control_writer=FakeWriter(),
+        render=lambda command, argument: f"{command}|{argument}",
+    )
+    channel.handle_message("1", "/trades")
+    assert sent[-1][0] == "Which would you like to see?"
+    assert sent[-1][1] is not None
+    channel.handle_update(
+        {"callback_query": {"id": "c", "data": "trades_history", "message": {"chat": {"id": 1}}}}
+    )
+    assert sent[-1][0] == "/trades|history"
+    channel.handle_message("1", "/trades open")
+    assert sent[-1][0] == "/positions|"

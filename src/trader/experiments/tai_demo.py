@@ -712,11 +712,19 @@ class TaiDemoRunner:
                 else None
             ),
         )
+        tp1, tp2, tp3 = signal.levels()
         self._journal_event(
             cycle_id,
             "entry",
             epic=epic,
             deal_id=position.deal_id,
+            direction=signal.direction.value,
+            size=position.size,
+            entry_price=position.level,
+            stop=signal.stop,
+            tp1=tp1,
+            tp2=tp2,
+            tp3=tp3,
             one_r_value=self._managed[position.deal_id].one_r_value,
         )
         self._persist_state()

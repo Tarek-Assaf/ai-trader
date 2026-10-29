@@ -181,6 +181,7 @@ class TelegramChannel:
     COMMANDS = {
         "/status",
         "/positions",
+        "/trades",
         "/pnl",
         "/pause",
         "/resume",
@@ -311,6 +312,26 @@ class TelegramChannel:
         if command == "/help":
             self._send(chat_id, "Supported commands: " + ", ".join(sorted(self.COMMANDS)))
             return
+        if command == "/trades":
+            choice = argument.lower().strip()
+            if choice in {"open", "positions"}:
+                self._send(chat_id, self._render("/positions", ""))
+            elif choice in {"history", "recent", "report"}:
+                self._send(chat_id, self._render("/trades", "history"))
+            else:
+                self._send(
+                    chat_id,
+                    "Which would you like to see?",
+                    reply_markup={
+                        "inline_keyboard": [
+                            [
+                                {"text": "Open positions", "callback_data": "trades_open"},
+                                {"text": "Recent trade history", "callback_data": "trades_history"},
+                            ]
+                        ]
+                    },
+                )
+            return
         if (
             command == "/chart" or (command == "/lab" and argument.lower().startswith("chart"))
         ) and self._render_chart is not None:
@@ -413,6 +434,13 @@ class TelegramChannel:
             )
             return
         action, _, nonce = data.partition(":")
+        if action in {"trades_open", "trades_history"}:
+            self._transport.answer_callback(callback_id, "")
+            if action == "trades_open":
+                self._send(chat_id, self._render("/positions", ""))
+            else:
+                self._send(chat_id, self._render("/trades", "history"))
+            return
         if action == "cancel":
             self._nonces.consume_any(nonce)
             self._transport.answer_callback(callback_id, "Cancelled")
