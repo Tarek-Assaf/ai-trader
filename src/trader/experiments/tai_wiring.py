@@ -548,6 +548,34 @@ class TaiSignalProvider:
         # a truncation boundary; the feed tailer starts after the final bar below.
         return cls(bars, minimum_history=minimum_history, ha_mode=ha_mode)
 
+    def external_signal(
+        self, direction: Direction, rules: TaiInstrumentRules, now: datetime | None = None
+    ) -> TaiSignal:
+        """Build the entry for a signal decided elsewhere (the owner's TradingView alert).
+
+        Entry is the live quote.  The stop is the indicator's own structure stop: the
+        extreme of the five closed bars before the signal bar, plus or minus 0.20 ATR.
+        """
+        atr = self.latest_atr
+        if atr is None or atr <= 0:
+            raise ValueError("ATR is not ready for an external signal")
+        moment = (now or datetime.now(UTC)).astimezone(UTC).replace(second=0, microsecond=0)
+        signal_bar_start = moment - timedelta(minutes=moment.minute % 3) - timedelta(minutes=3)
+        previous = [bar for bar in self._bars if bar.at < signal_bar_start][-SWING_LOOKBACK:]
+        if len(previous) < SWING_LOOKBACK:
+            raise ValueError("not enough closed bars before the signal bar")
+        buy = direction is Direction.BUY
+        quote = rules.ask if buy else rules.bid
+        if quote is None or quote <= 0:
+            raise ValueError("broker quote is unavailable")
+        buffer = atr * Decimal("0.20")
+        stop = (
+            min(bar.low for bar in previous) - buffer
+            if buy
+            else (max(bar.high for bar in previous) + buffer)
+        )
+        return TaiSignal(direction, quote, stop)
+
     @property
     def history(self) -> tuple[ClosedBar, ...]:
         return tuple(self._bars)

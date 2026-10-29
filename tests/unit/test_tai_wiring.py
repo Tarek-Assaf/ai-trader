@@ -703,6 +703,78 @@ def test_dry_run_journals_without_submitting() -> None:
     assert any(event["event"] == "dry_run_would_submit" for event in events)
 
 
+def _bars_with_lows(lows: list[str], first: datetime) -> list[ClosedBar]:
+    result = []
+    for index, low in enumerate(lows):
+        low_value = Decimal(low)
+        result.append(
+            ClosedBar(
+                first + timedelta(minutes=3 * index),
+                "US100",
+                low_value + 2,
+                low_value + 6,
+                low_value,
+                low_value + 3,
+            )
+        )
+    return result
+
+
+def _quote_rules(bid: str, ask: str) -> TaiInstrumentRules:
+    return TaiInstrumentRules(
+        Decimal("0.001"),
+        Decimal("0.001"),
+        Decimal("1"),
+        Decimal("0.1"),
+        Decimal("1"),
+        Decimal("1"),
+        bid=Decimal(bid),
+        ask=Decimal(ask),
+    )
+
+
+def test_external_signal_uses_the_five_bars_before_the_signal_bar_for_the_stop() -> None:
+    first = datetime(2026, 10, 28, 11, 30, tzinfo=UTC)
+    # 13 bars from 11:30 to 12:06; the last five (11:54..12:06) decide the stop
+    lows = [
+        "500",
+        "400",
+        "300",
+        "290",
+        "280",
+        "270",
+        "260",
+        "250",
+        "260",
+        "250",
+        "240",
+        "235",
+        "999",
+    ]
+    provider = TaiSignalProvider(_bars_with_lows(lows, first))
+    provider._latest_atr = Decimal("10")
+    # 12:12:05 -> the signal bar started 12:09, so the bars before it end at 12:06
+    now = datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
+    buy = provider.external_signal(Direction.BUY, _quote_rules("600", "601.8"), now)
+    assert buy.entry == Decimal("601.8")
+    assert buy.stop == Decimal("235") - Decimal("2.0")
+    sell = provider.external_signal(Direction.SELL, _quote_rules("600", "601.8"), now)
+    assert sell.entry == Decimal("600")
+    assert sell.stop == Decimal("999") + Decimal("6") + Decimal("2.0")
+
+
+def test_external_signal_refuses_when_atr_or_history_is_missing() -> None:
+    first = datetime(2026, 10, 28, 11, 30, tzinfo=UTC)
+    now = datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
+    no_atr = TaiSignalProvider(_bars_with_lows(["500"] * 13, first))
+    with pytest.raises(ValueError, match="ATR"):
+        no_atr.external_signal(Direction.BUY, _quote_rules("1", "2"), now)
+    short = TaiSignalProvider(_bars_with_lows(["500"] * 3, first))
+    short._latest_atr = Decimal("10")
+    with pytest.raises(ValueError, match="closed bars"):
+        short.external_signal(Direction.BUY, _quote_rules("1", "2"), now)
+
+
 def test_epic_aliases_cover_both_instruments_and_unknown_epics() -> None:
     from trader.experiments.tai_wiring import epic_aliases
 

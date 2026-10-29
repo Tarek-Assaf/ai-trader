@@ -28,6 +28,7 @@ from trader.api.health import (
     set_runtime_status_provider,
     set_tai_demo_health_provider,
 )
+from trader.api.tradingview import router as tradingview_router
 from trader.channels.router import ChatRouter, RoutedIntent
 from trader.channels.telegram import TelegramBotTransport, TelegramChannel
 from trader.core.audit import AuditEvent
@@ -1134,6 +1135,22 @@ async def lifespan(_app: FastAPI) -> Any:
 
 app = FastAPI(title="AI Trader", version="0.1.0", lifespan=lifespan)
 app.include_router(control_router)
+app.include_router(tradingview_router)
+
+
+@app.middleware("http")
+async def _tunnel_serves_only_the_alert_route(request: Any, call_next: Any) -> Any:
+    """Requests that arrive through a public tunnel may reach only the TradingView route.
+
+    Tunnels add ``X-Forwarded-For``; a local request never carries it.  Health, control
+    and every other route therefore stay unreachable from the internet.
+    """
+    forwarded = request.headers.get("x-forwarded-for") or request.headers.get("x-forwarded-host")
+    if forwarded and request.url.path != "/webhooks/tradingview":
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse({"detail": "not found"}, status_code=404)
+    return await call_next(request)
 
 
 @app.get("/health")
