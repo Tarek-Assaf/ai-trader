@@ -58,3 +58,15 @@ def test_reads_back_from_audit_log() -> None:
     for _at, event, payload in _rows():
         writer.append(AuditEvent(event, payload))
     assert "US100 BUY 2" in trade_history_text(engine)
+
+
+def test_summary_shows_the_real_result_when_it_is_known() -> None:
+    rows = _rows() + [
+        (
+            T0 + timedelta(minutes=10),
+            "trade_result",
+            {"deal_id": "D1", "pnl": "-2.41", "currency": "USD", "reason": "stop loss"},
+        ),
+    ]
+    text = summarize(rows)
+    assert "Result: -$2.41 (stop loss)" in text

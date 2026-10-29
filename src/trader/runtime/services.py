@@ -20,6 +20,7 @@ from typing import Any
 
 from trader.core.audit import SqlAuditWriter
 from trader.core.settings import EnvironmentSettings
+from trader.reports.trade_ledger import TradeLedger
 from trader.runtime.factory import RuntimeDependencyUnavailable
 
 LOGGER = logging.getLogger(__name__)
@@ -154,7 +155,9 @@ def build_runtime_services(
     # failed model can never prevent an owner command from returning facts.
     if "pnl_provider" not in provided:
         provided["pnl_provider"] = _broker_pnl_provider(
-            broker, Path(os.getenv("WORKSPACE_DIR", "/workspace")) / "state" / "pnl_baselines.json"
+            broker,
+            Path(os.getenv("WORKSPACE_DIR", "/workspace")) / "state" / "pnl_baselines.json",
+            TradeLedger(engine, audit),
         )
     if "risk_provider" not in provided:
         risk_values = _dump_mapping(configs.get("risk"))
@@ -466,6 +469,16 @@ def _period_key(period: str, now: datetime) -> str:
     return f"{period}:{day.isoformat()}"
 
 
+def _period_start(period: str, now: datetime) -> datetime:
+    """UTC midnight starting the period that ``_period_key`` names."""
+    day = now.astimezone(UTC).date()
+    if period == "weekly":
+        day = day - timedelta(days=day.weekday())
+    elif period == "monthly":
+        day = day.replace(day=1)
+    return datetime(day.year, day.month, day.day, tzinfo=UTC)
+
+
 def _baseline_balance(path: Path, period: str, balance: Decimal, now: datetime) -> Decimal:
     """Balance at the start of the period; the first balance seen in a period starts it."""
     key = _period_key(period, now)
@@ -520,7 +533,7 @@ def _equity_history(path: Path, equity: Decimal, now: datetime) -> tuple[Any, ..
     return tuple(points)
 
 
-def _broker_pnl_provider(broker: Any, baseline_path: Path | None = None) -> Any:
+def _broker_pnl_provider(broker: Any, baseline_path: Path | None = None, ledger: Any = None) -> Any:
     """Return a fail-closed P&L provider using explicit broker account fields.
 
     No trade ledger feeds the engine, so the broker's own figures are the truth:
@@ -577,8 +590,15 @@ def _broker_pnl_provider(broker: Any, baseline_path: Path | None = None) -> Any:
         )
         realized = figures.balance - start
         floating = figures.equity - figures.balance
+        r_multiples: tuple[Any, ...] = report.r_multiples
+        if ledger is not None:
+            try:
+                r_multiples = ledger.r_multiples(_period_start(period, now))
+            except Exception:  # noqa: BLE001 - reports must not fail on the trade list
+                LOGGER.warning("closed-trade list unavailable for the report", exc_info=True)
         return replace(
             report,
+            r_multiples=r_multiples,
             realized_gross=realized,
             realized_net=realized,
             unrealized_gross=floating,

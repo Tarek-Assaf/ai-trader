@@ -45,6 +45,7 @@ from trader.lab.runner import LabJobManager, LabRunner
 from trader.reports.commands import CommandDataService
 from trader.reports.entry_state import entry_state_lines
 from trader.reports.trade_history import trade_history_text
+from trader.reports.trade_ledger import ClosedTradeSync, TradeLedger
 from trader.runtime import (
     RuntimeComponents,
     RuntimeFeedAdapters,
@@ -416,8 +417,19 @@ def _build_tai_demo_runtime(
     from trader.runtime.market_watch import DiskWatcher, MarketWatcher
 
     app.state.market_watcher = MarketWatcher(capital_client, epics, alert)
+    app.state.closed_trade_sync = _closed_trade_sync(app, capital_client, alert)
     app.state.disk_watcher = DiskWatcher(alert)
     return runtime_adapter
+
+
+def _closed_trade_sync(app: FastAPI, capital_client: Any, alert: Any) -> Any:
+    """Poller that stores Capital.com's closed-trade results and sends RESULT messages."""
+    services = getattr(app.state, "runtime_services", None) or {}
+    writer = services.get("audit_writer") if hasattr(services, "get") else None
+    engine = getattr(writer, "engine", None)
+    if engine is None or not callable(getattr(capital_client, "_request_trading", None)):
+        return None
+    return ClosedTradeSync(capital_client, TradeLedger(engine, writer), alert)
 
 
 def _tai_market_open(capital_client: Any, epic: str) -> Callable[[datetime], bool]:
@@ -446,6 +458,7 @@ def _tai_market_open(capital_client: Any, epic: str) -> Callable[[datetime], boo
 async def _tai_feed_loop(app: FastAPI) -> None:
     """Tail the recorder lake without coupling the API to the worker stream."""
     last_equity_sample = 0.0
+    last_result_sync = 0.0
     while True:
         if time.monotonic() - last_equity_sample >= 60:
             last_equity_sample = time.monotonic()
@@ -461,6 +474,14 @@ async def _tai_feed_loop(app: FastAPI) -> None:
                     await asyncio.to_thread(disk.poll)
                 except Exception:  # noqa: BLE001 - never stop the feed
                     _LOG.warning("disk watch failed", exc_info=True)
+            if time.monotonic() - last_result_sync >= 120:
+                last_result_sync = time.monotonic()
+                results = getattr(app.state, "closed_trade_sync", None)
+                if results is not None:
+                    try:
+                        await asyncio.to_thread(results.poll)
+                    except Exception:  # noqa: BLE001 - never stop the feed
+                        _LOG.warning("closed-trade sync failed", exc_info=True)
             tai_runtime = getattr(app.state, "tai_demo_runtime", None)
             adapters = getattr(tai_runtime, "adapters", None)
             runners = (
