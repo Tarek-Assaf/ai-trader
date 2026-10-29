@@ -391,3 +391,30 @@ def test_published_menu_lists_every_owner_command_including_resume() -> None:
     assert {"resume", "pause", "kill", "stop", "status", "pnl", "positions"} <= names
     assert all("/" + name in TelegramChannel.COMMANDS for name in names if name != "help")
     assert all(0 < len(item["description"]) <= 256 for item in TELEGRAM_MENU)
+
+
+def test_feed_warnings_are_muted_only_with_fresh_closed_market_evidence(
+    tmp_path, monkeypatch
+) -> None:
+    import json
+    from datetime import UTC, datetime, timedelta
+
+    from trader.channels.telegram import _closed_market_feed_warning
+
+    monkeypatch.setenv("WORKSPACE_ROOT", str(tmp_path))
+    warning = "Tai feed stale: no new closed minute for 5 minutes"
+    assert _closed_market_feed_warning(warning) is False  # no status file: never muted
+    status = tmp_path / "data" / "recorder-status.json"
+    status.parent.mkdir()
+
+    def write(expected_open, age_seconds):
+        stamp = (datetime.now(UTC) - timedelta(seconds=age_seconds)).isoformat()
+        status.write_text(json.dumps({"expected_open": expected_open, "last_liveness_at": stamp}))
+
+    write(False, 30)
+    assert _closed_market_feed_warning(warning) is True
+    assert _closed_market_feed_warning("entry SELL US100") is False  # other text never muted
+    write(False, 600)
+    assert _closed_market_feed_warning(warning) is False  # old evidence
+    write(True, 30)
+    assert _closed_market_feed_warning(warning) is False  # market expected open

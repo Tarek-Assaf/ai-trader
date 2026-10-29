@@ -27,6 +27,37 @@ RESUME_CODE_SECONDS = 120
 RESUME_CODE_ATTEMPTS = 3
 
 
+def _closed_market_feed_warning(text: str) -> bool:
+    """Suppress feed warnings only with recent evidence all markets are closed.
+
+    Apply at delivery so recorder, Tai and queued warnings share the policy.
+    Missing, old or unknown status never mutes an operational warning.
+    """
+    prefixes = (
+        "Capital.com feed stalled since ",
+        "Tai feed stale: no new closed minute",
+        "Recorder degraded while the market is expected open.",
+    )
+    if not text.startswith(prefixes):
+        return False
+    import json
+    import os
+    from pathlib import Path
+
+    path = Path(os.getenv("WORKSPACE_ROOT", "/workspace")) / "data/recorder-status.json"
+    try:
+        status = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(status, dict) or status.get("expected_open") is not False:
+            return False
+        stamp = datetime.fromisoformat(status["last_liveness_at"])
+        if stamp.tzinfo is None:
+            return False
+        age = (datetime.now(UTC) - stamp).total_seconds()
+        return 0 <= age <= 180
+    except (OSError, ValueError, TypeError, KeyError):
+        return False
+
+
 class TelegramTransport(Protocol):
     """Minimal transport used by the channel and its tests."""
 
@@ -619,6 +650,9 @@ class TelegramBotTransport:
     def send_message(
         self, chat_id: str, text: str, *, reply_markup: Mapping[str, Any] | None = None
     ) -> None:
+        if _closed_market_feed_warning(text):
+            LOGGER.info("feed notification suppressed: markets confirmed closed")
+            return
         payload: dict[str, Any] = {"chat_id": chat_id, "text": text}
         if reply_markup is not None:
             payload["reply_markup"] = reply_markup
