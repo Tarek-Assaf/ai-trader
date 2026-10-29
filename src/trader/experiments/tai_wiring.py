@@ -574,9 +574,15 @@ class TaiSignalProvider:
             if buy
             else (max(bar.high for bar in previous) + buffer)
         )
+        note = ""
+        if (buy and stop >= quote) or (not buy and stop <= quote):
+            # Price already moved past the structure level (a fast move, or a late feed).
+            # The owner's signal still trades: stop one ATR from the entry, and say so.
+            stop = quote - atr if buy else quote + atr
+            note = "structure stop was on the wrong side of price; stop set 1 ATR from entry"
         tick = rules.tick_size
         if tick is None or tick <= 0:
-            return TaiSignal(direction, quote, stop)
+            return TaiSignal(direction, quote, stop, note=note)
         # Whole ticks only: the stop is never tighter than the indicator's, the targets are
         # the nearest tick, so Telegram and the order show the same clean prices.
         stop = (
@@ -592,8 +598,8 @@ class TaiSignalProvider:
             for multiple in (1, 2, 3)
         )
         if any(target <= 0 for target in targets):
-            return TaiSignal(direction, quote, stop)
-        return TaiSignal(direction, quote, stop, targets)
+            return TaiSignal(direction, quote, stop, note=note)
+        return TaiSignal(direction, quote, stop, targets, note)
 
     @property
     def history(self) -> tuple[ClosedBar, ...]:
