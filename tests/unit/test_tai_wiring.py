@@ -881,8 +881,8 @@ def test_external_signal_targets_follow_the_tradingview_close_when_usable() -> N
     assert (
         provider.external_signal(Direction.SELL, rules, now, reference=wrong_side).levels() == own
     )
-    # TP1 already behind the live price: fall back.
+    # TP1 would sit on or behind the live price: fall back.
     assert (
-        provider.external_signal(Direction.SELL, rules, now, reference=Decimal("585")).levels()
+        provider.external_signal(Direction.SELL, rules, now, reference=Decimal("629")).levels()
         == own
     )
