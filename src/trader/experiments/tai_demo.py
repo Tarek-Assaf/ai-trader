@@ -21,12 +21,14 @@ from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
 from hashlib import sha256
 from pathlib import Path
 from typing import Protocol
+from zoneinfo import ZoneInfo
 
 from trader.execution.brokers.base import Direction, OrderRequest, Position
 from trader.execution.control import ControlMode
 from trader.execution.manager import ExecutionPaused
 
 LOGGER = logging.getLogger(__name__)
+RIYADH = ZoneInfo("Asia/Riyadh")
 EXPERIMENT_LABEL = "Tai port, owner-directed demo experiment, loosely matched to the owner"
 # Q-075 = A: refuse entries when the live quote consumes more than one quarter
 # of the stop distance or two broker ticks, whichever is wider.
@@ -600,7 +602,12 @@ class TaiDemoRunner:
             self._journal_event(
                 cycle_id, "closed_for_new_signal", deal_id=position.deal_id, source=source
             )
-            self._send_alert(f"Closed the open {epic} trade: new {source} signal")
+            self._send_alert(
+                f"CLOSED {epic} (replaced)\n"
+                f"Time: {self._riyadh_time()}\n"
+                "\n"
+                f"Reason: a new {source} signal arrived while the trade was open."
+            )
         self._persist_state()
         return True
 
@@ -777,8 +784,11 @@ class TaiDemoRunner:
             )
             self._record_exit(epic)
             self._send_alert(
-                f"CLOSED {epic}: the trade is no longer open on Capital.com "
-                "(stop, target or manual). Exact result: Capital.com History."
+                f"CLOSED {epic}\n"
+                f"Time: {self._riyadh_time()}\n"
+                "\n"
+                "The trade is no longer open on Capital.com (stop, target or manual).\n"
+                "Exact result: see Capital.com History."
             )
             self._persist_state()
 
@@ -820,8 +830,12 @@ class TaiDemoRunner:
                     )
                     self._record_exit(bar.epic)
                     self._send_alert(
-                        f"EXIT {bar.epic} TP3 {self._num(target)} reached\n"
-                        f"Closed the remaining {self._num(current_size)}. Trade finished."
+                        f"EXIT {bar.epic}: TP3 reached\n"
+                        f"Time: {self._riyadh_time()}\n"
+                        "\n"
+                        f"Target: {self._num(target)}\n"
+                        f"Closed: {self._num(current_size)} (the remainder)\n"
+                        "Trade finished."
                     )
                     self._persist_state()
                     break
@@ -844,8 +858,12 @@ class TaiDemoRunner:
                             fraction=str(self._exit_fraction(index)),
                         )
                         self._send_alert(
-                            f"PARTIAL EXIT {bar.epic} TP{index} {self._num(target)} reached\n"
-                            f"Closed {self._num(amount)}, remaining {self._num(current_size)}"
+                            f"PARTIAL EXIT {bar.epic}: TP{index} reached\n"
+                            f"Time: {self._riyadh_time()}\n"
+                            "\n"
+                            f"Target: {self._num(target)}\n"
+                            f"Closed: {self._num(amount)}\n"
+                            f"Remaining: {self._num(current_size)}"
                         )
                     else:
                         self._journal_event(
@@ -875,8 +893,11 @@ class TaiDemoRunner:
         state.entry_stop_moved = True
         self._journal_event(cycle_id, "stop_to_entry", deal_id=position.deal_id)
         self._send_alert(
-            f"STOP MOVED TO ENTRY {position.epic} at {self._num(stop)}\n"
-            "Trade is now risk-free; TP3 stays as the target."
+            f"STOP MOVED TO ENTRY {position.epic}\n"
+            f"Time: {self._riyadh_time()}\n"
+            "\n"
+            f"New stop: {self._num(stop)}\n"
+            "The trade is now risk-free; TP3 stays as the target."
         )
 
     def _exit_failed(self, deal_id: str, event: str, exc: Exception, cycle_id: str) -> None:
@@ -1067,12 +1088,25 @@ class TaiDemoRunner:
         risk_usd = f" (1R = ${n(one_r_value.quantize(Decimal('0.01')))})" if one_r_value else ""
         return (
             f"{prefix} {signal.direction.value} {epic}\n"
-            f"Size: {n(size)}  Entry: {n(fill)}\n"
-            f"SL: {n(signal.stop)}  risk {n(risk)} pts{risk_usd}\n"
-            f"TP1: {n(tp1)}  TP2: {n(tp2)}  TP3: {n(tp3)}\n"
-            "Plan: 40% at TP1 (stop to entry), 30% at TP2, 30% at TP3"
+            f"Time: {self._riyadh_time()}\n"
+            "\n"
+            f"Size: {n(size)}\n"
+            f"Entry: {n(fill)}\n"
+            "\n"
+            f"SL: {n(signal.stop)}\n"
+            f"Risk: {n(risk)} pts{risk_usd}\n"
+            "\n"
+            f"TP1: {n(tp1)}\n"
+            f"TP2: {n(tp2)}\n"
+            f"TP3: {n(tp3)}\n"
+            "\n"
+            "Plan: 40% at TP1 (stop moves to entry), 30% at TP2, 30% at TP3"
             + (f"\nNote: {signal.note}" if signal.note else "")
         )
+
+    @staticmethod
+    def _riyadh_time() -> str:
+        return datetime.now(RIYADH).strftime("%d %b %H:%M") + " (Riyadh)"
 
     def _send_alert(self, message: str) -> None:
         prefix = "DRY-RUN: " if self._dry_run else ""
