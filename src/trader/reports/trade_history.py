@@ -22,6 +22,7 @@ EVENTS = (
     "exit",
     "reconcile_closed",
     "closed_for_new_signal",
+    "trade_result",
 )
 
 
@@ -54,6 +55,15 @@ def summarize(rows: list[tuple[datetime, str, Mapping[str, Any]]], limit: int = 
             try:
                 trade["banked_r"] += Decimal(str(payload.get("fraction", "0"))) * index
             except InvalidOperation:
+                pass
+        elif event == "trade_result":
+            try:
+                trade["result"] = trade.get("result", Decimal(0)) + Decimal(str(payload["pnl"]))
+                trade["currency"] = str(payload.get("currency", "USD"))
+                trade["result_reason"] = str(payload.get("reason", "")) or trade.get(
+                    "result_reason", ""
+                )
+            except (KeyError, InvalidOperation):
                 pass
         elif event in {"exit", "reconcile_closed", "closed_for_new_signal"}:
             trade["closed"] = at
@@ -89,6 +99,11 @@ def summarize(rows: list[tuple[datetime, str, Mapping[str, Any]]], limit: int = 
             parts.append("stop moved to entry")
         if parts:
             lines.append("   " + ", ".join(parts))
+        if "result" in trade:
+            sign = "-" if trade["result"] < 0 else "+"
+            symbol = "$" if trade.get("currency") == "USD" else f"{trade.get('currency', '')} "
+            reason = f" ({trade['result_reason']})" if trade.get("result_reason") else ""
+            lines.append(f"   Result: {sign}{symbol}{abs(trade['result']):.2f}{reason}")
         if trade["hits"]:
             banked = f"{trade['banked_r']:+.2f}R banked from partials"
             one_r = details.get("one_r_value")
@@ -98,9 +113,9 @@ def summarize(rows: list[tuple[datetime, str, Mapping[str, Any]]], limit: int = 
                 except InvalidOperation:
                     pass
             lines.append("   " + banked)
-        elif "closed" in trade:
+        elif "closed" in trade and "result" not in trade:
             lines.append("   no target hit; result is in the Capital.com history")
-    lines.append("Exact profit per trade: see Capital.com history; day total: /pnl.")
+    lines.append("Results come from Capital.com's history; day total: /pnl.")
     return "\n".join(lines)
 
 
