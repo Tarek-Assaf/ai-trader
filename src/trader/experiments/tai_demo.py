@@ -26,6 +26,7 @@ from zoneinfo import ZoneInfo
 from trader.execution.brokers.base import Direction, OrderRequest, Position
 from trader.execution.control import ControlMode
 from trader.execution.manager import ExecutionPaused
+from trader.experiments.plain_reasons import refusal_text
 
 LOGGER = logging.getLogger(__name__)
 RIYADH = ZoneInfo("Asia/Riyadh")
@@ -576,7 +577,7 @@ class TaiDemoRunner:
                 )
             except (TaiDemoRefused, ValueError) as exc:
                 self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
-                self._send_alert(f"{source} {direction.value} not traded: {str(exc)[:120]}")
+                self._send_alert(refusal_text(epic, direction.value, str(exc), self._riyadh_time()))
                 return self._outcome(cycle_id, "REJECTED", "external_signal_unusable")
             return self._attempt_entry(signal, epic, cycle_id, external=True)
 
@@ -629,7 +630,9 @@ class TaiDemoRunner:
                 alert_key = (epic, reason)
                 if alert_key not in self._spread_alerted:
                     self._spread_alerted.add(alert_key)
-                    self._send_alert(f"entry refused for {epic}: {reason}")
+                    self._send_alert(
+                        refusal_text(epic, signal.direction.value, reason, self._riyadh_time())
+                    )
                 return self._outcome(cycle_id, "REJECTED", reason)
             requested_size = self._requested_size(rules)
             order = self._build_order(signal, cycle_id, requested_size)
@@ -703,7 +706,9 @@ class TaiDemoRunner:
         except ExecutionPaused as exc:
             reason = str(exc) or "execution_paused"
             self._journal_event(cycle_id, "guardian_veto", epic=epic, reason=reason)
-            self._send_alert(f"entry vetoed for {epic}: {reason}")
+            self._send_alert(
+                refusal_text(epic, signal.direction.value, reason, self._riyadh_time())
+            )
             return self._outcome(cycle_id, "REJECTED", "guardian_veto")
         if receipt is None:
             self._journal_event(
