@@ -74,7 +74,7 @@ def test_other_events_are_acknowledged_but_never_trade(client) -> None:
 
 
 def test_a_late_alert_is_not_traded(client) -> None:
-    client.clock["now"] = datetime(2026, 10, 28, 20, 14, 30, tzinfo=UTC)  # 150 s into the bar
+    client.clock["now"] = datetime(2026, 10, 28, 20, 14, 58, tzinfo=UTC)  # 178 s into the bar
     assert _post(client, secret=SECRET, signal="SELL").json()["status"] == "stale"
     assert client.runner.calls == []
 
@@ -110,3 +110,23 @@ def test_requests_through_a_public_tunnel_reach_only_the_alert_route(monkeypatch
     wrong = local.post("/webhooks/tradingview", headers=tunnelled, json={"secret": "x"})
     assert wrong.status_code == 403
     assert local.get("/health").status_code == 200
+
+
+def test_symbol_routes_the_alert_to_that_instruments_runner(client) -> None:
+    us100, gold = _Runner(), _Runner()
+    client.app.state.tai_demo_runtime = SimpleNamespace(
+        runner=us100,
+        adapters={
+            "US100": SimpleNamespace(runner=us100),
+            "GOLD": SimpleNamespace(runner=gold),
+        },
+    )
+    assert _post(client, secret=SECRET, signal="SELL", symbol="XAUUSD").json()["status"] == (
+        "SUBMITTED"
+    )
+    assert _post(client, secret=SECRET, signal="BUY", symbol="NAS100").json()["status"] == (
+        "SUBMITTED"
+    )
+    assert gold.calls == [Direction.SELL] and us100.calls == [Direction.BUY]
+    assert _post(client, secret=SECRET, signal="BUY", symbol="DAX").status_code == 503
+    assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "duplicate"
