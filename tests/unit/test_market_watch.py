@@ -41,3 +41,26 @@ def test_unknown_status_and_lookup_errors_stay_silent() -> None:
     client.status = "EDITS_ONLY"
     MarketWatcher(client, ["US100"], sent.append).poll()
     assert sent == []
+
+
+def test_disk_watcher_alerts_once_above_threshold_and_again_after_the_repeat_window() -> None:
+    from trader.runtime.market_watch import DiskWatcher
+
+    sent: list[str] = []
+    clock = {"t": 0.0}
+    state = {"used": 50}
+    watcher = DiskWatcher(
+        sent.append,
+        usage=lambda _path: (100 * 10**9, state["used"] * 10**9, (100 - state["used"]) * 10**9),
+        clock=lambda: clock["t"],
+        repeat_seconds=3600,
+    )
+    watcher.poll()
+    assert sent == []
+    state["used"] = 85
+    watcher.poll()
+    watcher.poll()
+    assert len(sent) == 1 and "DISK 85% FULL" in sent[0]
+    clock["t"] = 4000.0
+    watcher.poll()
+    assert len(sent) == 2

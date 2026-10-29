@@ -413,7 +413,10 @@ def _build_tai_demo_runtime(
     app.state.tai_feed_tailer = tailers[0]
     from trader.runtime.market_watch import MarketWatcher
 
+    from trader.runtime.market_watch import DiskWatcher
+
     app.state.market_watcher = MarketWatcher(capital_client, epics, alert)
+    app.state.disk_watcher = DiskWatcher(alert)
     return runtime_adapter
 
 
@@ -452,6 +455,12 @@ async def _tai_feed_loop(app: FastAPI) -> None:
                     await asyncio.to_thread(watcher.poll)
                 except Exception:  # noqa: BLE001 - never stop the feed
                     _LOG.warning("market watch failed", exc_info=True)
+            disk = getattr(app.state, "disk_watcher", None)
+            if disk is not None:
+                try:
+                    await asyncio.to_thread(disk.poll)
+                except Exception:  # noqa: BLE001 - never stop the feed
+                    _LOG.warning("disk watch failed", exc_info=True)
             services = getattr(app.state, "runtime_services", None) or {}
             sampler = services.get("pnl_provider") if hasattr(services, "get") else None
             if callable(sampler):

@@ -67,3 +67,46 @@ class MarketWatcher:
         except Exception:  # noqa: BLE001
             pass
         return text + "\nOpen positions keep their stop and targets."
+
+
+class DiskWatcher:
+    """Alert once when the disk passes a threshold (a full disk stops the database)."""
+
+    def __init__(
+        self,
+        alert: Callable[[str], None],
+        *,
+        path: str = "/",
+        threshold_pct: float = 80.0,
+        repeat_seconds: float = 6 * 3600,
+        usage: Callable[[str], Any] | None = None,
+        clock: Callable[[], float] | None = None,
+    ) -> None:
+        import shutil
+        import time
+
+        self._alert = alert
+        self._path = path
+        self._threshold = threshold_pct
+        self._repeat = repeat_seconds
+        self._usage = usage or shutil.disk_usage
+        self._clock = clock or time.monotonic
+        self._last_alert: float | None = None
+
+    def poll(self) -> None:
+        try:
+            total, used, free = self._usage(self._path)[:3]
+        except OSError:
+            return
+        pct = used / total * 100 if total else 0.0
+        if pct < self._threshold:
+            self._last_alert = None
+            return
+        now = self._clock()
+        if self._last_alert is not None and now - self._last_alert < self._repeat:
+            return
+        self._last_alert = now
+        self._alert(
+            f"DISK {pct:.0f}% FULL, {free / 1e9:.1f} GB free. A full disk stops the "
+            "database and the bot. Remove old images: docker image prune -a -f"
+        )
