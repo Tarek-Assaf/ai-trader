@@ -1096,6 +1096,12 @@ async def lifespan(_app: FastAPI) -> Any:
                     else None
                 ),
             )
+            publish_menu = getattr(transport, "set_commands", None)
+            if callable(publish_menu):
+                try:
+                    publish_menu(TELEGRAM_MENU)
+                except Exception:  # noqa: BLE001 - a missing menu must not stop the bot
+                    _LOG.warning("telegram command menu could not be published")
             if report_scheduler is not None and hasattr(report_scheduler, "configure_alert"):
                 report_scheduler.configure_alert(channel.send_alert)
             stop_event = threading.Event()
@@ -1148,6 +1154,21 @@ async def lifespan(_app: FastAPI) -> Any:
 app = FastAPI(title="AI Trader", version="0.1.0", lifespan=lifespan)
 app.include_router(control_router)
 app.include_router(tradingview_router)
+
+
+TELEGRAM_MENU = (
+    {"command": "status", "description": "Bot status and health"},
+    {"command": "positions", "description": "Open positions"},
+    {"command": "pnl", "description": "Profit and loss"},
+    {"command": "risk", "description": "Risk limits and usage"},
+    {"command": "report", "description": "Daily, weekly or monthly report"},
+    {"command": "chart", "description": "Equity chart"},
+    {"command": "pause", "description": "Pause new entries"},
+    {"command": "resume", "description": "Resume entries (asks for your code)"},
+    {"command": "stop", "description": "Pause and close positions"},
+    {"command": "kill", "description": "Emergency stop"},
+    {"command": "help", "description": "List commands"},
+)
 
 
 @app.middleware("http")

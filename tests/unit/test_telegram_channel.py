@@ -382,3 +382,12 @@ def test_a_used_code_cannot_resume_twice() -> None:
     _confirm_resume_with_totp(transport, channel)
     channel.handle_message("owner", code)
     assert writer.set_modes == [ControlMode.RESUME]
+
+
+def test_published_menu_lists_every_owner_command_including_resume() -> None:
+    from trader.api.app import TELEGRAM_MENU
+
+    names = {item["command"] for item in TELEGRAM_MENU}
+    assert {"resume", "pause", "kill", "stop", "status", "pnl", "positions"} <= names
+    assert all("/" + name in TelegramChannel.COMMANDS for name in names if name != "help")
+    assert all(0 < len(item["description"]) <= 256 for item in TELEGRAM_MENU)
