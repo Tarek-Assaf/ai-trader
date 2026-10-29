@@ -553,7 +553,7 @@ def test_live_missing_position_is_dropped_and_later_signal_can_enter():
     assert instance.on_bar(bar()).action == "SUBMITTED"
     assert len(manager.submits) == 2
     assert any(event["event"] == "reconcile_closed" for event in events)
-    assert any("flat" in alert and "broker_closed" in alert for alert in alerts)
+    assert any("CLOSED" in alert and "Capital.com" in alert for alert in alerts)
 
 
 def test_broker_refusing_a_partial_exit_does_not_crash_the_bar_and_alerts_once():
@@ -745,3 +745,25 @@ def test_entry_alert_text_carries_the_full_plan() -> None:
         "TP3: 26532.2",
     ):
         assert part in text
+
+
+def test_check_broker_closed_notices_a_closed_trade_without_a_bar():
+    signal = TaiSignal(Direction.BUY, Decimal("100"), Decimal("99"))
+    gateway = Gateway()
+    events = []
+    alerts = []
+    instance, _manager = runner(
+        gateway,
+        signal_provider=lambda _bar: signal,
+        journal=events.append,
+        alerts=alerts,
+    )
+    assert instance.on_bar(bar()).action == "SUBMITTED"
+    instance.check_broker_closed()  # still open: nothing happens
+    assert not any(event["event"] == "reconcile_closed" for event in events)
+    gateway.positions.clear()
+    instance.check_broker_closed()
+    assert any(event["event"] == "reconcile_closed" for event in events)
+    assert any("CLOSED" in alert for alert in alerts)
+    instance.check_broker_closed()  # nothing tracked any more: quiet
+    assert sum(event["event"] == "reconcile_closed" for event in events) == 1

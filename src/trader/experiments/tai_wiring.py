@@ -15,7 +15,7 @@ from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from decimal import ROUND_CEILING, ROUND_FLOOR, Decimal, InvalidOperation
+from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -574,7 +574,26 @@ class TaiSignalProvider:
             if buy
             else (max(bar.high for bar in previous) + buffer)
         )
-        return TaiSignal(direction, quote, stop)
+        tick = rules.tick_size
+        if tick is None or tick <= 0:
+            return TaiSignal(direction, quote, stop)
+        # Whole ticks only: the stop is never tighter than the indicator's, the targets are
+        # the nearest tick, so Telegram and the order show the same clean prices.
+        stop = (
+            (stop / tick).to_integral_value(rounding=ROUND_FLOOR)
+            if buy
+            else (stop / tick).to_integral_value(rounding=ROUND_CEILING)
+        ) * tick
+        risk = abs(quote - stop)
+        sign = 1 if buy else -1
+        targets = tuple(
+            ((quote + sign * risk * multiple) / tick).to_integral_value(rounding=ROUND_HALF_UP)
+            * tick
+            for multiple in (1, 2, 3)
+        )
+        if any(target <= 0 for target in targets):
+            return TaiSignal(direction, quote, stop)
+        return TaiSignal(direction, quote, stop, targets)
 
     @property
     def history(self) -> tuple[ClosedBar, ...]:

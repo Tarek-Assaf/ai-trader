@@ -460,6 +460,20 @@ async def _tai_feed_loop(app: FastAPI) -> None:
                     await asyncio.to_thread(disk.poll)
                 except Exception:  # noqa: BLE001 - never stop the feed
                     _LOG.warning("disk watch failed", exc_info=True)
+            tai_runtime = getattr(app.state, "tai_demo_runtime", None)
+            adapters = getattr(tai_runtime, "adapters", None)
+            runners = (
+                [getattr(item, "runner", None) for item in adapters.values()]
+                if isinstance(adapters, dict)
+                else [getattr(tai_runtime, "runner", None)]
+            )
+            for runner in runners:
+                check = getattr(runner, "check_broker_closed", None)
+                if callable(check):
+                    try:
+                        await asyncio.to_thread(check)
+                    except Exception:  # noqa: BLE001 - never stop the feed
+                        _LOG.warning("broker closure check failed", exc_info=True)
             services = getattr(app.state, "runtime_services", None) or {}
             sampler = services.get("pnl_provider") if hasattr(services, "get") else None
             if callable(sampler):
