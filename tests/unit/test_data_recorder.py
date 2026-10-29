@@ -449,6 +449,7 @@ def test_store_reuses_its_month_in_memory_but_rereads_a_changed_file(
     outside = ParquetCandleStore(tmp_path / "lake")
     extra = start + timedelta(minutes=5)
     outside.upsert_many([("NAS100", _update(extra, "bid")), ("NAS100", _update(extra, "ask"))])
+    reads.clear()  # the other writer's own read does not count
     store.upsert_many([("NAS100", _update(later, "bid", close=105.0))])
     assert len(reads) == 1
     final = real_read(output).to_pylist()
