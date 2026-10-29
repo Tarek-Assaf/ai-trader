@@ -411,9 +411,7 @@ def _build_tai_demo_runtime(
     set_tai_demo_health_provider(runtime_adapter.health_snapshot)
     app.state.tai_feed_tailers = tailers
     app.state.tai_feed_tailer = tailers[0]
-    from trader.runtime.market_watch import MarketWatcher
-
-    from trader.runtime.market_watch import DiskWatcher
+    from trader.runtime.market_watch import DiskWatcher, MarketWatcher
 
     app.state.market_watcher = MarketWatcher(capital_client, epics, alert)
     app.state.disk_watcher = DiskWatcher(alert)
