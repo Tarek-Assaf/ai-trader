@@ -17,8 +17,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.concurrency import run_in_threadpool
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
 from trader.execution.brokers.base import Direction
 
@@ -59,7 +58,7 @@ def _runner_for(runtime: Any, symbol: str) -> Any:
 
 
 @router.post("/webhooks/tradingview")
-async def tradingview_alert(request: Request) -> dict[str, Any]:
+async def tradingview_alert(request: Request, background: BackgroundTasks) -> dict[str, Any]:
     secret = os.getenv("TRADINGVIEW_WEBHOOK_SECRET", "")
     if len(secret) < MIN_SECRET_LENGTH:
         raise HTTPException(status_code=404, detail="not found")
@@ -94,6 +93,15 @@ async def tradingview_alert(request: Request) -> dict[str, Any]:
         if previous is not None and current - previous < DUPLICATE_WINDOW_SECONDS:
             return {"status": "duplicate", "signal": signal}
         _last_accepted[key] = current
-    outcome = await run_in_threadpool(runner.on_external_signal, Direction(signal))
-    LOGGER.warning("tradingview %s alert -> %s %s", signal, outcome.action, outcome.reason)
-    return {"status": outcome.action, "reason": outcome.reason, "signal": signal}
+    # TradingView gives up after about 3 seconds, and placing the order takes longer.
+    # Answer at once and trade after the response has been sent.
+    background.add_task(_trade, runner, Direction(signal), signal)
+    return {"status": "accepted", "signal": signal}
+
+
+def _trade(runner: Any, direction: Direction, signal: str) -> None:
+    try:
+        outcome = runner.on_external_signal(direction)
+        LOGGER.warning("tradingview %s alert -> %s %s", signal, outcome.action, outcome.reason)
+    except Exception:  # noqa: BLE001 - nothing is waiting on this task
+        LOGGER.error("tradingview %s alert failed", signal, exc_info=True)
