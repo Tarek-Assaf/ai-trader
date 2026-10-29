@@ -19,9 +19,11 @@ SECRET = "test_" + "x" * 30  # not a real secret
 class _Runner:
     def __init__(self) -> None:
         self.calls: list[Direction] = []
+        self.references: list[object] = []
 
-    def on_external_signal(self, direction: Direction) -> SimpleNamespace:
+    def on_external_signal(self, direction: Direction, **kwargs: object) -> SimpleNamespace:
         self.calls.append(direction)
+        self.references.append(kwargs.get("reference_price"))
         return SimpleNamespace(action="SUBMITTED", reason="entry_submitted")
 
 
@@ -149,3 +151,14 @@ def test_alerts_just_before_or_after_the_bar_close_are_traded(client) -> None:
     assert _post(client, secret=SECRET, signal="SELL").json()["status"] == "accepted"
     client.clock["now"] = datetime(2026, 10, 28, 20, 15, 40, tzinfo=UTC)  # 40 s after
     assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "accepted"
+
+
+def test_the_close_price_in_the_alert_is_passed_on_when_usable(client) -> None:
+    from decimal import Decimal
+
+    assert _post(client, secret=SECRET, signal="SELL", close=29395.0).json()["status"] == "accepted"
+    client.clock["mono"] += 500
+    assert _post(client, secret=SECRET, signal="SELL", close="oops").json()["status"] == "accepted"
+    client.clock["mono"] += 500
+    assert _post(client, secret=SECRET, signal="SELL", close=-5).json()["status"] == "accepted"
+    assert client.runner.references == [Decimal("29395.0"), None, None]

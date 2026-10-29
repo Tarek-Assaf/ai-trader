@@ -849,3 +849,40 @@ def test_external_signal_falls_back_to_one_atr_when_structure_is_on_the_wrong_si
     # Normal case keeps the structure stop and has no note.
     normal = provider.external_signal(Direction.BUY, _quote_rules("600", "601.8"), now)
     assert normal.note == ""
+
+
+def test_external_signal_targets_follow_the_tradingview_close_when_usable() -> None:
+    first = datetime(2026, 10, 28, 11, 30, tzinfo=UTC)
+    provider = TaiSignalProvider(_bars_with_lows(["500"] * 12 + ["650"], first))
+    provider._latest_atr = Decimal("10")
+    now = datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
+    rules = _quote_rules("600", "601.8")
+    base = provider.external_signal(Direction.SELL, rules, now)
+    stop = base.stop
+    reference = Decimal("610")  # TradingView sold 10 points above the bot's quote
+    risk = stop - reference
+    signal = provider.external_signal(Direction.SELL, rules, now, reference=reference)
+    assert signal.stop == stop
+    expected = tuple(
+        ((reference - risk * multiple) / Decimal("0.1")).to_integral_value() * Decimal("0.1")
+        for multiple in (1, 2, 3)
+    )
+    assert signal.levels() == expected
+    assert "TradingView" in signal.note
+    # Unusable references fall back to the bot's own multiples.
+    own = base.levels()
+    assert (
+        provider.external_signal(Direction.SELL, rules, now, reference=Decimal("-1")).levels()
+        == own
+    )
+    far = Decimal("900")  # more than 3 ATR from the quote
+    assert provider.external_signal(Direction.SELL, rules, now, reference=far).levels() == own
+    wrong_side = stop + 5
+    assert (
+        provider.external_signal(Direction.SELL, rules, now, reference=wrong_side).levels() == own
+    )
+    # TP1 already behind the live price: fall back.
+    assert (
+        provider.external_signal(Direction.SELL, rules, now, reference=Decimal("585")).levels()
+        == own
+    )
