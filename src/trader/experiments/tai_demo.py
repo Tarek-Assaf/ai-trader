@@ -136,6 +136,7 @@ class TaiSignal:
     entry: Decimal
     stop: Decimal
     targets: tuple[Decimal, ...] = ()
+    note: str = ""
 
     def __post_init__(self) -> None:
         if not isinstance(self.direction, Direction):
@@ -1061,11 +1062,12 @@ class TaiDemoRunner:
             f"SL: {n(signal.stop)}  risk {n(risk)} pts{risk_usd}\n"
             f"TP1: {n(tp1)}  TP2: {n(tp2)}  TP3: {n(tp3)}\n"
             "Plan: 40% at TP1 (stop to entry), 30% at TP2, 30% at TP3"
+            + (f"\nNote: {signal.note}" if signal.note else "")
         )
 
     def _send_alert(self, message: str) -> None:
         prefix = "DRY-RUN: " if self._dry_run else ""
-        self._alert(f"{prefix}{EXPERIMENT_LABEL}: {message}")
+        self._alert(f"{prefix}Tai: {message}")
 
     @staticmethod
     def _spread_refusal(

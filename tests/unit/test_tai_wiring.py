@@ -831,3 +831,21 @@ def test_external_signal_levels_are_whole_ticks() -> None:
         assert len(signal.levels()) == 3
     sell = provider.external_signal(Direction.SELL, rules, now)
     assert sell.stop >= sell.entry  # never tighter than the indicator's stop
+
+
+def test_external_signal_falls_back_to_one_atr_when_structure_is_on_the_wrong_side() -> None:
+    first = datetime(2026, 10, 28, 11, 30, tzinfo=UTC)
+    provider = TaiSignalProvider(_bars_with_lows(["500"] * 13, first))
+    provider._latest_atr = Decimal("10")
+    now = datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
+    # Price has fallen far below the five-bar low: the structure stop would sit above a BUY.
+    buy = provider.external_signal(Direction.BUY, _quote_rules("399", "400"), now)
+    assert buy.stop == Decimal("390.0")
+    assert "1 ATR" in buy.note
+    # SELL with price far above the five-bar high.
+    sell = provider.external_signal(Direction.SELL, _quote_rules("700", "701"), now)
+    assert sell.stop == Decimal("710.0")
+    assert sell.note
+    # Normal case keeps the structure stop and has no note.
+    normal = provider.external_signal(Direction.BUY, _quote_rules("600", "601.8"), now)
+    assert normal.note == ""
