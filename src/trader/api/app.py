@@ -43,6 +43,7 @@ from trader.integrations.capital_com.client import CapitalComClient
 from trader.integrations.capital_com.trading import CapitalComTradingClient
 from trader.lab.runner import LabJobManager, LabRunner
 from trader.reports.commands import CommandDataService
+from trader.reports.entry_state import entry_state_lines
 from trader.reports.trade_history import trade_history_text
 from trader.runtime import (
     RuntimeComponents,
@@ -1091,6 +1092,18 @@ async def lifespan(_app: FastAPI) -> Any:
                 return trade_history_text(history_engine)
 
             command_handlers["/trades"] = trades_handler
+
+            base_status = command_handlers.get("/status")
+
+            def status_handler(command: str) -> str:
+                text = (
+                    base_status(command)
+                    if callable(base_status)
+                    else "Trading status is unavailable right now."
+                )
+                return "\n".join([str(text), *entry_state_lines(history_engine, current_mode)])
+
+            command_handlers["/status"] = status_handler
 
             def render_chart(command: str, argument: str) -> bytes:
                 if command == "/lab" and isinstance(lab_manager, LabJobManager):
