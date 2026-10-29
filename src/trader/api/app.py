@@ -480,8 +480,18 @@ async def _tai_feed_loop(app: FastAPI) -> None:
                 if results is not None:
                     try:
                         await asyncio.to_thread(results.poll)
-                    except Exception:  # noqa: BLE001 - never stop the feed
-                        _LOG.warning("closed-trade sync failed", exc_info=True)
+                    except Exception as exc:  # noqa: BLE001 - never stop the feed
+                        status = getattr(exc, "status_code", None)
+                        if status is None:
+                            _LOG.warning("closed-trade sync failed", exc_info=True)
+                        else:
+                            # The broker said no: log its reason code on one line, not a trace.
+                            _LOG.warning(
+                                "closed-trade sync failed: broker HTTP %s code=%s retry_after=%s",
+                                status,
+                                getattr(exc, "error_code", None),
+                                getattr(exc, "retry_after", None),
+                            )
             tai_runtime = getattr(app.state, "tai_demo_runtime", None)
             adapters = getattr(tai_runtime, "adapters", None)
             runners = (
