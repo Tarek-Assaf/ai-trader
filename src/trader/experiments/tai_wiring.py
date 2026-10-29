@@ -549,7 +549,11 @@ class TaiSignalProvider:
         return cls(bars, minimum_history=minimum_history, ha_mode=ha_mode)
 
     def external_signal(
-        self, direction: Direction, rules: TaiInstrumentRules, now: datetime | None = None
+        self,
+        direction: Direction,
+        rules: TaiInstrumentRules,
+        now: datetime | None = None,
+        reference: Decimal | None = None,
     ) -> TaiSignal:
         """Build the entry for a signal decided elsewhere (the owner's TradingView alert).
 
@@ -581,8 +585,11 @@ class TaiSignalProvider:
             stop = quote - atr if buy else quote + atr
             note = "structure stop was on the wrong side of price; stop set 1 ATR from entry"
         tick = rules.tick_size
+        anchored = self._tradingview_targets(direction, quote, stop, atr, rules, reference)
+        if anchored is not None and not note:
+            note = f"targets follow TradingView's close {anchored[0]}"
         if tick is None or tick <= 0:
-            return TaiSignal(direction, quote, stop, note=note)
+            return TaiSignal(direction, quote, stop, anchored[1] if anchored else (), note=note)
         # Whole ticks only: the stop is never tighter than the indicator's, the targets are
         # the nearest tick, so Telegram and the order show the same clean prices.
         stop = (
@@ -590,16 +597,54 @@ class TaiSignalProvider:
             if buy
             else (stop / tick).to_integral_value(rounding=ROUND_CEILING)
         ) * tick
-        risk = abs(quote - stop)
         sign = 1 if buy else -1
-        targets = tuple(
-            ((quote + sign * risk * multiple) / tick).to_integral_value(rounding=ROUND_HALF_UP)
-            * tick
-            for multiple in (1, 2, 3)
-        )
+        if anchored is not None:
+            targets = tuple(
+                (level / tick).to_integral_value(rounding=ROUND_HALF_UP) * tick
+                for level in anchored[1]
+            )
+        else:
+            risk = abs(quote - stop)
+            targets = tuple(
+                ((quote + sign * risk * multiple) / tick).to_integral_value(rounding=ROUND_HALF_UP)
+                * tick
+                for multiple in (1, 2, 3)
+            )
         if any(target <= 0 for target in targets):
             return TaiSignal(direction, quote, stop, note=note)
         return TaiSignal(direction, quote, stop, targets, note)
+
+    @staticmethod
+    def _tradingview_targets(
+        direction: Direction,
+        quote: Decimal,
+        stop: Decimal,
+        atr: Decimal,
+        rules: TaiInstrumentRules,
+        reference: Decimal | None,
+    ) -> tuple[Decimal, tuple[Decimal, Decimal, Decimal]] | None:
+        """TP1-3 at the prices TradingView's own trade would use, when they are usable.
+
+        TradingView measures 1R/2R/3R from its signal close to the structure stop.  The
+        bot's entry can differ by a few points; copying the indicator's target prices keeps
+        the partial exits at the same market events.  Anything odd falls back to the bot's
+        own R multiples.
+        """
+        if reference is None or not reference.is_finite() or reference <= 0:
+            return None
+        buy = direction is Direction.BUY
+        if (buy and reference <= stop) or (not buy and reference >= stop):
+            return None
+        if abs(reference - quote) > 3 * atr:
+            return None
+        risk = abs(reference - stop)
+        sign = 1 if buy else -1
+        levels = tuple(reference + sign * risk * multiple for multiple in (1, 2, 3))
+        gap = rules.min_limit_distance or ((rules.tick_size or Decimal(0)) * 2)
+        first = levels[0]
+        if (buy and first <= quote + gap) or (not buy and first >= quote - gap):
+            return None  # TP1 is already behind or on top of the live price
+        return reference, (levels[0], levels[1], levels[2])
 
     @property
     def history(self) -> tuple[ClosedBar, ...]:

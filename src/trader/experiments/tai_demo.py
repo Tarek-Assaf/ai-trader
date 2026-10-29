@@ -530,7 +530,12 @@ class TaiDemoRunner:
             return self._outcome(cycle_id, "NO_TRADE", "no_signal")
         return self._attempt_entry(signal, bar.epic, cycle_id)
 
-    def on_external_signal(self, direction: Direction, source: str = "tradingview") -> DemoOutcome:
+    def on_external_signal(
+        self,
+        direction: Direction,
+        source: str = "tradingview",
+        reference_price: Decimal | None = None,
+    ) -> DemoOutcome:
         """Enter on a signal produced outside this process (the owner's TradingView alert).
 
         The entry follows the same path as a local signal: spread guard, order factory,
@@ -562,7 +567,11 @@ class TaiDemoRunner:
                 build = getattr(self._signal, "external_signal", None)
                 if rules is None or not callable(build):
                     raise TaiDemoRefused("external signals need broker rules and a signal builder")
-                signal = build(direction, rules)
+                signal = (
+                    build(direction, rules, reference=reference_price)
+                    if reference_price is not None
+                    else build(direction, rules)
+                )
             except (TaiDemoRefused, ValueError) as exc:
                 self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
                 self._send_alert(f"{source} {direction.value} not traded: {str(exc)[:120]}")

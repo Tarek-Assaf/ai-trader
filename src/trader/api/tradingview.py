@@ -15,6 +15,7 @@ import threading
 import time
 from collections.abc import Callable
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
@@ -98,13 +99,29 @@ async def tradingview_alert(request: Request, background: BackgroundTasks) -> di
         _last_accepted[key] = current
     # TradingView gives up after about 3 seconds, and placing the order takes longer.
     # Answer at once and trade after the response has been sent.
-    background.add_task(_trade, runner, Direction(signal), signal)
+    background.add_task(_trade, runner, Direction(signal), signal, _close_price(payload))
     return {"status": "accepted", "signal": signal}
 
 
-def _trade(runner: Any, direction: Direction, signal: str) -> None:
+def _close_price(payload: dict[str, Any]) -> Decimal | None:
+    """TradingView's bar close from the alert, when the message carries a usable one."""
+    raw = payload.get("close")
+    if raw is None or isinstance(raw, bool):
+        return None
     try:
-        outcome = runner.on_external_signal(direction)
+        value = Decimal(str(raw).strip())
+    except (InvalidOperation, ValueError):
+        return None
+    return value if value.is_finite() and value > 0 else None
+
+
+def _trade(runner: Any, direction: Direction, signal: str, close: Decimal | None) -> None:
+    try:
+        outcome = (
+            runner.on_external_signal(direction, reference_price=close)
+            if close is not None
+            else runner.on_external_signal(direction)
+        )
         LOGGER.warning("tradingview %s alert -> %s %s", signal, outcome.action, outcome.reason)
     except Exception:  # noqa: BLE001 - nothing is waiting on this task
         LOGGER.error("tradingview %s alert failed", signal, exc_info=True)

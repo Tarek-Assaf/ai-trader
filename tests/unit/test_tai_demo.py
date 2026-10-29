@@ -767,3 +767,23 @@ def test_check_broker_closed_notices_a_closed_trade_without_a_bar():
     assert any("CLOSED" in alert for alert in alerts)
     instance.check_broker_closed()  # nothing tracked any more: quiet
     assert sum(event["event"] == "reconcile_closed" for event in events) == 1
+
+
+def test_external_signal_passes_the_tradingview_reference_to_the_builder() -> None:
+    seen = []
+
+    class Builder(_ExternalSignals):
+        def external_signal(self, direction, rules, reference=None):
+            seen.append(reference)
+            return super().external_signal(direction, rules)
+
+    gateway = Gateway()
+    instance, _manager = runner(
+        gateway,
+        signal_provider=Builder(),
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="100.5"),
+        epic="NSXUSD",
+    )
+    instance.on_external_signal(Direction.BUY, reference_price=Decimal("101"))
+    assert seen == [Decimal("101")]
