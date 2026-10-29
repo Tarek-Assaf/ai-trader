@@ -99,7 +99,7 @@ class CommandDataService:
             except Exception as exc:
                 self._log_provider_failure("pnl", exc)
                 return "P&L is unavailable right now."
-            rendered = self._render_value(value, "P&L")
+            rendered = self._render_pnl(value) or self._render_value(value, "P&L")
             if rendered is not None:
                 return rendered
         account = self._account()
@@ -187,6 +187,35 @@ class CommandDataService:
         if value in {"daily", "weekly", "monthly"}:
             return cast(ReportPeriod, value)
         return "daily"
+
+    @staticmethod
+    def _render_pnl(value: object) -> str | None:
+        """One item per line: closed result, open result, total, balance, trade count."""
+        try:
+            realized = Decimal(str(value.realized_net))  # type: ignore[attr-defined]
+            floating = Decimal(str(value.unrealized_net))  # type: ignore[attr-defined]
+            balance = Decimal(str(value.balance))  # type: ignore[attr-defined]
+            equity = Decimal(str(value.equity))  # type: ignore[attr-defined]
+            currency = str(value.currency)  # type: ignore[attr-defined]
+        except (AttributeError, ArithmeticError, ValueError):
+            return None
+        from trader.reports.trade_ledger import money
+
+        trades = tuple(getattr(value, "r_multiples", ()) or ())
+        wins = sum(1 for trade in trades if Decimal(str(trade.net_profit)) > 0)
+        lines = [
+            "P&L today (since 03:00 Riyadh):",
+            f"Closed trades: {money(realized, currency)}",
+            f"Open positions: {money(floating, currency)}",
+            f"Total: {money(realized + floating, currency)}",
+            f"Balance: {balance:.2f}",
+            f"Equity: {equity:.2f}",
+        ]
+        if trades:
+            lines.append(f"Trades closed: {len(trades)} ({wins} won, {len(trades) - wins} lost)")
+        else:
+            lines.append("Trades closed: none yet")
+        return "\n".join(lines)
 
     @staticmethod
     def _render_value(value: object, label: str) -> str | None:

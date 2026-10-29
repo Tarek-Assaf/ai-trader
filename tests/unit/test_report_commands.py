@@ -140,3 +140,47 @@ def test_scheduled_report_includes_llm_cost_from_usage_summary() -> None:
     document = runner.render("daily")
     assert document is not None
     assert "Spend: USD 1.23" in document.plain_text
+
+
+def test_pnl_shows_closed_open_total_and_trade_count_one_per_line() -> None:
+    from types import SimpleNamespace
+
+    report = SimpleNamespace(
+        currency="USD",
+        realized_net=Decimal("-13.20"),
+        unrealized_net=Decimal("0"),
+        balance=Decimal("10965.50"),
+        equity=Decimal("10965.50"),
+        r_multiples=(
+            SimpleNamespace(net_profit=Decimal("-11.79")),
+            SimpleNamespace(net_profit=Decimal("-2.41")),
+            SimpleNamespace(net_profit=Decimal("1.00")),
+        ),
+    )
+
+    text = CommandDataService(pnl_provider=lambda: report).pnl()
+
+    assert text.splitlines() == [
+        "P&L today (since 03:00 Riyadh):",
+        "Closed trades: -$13.20",
+        "Open positions: +$0.00",
+        "Total: -$13.20",
+        "Balance: 10965.50",
+        "Equity: 10965.50",
+        "Trades closed: 3 (1 won, 2 lost)",
+    ]
+
+
+def test_pnl_without_trades_says_none_yet() -> None:
+    from types import SimpleNamespace
+
+    report = SimpleNamespace(
+        currency="USD",
+        realized_net=Decimal("0"),
+        unrealized_net=Decimal("0"),
+        balance=Decimal("10000"),
+        equity=Decimal("10000"),
+        r_multiples=(),
+    )
+
+    assert "Trades closed: none yet" in CommandDataService(pnl_provider=lambda: report).pnl()
