@@ -43,6 +43,7 @@ from trader.integrations.capital_com.client import CapitalComClient
 from trader.integrations.capital_com.trading import CapitalComTradingClient
 from trader.lab.runner import LabJobManager, LabRunner
 from trader.reports.commands import CommandDataService
+from trader.reports.trade_history import trade_history_text
 from trader.runtime import (
     RuntimeComponents,
     RuntimeFeedAdapters,
@@ -1064,6 +1065,18 @@ async def lifespan(_app: FastAPI) -> Any:
             lab_manager = getattr(_app.state, "lab_job_manager", None)
             if isinstance(lab_manager, LabJobManager):
                 command_handlers["/lab"] = lab_manager.handle
+            history_engine = getattr(
+                (getattr(_app.state, "runtime_services", None) or {}).get("audit_writer"),
+                "engine",
+                None,
+            )
+
+            def trades_handler(command: str) -> str:
+                if history_engine is None:
+                    return "Trade history is unavailable right now."
+                return trade_history_text(history_engine)
+
+            command_handlers["/trades"] = trades_handler
 
             def render_chart(command: str, argument: str) -> bytes:
                 if command == "/lab" and isinstance(lab_manager, LabJobManager):
@@ -1159,6 +1172,7 @@ app.include_router(tradingview_router)
 TELEGRAM_MENU = (
     {"command": "status", "description": "Bot status and health"},
     {"command": "positions", "description": "Open positions"},
+    {"command": "trades", "description": "Open positions or recent trade history"},
     {"command": "pnl", "description": "Profit and loss"},
     {"command": "risk", "description": "Risk limits and usage"},
     {"command": "report", "description": "Daily, weekly or monthly report"},

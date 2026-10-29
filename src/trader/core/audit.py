@@ -54,6 +54,11 @@ class SqlAuditWriter:
     def __init__(self, engine: Engine) -> None:
         self._engine = engine
 
+    @property
+    def engine(self) -> Engine:
+        """Engine used for reading trade history back out of ``audit_log``."""
+        return self._engine
+
     def append(self, event: AuditEvent) -> None:
         """Append a canonical JSON payload in one database transaction.
 
