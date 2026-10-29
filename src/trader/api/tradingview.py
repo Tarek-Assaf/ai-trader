@@ -26,9 +26,12 @@ router = APIRouter()
 
 MIN_SECRET_LENGTH = 16
 MAX_BODY_BYTES = 2000
-# TradingView fires at the close of a 3-minute bar.  Later than this the price has moved
-# on and the entry is no longer the one the indicator signalled.
-MAX_ALERT_AGE_SECONDS = 170
+# The alerts are set to "Once per bar close", so TradingView sends them within seconds of a
+# 3-minute bar closing.  Anything arriving mid-bar is not a bar-close signal and the price has
+# moved on; the last seconds of the previous bar count too (clock differences).
+MAX_ALERT_AGE_SECONDS = 45
+BAR_SECONDS = 180
+EARLY_ALERT_SECONDS = 5
 DUPLICATE_WINDOW_SECONDS = 120.0
 
 _now: Callable[[], datetime] = lambda: datetime.now(UTC)  # noqa: E731 - replaced in tests
@@ -83,7 +86,7 @@ async def tradingview_alert(request: Request, background: BackgroundTasks) -> di
     if runner is None or not callable(getattr(runner, "on_external_signal", None)):
         raise HTTPException(status_code=503, detail="trading runtime is not ready")
     age = _seconds_into_bar(_now().astimezone(UTC))
-    if age > MAX_ALERT_AGE_SECONDS:
+    if MAX_ALERT_AGE_SECONDS < age < BAR_SECONDS - EARLY_ALERT_SECONDS:
         LOGGER.warning("tradingview %s alert ignored: %ss after the bar closed", signal, age)
         return {"status": "stale", "signal": signal, "age_seconds": age}
     key = f"{symbol}:{signal}"

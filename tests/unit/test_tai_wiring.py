@@ -815,3 +815,19 @@ def test_runtime_group_routes_each_bar_to_its_instrument_and_merges_health() -> 
     assert set(group.snapshot_state()) == {"deal-US100", "deal-GOLD"}
     assert group.runner == "runner-US100" and group.runner_for("GOLD") == "runner-GOLD"
     assert group.runner_for("DAX") is None
+
+
+def test_external_signal_levels_are_whole_ticks() -> None:
+    first = datetime(2026, 10, 28, 11, 30, tzinfo=UTC)
+    provider = TaiSignalProvider(_bars_with_lows(["500"] * 13, first))
+    provider._latest_atr = Decimal("7.77")
+    now = datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
+    rules = _quote_rules("600", "601.8")
+    assert rules.tick_size == Decimal("0.1")
+    for direction in (Direction.BUY, Direction.SELL):
+        signal = provider.external_signal(direction, rules, now)
+        for value in (signal.stop, *signal.levels()):
+            assert value % Decimal("0.1") == 0
+        assert len(signal.levels()) == 3
+    sell = provider.external_signal(Direction.SELL, rules, now)
+    assert sell.stop >= sell.entry  # never tighter than the indicator's stop

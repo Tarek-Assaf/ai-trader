@@ -73,8 +73,8 @@ def test_other_events_are_acknowledged_but_never_trade(client) -> None:
     assert client.runner.calls == []
 
 
-def test_a_late_alert_is_not_traded(client) -> None:
-    client.clock["now"] = datetime(2026, 10, 28, 20, 14, 58, tzinfo=UTC)  # 178 s into the bar
+def test_a_mid_bar_alert_is_not_traded(client) -> None:
+    client.clock["now"] = datetime(2026, 10, 28, 20, 13, 58, tzinfo=UTC)  # 118 s into the bar
     assert _post(client, secret=SECRET, signal="SELL").json()["status"] == "stale"
     assert client.runner.calls == []
 
@@ -142,3 +142,10 @@ def test_a_failing_runner_still_gets_a_fast_accepted_reply(client) -> None:
     response = _post(client, secret=SECRET, signal="BUY")
     assert response.status_code == 200
     assert response.json()["status"] == "accepted"
+
+
+def test_alerts_just_before_or_after_the_bar_close_are_traded(client) -> None:
+    client.clock["now"] = datetime(2026, 10, 28, 20, 14, 58, tzinfo=UTC)  # 178 s: bar closing
+    assert _post(client, secret=SECRET, signal="SELL").json()["status"] == "accepted"
+    client.clock["now"] = datetime(2026, 10, 28, 20, 15, 40, tzinfo=UTC)  # 40 s after
+    assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "accepted"

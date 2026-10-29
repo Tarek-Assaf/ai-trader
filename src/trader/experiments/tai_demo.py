@@ -739,26 +739,45 @@ class TaiDemoRunner:
         )
         return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
 
+    def check_broker_closed(self) -> None:
+        """Notice a trade the broker closed (stop, target, manual) without waiting for a bar."""
+        with self._lock:
+            if self._dry_run or not any(not state.shadow for state in self._managed.values()):
+                return
+            positions = tuple(self._positions.get_positions())
+            now = datetime.now(UTC)
+            cycle_id = f"tai-reconcile-{now.strftime('%Y%m%dT%H%M%S')}"
+            for epic in {state.epic for state in self._managed.values() if not state.shadow}:
+                self._reconcile_closed(epic, positions, cycle_id, now)
+
+    def _reconcile_closed(
+        self, epic: str, positions: tuple[Position, ...], cycle_id: str, at: datetime
+    ) -> None:
+        present_ids = {position.deal_id for position in positions}
+        for deal_id, tracked in tuple(self._managed.items()):
+            if tracked.shadow or tracked.epic != epic or deal_id in present_ids:
+                continue
+            self._managed.pop(deal_id, None)
+            self._last_exit_at = at
+            note_exit = getattr(self._signal, "note_exit", None)
+            if callable(note_exit):
+                note_exit(at)
+            self._journal_event(
+                cycle_id, "reconcile_closed", deal_id=deal_id, reason="broker_closed"
+            )
+            self._record_exit(epic)
+            self._send_alert(
+                f"CLOSED {epic}: the trade is no longer open on Capital.com "
+                "(stop, target or manual). Exact result: Capital.com History."
+            )
+            self._persist_state()
+
     def _manage_exits(self, bar: ClosedBar, cycle_id: str) -> None:
         if self._dry_run:
             self._manage_shadow_exits(bar, cycle_id)
             return
         positions = tuple(self._positions.get_positions())
-        present_ids = {position.deal_id for position in positions}
-        for deal_id, tracked in tuple(self._managed.items()):
-            if tracked.shadow or tracked.epic != bar.epic or deal_id in present_ids:
-                continue
-            self._managed.pop(deal_id, None)
-            self._last_exit_at = bar.at
-            note_exit = getattr(self._signal, "note_exit", None)
-            if callable(note_exit):
-                note_exit(bar.at)
-            self._journal_event(
-                cycle_id, "reconcile_closed", deal_id=deal_id, reason="broker_closed"
-            )
-            self._record_exit(bar.epic)
-            self._send_alert(f"flat {bar.epic} broker_closed")
-            self._persist_state()
+        self._reconcile_closed(bar.epic, positions, cycle_id, bar.at)
         for position in positions:
             if position.epic != bar.epic:
                 continue
