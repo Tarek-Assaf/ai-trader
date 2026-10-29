@@ -311,3 +311,83 @@ def test_alerts_with_distinct_keys_are_not_throttled_together() -> None:
     assert limiter.allow("tai_demo:2")  # a second message in the same second still goes out
     assert not limiter.allow("tai_demo:1")
     assert Alert("k", "text").text == "text"
+
+
+_TOTP_SECRET = "JBSWY3DPEHPK3PXP"
+
+
+def _totp_now(offset: int = 0) -> str:
+    import base64
+    import hashlib
+    import hmac
+    import struct
+    import time
+
+    key = base64.b32decode(_TOTP_SECRET)
+    step = int(time.time() // 30) + offset
+    digest = hmac.new(key, struct.pack(">Q", step), hashlib.sha1).digest()
+    start = digest[-1] & 0x0F
+    value = struct.unpack(">I", digest[start : start + 4])[0] & 0x7FFFFFFF
+    return f"{value % 1_000_000:06d}"
+
+
+def _confirm_resume_with_totp(transport, channel) -> None:
+    channel.handle_message("owner", "/resume")
+    markup = transport.messages[-1][2]
+    nonce = markup["inline_keyboard"][0][0]["callback_data"].split(":", 1)[1]
+    channel.handle_update(callback_update(nonce))
+
+
+def test_resume_asks_for_the_authenticator_code_and_resumes_on_a_good_one() -> None:
+    transport = FakeTransport()
+    channel, writer = make_channel(
+        transport,
+        current_mode=lambda: ControlMode.PAUSE,
+        resume_totp_secret=_TOTP_SECRET,
+    )
+    _confirm_resume_with_totp(transport, channel)
+    assert "6-digit code" in transport.messages[-1][1]
+    assert writer.set_modes == []
+    channel.handle_message("owner", _totp_now())
+    assert writer.set_modes == [ControlMode.RESUME]
+    assert "Resume requested" in transport.messages[-1][1]
+
+
+def test_wrong_code_is_refused_three_times_then_the_request_closes() -> None:
+    transport = FakeTransport()
+    channel, writer = make_channel(
+        transport,
+        current_mode=lambda: ControlMode.PAUSE,
+        resume_totp_secret=_TOTP_SECRET,
+    )
+    _confirm_resume_with_totp(transport, channel)
+    for _ in range(3):
+        channel.handle_message("owner", "000000" if _totp_now() != "000000" else "111111")
+    assert "three times" in transport.messages[-1][1]
+    channel.handle_message("owner", _totp_now())
+    assert writer.set_modes == []
+
+
+def test_a_used_code_cannot_resume_twice() -> None:
+    transport = FakeTransport()
+    channel, writer = make_channel(
+        transport,
+        current_mode=lambda: ControlMode.PAUSE,
+        resume_totp_secret=_TOTP_SECRET,
+    )
+    code = _totp_now()
+    _confirm_resume_with_totp(transport, channel)
+    channel.handle_message("owner", code)
+    assert writer.set_modes == [ControlMode.RESUME]
+    _confirm_resume_with_totp(transport, channel)
+    channel.handle_message("owner", code)
+    assert writer.set_modes == [ControlMode.RESUME]
+
+
+def test_published_menu_lists_every_owner_command_including_resume() -> None:
+    from trader.api.app import TELEGRAM_MENU
+
+    names = {item["command"] for item in TELEGRAM_MENU}
+    assert {"resume", "pause", "kill", "stop", "status", "pnl", "positions"} <= names
+    assert all("/" + name in TelegramChannel.COMMANDS for name in names if name != "help")
+    assert all(0 < len(item["description"]) <= 256 for item in TELEGRAM_MENU)

@@ -23,6 +23,8 @@ from typing import Any, Protocol
 from trader.execution.control import ControlMode, ControlWriter
 
 LOGGER = logging.getLogger(__name__)
+RESUME_CODE_SECONDS = 120
+RESUME_CODE_ATTEMPTS = 3
 
 
 class TelegramTransport(Protocol):
@@ -173,6 +175,7 @@ class TelegramChannel:
         render_chart: Callable[[str, str], bytes] | None = None,
         router: MessageRouter | None = None,
         authorize_resume: Callable[[], bool] | None = None,
+        resume_totp_secret: str | None = None,
         audit: AuditSink | None = None,
         nonce_store: NonceStore | None = None,
         alert_limiter: AlertLimiter | None = None,
@@ -194,6 +197,10 @@ class TelegramChannel:
         self._render_chart = render_chart
         self._router = router
         self._authorize_resume = authorize_resume
+        self._totp_secret = (resume_totp_secret or "").strip()
+        # chat id -> (expires at, failed attempts); the code itself is never stored or logged.
+        self._awaiting_code: dict[str, tuple[float, int]] = {}
+        self._last_totp_step: int | None = None
         self._audit = audit
         self._nonces = nonce_store or NonceStore()
         self._alerts = alert_limiter or AlertLimiter()
@@ -257,6 +264,8 @@ class TelegramChannel:
                 "ignored non-owner telegram update",
                 extra={"chat_hash": self._hash(chat_id)},
             )
+            return
+        if chat_id in self._awaiting_code and self._handle_resume_code(chat_id, text):
             return
         command, argument = self._parse_command(text)
         if command == "/resume":
@@ -383,17 +392,64 @@ class TelegramChannel:
             return
         if not self._resume_mode_is_safe(chat_id, callback_id=callback_id):
             return
+        if self._totp_secret:
+            self._awaiting_code[chat_id] = (time.monotonic() + RESUME_CODE_SECONDS, 0)
+            self._transport.answer_callback(callback_id, "Send your 6-digit code")
+            self._send(
+                chat_id,
+                "Reply with the 6-digit code from your authenticator app to resume "
+                f"(valid {RESUME_CODE_SECONDS} seconds).",
+            )
+            return
         if self._authorize_resume is None or not self._authorize_resume():
             self._transport.answer_callback(callback_id, "Owner authorization failed")
             self._audit_event("resume_rejected", chat_id, "pause", "unknown", nonce)
             return
+        self._complete_resume(chat_id, callback_id, nonce)
+
+    def _handle_resume_code(self, chat_id: str, text: str) -> bool:
+        """Consume a pending resume code; returns true when the message was the code reply."""
+        expires, failures = self._awaiting_code[chat_id]
+        code = text.strip()
+        if time.monotonic() > expires:
+            del self._awaiting_code[chat_id]
+            self._send(chat_id, "The resume code window closed. Send /resume to start again.")
+            return not (len(code) == 6 and code.isdigit())
+        if not (len(code) == 6 and code.isdigit()):
+            return False
+        if not self._resume_mode_is_safe(chat_id):
+            del self._awaiting_code[chat_id]
+            return True
+        from trader.control.totp import matching_totp_step
+
+        step = matching_totp_step(self._totp_secret, code)
+        if step is None or step == self._last_totp_step:
+            failures += 1
+            self._audit_event("resume_rejected", chat_id, "pause", "unknown", None)
+            if failures >= RESUME_CODE_ATTEMPTS:
+                del self._awaiting_code[chat_id]
+                self._send(chat_id, "Wrong code three times. Send /resume to start again.")
+            else:
+                self._awaiting_code[chat_id] = (expires, failures)
+                self._send(chat_id, "That code did not work. Check your authenticator and retry.")
+            return True
+        self._last_totp_step = step
+        del self._awaiting_code[chat_id]
+        self._complete_resume(chat_id, None, None)
+        return True
+
+    def _complete_resume(self, chat_id: str, callback_id: str | None, nonce: str | None) -> None:
         try:
             self._control_writer.set(ControlMode.RESUME)
         except Exception:
-            self._transport.answer_callback(callback_id, "Execution control unavailable")
+            if callback_id is not None:
+                self._transport.answer_callback(callback_id, "Execution control unavailable")
+            else:
+                self._send(chat_id, "Execution control unavailable.")
             return
         self._audit_event("resume", chat_id, "pause", ControlMode.RESUME.value, nonce)
-        self._transport.answer_callback(callback_id, "Resume requested")
+        if callback_id is not None:
+            self._transport.answer_callback(callback_id, "Resume requested")
         self._send(chat_id, "Resume requested; reconciliation must succeed before entries resume.")
 
     def _resume_mode_is_safe(self, chat_id: str, *, callback_id: str | None = None) -> bool:
