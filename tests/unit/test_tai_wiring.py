@@ -766,7 +766,7 @@ def test_external_signal_uses_the_five_bars_before_the_signal_bar_for_the_stop()
 def test_external_signal_refuses_when_atr_or_history_is_missing() -> None:
     first = datetime(2026, 10, 28, 11, 30, tzinfo=UTC)
     now = datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
-    no_atr = TaiSignalProvider(_bars_with_lows(["500"] * 13, first))
+    no_atr = TaiSignalProvider(_bars_with_lows(["500"] * 12 + ["650"], first))
     with pytest.raises(ValueError, match="ATR"):
         no_atr.external_signal(Direction.BUY, _quote_rules("1", "2"), now)
     short = TaiSignalProvider(_bars_with_lows(["500"] * 3, first))
@@ -819,7 +819,7 @@ def test_runtime_group_routes_each_bar_to_its_instrument_and_merges_health() -> 
 
 def test_external_signal_levels_are_whole_ticks() -> None:
     first = datetime(2026, 10, 28, 11, 30, tzinfo=UTC)
-    provider = TaiSignalProvider(_bars_with_lows(["500"] * 13, first))
+    provider = TaiSignalProvider(_bars_with_lows(["500"] * 12 + ["650"], first))
     provider._latest_atr = Decimal("7.77")
     now = datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
     rules = _quote_rules("600", "601.8")

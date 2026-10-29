@@ -591,6 +591,8 @@ class TaiSignalProvider:
             * tick
             for multiple in (1, 2, 3)
         )
+        if any(target <= 0 for target in targets):
+            return TaiSignal(direction, quote, stop)
         return TaiSignal(direction, quote, stop, targets)
 
     @property
