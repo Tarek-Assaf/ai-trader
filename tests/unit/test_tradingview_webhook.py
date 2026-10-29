@@ -49,7 +49,7 @@ def _post(client, **body):
 def test_valid_buy_alert_reaches_the_runner(client) -> None:
     response = _post(client, secret=SECRET, signal="buy")
     assert response.status_code == 200
-    assert response.json()["status"] == "SUBMITTED"
+    assert response.json()["status"] == "accepted"
     assert client.runner.calls == [Direction.BUY]
 
 
@@ -80,10 +80,10 @@ def test_a_late_alert_is_not_traded(client) -> None:
 
 
 def test_a_repeated_alert_is_traded_once(client) -> None:
-    assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "SUBMITTED"
+    assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "accepted"
     assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "duplicate"
     client.clock["mono"] += 200
-    assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "SUBMITTED"
+    assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "accepted"
     assert client.runner.calls == [Direction.BUY, Direction.BUY]
 
 
@@ -122,13 +122,23 @@ def test_symbol_routes_the_alert_to_that_instruments_runner(client) -> None:
         },
     )
     assert _post(client, secret=SECRET, signal="SELL", symbol="XAUUSD").json()["status"] == (
-        "SUBMITTED"
+        "accepted"
     )
     assert _post(client, secret=SECRET, signal="BUY", symbol="NAS100").json()["status"] == (
-        "SUBMITTED"
+        "accepted"
     )
     assert gold.calls == [Direction.SELL] and us100.calls == [Direction.BUY]
     assert _post(client, secret=SECRET, signal="BUY", symbol="DAX").status_code == 503
     assert _post(client, secret=SECRET, signal="BUY", symbol="NAS100").json()["status"] == (
         "duplicate"
     )
+
+
+def test_a_failing_runner_still_gets_a_fast_accepted_reply(client) -> None:
+    def boom(direction: Direction) -> None:
+        raise RuntimeError("broker down")
+
+    client.runner.on_external_signal = boom
+    response = _post(client, secret=SECRET, signal="BUY")
+    assert response.status_code == 200
+    assert response.json()["status"] == "accepted"
