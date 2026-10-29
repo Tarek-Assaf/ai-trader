@@ -1090,6 +1090,11 @@ async def lifespan(_app: FastAPI) -> Any:
                 render=_command_renderer(command_handlers),
                 render_chart=render_chart,
                 authorize_resume=lambda: settings.owner_totp_secret is None,
+                resume_totp_secret=(
+                    settings.owner_totp_secret.get_secret_value()
+                    if settings.owner_totp_secret
+                    else None
+                ),
             )
             if report_scheduler is not None and hasattr(report_scheduler, "configure_alert"):
                 report_scheduler.configure_alert(channel.send_alert)
