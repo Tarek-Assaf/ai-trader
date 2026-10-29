@@ -417,3 +417,41 @@ def test_bad_spread_is_quarantined_without_stopping_recorder(tmp_path: Path) -> 
     status = json.loads((tmp_path / "status.json").read_text(encoding="utf-8"))
     assert status["rejected_candles"] == 1
     assert status["last_reject_reason"] == "ask_close_below_bid_close"
+
+
+def test_store_reuses_its_month_in_memory_but_rereads_a_changed_file(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import trader.data.recorder as recorder_module
+
+    store = ParquetCandleStore(tmp_path / "lake")
+    start = datetime(2026, 10, 3, 12, 0, tzinfo=UTC)
+    store.upsert_many([("NAS100", _update(start, "bid")), ("NAS100", _update(start, "ask"))])
+
+    reads: list[object] = []
+    real_read = recorder_module.pq.read_table
+
+    def counting_read(*args, **kwargs):
+        reads.append(args[0])
+        return real_read(*args, **kwargs)
+
+    monkeypatch.setattr(recorder_module.pq, "read_table", counting_read)
+    later = start + timedelta(minutes=1)
+    store.upsert_many([("NAS100", _update(later, "bid")), ("NAS100", _update(later, "ask"))])
+    assert reads == []  # second batch merged into the cached month: no re-read
+
+    output = tmp_path / "lake" / "NAS100" / "1m_capital" / "2026" / "10.parquet"
+    rows = real_read(output).to_pylist()
+    assert len(rows) == 4
+    assert {row["ts_utc"] for row in rows} == {start, later}
+
+    # Another writer replaces the file: the store must notice and read it again.
+    outside = ParquetCandleStore(tmp_path / "lake")
+    extra = start + timedelta(minutes=5)
+    outside.upsert_many([("NAS100", _update(extra, "bid")), ("NAS100", _update(extra, "ask"))])
+    reads.clear()  # the other writer's own read does not count
+    store.upsert_many([("NAS100", _update(later, "bid", close=105.0))])
+    assert len(reads) == 1
+    final = real_read(output).to_pylist()
+    assert len(final) == 6
+    assert {row["ts_utc"] for row in final} == {start, later, extra}

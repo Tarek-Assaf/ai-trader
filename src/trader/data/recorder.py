@@ -8,7 +8,7 @@ import os
 import tempfile
 import threading
 import time
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -40,6 +40,7 @@ _SCHEMA = pa.schema(
 )
 _SOURCE_RANK = {"capital_ws": 1, "capital_rest": 2}
 _MAX_REJECTED_CANDLES = 1_000_000
+_MAX_CACHED_FILES = 6
 _REJECT_ASK_BELOW_BID = "ask_close_below_bid_close"
 _REJECT_TIMESTAMP = "timestamp_not_timezone_aware"
 _REJECT_SIDE = "invalid_side"
@@ -61,6 +62,30 @@ class ParquetCandleStore:
     def __init__(self, lake_root: str | Path) -> None:
         self._root = Path(lake_root)
         self._lock = threading.RLock()
+        # Month rows already in memory, keyed by file.  Re-reading and re-parsing the whole
+        # month on every minute made the recorder CPU-bound late in the month.  An entry is
+        # only trusted while the file is exactly as this store last wrote it.
+        self._cache: OrderedDict[Path, tuple[tuple[int, int], dict[Any, dict[str, Any]]]] = (
+            OrderedDict()
+        )
+
+    @staticmethod
+    def _signature(path: Path) -> tuple[int, int]:
+        info = path.stat()
+        return (info.st_mtime_ns, info.st_size)
+
+    def _prior_rows(self, path: Path) -> dict[tuple[str, datetime, str], dict[str, Any]]:
+        if not path.exists():
+            return {}
+        # Taken out of the cache while it is being changed, and put back only after the
+        # file was written; any failure in between leaves it uncached, never half-updated.
+        cached = self._cache.pop(path, None)
+        if cached is not None and cached[0] == self._signature(path):
+            return cached[1]
+        return {
+            (row["epic"], row["ts_utc"], row["side"]): row
+            for row in pq.read_table(path).to_pylist()
+        }
 
     @staticmethod
     def _minute(stamp: datetime) -> datetime:
@@ -127,11 +152,7 @@ class ParquetCandleStore:
         written = 0
         with self._lock:
             for path, batch in grouped.items():
-                prior = pq.read_table(path).to_pylist() if path.exists() else []
-                rows: dict[tuple[str, datetime, str], dict[str, Any]] = {}
-                for row in prior:
-                    key = (row["epic"], row["ts_utc"], row["side"])
-                    rows[key] = row
+                rows = self._prior_rows(path)
                 changed_keys: set[tuple[str, datetime, str]] = set()
                 for _symbol, update in sorted(
                     batch,
@@ -207,6 +228,10 @@ class ParquetCandleStore:
                     temporary.replace(path)
                 finally:
                     temporary.unlink(missing_ok=True)
+                self._cache[path] = (self._signature(path), rows)
+                self._cache.move_to_end(path)
+                while len(self._cache) > _MAX_CACHED_FILES:
+                    self._cache.popitem(last=False)
         return written
 
 
