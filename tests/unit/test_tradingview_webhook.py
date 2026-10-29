@@ -81,7 +81,9 @@ def test_a_late_alert_is_not_traded(client) -> None:
 
 def test_a_repeated_alert_is_traded_once(client) -> None:
     assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "SUBMITTED"
-    assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "duplicate"
+    assert _post(client, secret=SECRET, signal="BUY", symbol="NAS100").json()["status"] == (
+        "duplicate"
+    )
     client.clock["mono"] += 200
     assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "SUBMITTED"
     assert client.runner.calls == [Direction.BUY, Direction.BUY]
@@ -129,4 +131,6 @@ def test_symbol_routes_the_alert_to_that_instruments_runner(client) -> None:
     )
     assert gold.calls == [Direction.SELL] and us100.calls == [Direction.BUY]
     assert _post(client, secret=SECRET, signal="BUY", symbol="DAX").status_code == 503
-    assert _post(client, secret=SECRET, signal="BUY").json()["status"] == "duplicate"
+    assert _post(client, secret=SECRET, signal="BUY", symbol="NAS100").json()["status"] == (
+        "duplicate"
+    )
