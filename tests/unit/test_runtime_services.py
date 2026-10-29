@@ -282,3 +282,26 @@ def test_recorder_health_alerts_after_degradation_and_recovers(tmp_path: Path) -
     scheduler.run_due()
     assert len(sent) == 2
     assert sent[1].alert_key == "recorder_health_recovered"
+
+
+def test_open_positions_use_the_configured_symbol_not_the_broker_epic() -> None:
+    from decimal import Decimal
+
+    from trader.risk.guardian import OpenPosition
+    from trader.runtime.services import _canonical_positions
+
+    instruments = {
+        "instruments": {
+            "NAS100": {"capital_epic": "US100", "aliases": ["NAS100", "US100"]},
+            "XAUUSD": {"capital_epic": "GOLD", "aliases": ["XAUUSD", "GOLD"]},
+        }
+    }
+    raw = (
+        OpenPosition("US100", Decimal("5"), Decimal("100"), Decimal("1000")),
+        OpenPosition("GOLD", Decimal("3"), Decimal("50"), Decimal("500")),
+        OpenPosition("OTHER", Decimal("1"), Decimal("1"), Decimal("1")),
+    )
+
+    names = [p.instrument for p in _canonical_positions(lambda: raw, instruments)()]
+
+    assert names == ["NAS100", "XAUUSD", "OTHER"]

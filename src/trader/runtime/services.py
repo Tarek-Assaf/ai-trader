@@ -289,8 +289,10 @@ def build_runtime_services(
                 raise ContextUnavailable("instrument terms or sizing limits are unavailable")
 
             sizing_source = unavailable_sizing
-        positions_source = provided.get("positions_provider") or position_source(
-            broker, valuation=position_valuation
+        positions_source = _canonical_positions(
+            provided.get("positions_provider")
+            or position_source(broker, valuation=position_valuation),
+            _dump_mapping(configs.get("instruments")),
         )
         if callable(account_source) and callable(market_source) and callable(sizing_source):
             context_provider = RuntimeContextProvider(
@@ -467,6 +469,34 @@ def _period_key(period: str, now: datetime) -> str:
     elif period == "monthly":
         day = day.replace(day=1)
     return f"{period}:{day.isoformat()}"
+
+
+def _canonical_positions(source: Any, instruments: Mapping[str, Any]) -> Any:
+    """Name each open position by its configured symbol (GOLD -> XAUUSD, US100 -> NAS100).
+
+    The broker reports its own epic; the Guardian only knows the configured symbols, so an
+    open position under the broker name made it refuse every new order.
+    """
+    items: Any = instruments.get("instruments", instruments)
+    names: dict[str, str] = {}
+    if isinstance(items, Mapping):
+        for symbol, item in items.items():
+            names[str(symbol).upper()] = str(symbol)
+            if isinstance(item, Mapping):
+                for alias in (item.get("capital_epic"), *(item.get("aliases") or ())):
+                    if alias:
+                        names[str(alias).upper()] = str(symbol)
+
+    def read() -> tuple[Any, ...]:
+        return tuple(
+            replace(
+                position,
+                instrument=names.get(str(position.instrument).upper(), position.instrument),
+            )
+            for position in source()
+        )
+
+    return read
 
 
 def _period_start(period: str, now: datetime) -> datetime:
