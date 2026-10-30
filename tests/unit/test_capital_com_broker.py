@@ -197,3 +197,45 @@ def test_modify_close_cancel_and_polling_use_confirmed_references() -> None:
     assert broker.get_positions()[0].deal_id == "deal-1"
     assert broker.get_open_orders()[0]["workingOrderData"]["dealId"] == "work-1"
     assert broker.get_activity(now, now + timedelta(hours=1))[0]["status"] == "ACCEPTED"
+
+
+class _HttpError(RuntimeError):
+    def __init__(self, status_code, error_code=None):
+        self.status_code, self.error_code = status_code, error_code
+        super().__init__(f"HTTP {status_code}")
+
+
+def test_a_refused_order_request_is_a_rejection_not_an_ambiguous_outcome() -> None:
+    from trader.execution.brokers.base import OrderRejected
+
+    client = FakeCapitalClient()
+
+    def refuse(_payload):
+        raise _HttpError(400, "error.invalid.stoploss.minvalue")
+
+    client.open_position = refuse
+    broker = CapitalComBroker(client, enable_demo_orders=True)
+
+    with pytest.raises(OrderRejected, match="error.invalid.stoploss.minvalue"):
+        broker.place_order(order())
+
+
+def test_a_server_error_on_the_order_request_stays_ambiguous() -> None:
+    from trader.execution.brokers.base import OrderRejected
+
+    client = FakeCapitalClient()
+
+    def fail(_payload):
+        raise _HttpError(503)
+
+    client.open_position = fail
+    broker = CapitalComBroker(client, enable_demo_orders=True)
+
+    with pytest.raises(_HttpError):
+        broker.place_order(order())
+    try:
+        broker.place_order(order())
+    except OrderRejected:
+        raise AssertionError("a 5xx must not be treated as a clean rejection") from None
+    except Exception:
+        pass

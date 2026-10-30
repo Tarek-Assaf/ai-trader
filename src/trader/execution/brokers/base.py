@@ -18,6 +18,14 @@ class BrokerProtocolError(BrokerError):
     """Raised when a broker reply is missing required fields or is inconsistent."""
 
 
+class OrderRejected(BrokerError):
+    """The broker refused the order request outright, so no position was opened."""
+
+    def __init__(self, code: str | None = None) -> None:
+        self.code = code
+        super().__init__(f"the broker refused the order: {code or 'no reason code'}")
+
+
 class TradingDisabledError(BrokerError):
     """Raised when an order path is not explicitly enabled."""
 

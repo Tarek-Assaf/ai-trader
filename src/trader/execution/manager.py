@@ -10,7 +10,13 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
-from trader.execution.brokers.base import BrokerAdapter, OrderReceipt, OrderRequest, Position
+from trader.execution.brokers.base import (
+    BrokerAdapter,
+    OrderReceipt,
+    OrderRejected,
+    OrderRequest,
+    Position,
+)
 from trader.execution.control import (
     ControlMode,
     ControlSource,
@@ -502,6 +508,19 @@ class OrderManager:
                     raise ValueError("broker receipt mismatch")
                 self._journal.mark(cycle_id, "submitted", deal_id=receipt.deal_id)
                 self.reconcile()
+            except OrderRejected as exc:
+                # The broker refused the request, so there is nothing to reconcile and nothing
+                # to hold the whole bot for: record it, tell the owner, keep running.
+                LOGGER.error("order refused by the broker: %s", exc)
+                try:
+                    self._journal.mark(cycle_id, "rejected")
+                except Exception:
+                    self._pause("rejected_order_persistence_failed")
+                try:
+                    self._alert("order_rejected_by_broker")
+                except Exception:
+                    pass
+                raise ExecutionPaused(str(exc)) from None
             except Exception as exc:
                 LOGGER.error(
                     "order outcome ambiguous: %s: %s", type(exc).__name__, exc, exc_info=True
