@@ -540,8 +540,8 @@ class RuntimeService:
                 await asyncio.to_thread(manager.tick)
             except asyncio.CancelledError:
                 raise
-            except Exception:
-                LOGGER.error("order manager tick failed")
+            except Exception as exc:
+                LOGGER.error("order manager tick failed: %s: %s", type(exc).__name__, exc)
 
     async def _lease_heartbeat_loop(self) -> None:
         """Renew the lease independently of market-bar arrival."""

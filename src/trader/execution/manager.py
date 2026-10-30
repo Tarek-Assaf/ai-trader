@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -18,6 +19,8 @@ from trader.execution.control import (
 )
 from trader.execution.journal import ExecutionJournal, restored_order
 from trader.risk.guardian import RiskDecision
+
+LOGGER = logging.getLogger(__name__)
 
 
 class Ownership(Protocol):
@@ -133,7 +136,8 @@ class OrderManager:
         self._shutdown_event.clear()
         try:
             self._acquire_leases()
-        except Exception:
+        except Exception as exc:
+            LOGGER.error("could not take the execution leases: %s: %s", type(exc).__name__, exc)
             with self._mutex:
                 self._pause("execution_startup_failed")
             raise ExecutionPaused("execution startup failed") from None
@@ -152,7 +156,8 @@ class OrderManager:
                     return
                 if not self._journal.is_paused() and not self._journal.is_killed():
                     self._paused = False
-            except Exception:
+            except Exception as exc:
+                LOGGER.error("execution startup failed: %s: %s", type(exc).__name__, exc)
                 self._pause("execution_startup_failed")
                 raise ExecutionPaused("execution startup failed") from None
 
@@ -207,9 +212,8 @@ class OrderManager:
                     state = record["execution_state"]
                     if state in {"reserved", "ambiguous"}:
                         # Position absence alone cannot prove an order was rejected.
-                        self._broker.get_activity(
-                            datetime.now(UTC) - timedelta(days=1), datetime.now(UTC)
-                        )
+                        now = datetime.now(UTC)
+                        self._broker.get_activity(now - timedelta(days=1), now)
                         mismatch = True
                     elif state == "submitted" and record["deal_id"] not in active_ids:
                         self._journal.mark(record["execution_order"]["client_order_id"], "closed")
@@ -219,7 +223,10 @@ class OrderManager:
                 if mismatch:
                     self._pause("broker_state_mismatch")
                 return not mismatch
-            except Exception:
+            except Exception as exc:
+                LOGGER.error(
+                    "broker reconciliation failed: %s: %s", type(exc).__name__, exc, exc_info=True
+                )
                 self._pause("broker_reconciliation_failed")
                 raise ExecutionPaused("reconciliation failed") from None
 
@@ -495,7 +502,10 @@ class OrderManager:
                     raise ValueError("broker receipt mismatch")
                 self._journal.mark(cycle_id, "submitted", deal_id=receipt.deal_id)
                 self.reconcile()
-            except Exception:
+            except Exception as exc:
+                LOGGER.error(
+                    "order outcome ambiguous: %s: %s", type(exc).__name__, exc, exc_info=True
+                )
                 self._pause("order_outcome_ambiguous")
                 try:
                     self._journal.mark(cycle_id, "ambiguous")
