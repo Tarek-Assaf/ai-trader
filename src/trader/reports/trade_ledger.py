@@ -28,6 +28,9 @@ RIYADH = ZoneInfo("Asia/Riyadh")
 RESULT_EVENT = "trade_result"
 FRESH_ALERT_SECONDS = 20 * 60
 LOOKBACK_HOURS = 12
+# Ask for history that ended a little ago: Capital.com answers error.invalid.daterange when
+# the window ends even a moment after its own clock, which the VM clock sometimes does.
+END_MARGIN_SECONDS = 15
 _SOURCES = {
     "SL": "stop loss",
     "TP": "take profit",
@@ -218,7 +221,7 @@ class ClosedTradeSync:
         self._now = now
 
     def poll(self) -> int:
-        end = self._now()
+        end = self._now() - timedelta(seconds=END_MARGIN_SECONDS)
         start = end - timedelta(hours=LOOKBACK_HOURS)
         stamp = self._client._timestamp
         payload = self._client._request_trading(
