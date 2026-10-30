@@ -52,6 +52,7 @@ class FakeClient:
 
     def _request_trading(self, method, path, **kwargs):
         self.calls += 1
+        self.params = kwargs.get("params")
         assert path == "history/transactions"
         return {"transactions": self.rows}
 
@@ -122,3 +123,11 @@ def test_r_multiples_sum_partials_per_deal_and_use_the_entry_risk() -> None:
     assert by_deal["deal-b"].r_multiple == Decimal("-1.179")
     assert by_deal["deal-a"].r_multiple == Decimal(0)  # unknown risk
     assert ledger.r_multiples(NOW - timedelta(minutes=30))[0].trade_id == "deal-b"
+
+
+def test_poll_asks_for_history_that_ended_a_moment_ago() -> None:
+    ledger, _writer = _ledger()
+    client = FakeClient(ROWS)
+    ClosedTradeSync(client, ledger, lambda _t: None, now=lambda: NOW).poll()
+    expected_end = (NOW - timedelta(seconds=15)).strftime("%Y-%m-%dT%H:%M:%S")
+    assert client.params["to"] == expected_end
