@@ -664,3 +664,21 @@ def test_unresolved_order_pauses_as_mismatch_even_when_the_broker_limits_activit
     assert manager.reconcile() is False
     assert manager.paused
     assert alerts[-1] == "broker_state_mismatch"
+
+
+def test_a_broker_refusal_is_recorded_without_pausing_the_bot(tmp_path):
+    from trader.execution.brokers.base import OrderRejected
+
+    manager, broker, journal, _lease, alerts, order = setup(tmp_path)
+
+    def refuse(_order):
+        raise OrderRejected("error.invalid.stoploss.minvalue")
+
+    broker.place_order = refuse
+
+    with pytest.raises(ExecutionPaused, match="error.invalid.stoploss.minvalue"):
+        manager.submit("cycle-1", order)
+
+    assert journal.get("cycle-1")["execution_state"] == "rejected"
+    assert not manager.paused
+    assert alerts[-1] == "order_rejected_by_broker"

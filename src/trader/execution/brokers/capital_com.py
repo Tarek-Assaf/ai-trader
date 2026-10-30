@@ -13,10 +13,13 @@ from trader.execution.brokers.base import (
     BrokerProtocolError,
     Direction,
     OrderReceipt,
+    OrderRejected,
     OrderRequest,
     Position,
     TradingDisabledError,
 )
+
+_REFUSED_STATUS = frozenset({400, 403, 404, 422})
 
 
 class _CapitalComClient(Protocol):
@@ -156,7 +159,16 @@ class CapitalComBroker:
             }
             if order.profit_level is not None:
                 payload["profitLevel"] = float(order.profit_level)
-            created = self._client.open_position(payload)
+            try:
+                created = self._client.open_position(payload)
+            except Exception as exc:
+                # A 4xx on the order request itself means Capital.com did not accept it, so no
+                # position exists. Anything else (timeout, 5xx) may have been accepted, so it
+                # stays ambiguous.
+                if getattr(exc, "status_code", None) in _REFUSED_STATUS:
+                    code = getattr(exc, "error_code", None)
+                    raise OrderRejected(code if isinstance(code, str) else None) from None
+                raise
             reference = _required_text(created.get("dealReference"), "dealReference")
             confirmation = self._client.confirm_deal(reference)
             self._require_accepted(confirmation, "open")
