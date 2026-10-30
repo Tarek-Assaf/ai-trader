@@ -643,3 +643,24 @@ def test_tai_signal_is_refused_when_the_manager_is_not_started(tmp_path):
     outcome = _tai_runner(manager, broker, alerts).on_bar(_tai_bar())
     assert outcome.action != "SUBMITTED"
     assert broker.calls == 0
+
+
+def test_unresolved_order_pauses_as_mismatch_even_when_the_broker_limits_activity_to_a_day(
+    tmp_path,
+):
+    from datetime import timedelta
+
+    manager, broker, journal, _lease, alerts, order = setup(tmp_path)
+
+    def strict_activity(start, end):
+        if end - start > timedelta(days=1):
+            raise ValueError("activity interval must be positive and at most one day")
+        return ()
+
+    broker.get_activity = strict_activity
+    journal.reserve("cycle-1", order)
+    journal.mark("cycle-1", "ambiguous")
+
+    assert manager.reconcile() is False
+    assert manager.paused
+    assert alerts[-1] == "broker_state_mismatch"
