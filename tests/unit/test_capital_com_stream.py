@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -10,6 +11,7 @@ from typing import Any
 import pytest
 
 from trader.core.logging import configure_logging
+from trader.integrations.capital_com.client import CapitalComError
 from trader.integrations.capital_com.stream import (
     _PING_INTERVAL,
     CapitalComStreamClient,
@@ -564,3 +566,89 @@ def test_stream_sends_keepalive_ping_before_ten_minutes() -> None:
 
     messages = [json.loads(message) for message in socket.sent]
     assert sum(message["destination"] == "ping" for message in messages) == 2
+
+
+class RefusingRest(FakeRest):
+    def __init__(self, status: int) -> None:
+        super().__init__()
+        self.status = status
+
+    def iter_price_history(self, *args: Any, **kwargs: Any) -> list[dict[str, Any]]:
+        self.calls.append(args)
+        raise CapitalComError(self.status, "prices/US100", error_code="error.invalid.daterange")
+
+
+def _backfill_client(
+    rest: FakeRest, sockets: list[FakeSocket]
+) -> tuple[CapitalComStreamClient, list[int]]:
+    connects: list[int] = []
+    iterator = iter(sockets)
+
+    def factory(*_args: Any, **_kwargs: Any) -> FakeSocket:
+        connects.append(1)
+        return next(iterator)
+
+    client = CapitalComStreamClient(
+        rest,
+        ["US100"],
+        lambda _update: None,
+        connection_factory=factory,
+        reconnect_min_seconds=0.01,
+        reconnect_max_seconds=0.02,
+        clock=lambda: datetime(2026, 10, 3, 10, 3, tzinfo=UTC),
+        sleep=lambda _delay: None,
+    )
+    client._last_seen[("US100", "bid")] = datetime(2026, 10, 2, 20, 59, tzinfo=UTC)
+    return client, connects
+
+
+def test_refused_backfill_keeps_the_stream_connected(caplog) -> None:
+    caplog.set_level(logging.WARNING, logger="trader.integrations.capital_com.stream")
+    stop = threading.Event()
+    seen: list[str] = []
+
+    def on_message(raw: str) -> None:
+        time.sleep(0.1)
+        seen.append(raw)
+        if len(seen) >= 4:
+            stop.set()
+
+    socket = FakeSocket(
+        [
+            subscribe_reply(),
+            ping_reply(),
+            event(1791021720000),
+            event(1791021780000),
+        ],
+        on_message=on_message,
+    )
+    client, connects = _backfill_client(RefusingRest(400), [socket])
+    client.run_forever(stop)
+
+    assert len(connects) == 1
+    assert client.reconnect_count == 0
+    refused = [r.getMessage() for r in caplog.records if "backfill refused" in r.getMessage()]
+    assert refused
+    assert "HTTP 400" in refused[0]
+    assert "error.invalid.daterange" in refused[0]
+
+
+def test_server_error_during_backfill_still_reconnects() -> None:
+    stop = threading.Event()
+
+    def on_message(_raw: str) -> None:
+        time.sleep(0.1)
+
+    first = FakeSocket(
+        [subscribe_reply(), ping_reply(), event(1791021720000), event(1791021780000)],
+        on_message=on_message,
+    )
+    second = FakeSocket(
+        [subscribe_reply(), ping_reply(), event(1791021840000)],
+        on_message=lambda _raw: stop.set(),
+    )
+    client, connects = _backfill_client(RefusingRest(503), [first, second])
+    client.run_forever(stop)
+
+    assert len(connects) == 2
+    assert client.reconnect_count == 1

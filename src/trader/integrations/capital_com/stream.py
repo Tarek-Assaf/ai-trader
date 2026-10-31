@@ -62,6 +62,16 @@ ReconnectHandler = Callable[[int, str], None]
 DataExpected = Callable[[], bool]
 
 
+_BACKFILL_RETRY_MIN_SECONDS = 60.0
+_BACKFILL_RETRY_MAX_SECONDS = 600.0
+_BACKFILL_REFUSED = frozenset({400, 404, 422})
+
+
+def _backfill_refused(exc: BaseException) -> bool:
+    """True when Capital.com refused the catch-up request itself (not a dead connection)."""
+    return isinstance(exc, CapitalComError) and exc.status_code in _BACKFILL_REFUSED
+
+
 class CapitalComStreamClient:
     """Subscribe to minute OHLC, validate liveness, and REST-backfill reconnect gaps."""
 
@@ -640,30 +650,61 @@ class CapitalComStreamClient:
                     self._ping(socket)
                     ping_ok = True
 
-                    def run_backfill(state: dict[str, Any] = backfill_state) -> None:
-                        try:
-                            state["updates"] = self._backfill()
-                            state["completed"] = True
-                        except BaseException as exc:  # noqa: BLE001 - hand back to stream loop
-                            state["error"] = exc
+                    def start_backfill() -> None:
+                        nonlocal backfill_state, backfill_thread, backfill_started
+                        state: dict[str, Any] = {"updates": 0, "error": None}
 
-                    backfill_started = True
-                    backfill_thread = threading.Thread(
-                        target=run_backfill,
-                        name="capital-data-backfill",
-                        daemon=True,
-                    )
-                    backfill_thread.start()
+                        def run_backfill(state: dict[str, Any] = state) -> None:
+                            try:
+                                state["updates"] = self._backfill()
+                                state["completed"] = True
+                            except BaseException as exc:  # noqa: BLE001 - hand back to stream loop
+                                state["error"] = exc
+
+                        backfill_state = state
+                        backfill_started = True
+                        backfill_thread = threading.Thread(
+                            target=run_backfill,
+                            name="capital-data-backfill",
+                            daemon=True,
+                        )
+                        backfill_thread.start()
+
+                    start_backfill()
+                    backfill_retry_at: datetime | None = None
+                    backfill_retry_delay = _BACKFILL_RETRY_MIN_SECONDS
                     self._last_data_at = self._clock().astimezone(UTC)
-                    backoff = self._reconnect_min
                     last_ping = self._clock()
                     was_expected = self._is_data_expected()
                     while not stop_event.is_set():
                         backfill_error = backfill_state.get("error")
                         if backfill_error is not None:
-                            raise backfill_error
+                            if not _backfill_refused(backfill_error):
+                                raise backfill_error
+                            # A refused catch-up request must not tear down a healthy stream.
+                            _LOG.warning(
+                                "Capital.com backfill refused: HTTP %s code=%s; "
+                                "the stream stays connected, retrying in %.0fs",
+                                backfill_error.status_code,
+                                backfill_error.error_code,
+                                backfill_retry_delay,
+                            )
+                            backfill_retry_at = self._clock() + timedelta(
+                                seconds=backfill_retry_delay
+                            )
+                            backfill_retry_delay = min(
+                                backfill_retry_delay * 2, _BACKFILL_RETRY_MAX_SECONDS
+                            )
+                            backfill_state = {"updates": 0, "error": None}
+                            backfill_thread = None
+                            backoff = self._reconnect_min
+                        elif backfill_retry_at is not None and self._clock() >= backfill_retry_at:
+                            backfill_retry_at = None
+                            start_backfill()
                         backfill_updates = int(backfill_state.get("updates", 0))
                         backfill_completed = bool(backfill_state.get("completed", False))
+                        if backfill_completed:
+                            backoff = self._reconnect_min
                         receive_started_at = datetime.now(UTC)
                         receive_started = time.monotonic()
                         try:
