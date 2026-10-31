@@ -147,6 +147,43 @@ def test_price_history_pages_forward_and_uses_documented_resolution() -> None:
     assert sum(history for _, history in limiter.calls) == 2
 
 
+def test_price_history_reads_a_long_gap_in_bounded_windows() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    queries: list[dict[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return response(request, headers={"CST": "cst", "X-SECURITY-TOKEN": "token"})
+        queries.append(dict(request.url.params))
+        if len(queries) == 2:
+            return response(
+                request,
+                {"prices": [{"snapshotTimeUTC": "2026-01-01T13:00:00", "closePrice": {"bid": 1}}]},
+            )
+        return response(request, {"prices": []})
+
+    http = httpx.Client(transport=httpx.MockTransport(handler))
+    with CapitalComClient(make_settings(), limiter=AllowAllLimiter(), http_client=http) as client:
+        candles = list(
+            client.iter_price_history(
+                "US100",
+                Resolution.MINUTE,
+                datetime(2026, 1, 1, tzinfo=UTC),
+                datetime(2026, 1, 2, 6, tzinfo=UTC),
+            )
+        )
+
+    assert len(candles) == 1
+    assert len(queries) == 3
+    for query in queries:
+        span = datetime.fromisoformat(query["to"]) - datetime.fromisoformat(query["from"])
+        assert span <= timedelta(hours=12)
+    assert queries[0]["from"] == "2026-01-01T00:00:00"
+    assert queries[-1]["to"] == "2026-01-02T06:00:00"
+    assert queries[1]["from"] == "2026-01-01T12:00:01"
+
+
 def test_live_host_is_selected_only_by_explicit_environment() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return response(request, headers={"CST": "cst", "X-SECURITY-TOKEN": "token"})

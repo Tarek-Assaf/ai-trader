@@ -356,8 +356,13 @@ class CapitalComClient:
         *,
         page_size: int = 1000,
         max_pages: int = 100,
+        max_window: timedelta = timedelta(hours=12),
     ) -> Iterator[Mapping[str, Any]]:
-        """Yield historical candles, paging forward in bounded 1000-row requests."""
+        """Yield historical candles, paging forward in bounded requests.
+
+        Each request covers at most ``max_window`` (Capital.com answers a wider range with
+        ``error.invalid.max.daterange``), so a gap over a weekend is read in several windows.
+        """
         resolution_value = str(resolution)
         if resolution_value not in _RESOLUTIONS:
             raise ValueError(f"unsupported Capital.com resolution: {resolution_value}")
@@ -365,6 +370,8 @@ class CapitalComClient:
             raise ValueError("page_size must be between 1 and 1000")
         if max_pages < 1:
             raise ValueError("max_pages must be positive")
+        if max_window <= timedelta(0):
+            raise ValueError("max_window must be positive")
         cursor = start
         end_utc = end.astimezone(UTC) if end.tzinfo else None
         if end_utc is None or start.tzinfo is None:
@@ -374,13 +381,14 @@ class CapitalComClient:
         seen: set[str] = set()
         path = f"prices/{quote(epic, safe='')}"
         for _ in range(max_pages):
+            window_end = min(end_utc, cursor.astimezone(UTC) + max_window)
             payload = self._request(
                 "GET",
                 path,
                 params={
                     "resolution": resolution_value,
                     "from": self._timestamp(cursor),
-                    "to": self._timestamp(end_utc),
+                    "to": self._timestamp(window_end),
                     "max": page_size,
                 },
                 history=True,
@@ -389,7 +397,10 @@ class CapitalComClient:
             if not isinstance(prices, list):
                 raise CapitalComError(200, path)
             if not prices:
-                return
+                if window_end >= end_utc:
+                    return
+                cursor = window_end + timedelta(seconds=1)
+                continue
             last_stamp: datetime | None = None
             for candle in prices:
                 if not isinstance(candle, Mapping):
@@ -410,7 +421,10 @@ class CapitalComClient:
                     seen.add(key)
                     yield candle
             if len(prices) < page_size:
-                return
+                if window_end >= end_utc:
+                    return
+                cursor = window_end + timedelta(seconds=1)
+                continue
             if last_stamp is None:
                 return
             next_cursor = last_stamp + timedelta(seconds=1)
