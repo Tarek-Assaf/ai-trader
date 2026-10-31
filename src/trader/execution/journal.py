@@ -165,7 +165,7 @@ class ExecutionJournal:
         try:
             with self._engine.connect() as connection:
                 row = connection.execute(
-                    select(table.c.payload).where(table.c.id == "execution-pause")
+                    select(table.c.payload).where(table.c.id == self._pause_id)
                 ).first()
         except Exception:
             raise JournalError("execution pause read failed") from None
