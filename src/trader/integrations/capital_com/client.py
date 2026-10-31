@@ -34,6 +34,9 @@ _SHARED_SESSION_LOCK = threading.RLock()
 _SHARED_SESSIONS: dict[tuple[str, str, int], dict[str, object]] = {}
 
 
+_NO_PRICES_CODE = "error.prices.not-found"
+
+
 class CapitalComError(RuntimeError):
     """Sanitized API error; deliberately excludes response bodies and headers."""
 
@@ -382,17 +385,23 @@ class CapitalComClient:
         path = f"prices/{quote(epic, safe='')}"
         for _ in range(max_pages):
             window_end = min(end_utc, cursor.astimezone(UTC) + max_window)
-            payload = self._request(
-                "GET",
-                path,
-                params={
-                    "resolution": resolution_value,
-                    "from": self._timestamp(cursor),
-                    "to": self._timestamp(window_end),
-                    "max": page_size,
-                },
-                history=True,
-            )
+            try:
+                payload = self._request(
+                    "GET",
+                    path,
+                    params={
+                        "resolution": resolution_value,
+                        "from": self._timestamp(cursor),
+                        "to": self._timestamp(window_end),
+                        "max": page_size,
+                    },
+                    history=True,
+                )
+            except CapitalComError as exc:
+                # Capital.com answers a window with no candles (a closed market) with 404.
+                if exc.status_code != 404 or exc.error_code != _NO_PRICES_CODE:
+                    raise
+                payload = {"prices": []}
             prices = payload.get("prices") if isinstance(payload, Mapping) else None
             if not isinstance(prices, list):
                 raise CapitalComError(200, path)

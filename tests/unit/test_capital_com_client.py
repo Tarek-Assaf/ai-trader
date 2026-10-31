@@ -184,6 +184,60 @@ def test_price_history_reads_a_long_gap_in_bounded_windows() -> None:
     assert queries[1]["from"] == "2026-01-01T12:00:01"
 
 
+def test_price_history_treats_no_prices_not_found_as_an_empty_window() -> None:
+    from datetime import UTC, datetime
+
+    queries: list[dict[str, str]] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return response(request, headers={"CST": "cst", "X-SECURITY-TOKEN": "token"})
+        queries.append(dict(request.url.params))
+        if len(queries) == 1:
+            return httpx.Response(
+                404, json={"errorCode": "error.prices.not-found"}, request=request
+            )
+        return response(
+            request,
+            {"prices": [{"snapshotTimeUTC": "2026-01-01T14:00:00", "closePrice": {"bid": 1}}]},
+        )
+
+    http = httpx.Client(transport=httpx.MockTransport(handler))
+    with CapitalComClient(make_settings(), limiter=AllowAllLimiter(), http_client=http) as client:
+        candles = list(
+            client.iter_price_history(
+                "US100",
+                Resolution.MINUTE,
+                datetime(2026, 1, 1, tzinfo=UTC),
+                datetime(2026, 1, 1, 20, tzinfo=UTC),
+            )
+        )
+
+    assert len(candles) == 1
+    assert len(queries) == 2
+
+
+def test_price_history_still_raises_other_not_found_errors() -> None:
+    from datetime import UTC, datetime
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            return response(request, headers={"CST": "cst", "X-SECURITY-TOKEN": "token"})
+        return httpx.Response(404, json={"errorCode": "error.epic.not-found"}, request=request)
+
+    http = httpx.Client(transport=httpx.MockTransport(handler))
+    with CapitalComClient(make_settings(), limiter=AllowAllLimiter(), http_client=http) as client:
+        with pytest.raises(CapitalComError):
+            list(
+                client.iter_price_history(
+                    "NOPE",
+                    Resolution.MINUTE,
+                    datetime(2026, 1, 1, tzinfo=UTC),
+                    datetime(2026, 1, 1, 1, tzinfo=UTC),
+                )
+            )
+
+
 def test_live_host_is_selected_only_by_explicit_environment() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return response(request, headers={"CST": "cst", "X-SECURITY-TOKEN": "token"})
