@@ -16,6 +16,7 @@ from trader.execution.brokers.base import (
     OrderRejected,
     OrderRequest,
     Position,
+    is_transient_broker_error,
 )
 from trader.execution.control import (
     ControlMode,
@@ -44,8 +45,18 @@ class BoundApproval:
     decision: RiskDecision
 
 
+BROKER_UNREACHABLE = "broker_unreachable"
+_TRANSIENT_ATTEMPTS = 3
+_TRANSIENT_RETRY_SECONDS = 2.0
+_UNREACHABLE_RETRY_SECONDS = 15.0
+
+
 class ExecutionPaused(RuntimeError):
     """No entry is allowed until reconciliation and explicit recovery succeed."""
+
+
+class BrokerUnreachable(ExecutionPaused):
+    """The broker could not be reached; entries wait and the pause clears itself."""
 
 
 class OrderManager:
@@ -99,6 +110,7 @@ class OrderManager:
         self._startup_lease_wait = startup_lease_wait_seconds
         self._shutdown_event = threading.Event()
         self._last_pause_alert: str | None = None
+        self._unreachable_retry_at: datetime | None = None
 
     @property
     def paused(self) -> bool:
@@ -182,59 +194,126 @@ class OrderManager:
                         pass  # the lease simply expires on its own
 
     def reconcile(self) -> bool:
-        """Poll broker truth and heal the read model; a mismatch stays paused."""
+        """Poll broker truth and heal the read model; a mismatch stays paused.
+
+        A broker that cannot be reached right now (network error, timeout, 429, 5xx) is tried a
+        few times, then blocks entries under a pause that clears itself when the broker answers
+        again. Every other failure still latches a pause that needs the owner's /resume.
+        """
         with self._mutex:
-            try:
-                self._execution_lease.check()
-                self._guardian_lease.check()
-                positions = tuple(self._broker.get_positions())
-                if len({position.deal_id for position in positions}) != len(positions):
-                    raise ValueError("duplicate broker deal ids")
-                working_orders = self._broker.get_open_orders()
-                records = self._journal.records()
-                known = {record["deal_id"]: record for record in records if record.get("deal_id")}
-                mismatch = bool(working_orders)
-                for position in positions:
-                    record = known.get(position.deal_id)
-                    if record is None:
-                        mismatch = True
-                        continue
-                    order = restored_order(record["execution_order"])
-                    safe_stop = position.stop_level is not None and (
-                        position.stop_level >= order.stop_level
-                        if order.direction.value == "BUY"
-                        else position.stop_level <= order.stop_level
-                    )
+            for attempt in range(1, _TRANSIENT_ATTEMPTS + 1):
+                try:
+                    healthy = self._reconcile_once()
+                except Exception as exc:
+                    transient = is_transient_broker_error(exc)
                     if (
-                        position.epic != order.epic
-                        or position.direction != order.direction
-                        or position.size <= 0
-                        or position.size > order.size
-                        or not safe_stop
+                        transient
+                        and attempt < _TRANSIENT_ATTEMPTS
+                        and not self._shutdown_event.is_set()
                     ):
-                        mismatch = True
-                active_ids = {position.deal_id for position in positions}
-                for record in records:
-                    state = record["execution_state"]
-                    if state in {"reserved", "ambiguous"}:
-                        # Position absence alone cannot prove an order was rejected.
-                        now = datetime.now(UTC)
-                        self._broker.get_activity(now - timedelta(days=1), now)
-                        mismatch = True
-                    elif state == "submitted" and record["deal_id"] not in active_ids:
-                        self._journal.mark(record["execution_order"]["client_order_id"], "closed")
-                self._positions = positions
-                self._check_pnl(positions)
-                self._last_reconcile = datetime.now(UTC)
-                if mismatch:
-                    self._pause("broker_state_mismatch")
-                return not mismatch
-            except Exception as exc:
-                LOGGER.error(
-                    "broker reconciliation failed: %s: %s", type(exc).__name__, exc, exc_info=True
+                        LOGGER.warning(
+                            "broker reconciliation attempt %s of %s failed: %s: %s; retrying",
+                            attempt,
+                            _TRANSIENT_ATTEMPTS,
+                            type(exc).__name__,
+                            exc,
+                        )
+                        self._shutdown_event.wait(_TRANSIENT_RETRY_SECONDS)
+                        continue
+                    LOGGER.error(
+                        "broker reconciliation failed: %s: %s",
+                        type(exc).__name__,
+                        exc,
+                        exc_info=True,
+                    )
+                    if transient:
+                        self._broker_unreachable()
+                        return False
+                    self._pause("broker_reconciliation_failed")
+                    raise ExecutionPaused("reconciliation failed") from None
+                if healthy:
+                    self._broker_reachable()
+                return healthy
+            return False
+
+    def _broker_unreachable(self) -> None:
+        """Hold entries while the broker cannot be reached, without hiding a stronger pause."""
+        self._unreachable_retry_at = datetime.now(UTC) + timedelta(
+            seconds=_UNREACHABLE_RETRY_SECONDS
+        )
+        try:
+            reason = self._journal.pause_reason()
+        except Exception:
+            reason = "unknown"
+        if reason is None or reason == BROKER_UNREACHABLE:
+            self._pause(BROKER_UNREACHABLE)
+        else:
+            self._paused = True
+
+    def _broker_reachable(self) -> None:
+        """The broker answered and matches the journal: lift only the self-clearing pause."""
+        self._unreachable_retry_at = None
+        try:
+            if self._journal.pause_reason() != BROKER_UNREACHABLE or self._journal.is_killed():
+                return
+            self._journal.clear_pause()
+        except Exception:
+            return
+        if self._started:
+            self._paused = False
+        self._last_pause_alert = None
+        try:
+            self._alert("broker_reachable_again")
+        except Exception:
+            pass
+
+    def _reconcile_once(self) -> bool:
+        """One poll of broker truth; raises on any failure, pauses on a mismatch."""
+        with self._mutex:
+            self._execution_lease.check()
+            self._guardian_lease.check()
+            positions = tuple(self._broker.get_positions())
+            if len({position.deal_id for position in positions}) != len(positions):
+                raise ValueError("duplicate broker deal ids")
+            working_orders = self._broker.get_open_orders()
+            records = self._journal.records()
+            known = {record["deal_id"]: record for record in records if record.get("deal_id")}
+            mismatch = bool(working_orders)
+            for position in positions:
+                record = known.get(position.deal_id)
+                if record is None:
+                    mismatch = True
+                    continue
+                order = restored_order(record["execution_order"])
+                safe_stop = position.stop_level is not None and (
+                    position.stop_level >= order.stop_level
+                    if order.direction.value == "BUY"
+                    else position.stop_level <= order.stop_level
                 )
-                self._pause("broker_reconciliation_failed")
-                raise ExecutionPaused("reconciliation failed") from None
+                if (
+                    position.epic != order.epic
+                    or position.direction != order.direction
+                    or position.size <= 0
+                    or position.size > order.size
+                    or not safe_stop
+                ):
+                    mismatch = True
+            active_ids = {position.deal_id for position in positions}
+            for record in records:
+                state = record["execution_state"]
+                if state in {"reserved", "ambiguous"}:
+                    # Position absence alone cannot prove an order was rejected.
+                    now = datetime.now(UTC)
+                    self._broker.get_activity(now - timedelta(days=1), now)
+                    mismatch = True
+                elif state == "submitted" and record["deal_id"] not in active_ids:
+                    self._journal.mark(record["execution_order"]["client_order_id"], "closed")
+            self._positions = positions
+            self._check_pnl(positions)
+            self._last_reconcile = datetime.now(UTC)
+            if mismatch:
+                self._pause("broker_state_mismatch")
+            return not mismatch
 
     def tick(self) -> None:
         """Check emergency controls and service open positions on every loop."""
@@ -253,9 +332,15 @@ class OrderManager:
             except Exception:
                 self._pause("position_management_failed")
                 return
+            now = datetime.now(UTC)
+            retry_at = self._unreachable_retry_at
+            retry_due = retry_at is not None
+            if retry_at is not None and now < retry_at:
+                return
             if (
-                self._last_reconcile is None
-                or datetime.now(UTC) - self._last_reconcile >= self._interval
+                retry_due
+                or self._last_reconcile is None
+                or now - self._last_reconcile >= self._interval
             ):
                 self.reconcile()
 
@@ -468,6 +553,8 @@ class OrderManager:
             try:
                 self._execution_lease.check()
                 if not self.reconcile():
+                    if self._unreachable_retry_at is not None:
+                        raise BrokerUnreachable("broker unreachable; entry skipped")
                     raise ExecutionPaused("broker state mismatch")
                 self._guardian_lease.check()
                 approval = self._approve(order, cycle_id)
@@ -485,6 +572,8 @@ class OrderManager:
                     return None
                 self._execution_lease.check()
                 self._guardian_lease.check()
+            except BrokerUnreachable:
+                raise
             except Exception:
                 self._pause("entry_preflight_failed")
                 raise ExecutionPaused("entry preflight failed") from None

@@ -132,6 +132,22 @@ class ExecutionJournal:
         except Exception:
             raise JournalError("execution pause read failed") from None
 
+    def pause_reason(self) -> str | None:
+        """Reason stored with the pause latch, or None when no pause is latched."""
+        table = tables["snapshots"]
+        try:
+            with self._engine.connect() as connection:
+                row = connection.execute(
+                    select(table.c.payload).where(table.c.id == "execution-pause")
+                ).first()
+        except Exception:
+            raise JournalError("execution pause read failed") from None
+        if row is None:
+            return None
+        body = row[0]
+        reason = body.get("reason") if isinstance(body, Mapping) else None
+        return str(reason) if reason else "unknown"
+
     def clear_pause(self) -> None:
         from sqlalchemy import delete
 
