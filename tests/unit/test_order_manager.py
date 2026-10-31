@@ -682,3 +682,124 @@ def test_a_broker_refusal_is_recorded_without_pausing_the_bot(tmp_path):
     assert journal.get("cycle-1")["execution_state"] == "rejected"
     assert not manager.paused
     assert alerts[-1] == "order_rejected_by_broker"
+
+
+class NetworkDown(RuntimeError):
+    """Looks like the Capital.com client's transport error: status_code is None."""
+
+    def __init__(self, status_code=None):
+        super().__init__("transport error")
+        self.status_code = status_code
+
+
+def _fast_retries(monkeypatch):
+    monkeypatch.setattr("trader.execution.manager._TRANSIENT_RETRY_SECONDS", 0)
+
+
+def test_transient_broker_errors_are_classified():
+    from trader.execution.brokers.base import is_transient_broker_error
+
+    assert is_transient_broker_error(NetworkDown())
+    assert is_transient_broker_error(NetworkDown(503))
+    assert is_transient_broker_error(NetworkDown(429))
+    assert not is_transient_broker_error(NetworkDown(400))
+    assert not is_transient_broker_error(NetworkDown(401))
+    assert not is_transient_broker_error(ValueError("bad"))
+
+
+def test_a_brief_network_error_is_retried_without_pausing(tmp_path, monkeypatch):
+    _fast_retries(monkeypatch)
+    manager, broker, journal, _lease, alerts, _order = setup(tmp_path)
+    real = broker.get_positions
+    failures = []
+
+    def flaky():
+        if len(failures) < 2:
+            failures.append(1)
+            raise NetworkDown()
+        return real()
+
+    broker.get_positions = flaky
+
+    assert manager.reconcile() is True
+    assert not manager.paused and not journal.is_paused()
+    assert alerts == []
+
+
+def test_a_lasting_network_error_pauses_itself_and_clears_when_the_broker_answers(
+    tmp_path, monkeypatch
+):
+    from datetime import UTC, datetime, timedelta
+
+    _fast_retries(monkeypatch)
+    manager, broker, journal, _lease, alerts, _order = setup(tmp_path)
+    real = broker.get_positions
+
+    def down():
+        raise NetworkDown()
+
+    broker.get_positions = down
+
+    assert manager.reconcile() is False
+    assert manager.paused
+    assert journal.pause_reason() == "broker_unreachable"
+    assert alerts[-1] == "broker_unreachable"
+
+    broker.get_positions = real
+    manager.tick()  # inside the retry delay: nothing happens yet
+    assert manager.paused
+    manager._unreachable_retry_at = datetime.now(UTC) - timedelta(seconds=1)
+    manager.tick()
+
+    assert not manager.paused and not journal.is_paused()
+    assert alerts[-1] == "broker_reachable_again"
+
+
+def test_a_network_error_never_overwrites_a_stronger_pause(tmp_path, monkeypatch):
+    _fast_retries(monkeypatch)
+    manager, broker, journal, _lease, _alerts, _order = setup(tmp_path)
+    journal.save_pause("order_outcome_ambiguous")
+    real = broker.get_positions
+
+    def down():
+        raise NetworkDown()
+
+    broker.get_positions = down
+    assert manager.reconcile() is False
+    assert journal.pause_reason() == "order_outcome_ambiguous"
+
+    broker.get_positions = real
+    assert manager.reconcile() is True
+    assert journal.pause_reason() == "order_outcome_ambiguous"
+
+
+def test_a_refusal_from_the_broker_still_latches_the_pause(tmp_path, monkeypatch):
+    _fast_retries(monkeypatch)
+    manager, broker, journal, _lease, alerts, _order = setup(tmp_path)
+
+    def refused():
+        raise NetworkDown(400)
+
+    broker.get_positions = refused
+    with pytest.raises(ExecutionPaused):
+        manager.reconcile()
+    assert journal.pause_reason() == "broker_reconciliation_failed"
+    assert alerts[-1] == "broker_reconciliation_failed"
+
+
+def test_an_entry_during_a_network_outage_is_skipped_without_a_latched_preflight_pause(
+    tmp_path, monkeypatch
+):
+    from trader.execution.manager import BrokerUnreachable
+
+    _fast_retries(monkeypatch)
+    manager, broker, journal, _lease, _alerts, order = setup(tmp_path)
+
+    def down():
+        raise NetworkDown()
+
+    broker.get_positions = down
+    with pytest.raises(BrokerUnreachable):
+        manager.submit("cycle-1", order)
+    assert broker.calls == 0
+    assert journal.pause_reason() == "broker_unreachable"

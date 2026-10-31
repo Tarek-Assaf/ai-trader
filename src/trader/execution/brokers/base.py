@@ -26,6 +26,23 @@ class OrderRejected(BrokerError):
         super().__init__(f"the broker refused the order: {code or 'no reason code'}")
 
 
+_TRANSIENT_STATUS = frozenset({408, 425, 429})
+
+
+def is_transient_broker_error(exc: BaseException) -> bool:
+    """True when the broker could not be reached right now (network, timeout, 429, 5xx).
+
+    Duck-typed on ``status_code`` so broker adapters need no shared import: a transport error
+    has ``status_code`` None. A refusal or a malformed reply is not transient.
+    """
+    if not hasattr(exc, "status_code"):
+        return False
+    status = exc.status_code
+    if status is None:
+        return True
+    return isinstance(status, int) and (status in _TRANSIENT_STATUS or status >= 500)
+
+
 class TradingDisabledError(BrokerError):
     """Raised when an order path is not explicitly enabled."""
 
