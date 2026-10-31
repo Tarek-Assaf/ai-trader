@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -13,9 +14,26 @@ from sqlalchemy.exc import IntegrityError
 from trader.core.db import tables
 from trader.execution.brokers.base import Direction, OrderRequest
 
+DEFAULT_ACCOUNT_ID = "acct-01"
+_ACCOUNT_ID = re.compile(r"^acct-\d{2,3}$")
+
 
 class JournalError(RuntimeError):
     """Persistence failed or a cycle was reused with different parameters."""
+
+
+def pause_snapshot_id(account_id: str = DEFAULT_ACCOUNT_ID) -> str:
+    """Snapshot id of an account's pause latch; account 01 keeps the original id."""
+    return (
+        "execution-pause" if account_id == DEFAULT_ACCOUNT_ID else f"execution-pause:{account_id}"
+    )
+
+
+def kill_snapshot_id(account_id: str = DEFAULT_ACCOUNT_ID) -> str:
+    """Snapshot id of an account's kill latch; account 01 keeps the original id."""
+    if account_id == DEFAULT_ACCOUNT_ID:
+        return "execution-kill"
+    return f"execution-kill:{account_id}"
 
 
 def order_payload(order: OrderRequest) -> dict[str, object]:
@@ -50,9 +68,18 @@ class ExecutionJournal:
     unique constraint arbitrates across processes, independently of Redis.
     """
 
-    def __init__(self, engine: Engine) -> None:
+    def __init__(self, engine: Engine, account_id: str = DEFAULT_ACCOUNT_ID) -> None:
+        if not _ACCOUNT_ID.match(account_id):
+            raise JournalError("account id must look like acct-01")
         self._engine = engine
         self._table = tables["trade_intents"]
+        self._account_id = account_id
+        self._pause_id = pause_snapshot_id(account_id)
+        self._kill_id = kill_snapshot_id(account_id)
+
+    @property
+    def account_id(self) -> str:
+        return self._account_id
 
     def save_pause(self, reason: str) -> None:
         """Latch a pause across process restarts, independently of Redis."""
@@ -60,16 +87,16 @@ class ExecutionJournal:
         try:
             with self._engine.begin() as connection:
                 exists = connection.execute(
-                    select(table.c.id).where(table.c.id == "execution-pause")
+                    select(table.c.id).where(table.c.id == self._pause_id)
                 ).scalar_one_or_none()
                 if exists is None:
                     connection.execute(
-                        insert(table).values(id="execution-pause", payload={"reason": reason})
+                        insert(table).values(id=self._pause_id, payload={"reason": reason})
                     )
                 else:
                     connection.execute(
                         update(table)
-                        .where(table.c.id == "execution-pause")
+                        .where(table.c.id == self._pause_id)
                         .values(payload={"reason": reason})
                     )
         except Exception:
@@ -81,16 +108,16 @@ class ExecutionJournal:
         try:
             with self._engine.begin() as connection:
                 exists = connection.execute(
-                    select(table.c.id).where(table.c.id == "execution-kill")
+                    select(table.c.id).where(table.c.id == self._kill_id)
                 ).scalar_one_or_none()
                 if exists is None:
                     connection.execute(
-                        insert(table).values(id="execution-kill", payload={"reason": reason})
+                        insert(table).values(id=self._kill_id, payload={"reason": reason})
                     )
                 else:
                     connection.execute(
                         update(table)
-                        .where(table.c.id == "execution-kill")
+                        .where(table.c.id == self._kill_id)
                         .values(payload={"reason": reason})
                     )
         except Exception:
@@ -102,7 +129,7 @@ class ExecutionJournal:
             with self._engine.connect() as connection:
                 return (
                     connection.execute(
-                        select(table.c.id).where(table.c.id == "execution-kill")
+                        select(table.c.id).where(table.c.id == self._kill_id)
                     ).scalar_one_or_none()
                     is not None
                 )
@@ -115,7 +142,7 @@ class ExecutionJournal:
         try:
             with self._engine.begin() as connection:
                 table = tables["snapshots"]
-                connection.execute(delete(table).where(table.c.id == "execution-kill"))
+                connection.execute(delete(table).where(table.c.id == self._kill_id))
         except Exception:
             raise JournalError("execution kill reset failed") from None
 
@@ -125,7 +152,7 @@ class ExecutionJournal:
             with self._engine.connect() as connection:
                 return (
                     connection.execute(
-                        select(table.c.id).where(table.c.id == "execution-pause")
+                        select(table.c.id).where(table.c.id == self._pause_id)
                     ).scalar_one_or_none()
                     is not None
                 )
@@ -138,7 +165,7 @@ class ExecutionJournal:
         try:
             with self._engine.connect() as connection:
                 row = connection.execute(
-                    select(table.c.payload).where(table.c.id == "execution-pause")
+                    select(table.c.payload).where(table.c.id == self._pause_id)
                 ).first()
         except Exception:
             raise JournalError("execution pause read failed") from None
@@ -154,7 +181,7 @@ class ExecutionJournal:
         try:
             with self._engine.begin() as connection:
                 table = tables["snapshots"]
-                connection.execute(delete(table).where(table.c.id == "execution-pause"))
+                connection.execute(delete(table).where(table.c.id == self._pause_id))
         except Exception:
             raise JournalError("execution pause reset failed") from None
 
@@ -201,6 +228,7 @@ class ExecutionJournal:
             "execution_state": "reserved",
             "reserved_at": datetime.now(UTC).isoformat(),
             "initial_stop": str(order.stop_level),
+            "account": self._account_id,
         }
         try:
             with self._engine.begin() as connection:
@@ -239,7 +267,9 @@ class ExecutionJournal:
             return tuple(
                 cast(dict[str, Any], row)
                 for row in rows
-                if isinstance(row, dict) and "execution_order" in row
+                if isinstance(row, dict)
+                and "execution_order" in row
+                and row.get("account", DEFAULT_ACCOUNT_ID) == self._account_id
             )
         except Exception:
             raise JournalError("execution recovery read failed") from None
