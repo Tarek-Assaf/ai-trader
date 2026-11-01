@@ -7,6 +7,7 @@ import pytest
 from trader.execution.brokers.base import Direction, OrderReceipt, OrderRequest, Position
 from trader.execution.control import ControlMode
 from trader.execution.manager import ExecutionPaused
+from trader.experiments.start_balance import StartBalanceStore
 from trader.experiments.tai_demo import (
     ClosedBar,
     TaiDemoRefused,
@@ -394,7 +395,7 @@ def test_missing_balance_provider_is_refused_when_rules_are_available():
         instance._requested_size(TaiInstrumentRules(Decimal("0.1"), Decimal("0.1")))
 
 
-def test_enabled_experiment_without_start_balance_is_refused():
+def test_unset_start_balance_means_automatic_not_a_startup_refusal():
     class Cfg:
         broker_env = "demo"
         trading_mode = "paper"
@@ -403,8 +404,72 @@ def test_enabled_experiment_without_start_balance_is_refused():
         tai_demo_base_lot = "0.1"
         tai_demo_start_balance = "0"
 
-    with pytest.raises(TaiDemoRefused):
-        TaiDemoSettings.from_settings(Cfg())
+    assert TaiDemoSettings.from_settings(Cfg()).start_balance == Decimal("0")
+
+
+def _automatic_runner(balance, store, alerts=None, journal=None):
+    gateway = Gateway()
+    return TaiDemoRunner(
+        settings=TaiDemoSettings("demo", "paper", False, True, start_balance=Decimal("0")),
+        order_manager=Manager(gateway),
+        position_gateway=gateway,
+        signal_provider=lambda _bar: None,
+        order_factory=lambda *_: None,
+        control=Control(),
+        balance_provider=lambda: Decimal(balance),
+        alert=(alerts.append if alerts is not None else None),
+        journal=journal,
+        start_balance_store=store,
+    )
+
+
+RULES = TaiInstrumentRules(Decimal("0.01"), Decimal("0.01"))
+
+
+def test_automatic_start_balance_is_recorded_on_first_sizing_and_trades_the_base_lot(tmp_path):
+    store = StartBalanceStore(tmp_path / "start.json")
+    alerts, events = [], []
+    instance = _automatic_runner("20987.63", store, alerts, events.append)
+    assert instance._requested_size(RULES) == Decimal("0.10")
+    assert store.get() == Decimal("20987.63")
+    assert len(alerts) == 1 and "20987.63" in alerts[0]
+    assert [e["event"] for e in events] == ["start_balance_recorded"]
+    instance._requested_size(RULES)
+    assert len(alerts) == 1  # told once, not on every trade
+
+
+def test_automatic_start_balance_scales_lots_with_later_growth(tmp_path):
+    store = StartBalanceStore(tmp_path / "start.json")
+    _automatic_runner("1000", store)._requested_size(RULES)
+    assert _automatic_runner("1500", store)._requested_size(RULES) == Decimal("0.15")
+    assert _automatic_runner("500", store)._requested_size(RULES) == Decimal("0.10")
+
+
+def test_automatic_start_balance_survives_a_restart(tmp_path):
+    path = tmp_path / "start.json"
+    _automatic_runner("1000", StartBalanceStore(path))._requested_size(RULES)
+    reopened = _automatic_runner("2000", StartBalanceStore(path))
+    assert reopened._requested_size(RULES) == Decimal("0.20")
+
+
+def test_an_explicit_start_balance_overrides_the_saved_one(tmp_path):
+    store = StartBalanceStore(tmp_path / "start.json")
+    store.record_if_missing(Decimal("1000"))
+    assert _sizing_runner("1500", "1500")._requested_size(RULES) == Decimal("0.10")
+    assert store.get() == Decimal("1000")
+
+
+def test_no_start_balance_and_no_store_refuses_the_entry():
+    with pytest.raises(TaiDemoRefused, match="no start balance"):
+        _automatic_runner("1000", None)._requested_size(RULES)
+
+
+def test_a_damaged_start_balance_file_refuses_instead_of_guessing(tmp_path):
+    path = tmp_path / "start.json"
+    path.write_text("garbage", encoding="utf-8")
+    with pytest.raises(TaiDemoRefused, match="start balance unavailable"):
+        _automatic_runner("1000", StartBalanceStore(path))._requested_size(RULES)
+    assert path.read_text(encoding="utf-8") == "garbage"
 
 
 def test_persisted_position_restores_management_and_prevents_duplicate_entry(tmp_path: Path):

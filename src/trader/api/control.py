@@ -37,7 +37,10 @@ def control_action(
     if not expected_token or not totp_secret:
         raise HTTPException(status_code=401, detail="owner authorization failed")
 
-    writer = getattr(request.app.state, "execution_control_writer", None)
+    # The HTTP kill switch stops every account; fall back to this process's own writer.
+    writer = getattr(request.app.state, "execution_control_all_writer", None) or getattr(
+        request.app.state, "execution_control_writer", None
+    )
     if writer is None:
         raise HTTPException(status_code=503, detail="execution control is unavailable")
     try:

@@ -13,10 +13,15 @@ import logging
 import os
 import threading
 import time
+import urllib.error
+import urllib.request
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Request
 
@@ -34,6 +39,15 @@ MAX_ALERT_AGE_SECONDS = 45
 BAR_SECONDS = 180
 EARLY_ALERT_SECONDS = 5
 DUPLICATE_WINDOW_SECONDS = 120.0
+# Other accounts run their own copy of the bot.  The owner lists their webhook addresses in
+# TRADINGVIEW_FORWARD_URLS and this bot passes each authenticated BUY/SELL on unchanged, so one
+# TradingView alert opens one trade per account.  A forwarded alert is never forwarded again.
+FORWARD_URLS_ENV = "TRADINGVIEW_FORWARD_URLS"
+FORWARD_FILE_NAME = "forward_urls"
+FORWARD_HEADER = "X-Tai-Forwarded"
+FORWARD_TIMEOUT_SECONDS = 4.0
+FORWARD_ATTEMPTS = 2
+FORWARD_RETRY_SECONDS = 2.0
 
 _now: Callable[[], datetime] = lambda: datetime.now(UTC)  # noqa: E731 - replaced in tests
 _monotonic: Callable[[], float] = time.monotonic
@@ -43,6 +57,96 @@ _last_accepted: dict[str, float] = {}
 
 def _seconds_into_bar(moment: datetime) -> int:
     return (moment.minute % 3) * 60 + moment.second
+
+
+def _forward_file() -> Path:
+    return Path(os.getenv("WORKSPACE_DIR", "/workspace")) / "state" / FORWARD_FILE_NAME
+
+
+def _forward_targets() -> list[str]:
+    """Webhook addresses to copy each alert to, from the environment and the forward file.
+
+    The file (one address per line, ``#`` starts a comment) is read on every alert, so the owner
+    can add an account without restarting this bot.  Anything that is not an http(s) address is
+    skipped, and an address listed twice is used once.
+    """
+    entries = [part for part in os.getenv(FORWARD_URLS_ENV, "").split(",")]
+    try:
+        entries.extend(_forward_file().read_text(encoding="utf-8").splitlines())
+    except FileNotFoundError:
+        pass
+    except OSError:
+        LOGGER.warning("the forward address file could not be read")
+    targets: list[str] = []
+    for part in entries:
+        url = part.split("#", 1)[0].strip()
+        if not url or url in targets:
+            continue
+        parsed = urlsplit(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            LOGGER.warning("a forward address is not an http(s) address; skipped")
+            continue
+        targets.append(url)
+    return targets
+
+
+def _send_copy(url: str, body: bytes, timeout: float) -> int:
+    """POST the alert once and return the HTTP status; raises on a network failure."""
+    request = urllib.request.Request(  # noqa: S310 - scheme checked in _forward_targets
+        url,
+        data=body,
+        headers={"Content-Type": "application/json", FORWARD_HEADER: "1"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:  # noqa: S310
+            return int(response.status)
+    except urllib.error.HTTPError as exc:
+        return int(exc.code)
+
+
+def _forward_one(url: str, body: bytes) -> bool:
+    host = urlsplit(url).hostname or "target"
+    for attempt in range(1, FORWARD_ATTEMPTS + 1):
+        try:
+            status = _send_copy(url, body, FORWARD_TIMEOUT_SECONDS)
+        except Exception as exc:  # noqa: BLE001 - one account must never block another
+            LOGGER.warning(
+                "tradingview alert copy to %s failed (attempt %d): %s",
+                host,
+                attempt,
+                type(exc).__name__,
+            )
+        else:
+            if status < 400:
+                return True
+            LOGGER.warning("tradingview alert copy to %s refused: HTTP %s", host, status)
+            return False  # the other bot answered; sending it again would not change that
+        if attempt < FORWARD_ATTEMPTS:
+            time.sleep(FORWARD_RETRY_SECONDS)
+    return False
+
+
+def _forward(targets: list[str], body: bytes, signal: str) -> None:
+    """Copy one authenticated alert to every other account's bot, in parallel."""
+    try:
+        with ThreadPoolExecutor(max_workers=min(8, len(targets))) as pool:
+            results = list(pool.map(lambda url: _forward_one(url, body), targets))
+        LOGGER.warning(
+            "tradingview %s alert copied to %d of %d other account bot(s)",
+            signal,
+            sum(results),
+            len(results),
+        )
+    except Exception:  # noqa: BLE001 - nothing is waiting on this task
+        LOGGER.error("tradingview %s alert copy failed", signal, exc_info=True)
+
+
+def _start_forward(targets: list[str], body: bytes, signal: str) -> None:
+    """Run the copy on its own thread: a refusal below must not cancel it."""
+    threading.Thread(
+        target=_forward, args=(targets, body, signal), name="tradingview-forward", daemon=True
+    ).start()
 
 
 def _runner_for(runtime: Any, symbol: str) -> Any:
@@ -81,6 +185,15 @@ async def tradingview_alert(request: Request, background: BackgroundTasks) -> di
     signal = str(payload.get("signal", "")).strip().upper()
     if signal not in {"BUY", "SELL"}:
         return {"status": "ignored", "signal": signal[:20]}
+    # Copy the alert to the other accounts before anything here can refuse it: this bot being
+    # not ready, stale or paused says nothing about their bots, which judge the alert themselves.
+    if not request.headers.get(FORWARD_HEADER):
+        try:
+            targets = _forward_targets()
+            if targets:
+                _start_forward(targets, raw, signal)
+        except Exception:  # noqa: BLE001 - copying must never change this bot's own answer
+            LOGGER.error("tradingview %s alert could not be copied", signal, exc_info=True)
     runtime = getattr(request.app.state, "tai_demo_runtime", None)
     symbol = str(payload.get("symbol", "")).strip().upper()
     runner = _runner_for(runtime, symbol)

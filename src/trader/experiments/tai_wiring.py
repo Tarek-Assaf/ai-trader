@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 from trader.data.instruments import InstrumentDataError
 from trader.data.resample import Candle
 from trader.execution.brokers.base import Direction, OrderRequest
+from trader.experiments.start_balance import StartBalanceStore
 from trader.experiments.tai_demo import (
     Alert,
     ClosedBar,
@@ -1177,6 +1178,7 @@ def build_tai_demo_runtime(
     managed_state: Mapping[str, _ManagedPosition] | None = None,
     pending_bars: Mapping[str, ClosedBar] | None = None,
     state_path: Path | None = None,
+    start_balance_store: StartBalanceStore | None = None,
 ) -> TaiDemoRuntimeAdapter | None:
     """Compose the guarded T-186 runtime only when the explicit experiment is on."""
     demo_settings = TaiDemoSettings.from_settings(settings)
@@ -1209,6 +1211,7 @@ def build_tai_demo_runtime(
         managed_state=managed_state,
         state_path=state_path,
         epic=epic,
+        start_balance_store=start_balance_store,
     )
     return TaiDemoRuntimeAdapter(
         runner,

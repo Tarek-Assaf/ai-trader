@@ -169,6 +169,20 @@ class AlertLimiter:
             return True
 
 
+class AccountPanel(Protocol):
+    """Per-account controls the channel can steer: one account, or every account."""
+
+    def numbers(self) -> tuple[str, ...]: ...
+
+    def has(self, number: str) -> bool: ...
+
+    def writer(self, number: str | None) -> ControlWriter: ...
+
+    def mode(self, number: str | None) -> ControlMode: ...
+
+    def global_mode(self) -> ControlMode: ...
+
+
 class TelegramChannel:
     """Long-poll Telegram channel with deterministic control commands.
 
@@ -212,6 +226,7 @@ class TelegramChannel:
         nonce_store: NonceStore | None = None,
         alert_limiter: AlertLimiter | None = None,
         max_queue: int = 128,
+        accounts: AccountPanel | None = None,
     ) -> None:
         ids = frozenset(value.strip() for value in owner_chat_ids if value.strip())
         if not ids:
@@ -223,6 +238,7 @@ class TelegramChannel:
         self._transport = transport
         self._owner_ids = ids
         self._control_writer = control_writer
+        self._accounts = accounts
         self._current_mode = current_mode
         self._flatten = flatten
         self._render = render or (lambda command, argument: f"{command}: {argument}".strip())
@@ -231,7 +247,7 @@ class TelegramChannel:
         self._authorize_resume = authorize_resume
         self._totp_secret = (resume_totp_secret or "").strip()
         # chat id -> (expires at, failed attempts); the code itself is never stored or logged.
-        self._awaiting_code: dict[str, tuple[float, int]] = {}
+        self._awaiting_code: dict[str, tuple[float, int, str | None]] = {}
         self._last_totp_step: int | None = None
         self._audit = audit
         self._nonces = nonce_store or NonceStore()
@@ -300,17 +316,32 @@ class TelegramChannel:
         if chat_id in self._awaiting_code and self._handle_resume_code(chat_id, text):
             return
         command, argument = self._parse_command(text)
-        if command == "/resume":
-            if not self._resume_mode_is_safe(chat_id):
+        if command in {"/resume", "/pause", "/stop", "/kill"}:
+            known, account = self._resolve_account(chat_id, command, argument)
+            if not known:
                 return
-            nonce = self._nonces.issue("resume")
-            self._send(chat_id, "Confirm resume?", reply_markup=self._buttons(nonce, "resume"))
-            return
-        if command in {"/pause", "/stop", "/kill"}:
-            self._apply_safe_control(chat_id, command)
+            if command == "/resume":
+                if not self._resume_mode_is_safe(chat_id, account=account):
+                    return
+                nonce = self._nonces.issue(self._resume_purpose(account))
+                target = f" for account {account}" if account else ""
+                self._send(
+                    chat_id,
+                    f"Confirm resume{target}?",
+                    reply_markup=self._buttons(nonce, "resume", account),
+                )
+                return
+            self._apply_safe_control(chat_id, command, account)
             return
         if command == "/help":
-            self._send(chat_id, "Supported commands: " + ", ".join(sorted(self.COMMANDS)))
+            lines = ["Supported commands: " + ", ".join(sorted(self.COMMANDS))]
+            if self._accounts is not None and len(self._accounts.numbers()) > 1:
+                lines.append(
+                    "Add an account number to steer one account, for example /pause 02 or "
+                    "/resume 02. Without a number the command applies to every account. "
+                    f"Accounts: {', '.join(self._accounts.numbers())}."
+                )
+            self._send(chat_id, "\n".join(lines))
             return
         if command == "/trades":
             choice = argument.lower().strip()
@@ -393,21 +424,53 @@ class TelegramChannel:
                     self._queue.append((chat_id, text, markup))
                 LOGGER.warning("telegram delivery failed", extra={"chat_hash": self._hash(chat_id)})
 
-    def _apply_safe_control(self, chat_id: str, command: str) -> None:
+    def _resolve_account(
+        self, chat_id: str, command: str, argument: str
+    ) -> tuple[bool, str | None]:
+        """Which account a control command names: (understood, number); None means all.
+
+        A number that is not a known account is refused: it never falls back to every account.
+        """
+        name = argument.strip().lower()
+        if not name:
+            return True, None
+        number = name.removeprefix("acct-").removeprefix("account").strip()
+        if number.isdigit():
+            number = number.zfill(2)
+        if self._accounts is not None and self._accounts.has(number):
+            return True, number
+        known = ", ".join(self._accounts.numbers()) if self._accounts is not None else "none"
+        self._send(
+            chat_id,
+            f"{command} was not applied: no account '{argument.strip()[:20]}'. "
+            f"Accounts: {known}. Send {command} alone to apply it to every account.",
+        )
+        return False, None
+
+    @staticmethod
+    def _resume_purpose(account: str | None) -> str:
+        return f"resume:{account}" if account else "resume"
+
+    def _writer_for(self, account: str | None) -> ControlWriter:
+        if self._accounts is not None:
+            return self._accounts.writer(account)
+        return self._control_writer
+
+    def _apply_safe_control(self, chat_id: str, command: str, account: str | None = None) -> None:
         mode = {
             "/pause": ControlMode.PAUSE,
             "/stop": ControlMode.PAUSE,
             "/kill": ControlMode.KILL,
         }[command]
         previous = "unknown"
-        if self._control_writer is not None:
-            try:
-                self._control_writer.set(mode)
-            except Exception:
-                self._audit_event(f"{command}_rejected", chat_id, previous, "unknown", None)
-                self._send(chat_id, "Execution control is unavailable; execution remains halted.")
-                return
-        if command in {"/stop", "/kill"} and self._flatten is not None:
+        scope = f" for account {account}" if account else ""
+        try:
+            self._writer_for(account).set(mode)
+        except Exception:
+            self._audit_event(f"{command}_rejected", chat_id, previous, "unknown", None)
+            self._send(chat_id, "Execution control is unavailable; execution remains halted.")
+            return
+        if command in {"/stop", "/kill"} and account is None and self._flatten is not None:
             try:
                 flattened = self._flatten()
             except Exception:
@@ -417,7 +480,7 @@ class TelegramChannel:
                 self._audit_event(command, chat_id, previous, mode.value, None)
                 return
         self._audit_event(command, chat_id, previous, mode.value, None)
-        self._send(chat_id, f"{command} accepted; execution mode is {mode.value}.")
+        self._send(chat_id, f"{command} accepted{scope}; execution mode is {mode.value}.")
 
     def _handle_callback(self, callback: Mapping[str, Any]) -> None:
         callback_id = callback.get("id")
@@ -433,7 +496,9 @@ class TelegramChannel:
                 extra={"chat_hash": self._hash(chat_id)},
             )
             return
-        action, _, nonce = data.partition(":")
+        action, _, rest = data.partition(":")
+        nonce, _, callback_account = rest.partition(":")
+        account = callback_account or None
         if action in {"trades_open", "trades_history"}:
             self._transport.answer_callback(callback_id, "")
             if action == "trades_open":
@@ -445,14 +510,16 @@ class TelegramChannel:
             self._nonces.consume_any(nonce)
             self._transport.answer_callback(callback_id, "Cancelled")
             return
-        if action != "confirm_resume" or not self._nonces.consume(nonce, "resume"):
+        if action != "confirm_resume" or not self._nonces.consume(
+            nonce, self._resume_purpose(account)
+        ):
             self._transport.answer_callback(callback_id, "Expired or invalid confirmation")
             self._audit_event("resume_rejected", chat_id, "unknown", "unknown", nonce)
             return
-        if not self._resume_mode_is_safe(chat_id, callback_id=callback_id):
+        if not self._resume_mode_is_safe(chat_id, callback_id=callback_id, account=account):
             return
         if self._totp_secret:
-            self._awaiting_code[chat_id] = (time.monotonic() + RESUME_CODE_SECONDS, 0)
+            self._awaiting_code[chat_id] = (time.monotonic() + RESUME_CODE_SECONDS, 0, account)
             self._transport.answer_callback(callback_id, "Send your 6-digit code")
             self._send(
                 chat_id,
@@ -464,11 +531,11 @@ class TelegramChannel:
             self._transport.answer_callback(callback_id, "Owner authorization failed")
             self._audit_event("resume_rejected", chat_id, "pause", "unknown", nonce)
             return
-        self._complete_resume(chat_id, callback_id, nonce)
+        self._complete_resume(chat_id, callback_id, nonce, account)
 
     def _handle_resume_code(self, chat_id: str, text: str) -> bool:
         """Consume a pending resume code; returns true when the message was the code reply."""
-        expires, failures = self._awaiting_code[chat_id]
+        expires, failures, account = self._awaiting_code[chat_id]
         code = text.strip()
         if time.monotonic() > expires:
             del self._awaiting_code[chat_id]
@@ -476,7 +543,7 @@ class TelegramChannel:
             return not (len(code) == 6 and code.isdigit())
         if not (len(code) == 6 and code.isdigit()):
             return False
-        if not self._resume_mode_is_safe(chat_id):
+        if not self._resume_mode_is_safe(chat_id, account=account):
             del self._awaiting_code[chat_id]
             return True
         from trader.control.totp import matching_totp_step
@@ -489,17 +556,19 @@ class TelegramChannel:
                 del self._awaiting_code[chat_id]
                 self._send(chat_id, "Wrong code three times. Send /resume to start again.")
             else:
-                self._awaiting_code[chat_id] = (expires, failures)
+                self._awaiting_code[chat_id] = (expires, failures, account)
                 self._send(chat_id, "That code did not work. Check your authenticator and retry.")
             return True
         self._last_totp_step = step
         del self._awaiting_code[chat_id]
-        self._complete_resume(chat_id, None, None)
+        self._complete_resume(chat_id, None, None, account)
         return True
 
-    def _complete_resume(self, chat_id: str, callback_id: str | None, nonce: str | None) -> None:
+    def _complete_resume(
+        self, chat_id: str, callback_id: str | None, nonce: str | None, account: str | None = None
+    ) -> None:
         try:
-            self._control_writer.set(ControlMode.RESUME)
+            self._writer_for(account).set(ControlMode.RESUME)
         except Exception:
             if callback_id is not None:
                 self._transport.answer_callback(callback_id, "Execution control unavailable")
@@ -509,23 +578,44 @@ class TelegramChannel:
         self._audit_event("resume", chat_id, "pause", ControlMode.RESUME.value, nonce)
         if callback_id is not None:
             self._transport.answer_callback(callback_id, "Resume requested")
-        self._send(chat_id, "Resume requested; reconciliation must succeed before entries resume.")
+        target = f" for account {account}" if account else ""
+        self._send(
+            chat_id,
+            f"Resume requested{target}; reconciliation must succeed before entries resume.",
+        )
 
-    def _resume_mode_is_safe(self, chat_id: str, *, callback_id: str | None = None) -> bool:
+    def _resume_mode_is_safe(
+        self, chat_id: str, *, callback_id: str | None = None, account: str | None = None
+    ) -> bool:
         """Reject resume when mode cannot be read or kill is latched."""
-        if self._current_mode is None:
-            message = "Resume unavailable; execution mode cannot be read."
-        else:
+        message = ""
+        if self._accounts is not None:
             try:
-                mode = self._current_mode()
+                mode: ControlMode | None = self._accounts.mode(account)
+                everyone_paused = (
+                    account is not None and self._accounts.global_mode() is ControlMode.PAUSE
+                )
             except Exception:
-                mode = None
+                mode, everyone_paused = None, False
             if mode is ControlMode.KILL:
                 message = "Resume unavailable; execution kill is latched."
             elif mode is None:
                 message = "Resume unavailable; execution mode cannot be read."
-            else:
-                message = ""
+            elif everyone_paused:
+                message = (
+                    "Every account is paused. Send /resume without a number to lift that first."
+                )
+        elif self._current_mode is None:
+            message = "Resume unavailable; execution mode cannot be read."
+        else:
+            try:
+                current: ControlMode | None = self._current_mode()
+            except Exception:
+                current = None
+            if current is ControlMode.KILL:
+                message = "Resume unavailable; execution kill is latched."
+            elif current is None:
+                message = "Resume unavailable; execution mode cannot be read."
         if message:
             if callback_id is None:
                 self._send(chat_id, message)
@@ -552,11 +642,12 @@ class TelegramChannel:
         return (command if command in TelegramChannel.COMMANDS else None, rest.strip())
 
     @staticmethod
-    def _buttons(nonce: str, action: str) -> Mapping[str, Any]:
+    def _buttons(nonce: str, action: str, account: str | None = None) -> Mapping[str, Any]:
+        suffix = f":{account}" if account else ""
         return {
             "inline_keyboard": [
                 [
-                    {"text": "Confirm", "callback_data": f"confirm_{action}:{nonce}"},
+                    {"text": "Confirm", "callback_data": f"confirm_{action}:{nonce}{suffix}"},
                     {"text": "Cancel", "callback_data": "cancel:" + nonce},
                 ]
             ]
@@ -597,11 +688,19 @@ class TelegramChannel:
 class TelegramBotTransport:
     """HTTP transport kept separate so the channel remains offline-testable."""
 
-    def __init__(self, token: str, *, api_base: str = "https://api.telegram.org") -> None:
+    def __init__(
+        self, token: str, *, api_base: str = "https://api.telegram.org", label: str | None = None
+    ) -> None:
         if not token.strip():
             raise ValueError("Telegram bot token is required")
         self._token = token
         self._base = api_base.rstrip("/")
+        # An extra account's name, put in front of everything it sends so messages from
+        # several accounts through one bot can be told apart.
+        self._label = (label or "").strip()[:40]
+
+    def _labelled(self, text: str) -> str:
+        return f"[{self._label}] {text}" if self._label else text
 
     def _request(self, method: str, payload: Mapping[str, Any]) -> Any:
         import httpx
@@ -681,7 +780,7 @@ class TelegramBotTransport:
         if _closed_market_feed_warning(text):
             LOGGER.info("feed notification suppressed: markets confirmed closed")
             return
-        payload: dict[str, Any] = {"chat_id": chat_id, "text": text}
+        payload: dict[str, Any] = {"chat_id": chat_id, "text": self._labelled(text)}
         if reply_markup is not None:
             payload["reply_markup"] = reply_markup
         self._request("sendMessage", payload)
@@ -692,8 +791,8 @@ class TelegramBotTransport:
         for logger_name in ("httpx", "httpcore"):
             logging.getLogger(logger_name).setLevel(logging.WARNING)
         data: dict[str, str] = {"chat_id": chat_id}
-        if caption:
-            data["caption"] = caption
+        if caption or self._label:
+            data["caption"] = self._labelled(caption)
         try:
             response = httpx.post(
                 f"{self._base}/bot{self._token}/sendPhoto",

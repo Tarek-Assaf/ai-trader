@@ -57,6 +57,21 @@ def test_numbered_accounts_load_in_number_order_and_fall_back_to_shared_values()
     assert five.base_lot == Decimal("0.2")
 
 
+def test_the_start_balance_is_one_accounts_own_and_never_falls_back() -> None:
+    environ = {
+        "CAPITAL_IDENTIFIER": "id-secret-aaa",
+        "CAPITAL_API_KEY": "key-secret-bbb",
+        "CAPITAL_API_PASSWORD": "pw-secret-ccc",
+        "TAI_DEMO_START_BALANCE": "10999.80",
+        **block("02", identifier="id-secret-ddd"),
+        **block("03", identifier="id-secret-eee", TAI_DEMO_START_BALANCE="5000"),
+    }
+    one, two, three = load_accounts(environ).accounts
+    assert one.start_balance == Decimal("10999.80")
+    assert two.start_balance == Decimal("0")  # automatic: recorded from the account
+    assert three.start_balance == Decimal("5000")
+
+
 def test_credentials_never_fall_back_to_unnumbered_or_other_accounts() -> None:
     environ = {
         "CAPITAL_API_KEY": "key-secret-bbb",

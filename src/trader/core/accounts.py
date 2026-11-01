@@ -2,8 +2,10 @@
 
 An account is one block of variables ending in ``_NN`` (for example
 ``CAPITAL_IDENTIFIER_02``). The unnumbered Capital.com variables used by the single-account
-setup count as account ``01``. Credentials never fall back to another account's or to the
-unnumbered ones; every other value falls back to the shared unnumbered variable.
+setup count as account ``01``. Credentials and the start balance never fall back to another
+account's or to the unnumbered ones (a balance is one account's own); every other value falls
+back to the shared unnumbered variable.  A start balance of zero means "record it from the
+account".
 
 Nothing here reads the process environment by itself, prints a secret, or builds a broker.
 Problems name the missing or invalid variable, never its value.
@@ -11,6 +13,7 @@ Problems name the missing or invalid variable, never its value.
 
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -19,6 +22,8 @@ from typing import Literal
 
 from pydantic import SecretStr
 
+DEFAULT_ACCOUNT_ID = "acct-01"
+ACCOUNT_ID_PATTERN = re.compile(r"^acct-\d{2,3}$")
 _CREDENTIALS = ("CAPITAL_IDENTIFIER", "CAPITAL_API_KEY", "CAPITAL_API_PASSWORD")
 _PER_ACCOUNT = (
     *_CREDENTIALS,
@@ -141,6 +146,10 @@ def _build(
     def shared(name: str) -> str:
         return numbered(name) or _text(environ, name)
 
+    def own(name: str) -> str:
+        """A value that belongs to one account: the shared variable is account 01's alone."""
+        return numbered(name) or (_text(environ, name) if legacy else "")
+
     problems: list[AccountProblem] = []
     values = {name: credential(name) for name in _CREDENTIALS}
     for name, value in values.items():
@@ -167,7 +176,7 @@ def _build(
         problems.append(
             AccountProblem(number, f"TAI_DEMO_BASE_LOT_{number}", "must be a number above zero")
         )
-    start_balance = _decimal(shared("TAI_DEMO_START_BALANCE"), Decimal("0"))
+    start_balance = _decimal(own("TAI_DEMO_START_BALANCE"), Decimal("0"))
     if start_balance is None or start_balance < 0:
         problems.append(
             AccountProblem(
@@ -248,3 +257,23 @@ def describe_accounts(load: AccountLoad) -> str:
     for problem in load.problems:
         lines.append(f"Skipped {problem}")
     return "\n".join(lines)
+
+
+def current_account_id(environ: Mapping[str, str] | None = None) -> str:
+    """The account this process trades.  Account 01 unless a worker sets ``ACCOUNT_ID``."""
+    source = os.environ if environ is None else environ
+    value = (source.get("ACCOUNT_ID") or "").strip()
+    if not value:
+        return DEFAULT_ACCOUNT_ID
+    if not ACCOUNT_ID_PATTERN.match(value):
+        raise ValueError("ACCOUNT_ID must look like acct-02")
+    return value
+
+
+def scoped_lease_key(base: str, environ: Mapping[str, str] | None = None) -> str:
+    """Lease key for this account.  Account 01 keeps its original key; others get a suffix.
+
+    Every account's process shares one Redis, so two accounts must never contend for one lease.
+    """
+    account = current_account_id(environ)
+    return base if account == DEFAULT_ACCOUNT_ID else f"{base}:{account}"

@@ -31,13 +31,14 @@ from trader.api.health import (
 from trader.api.tradingview import router as tradingview_router
 from trader.channels.router import ChatRouter, RoutedIntent
 from trader.channels.telegram import TelegramBotTransport, TelegramChannel
+from trader.core.accounts import DEFAULT_ACCOUNT_ID, current_account_id, load_accounts
 from trader.core.audit import AuditEvent
 from trader.core.config import load_all_configs
 from trader.core.logging import configure_logging
 from trader.core.settings import EnvironmentSettings
 from trader.data.instruments import InstrumentMapper
 from trader.data.recorder import CapitalDataRecorder, ParquetCandleStore
-from trader.execution.control import ControlMode, build_control_sources
+from trader.execution.control import ControlMode, build_account_controls
 from trader.execution.reconciliation import capital_account_field_map_from_config
 from trader.integrations.capital_com.client import CapitalComClient
 from trader.integrations.capital_com.trading import CapitalComTradingClient
@@ -96,7 +97,35 @@ def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
     broker exception or any credentials.
     """
     configured = getattr(state, "report_telegram_transport", None)
-    return configured or TelegramBotTransport(token)
+    return configured or TelegramBotTransport(token, label=os.getenv("ACCOUNT_LABEL") or None)
+
+
+_WORKER_ENGINES: dict[str, Any] = {}
+
+
+def _worker_status_lines(app_instance: FastAPI) -> list[str]:
+    """Status of each extra account (empty when only account 01 runs)."""
+    controls = getattr(app_instance.state, "account_controls", None)
+    if controls is None:
+        return []
+    from trader.reports.account_status import other_account_lines
+    from trader.runtime.account_workers import _database_url, worker_accounts
+
+    names = {account.number: account.name for account in worker_accounts(os.environ)}
+    names = {number: name for number, name in names.items() if controls.has(number)}
+    if not names:
+        return []
+
+    def engine_for(number: str) -> Any:
+        if number not in _WORKER_ENGINES:
+            from sqlalchemy import create_engine
+
+            _WORKER_ENGINES[number] = create_engine(
+                _database_url(os.environ, number), pool_pre_ping=True, pool_size=1, max_overflow=0
+            )
+        return _WORKER_ENGINES[number]
+
+    return other_account_lines(names, engine_for, lambda number: lambda: controls.mode(number))
 
 
 def _command_renderer(command_handlers: dict[str, Any]) -> Callable[[str, str], str]:
@@ -292,6 +321,10 @@ def _build_tai_demo_runtime(
     audit_writer = (getattr(app.state, "runtime_services", None) or {}).get("audit_writer")
     append_audit = getattr(audit_writer, "append", None)
     journal = _tai_audit_journal(append_audit)
+    from trader.experiments.start_balance import StartBalanceStore
+
+    # One saved start balance per account workspace, shared by every market's runner.
+    start_balances = StartBalanceStore(workspace / "state" / "tai_start_balance.json")
 
     def alert(message: str) -> None:
         _LOG.error("tai demo alert: %s", message)
@@ -363,6 +396,7 @@ def _build_tai_demo_runtime(
             pending_bars=pending_bars,
             journal=journal if callable(append_audit) else None,
             alert=alert,
+            start_balance_store=start_balances,
             state_path=workspace
             / "state"
             / (
@@ -870,11 +904,25 @@ async def lifespan(_app: FastAPI) -> Any:
         # state prevents a paper/demo startup from silently running a partial
         # decision loop that could bypass OrderManager.
         _LOG.info("Demo runtime composition is eligible; waiting for core dependencies")
+    _app.state.account_controls = None
+    _app.state.execution_control_all_writer = None
     if redis_url:
         try:
-            control_source, control_writer = build_control_sources(redis_url=redis_url)
-            _app.state.execution_control_source = control_source
-            _app.state.execution_control_writer = control_writer
+            # Each account obeys its own switch and the shared one.  The main process (account
+            # 01) also holds every worker account's switch so Telegram can steer them.
+            account_id = current_account_id()
+            account_ids = [account_id]
+            if account_id == DEFAULT_ACCOUNT_ID:
+                account_ids += [
+                    account.account_id
+                    for account in load_accounts(os.environ).active
+                    if account.account_id != DEFAULT_ACCOUNT_ID
+                ]
+            controls = build_account_controls(redis_url=redis_url, account_ids=account_ids)
+            _app.state.account_controls = controls
+            _app.state.execution_control_source = controls.source_for(account_id)
+            _app.state.execution_control_writer = controls.account_writer(account_id)
+            _app.state.execution_control_all_writer = controls.writer(None)
         except Exception as exc:
             _LOG.warning("Execution control unavailable (%s)", type(exc).__name__)
     default_dir = Path("/app/config") if Path("/app/config").is_dir() else Path("config")
@@ -1000,7 +1048,11 @@ async def lifespan(_app: FastAPI) -> Any:
             for value in (settings.telegram_owner_chat_ids or "").split(",")
             if value.strip()
         )
-        report_transport = TelegramBotTransport(token) if token and owner_ids else None
+        report_transport = (
+            TelegramBotTransport(token, label=os.getenv("ACCOUNT_LABEL") or None)
+            if token and owner_ids
+            else None
+        )
         _app.state.report_telegram_transport = report_transport
         report_email = (
             _app.state.runtime_services.get("report_email")
@@ -1132,7 +1184,9 @@ async def lifespan(_app: FastAPI) -> Any:
                     if callable(base_status)
                     else "Trading status is unavailable right now."
                 )
-                return "\n".join([str(text), *entry_state_lines(history_engine, current_mode)])
+                lines = [str(text), *entry_state_lines(history_engine, current_mode)]
+                lines.extend(_worker_status_lines(_app))
+                return "\n".join(lines)
 
             command_handlers["/status"] = status_handler
 
@@ -1166,9 +1220,18 @@ async def lifespan(_app: FastAPI) -> Any:
                     if settings.owner_totp_secret
                     else None
                 ),
+                accounts=getattr(_app.state, "account_controls", None),
             )
+            # Only the main bot listens for commands.  An extra account's process sends its
+            # alerts and reports through the same bot but never competes for the updates.
+            polling = os.getenv("TELEGRAM_POLLING", "on").strip().lower() not in {
+                "off",
+                "no",
+                "0",
+                "false",
+            }
             publish_menu = getattr(transport, "set_commands", None)
-            if callable(publish_menu):
+            if polling and callable(publish_menu):
                 try:
                     publish_menu(TELEGRAM_MENU)
                 except Exception:  # noqa: BLE001 - a missing menu must not stop the bot
@@ -1184,11 +1247,13 @@ async def lifespan(_app: FastAPI) -> Any:
             )
             _app.state.telegram_channel = channel
             _app.state.telegram_stop = stop_event
-            _app.state.telegram_thread = thread
-            thread.start()
+            if polling:
+                _app.state.telegram_thread = thread
+                thread.start()
             _LOG.info(
-                "Telegram channel started owner_ids=%d commands=[%s]",
+                "Telegram channel started owner_ids=%d polling=%s commands=[%s]",
                 len(owner_ids),
+                "on" if polling else "off (alerts only)",
                 ",".join(sorted(getattr(TelegramChannel, "COMMANDS", ()))),
             )
     try:

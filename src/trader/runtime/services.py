@@ -18,6 +18,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from trader.core.accounts import scoped_lease_key
 from trader.core.audit import SqlAuditWriter
 from trader.core.settings import EnvironmentSettings
 from trader.reports.trade_ledger import TradeLedger
@@ -137,14 +138,14 @@ def build_runtime_services(
     # The manager ticks every few seconds; a two-minute lease rides out disk and VM stalls.
     execution_lease = RedisLeaderLease(
         redis_client,
-        "ai-trader:execution:lease",
+        scoped_lease_key("ai-trader:execution:lease"),
         ttl_ms=EXECUTION_LEASE_TTL_MS,
         retries=5,
         retake_when_expired=True,
     )
     guardian_lease = RedisLeaderLease(
         redis_client,
-        "ai-trader:guardian:lease",
+        scoped_lease_key("ai-trader:guardian:lease"),
         ttl_ms=EXECUTION_LEASE_TTL_MS,
         retries=5,
         retake_when_expired=True,
