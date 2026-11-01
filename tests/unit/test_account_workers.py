@@ -209,3 +209,26 @@ def test_only_worker_databases_can_be_created() -> None:
 def test_render_writes_atomically_and_leaves_no_temporary_files(tmp_path: Path) -> None:
     aw.render(environ(account("02")), supervisor_path=tmp_path / "s", forward_path=tmp_path / "f")
     assert sorted(p.name for p in tmp_path.iterdir()) == ["f", "s"]
+
+
+def test_launcher_looks_the_account_up_before_taking_on_its_login() -> None:
+    """After the exports the unnumbered login equals account NN's, so NN would look like a
+    duplicate of account 01 and be dropped; every lookup must come before the eval."""
+    text = (Path(__file__).resolve().parents[2] / "scripts" / "start_account_api.sh").read_text()
+    lookups = [text.index("account_workers database"), text.index("account_workers env")]
+    assert max(lookups) < text.index('eval "$EXPORTS"')
+
+
+def test_the_workers_own_environment_makes_its_account_look_like_a_duplicate() -> None:
+    """Documents why: with the exports applied, a second lookup finds no worker account."""
+    environ = {
+        "CAPITAL_IDENTIFIER_02": "second@example.test",
+        "CAPITAL_API_KEY_02": "key-two",
+        "CAPITAL_API_PASSWORD_02": "pw-two",
+        "CAPITAL_IDENTIFIER": "main@example.test",
+        "CAPITAL_API_KEY": "key-one",
+        "CAPITAL_API_PASSWORD": "pw-one",
+    }
+    (account,) = aw.worker_accounts(environ)
+    after = {**environ, **aw.worker_environment(account, environ)}
+    assert aw.worker_accounts(after) == ()
