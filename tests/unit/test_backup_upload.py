@@ -193,3 +193,28 @@ def test_active_files_are_snapshotted_before_hashing(tmp_path: Path) -> None:
     assert snap["data/lake/old.parquet"] == old
     assert snap["data/lake/live.parquet"] != live
     assert snap["data/lake/live.parquet"].read_bytes() == b"v1"
+
+
+def test_extra_account_databases_are_included_in_the_encrypted_upload(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Account 02's newest dump and its daily copies go up with the main database's."""
+    monkeypatch.setattr(
+        backup,
+        "_run",
+        lambda command, env=None: Path(command[command.index("-out") + 1]).write_text("x"),
+    )
+    root = tmp_path / "backups"
+    (root / "accounts" / "02" / "daily").mkdir(parents=True)
+    (root / "trader-20260101T000000Z-1.dump").write_text("main")
+    for name in ("trader_02-20260101T000000Z-1.dump", "trader_02-20260102T000000Z-1.dump"):
+        (root / "accounts" / "02" / name).write_text("account")
+    (root / "accounts" / "02" / "daily" / "trader_02-20260102.dump").write_text("account")
+
+    files = backup._encrypted_dumps(root, "key", tmp_path / "out")
+
+    assert sorted(files) == [
+        "database/accounts/02/daily/trader_02-20260102.dump.enc",
+        "database/accounts/02/trader_02-20260102T000000Z-1.dump.enc",
+        "database/trader-20260101T000000Z-1.dump.enc",
+    ]
