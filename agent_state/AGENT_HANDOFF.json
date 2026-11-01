@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 601,
+  "turn": "claude",
+  "revision": 602,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -49,7 +49,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-268",
+    "last_task": "T-269",
     "last_status": "review"
   },
   "requirements": [
@@ -7685,6 +7685,26 @@
       "review_cycles": 0,
       "evidence": [],
       "completion_note": ""
+    },
+    {
+      "id": "T-278",
+      "title": "Exclude deposits and withdrawals from realized P&L and daily-loss guard",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "finding",
+      "requirements": [],
+      "depends_on": [
+        "T-271"
+      ],
+      "acceptance_criteria": [
+        "Closed-trade P&L and the daily-loss guard use trading cash flows only; deposits and withdrawals are excluded",
+        "A validation covers a demo top-up before any closed trades and proves it is not shown as realized trading profit"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": "Finding recorded: PnlLossGuard currently trusts broker daily_pnl/weekly_pnl when present, so broker cash movements can mask or distort trading loss. A transaction-aware cash-flow source is required before implementation."
     }
   ],
   "decisions": [
@@ -31269,7 +31289,28 @@
         "scripts/backup_upload.py",
         "scripts/start_postgres.sh"
       ],
-      "summary": "Recorded T-262..T-268 (merged, installed; real second demo account healthy; fix PR 489), built T-270 (backups of trader_NN databases) and T-271 (per-account status, positions, P&L, risk, reports), and queued T-269 (Codex review and adversarial tests) and T-272..T-277 (first market-open check, Capital.com limits, per-account charts, chat router, scheduled report check, CI backup drill). Owner asked on 2026-11-02 that nothing be left out; turn was set to human by PR 490 for this entry. T-268 adds extra accounts as worker processes inside the one container (one alert, one Telegram bot), per-account and all-account pause/kill/resume, and the automatic start balance. First real run needs the owner's second demo account keys and an open market. Turn to Codex for review. Catch-up: this file was last updated at T-222 (2026-10-23). Work since then was merged by PR without handoff entries: T-223..T-229 Tai signal chain, order manager start and end-to-end test; T-230/T-238/T-239 strategy entries through the Risk Guardian with a paper-stage size cap; T-232 lease rides out Redis stalls; T-235 opt-in real Capital.com demo execution; T-240 TradingView alerts as the Tai signal source; T-242 Gold beside US100; T-243/T-244/T-255/T-256 P&L from the broker account, trade visibility, plain-language refusals; T-245/T-246/T-247/T-248 disk alert, Telegram resume with authenticator code, /trades; T-249..T-253 webhook answers at once, bar-close window, levels anchored to the alert close; T-254 /status shows pause state; T-257..T-261 second-instrument Guardian fix, closed-trade sync fixes, clearer startup failure, broker refusal is a rejection. See git log on main for each PR; none of these were independently reviewed through this file."
+      "summary": "Recorded T-262..T-268 (merged, installed; real second demo account healthy; fix PR 489), built T-270 (backups of trader_NN databases) and T-271 (per-account status, positions, P&L, risk, reports), and queued T-269 (Codex review and adversarial tests) and T-272..T-277 (first market-open check, Capital.com limits, per-account charts, chat router, scheduled report check, CI backup drill). Owner asked on 2026-11-02 that nothing be left out; turn was set to human by PR 490 for this entry. T-268 adds extra accounts as worker processes inside the one container (one alert, one Telegram bot), per-account and all-account pause/kill/resume, and the automatic start balance. First real run needs the owner's second demo account keys and an open market. Turn to Codex for review. Catch-up: this file was last updated at T-222 (2026-10-23). Work since then was merged by PR without handoff entries: T-223..T-229 Tai signal chain, order manager start and end-to-end test; T-230/T-238/T-239 strategy entries through the Risk Guardian with a paper-stage size cap; T-232 lease rides out Redis stalls; T-235 opt-in real Capital.com demo execution; T-240 TradingView alerts as the Tai signal source; T-242 Gold beside US100; T-243/T-244/T-255/T-256 P&L from the broker account, trade visibility, plain-language refusals; T-245..T-248 disk alert, Telegram resume with authenticator code, /trades; T-249..T-253 webhook answers at once, bar-close window, levels anchored to the alert close; T-254 /status shows pause state; T-257..T-261 second-instrument Guardian fix, closed-trade sync fixes, clearer startup failure, broker refusal is a rejection. See git log on main for each PR; none of these were independently reviewed through this file."
+    },
+    {
+      "revision": 602,
+      "ts": "2026-11-02T00:00:00Z",
+      "agent": "codex",
+      "action": "review_t269_t270_t271_and_validate_runtime_access",
+      "task_ids": [
+        "T-269",
+        "T-272",
+        "T-273",
+        "T-278"
+      ],
+      "files_changed": [
+        "docker/supervisord.all.conf",
+        "docker/supervisord.core.conf",
+        "docker/supervisord.worker.conf",
+        "src/trader/runtime/account_workers.py",
+        "tests/unit/test_account_workers.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "T-269 review found unbounded stdout/stderr logs in every Supervisor program, including dynamically generated account workers; PR 492 sets 50MB rotation with three backups and adds assertions. Static compileall, Ruff check/format check and diff check pass; full dependency tests remain CI-only. T-270 backup code includes trader_NN dumps and encrypted HuggingFace upload; T-271 loopback command routing is read-only, bounded, account-labelled and rejects forwarded callers. T-272 could not be observed because no market-open TradingView alert occurred. T-273 could not be checked because the authorized VM SSH endpoint 192.168.187.50 timed out during banner exchange; no credentials or secrets were exposed. T-278 finding: PnlLossGuard trusts broker daily_pnl/weekly_pnl when present, so cash deposits or withdrawals included by the broker can mask or distort trading loss; the guard needs transaction-aware cash-flow exclusion before this is considered resolved. No risk.yaml, strategy gate, broker, order, restart or trading-control change. Turn to Claude for review/merge and owner VM access."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. Demo only. Not yet observed: one alert opening trades on both accounts (T-272). Codex next: T-269 review and adversarial tests of T-268, then review T-270/T-271; T-277 extends the CI backup drill; T-222 still waits on Codex."
