@@ -274,6 +274,11 @@ def _encrypted_dumps(backup_root: Path, key: str, destination: Path) -> dict[str
         hourly = sorted((backup_root / "hourly").glob("trader-*.dump"), reverse=True)
         daily = sorted((backup_root / "daily").glob("trader-*.dump"), reverse=True)
         dumps = root_dumps[:1] + hourly + daily
+        # Extra accounts' databases: the newest dump and the daily copies of each.
+        for account_dir in sorted((backup_root / "accounts").glob("[0-9][0-9]*")):
+            if account_dir.is_dir():
+                dumps += sorted(account_dir.glob("trader_*.dump"), reverse=True)[:1]
+                dumps += sorted((account_dir / "daily").glob("trader_*.dump"), reverse=True)
     if not dumps:
         return {}
     if not key:

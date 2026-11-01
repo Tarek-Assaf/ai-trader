@@ -93,3 +93,19 @@ No LLM-side module gets broker access; no agent can edit risk or gate files; no 
 in core/execution; stop requests never route through the LLM; no secrets in code, logs, backups or
 files. Check in particular that the worker environment is only ever built in memory and exported by
 `start_account_api.sh`, and that `render` output contains no values.
+
+
+## Update 2026-11-02: what changed after the first real run
+
+- **PR 489**: the worker launcher looked its account up after taking on its login, so it saw a duplicate
+  of account 01 and dropped itself. Both lookups now run first (test guards the order).
+- **T-270 (PR 491)**: every `trader_NN` database is dumped, validated and retained beside the main one,
+  uploaded encrypted with the main dumps, and restored on a new cluster (a corrupt newest dump falls
+  back to the previous; a missing backup starts that account fresh; start-up is never blocked).
+  Verified against a real PostgreSQL 16. The CI Docker drill does not include an account database yet (T-277).
+- **T-271 (PR 491)**: `/status` shows each account's own full status (balance, equity, entry state);
+  `/positions /pnl /risk /report` show every account, `/pnl 02` one account. The main process asks the
+  worker over loopback (`POST /internal/command`, read-only commands, loopback callers only, refused
+  through the tunnel). Not built: charts per account (T-274), natural-language router per account (T-275).
+- **Pending list**: T-272 first market-open check, T-273 Capital.com limits for two logins, T-274, T-275,
+  T-276 scheduled reports from account 02, T-277 CI drill, T-269 Codex review.

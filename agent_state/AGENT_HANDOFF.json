@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "human",
-  "revision": 600,
+  "turn": "codex",
+  "revision": 601,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,12 +34,14 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "T-222 in changes_requested (cycle 1): source accepted in principle, two acceptance tests missing (10-minute keepalive soak, screenshot-vs-live parity). Q-078/Q-079 still open for the owner.",
+    "summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. Demo only. Not yet observed: one alert opening trades on both accounts (T-272). Codex next: T-269 review and adversarial tests of T-268, then review T-270/T-271; T-277 extends the CI backup drill; T-222 still waits on Codex.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
       "The desktop runtime has no pytest, Ruff or mypy, so focused tests and make check could not run; bundled Python compileall, runtime smoke, handoff validation and git diff --check pass.",
-      "The desktop pytest runner suite cannot create its temp root under pytest-of-Tarek Assaf due to Windows ACLs; CI validation is required."
+      "The desktop pytest runner suite cannot create its temp root under pytest-of-Tarek Assaf due to Windows ACLs; CI validation is required.",
+      "The Claude author workspace has no PyPI access, so SQLAlchemy, FastAPI and Postgres/Redis tests run only in CI; local checks use stubs.",
+      "Extra accounts have not yet been seen opening a trade on a real alert (market was closed); see T-272. Charts and the natural-language router are not per account yet (T-274, T-275)."
     ],
     "environment": {
       "runtime": "RunPod Docker",
@@ -47,7 +49,7 @@
       "trading_mode": "paper",
       "broker_env": "demo"
     },
-    "last_task": "T-222",
+    "last_task": "T-268",
     "last_status": "review"
   },
   "requirements": [
@@ -7316,6 +7318,373 @@
         "Add a parity test: build the screenshot bar and an equivalent live-shaped update (same OHLCV via the recorder/closed-bar path) and assert Tai produces identical action, reason and bar_fingerprint.",
         "Lint/format already fixed by Claude on the review branch (import order, trailing blank lines); keep them. Local pytest was unavailable to the reviewer, so CI is the check for the existing stream/recorder/tai tests."
       ]
+    },
+    {
+      "id": "T-262",
+      "title": "A refused price backfill no longer forces a reconnect loop",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "A 400/404/422 from the price backfill keeps the stream connected and retries with doubling delay",
+        "Other backfill errors still reconnect"
+      ],
+      "deliverables": [
+        "src/trader/integrations/capital_com/stream.py",
+        "tests/unit/test_capital_com_stream.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/482"
+      ],
+      "completion_note": "Fixed the 3,173-reconnect storm. Merged to main after CI quality passed; installed on the owner's VM. Independent review by Codex still outstanding (owner reviewer role was Claude's own work)."
+    },
+    {
+      "id": "T-263",
+      "title": "Account loader for numbered per-account environment variables",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "CAPITAL_*_NN blocks load into AccountSettings; credentials never fall back; duplicate logins refused; live needs two switches; problems name variables, never values"
+      ],
+      "deliverables": [
+        "src/trader/core/accounts.py",
+        "tests/unit/test_accounts.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/483"
+      ],
+      "completion_note": "Merged to main after CI quality passed; installed on the owner's VM. Independent review by Codex still outstanding (owner reviewer role was Claude's own work)."
+    },
+    {
+      "id": "T-264",
+      "title": "Read price history in bounded windows",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "iter_price_history never asks for more than max_window (12h) per request"
+      ],
+      "deliverables": [
+        "src/trader/integrations/capital_com/client.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/484"
+      ],
+      "completion_note": "Merged to main after CI quality passed; installed on the owner's VM. Independent review by Codex still outstanding (owner reviewer role was Claude's own work)."
+    },
+    {
+      "id": "T-265",
+      "title": "An empty price window is not an error",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "HTTP 404 error.prices.not-found is an empty window; any other 404 still raises"
+      ],
+      "deliverables": [
+        "src/trader/integrations/capital_com/client.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/485"
+      ],
+      "completion_note": "Merged to main after CI quality passed; installed on the owner's VM. Independent review by Codex still outstanding (owner reviewer role was Claude's own work)."
+    },
+    {
+      "id": "T-266",
+      "title": "A brief network error no longer latches a pause the owner must clear",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "Transient broker errors retry, then latch self-clearing broker_unreachable; non-transient errors still latch broker_reconciliation_failed",
+        "submit() does not latch entry_preflight_failed while the broker is unreachable"
+      ],
+      "deliverables": [
+        "src/trader/execution/manager.py",
+        "src/trader/execution/brokers/base.py",
+        "tests/unit/test_order_manager.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/486"
+      ],
+      "completion_note": "Merged to main after CI quality passed; installed on the owner's VM. Independent review by Codex still outstanding (owner reviewer role was Claude's own work)."
+    },
+    {
+      "id": "T-267",
+      "title": "Execution journal keeps pause, kill and orders per account",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [],
+      "depends_on": [],
+      "acceptance_criteria": [
+        "ExecutionJournal(engine, account_id) filters orders and uses per-account pause/kill snapshot ids; account 01 keeps the original ids"
+      ],
+      "deliverables": [
+        "src/trader/execution/journal.py",
+        "tests/unit/test_execution_journal.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/487"
+      ],
+      "completion_note": "Merged to main after CI quality passed; installed on the owner's VM. Independent review by Codex still outstanding (owner reviewer role was Claude's own work)."
+    },
+    {
+      "id": "T-268",
+      "title": "Extra accounts as workers in one container; per-account pause/kill; automatic start balance",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [],
+      "depends_on": [
+        "T-263",
+        "T-267"
+      ],
+      "acceptance_criteria": [
+        "One TradingView alert and one Telegram bot are unchanged from outside; each extra account runs as its own worker process inside the container with its own login, database, state, leases, controls and lot sizing",
+        "/pause /stop /kill /resume work per account (/pause 02) and for all (no number); unknown number refused; resume-all never clears a killed account",
+        "Start balance is recorded once from the account; explicit value wins; never shared across accounts",
+        "Failure copying an alert cannot change the reply to TradingView; worker setup failure leaves account 01 running alone"
+      ],
+      "deliverables": [
+        "src/trader/runtime/account_workers.py",
+        "scripts/start_account_api.sh",
+        "docker/entrypoint.sh",
+        "docker/supervisord.all.conf",
+        "src/trader/execution/control.py",
+        "src/trader/channels/telegram.py",
+        "src/trader/api/tradingview.py",
+        "src/trader/experiments/start_balance.py",
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/reports/account_status.py",
+        "tests/unit/test_account_workers.py",
+        "tests/unit/test_account_controls.py",
+        "tests/unit/test_tradingview_forward.py",
+        "tests/unit/test_start_balance.py",
+        "tests/unit/test_account_labels_and_leases.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/488",
+        "https://github.com/Tarek-Assaf/ai-trader/pull/489"
+      ],
+      "completion_note": "Merged (PR 488) and installed on the owner's VM; PR 489 fixed a start-up order bug found on the first real run (the worker looked its account up after taking on its login, so it saw a duplicate login and dropped itself). Account 02 now runs as a healthy worker against a real second Capital.com demo account and shows in Telegram /status. Original checks:  Local: ruff clean, no mypy errors in changed files, ~160 related tests pass with third-party libraries stubbed (no PyPI in the author workspace); CI runs the database and Redis suites. Still NOT observed: one TradingView alert opening a trade on both accounts (market was closed)."
+    },
+    {
+      "id": "T-269",
+      "title": "Independent review and adversarial tests of T-268",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [],
+      "depends_on": [
+        "T-268"
+      ],
+      "acceptance_criteria": [
+        "Review the T-268 diff against the safety posture in CLAUDE.md: no LLM-side broker access, no secrets in code, logs, files or the supervisor include, no way for one account to read or change another account's credentials",
+        "Add adversarial tests: unknown account number never falls back to all; resume-all never clears a killed account; workers never share a lease key, control key or database; a forged callback cannot resume a different account",
+        "Run the full suite in CI and record the result as a validation"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-270",
+      "title": "Back up and restore the per-account databases (trader_NN)",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [],
+      "depends_on": [
+        "T-268"
+      ],
+      "acceptance_criteria": [
+        "backup_postgres.sh dumps, validates and retains every trader_NN database (48 recent + 14 daily) without ever failing or undoing the main backup",
+        "backup_upload.py encrypts and uploads each account's newest and daily dumps beside the main ones",
+        "On a new cluster, start_postgres.sh restores each account's newest valid dump, falls back past a corrupt one, and never blocks start-up"
+      ],
+      "deliverables": [
+        "scripts/backup_postgres.sh",
+        "scripts/backup_upload.py",
+        "scripts/start_postgres.sh",
+        "tests/unit/test_backup_upload.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/491"
+      ],
+      "completion_note": "Tested against a real temporary PostgreSQL 16: backup script, corrupt-newest fallback restore with data intact, no-backup case, new-cluster=false no-op, upload selection (unit test). NOT run: the full CI Docker restore drill does not yet include an account database; add it."
+    },
+    {
+      "id": "T-271",
+      "title": "Per-account balance, positions, P&L, risk and reports in Telegram",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "review",
+      "requirements": [],
+      "depends_on": [
+        "T-268"
+      ],
+      "acceptance_criteria": [
+        "/status shows each extra account's own full status (balance, equity, entry state), falling back to its control state if its worker is silent",
+        "/positions /pnl /risk /report show every account with its name; '/pnl 02' shows one; '01' is the main account; an unknown number is not an account",
+        "Workers answer only read-only commands, only to loopback callers, never through the public tunnel"
+      ],
+      "deliverables": [
+        "src/trader/api/account_proxy.py",
+        "src/trader/api/app.py",
+        "tests/unit/test_account_commands.py"
+      ],
+      "review_cycles": 0,
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/491"
+      ],
+      "completion_note": "Main process asks each worker over loopback for the text of the same command. Unit tests cover routing and the route's access rules; the route tests need real FastAPI and run in CI only. NOT done: charts per account, the natural-language router for account 02, and verification of scheduled daily/weekly/monthly reports from the worker (see T-274, T-275, T-276)."
+    },
+    {
+      "id": "T-272",
+      "title": "First market-open check: one alert opens a trade on both accounts",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [],
+      "depends_on": [
+        "T-268"
+      ],
+      "acceptance_criteria": [
+        "After the first TradingView alert with the market open, both accounts show an order/position, each Telegram message carries its account name, and lot sizes follow each account's recorded start balance",
+        "Record the result as a validation (V-527)"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-273",
+      "title": "Capital.com limits for two demo logins from one address are unknown",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [],
+      "depends_on": [
+        "T-272"
+      ],
+      "acceptance_criteria": [
+        "Watch session 401/429 errors and the reconnect behaviour in account_02 logs during a full session",
+        "If limited, add per-account back-off so one account's rate limit never affects the other"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-274",
+      "title": "Charts per account (/chart 02) and the lab/visual commands",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [],
+      "depends_on": [
+        "T-271"
+      ],
+      "acceptance_criteria": [
+        "/chart and visual graph commands accept an account number and are served by that account's worker"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-275",
+      "title": "Natural-language chat answers about a named account",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [],
+      "depends_on": [
+        "T-271"
+      ],
+      "acceptance_criteria": [
+        "The chat router can answer 'how is account 02 doing' by using the same per-account commands; no LLM-side broker access is added"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-276",
+      "title": "Verify scheduled daily/weekly/monthly reports from account 02",
+      "phase": 8,
+      "owner": "claude",
+      "reviewer": "codex",
+      "status": "todo",
+      "requirements": [],
+      "depends_on": [
+        "T-268"
+      ],
+      "acceptance_criteria": [
+        "Each worker's report scheduler sends its own labelled report; confirm at the first daily report time, and confirm reports are not duplicated or missing"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
+    },
+    {
+      "id": "T-277",
+      "title": "Extend the CI backup/restore drill with an extra account database",
+      "phase": 8,
+      "owner": "codex",
+      "reviewer": "claude",
+      "status": "todo",
+      "requirements": [],
+      "depends_on": [
+        "T-270"
+      ],
+      "acceptance_criteria": [
+        "scripts/test_postgres_backup_restore.sh creates trader_02, backs up, wipes the cluster, restarts, and proves the account journal and its audit chain return"
+      ],
+      "deliverables": [],
+      "review_cycles": 0,
+      "evidence": [],
+      "completion_note": ""
     }
   ],
   "decisions": [
@@ -7958,6 +8327,41 @@
       "statement": "Owner 2026-10-20 (chat): the Tai strategy stays the strategy until the cost/backtest gap is explained (the owner's indicator gave far better numbers, and the same gap appeared for 2,700+ strategies) or a better strategy is proven. Queue T-201 (cost per trade in R by stop size: tiny structure stops make cost/risk explode and the sum of ratios is dominated by them) as the next Codex task after T-200. The goal is a demo-ready agent today: remaining steps are the fresh Pod terminal (Q-076), T-199 replay, then the owner redeploys and decides about turning dry-run off. Dry-run stays on until the owner decides.",
       "status": "final",
       "do_not_reopen": false,
+      "decided_by": "owner"
+    },
+    {
+      "id": "D-084",
+      "statement": "Owner 2026-11-01 (chat): multi-account keeps ONE TradingView alert integration, ONE Telegram bot, one container and one ngrok from the outside; 'inside the container you can modify it and split as you want'. Implemented as extra worker processes inside the container (loopback port 80NN, own database trader_NN, own state folder, own leases), not as extra containers.",
+      "status": "final",
+      "do_not_reopen": true,
+      "decided_by": "owner"
+    },
+    {
+      "id": "D-085",
+      "statement": "Owner 2026-11-01 (chat): each account can be paused and killed separately or all at once. Per-account Redis control key plus the shared key and flag files; commands take an optional account number; an unknown number is refused and never falls back to all; resume-all never clears a killed account; a flag file or the HTTP control route stops every account.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "owner"
+    },
+    {
+      "id": "D-086",
+      "statement": "Owner 2026-11-01 (chat): remove TAI_DEMO_START_BALANCE as something the owner types; the bot identifies it from the account. Recorded once per account workspace on first sizing (lot = base lot x balance / start balance, never below base lot). An explicit value still overrides. The start balance never falls back from the unnumbered variable to numbered accounts.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "owner"
+    },
+    {
+      "id": "D-088",
+      "statement": "Owner 2026-11-02 (chat): extra accounts must be built to the same level as the main account, not just connected: own balance, positions, P&L, risk, reports, controls, backups. Pending items are tracked as tasks T-272..T-277 so none are lost.",
+      "status": "final",
+      "do_not_reopen": false,
+      "decided_by": "owner"
+    },
+    {
+      "id": "D-087",
+      "statement": "Demo only: no live-money path exists (_capital_execution_enabled needs EXECUTION_BROKER=capital_demo, BROKER_ENV=demo, TRADING_MODE=paper). An account loaded with BROKER_ENV=live also needs LIVE_ENABLED=yes and is still not started by the demo-only runtime. Going live for several accounts is a later, separate, owner-approved task.",
+      "status": "final",
+      "do_not_reopen": true,
       "decided_by": "owner"
     }
   ],
@@ -17793,6 +18197,54 @@
       "checked": "No Pod or broker mutation occurred. No order was placed. The patch keeps paper/demo/live safety gates unchanged. Focused pytest could not run because pytest is absent from this desktop checkout.",
       "reverify_if": "CI or a development checkout with uv sync --extra dev is available.",
       "validated_by": "codex"
+    },
+    {
+      "id": "V-526",
+      "task_id": "T-268",
+      "result": "pass",
+      "subject": "T-268 local verification",
+      "method": "ruff check and format on changed files; mypy --ignore-missing-imports on changed modules (no errors in them); pytest with third-party libraries stubbed for the suites that do not need a database or Redis.",
+      "evidence": [
+        "tests/unit/test_account_workers.py",
+        "tests/unit/test_account_controls.py",
+        "tests/unit/test_tradingview_forward.py",
+        "tests/unit/test_start_balance.py",
+        "tests/unit/test_account_labels_and_leases.py",
+        "tests/unit/test_tai_demo.py",
+        "tests/unit/test_telegram_channel.py"
+      ],
+      "checked": "About 160 tests pass locally. Not run locally: tests needing SQLAlchemy, FastAPI TestClient, Postgres or Redis (the author workspace has no PyPI access). No real broker call and no real Docker run.",
+      "reverify_if": "CI results differ, or the image is changed.",
+      "validated_by": "claude"
+    },
+    {
+      "id": "V-527",
+      "task_id": "T-268",
+      "result": "pending",
+      "subject": "T-268 CI, install, worker health and first real two-account run",
+      "method": "CI on PRs 488 and 489 passed (quality, then publish-image on main). Installed on the owner's VM. After PR 489, worker 02 reports healthy, demo, paper against the real second demo account (Capital.com session HTTP 200) and Telegram /status lists both accounts. Still to observe: one TradingView alert opening a trade on both accounts with the market open (T-272).",
+      "evidence": [
+        "https://github.com/Tarek-Assaf/ai-trader/pull/488",
+        "https://github.com/Tarek-Assaf/ai-trader/pull/489"
+      ],
+      "checked": "Owner pasted /status showing both accounts in control mode run. No trade has yet been placed on account 02.",
+      "reverify_if": "n/a",
+      "validated_by": "claude"
+    },
+    {
+      "id": "V-528",
+      "task_id": "T-270",
+      "result": "pass",
+      "subject": "T-270 backup and restore against a real PostgreSQL 16",
+      "method": "Temporary PostgreSQL 16 cluster: created trader and trader_02 with a marker row each, ran backup_postgres.sh (main and account dumps, daily copy), corrupted the newest account dump, dropped trader_02 and ran the restore function with NEW_CLUSTER=true; also the no-backup case and NEW_CLUSTER=false.",
+      "evidence": [
+        "scripts/backup_postgres.sh",
+        "scripts/start_postgres.sh",
+        "tests/unit/test_backup_upload.py"
+      ],
+      "checked": "Account database came back with its row from the older valid dump; corrupt newest dump skipped; no-backup case starts fresh; non-new cluster is a no-op; exit codes 0. Not run: the Docker CI drill with an account database (T-277).",
+      "reverify_if": "backup_postgres.sh, start_postgres.sh or backup_upload.py change.",
+      "validated_by": "claude"
     }
   ],
   "blockers": [
@@ -18058,6 +18510,20 @@
       "raised_by": "codex",
       "text": "The reachable Pod replay remains 1/26. Ten inspected misses are refresh entries with false raw HA buy/sell flags on both port and runtime; the runtime has no post-exit refresh state. T-199 cannot claim >=22/26 until the narrow refresh-state fix is reviewed and rerun.",
       "resolution": "Resolved: the Pod terminal works and T-204 reproduced 25/26 port entries (V-499); the remaining miss is a harness callback-ordering artifact (T-205, V-500)."
+    },
+    {
+      "id": "B-036",
+      "task_id": "T-270",
+      "status": "resolved",
+      "raised_by": "claude",
+      "text": "The Postgres backup loop and restore cover only the database 'trader'. Extra accounts' databases (trader_02, ...) are created by the worker launcher and are NOT backed up to GitHub/Hugging Face or restored after a pod rebuild. Acceptable for a demo account for now; fix in T-270 before any live use. Resolved in PR 491 (T-270); CI drill still to extend (T-277)."
+    },
+    {
+      "id": "B-037",
+      "task_id": "T-271",
+      "status": "resolved",
+      "raised_by": "claude",
+      "text": "Extra accounts' balance and P&L are not yet shown in /status or /pnl (only control mode and pause state). Resolved in PR 491 (T-271)."
     }
   ],
   "questions": [
@@ -30761,7 +31227,50 @@
         "tests/unit/test_tai_demo.py"
       ],
       "summary": "Reviewed T-222: 45s keepalive, queued recorder drain and per-bar decision fingerprint look correct and safe (no broker, risk or gate changes). Fixed ruff import order/format. Requested two missing acceptance tests (10-minute soak, parity). Review cycle 1 of 2."
+    },
+    {
+      "revision": 601,
+      "ts": "2026-11-01T21:30:48Z",
+      "agent": "claude",
+      "action": "catch_up_and_t262_to_t277_multi_account",
+      "task_ids": [
+        "T-262",
+        "T-263",
+        "T-264",
+        "T-265",
+        "T-266",
+        "T-267",
+        "T-268",
+        "T-269",
+        "T-270",
+        "T-271",
+        "T-272",
+        "T-273",
+        "T-274",
+        "T-275",
+        "T-276",
+        "T-277"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json",
+        "src/trader/runtime/account_workers.py",
+        "scripts/start_account_api.sh",
+        "docker/entrypoint.sh",
+        "docker/supervisord.all.conf",
+        "docker/Dockerfile",
+        "src/trader/execution/control.py",
+        "src/trader/channels/telegram.py",
+        "src/trader/api/tradingview.py",
+        "src/trader/api/app.py",
+        "src/trader/experiments/start_balance.py",
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/api/account_proxy.py",
+        "scripts/backup_postgres.sh",
+        "scripts/backup_upload.py",
+        "scripts/start_postgres.sh"
+      ],
+      "summary": "Recorded T-262..T-268 (merged, installed; real second demo account healthy; fix PR 489), built T-270 (backups of trader_NN databases) and T-271 (per-account status, positions, P&L, risk, reports), and queued T-269 (Codex review and adversarial tests) and T-272..T-277 (first market-open check, Capital.com limits, per-account charts, chat router, scheduled report check, CI backup drill). Owner asked on 2026-11-02 that nothing be left out; turn was set to human by PR 490 for this entry. T-268 adds extra accounts as worker processes inside the one container (one alert, one Telegram bot), per-account and all-account pause/kill/resume, and the automatic start balance. First real run needs the owner's second demo account keys and an open market. Turn to Codex for review. Catch-up: this file was last updated at T-222 (2026-10-23). Work since then was merged by PR without handoff entries: T-223..T-229 Tai signal chain, order manager start and end-to-end test; T-230/T-238/T-239 strategy entries through the Risk Guardian with a paper-stage size cap; T-232 lease rides out Redis stalls; T-235 opt-in real Capital.com demo execution; T-240 TradingView alerts as the Tai signal source; T-242 Gold beside US100; T-243/T-244/T-255/T-256 P&L from the broker account, trade visibility, plain-language refusals; T-245/T-246/T-247/T-248 disk alert, Telegram resume with authenticator code, /trades; T-249..T-253 webhook answers at once, bar-close window, levels anchored to the alert close; T-254 /status shows pause state; T-257..T-261 second-instrument Guardian fix, closed-trade sync fixes, clearer startup failure, broker refusal is a rejection. See git log on main for each PR; none of these were independently reviewed through this file."
     }
   ],
-  "project_summary": "T-216 implementation is ready for Claude review: live recorder status is shared by /health and Telegram digests, unreadable status is unavailable, and volume logging is bounded and redacted. Reconnect analysis is read-only. No trading, risk/gate, dry-run, order, config or secret changes."
+  "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. Demo only. Not yet observed: one alert opening trades on both accounts (T-272). Codex next: T-269 review and adversarial tests of T-268, then review T-270/T-271; T-277 extends the CI backup drill; T-222 still waits on Codex."
 }

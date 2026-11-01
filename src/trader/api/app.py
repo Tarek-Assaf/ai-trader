@@ -20,6 +20,7 @@ from typing import Any, cast
 
 from fastapi import FastAPI
 
+from trader.api.account_proxy import router as account_command_router
 from trader.api.control import router as control_router
 from trader.api.health import (
     data_recorder_status,
@@ -103,18 +104,26 @@ def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
 _WORKER_ENGINES: dict[str, Any] = {}
 
 
-def _worker_status_lines(app_instance: FastAPI) -> list[str]:
-    """Status of each extra account (empty when only account 01 runs)."""
+def _extra_accounts(app_instance: FastAPI) -> dict[str, str]:
+    """Extra accounts this process can steer: number -> name (empty inside a worker)."""
     controls = getattr(app_instance.state, "account_controls", None)
-    if controls is None:
-        return []
-    from trader.reports.account_status import other_account_lines
-    from trader.runtime.account_workers import _database_url, worker_accounts
+    if controls is None or current_account_id() != DEFAULT_ACCOUNT_ID:
+        return {}
+    from trader.runtime.account_workers import worker_accounts
 
     names = {account.number: account.name for account in worker_accounts(os.environ)}
-    names = {number: name for number, name in names.items() if controls.has(number)}
+    return {number: name for number, name in names.items() if controls.has(number)}
+
+
+def _worker_status_lines(app_instance: FastAPI) -> list[str]:
+    """Status of each extra account: its own full status, or its control state if it is silent."""
+    names = _extra_accounts(app_instance)
     if not names:
         return []
+    controls = app_instance.state.account_controls
+    from trader.api.account_proxy import ask_worker
+    from trader.reports.account_status import other_account_lines
+    from trader.runtime.account_workers import _database_url
 
     def engine_for(number: str) -> Any:
         if number not in _WORKER_ENGINES:
@@ -125,11 +134,37 @@ def _worker_status_lines(app_instance: FastAPI) -> list[str]:
             )
         return _WORKER_ENGINES[number]
 
-    return other_account_lines(names, engine_for, lambda number: lambda: controls.mode(number))
+    lines: list[str] = []
+    for number, name in names.items():
+        answer = ask_worker(number, "/status")
+        if answer is not None:
+            lines += ["", f"Account {number} ({name}):", answer]
+        else:
+            lines += other_account_lines(
+                {number: name}, engine_for, lambda n: lambda: controls.mode(n)
+            )
+    return lines
 
 
-def _command_renderer(command_handlers: dict[str, Any]) -> Callable[[str, str], str]:
-    """Render read-only Telegram commands through their data-service handlers."""
+def _command_renderer(
+    command_handlers: dict[str, Any],
+    workers: Callable[[], Mapping[str, str]] | None = None,
+) -> Callable[[str, str], str]:
+    """Render read-only Telegram commands through their data-service handlers.
+
+    With extra accounts, ``/pnl 02`` asks account 02's worker, and ``/pnl`` shows every account.
+    """
+    if workers is not None:
+        from trader.api.account_proxy import READ_ONLY_COMMANDS, render_for_accounts
+
+        local = _command_renderer(command_handlers)
+
+        def render_all(command: str, argument: str) -> str:
+            if command not in READ_ONLY_COMMANDS:
+                return local(command, argument)
+            return render_for_accounts(command, argument, local=local, workers=workers)
+
+        return render_all
 
     def render(command: str, argument: str) -> str:
         unavailable = f"{command[:32]} is unavailable right now."
@@ -1189,6 +1224,8 @@ async def lifespan(_app: FastAPI) -> Any:
                 return "\n".join(lines)
 
             command_handlers["/status"] = status_handler
+            # A worker answers the main process's read-only questions from these same handlers.
+            _app.state.local_command_handlers = command_handlers
 
             def render_chart(command: str, argument: str) -> bytes:
                 if command == "/lab" and isinstance(lab_manager, LabJobManager):
@@ -1212,7 +1249,7 @@ async def lifespan(_app: FastAPI) -> Any:
                 control_writer=writer,
                 current_mode=current_mode,
                 router=router,
-                render=_command_renderer(command_handlers),
+                render=_command_renderer(command_handlers, lambda: _extra_accounts(_app)),
                 render_chart=render_chart,
                 authorize_resume=lambda: settings.owner_totp_secret is None,
                 resume_totp_secret=(
@@ -1290,6 +1327,7 @@ async def lifespan(_app: FastAPI) -> Any:
 app = FastAPI(title="AI Trader", version="0.1.0", lifespan=lifespan)
 app.include_router(control_router)
 app.include_router(tradingview_router)
+app.include_router(account_command_router)
 
 
 TELEGRAM_MENU = (

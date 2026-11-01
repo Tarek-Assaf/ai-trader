@@ -85,6 +85,35 @@ if [ "$NEW_CLUSTER" = true ]; then
     fi
 fi
 
+# Extra accounts' databases come back the same way.  Their loss never blocks start-up: an account
+# whose backup cannot be restored starts with a fresh database (the worker creates it).
+restore_account_databases() {
+    [ "$NEW_CLUSTER" = true ] || return 0
+    [ -d "$BACKUP_DIR/accounts" ] || return 0
+    for account_dir in "$BACKUP_DIR"/accounts/*/; do
+        [ -d "$account_dir" ] || continue
+        number=$(basename "$account_dir")
+        case "$number" in ''|*[!0-9]*) continue ;; esac
+        database="trader_$number"
+        done_restoring=false
+        for backup in $(find "$account_dir" -maxdepth 1 -type f -name "$database-*.dump" -print | LC_ALL=C sort -r); do
+            "$PG_BIN/pg_restore" --list "$backup" >/dev/null 2>&1 || continue
+            "$PG_BIN/dropdb" -h 127.0.0.1 -U trader --if-exists "$database" || true
+            "$PG_BIN/createdb" -h 127.0.0.1 -U trader "$database" || break
+            if "$PG_BIN/pg_restore" --exit-on-error --single-transaction --no-owner --no-privileges -h 127.0.0.1 -U trader --dbname="$database" "$backup" >/dev/null 2>&1; then
+                echo "Restored PostgreSQL database $database from a backup"
+                done_restoring=true
+                break
+            fi
+        done
+        if [ "$done_restoring" != true ]; then
+            "$PG_BIN/dropdb" -h 127.0.0.1 -U trader --if-exists "$database" || true
+            echo "No usable backup for $database; it will start fresh"
+        fi
+    done
+}
+restore_account_databases || true
+
 touch "$RESTORE_READY"
 /app/scripts/postgres_backup_loop.sh &
 BACKUP_PID=$!
