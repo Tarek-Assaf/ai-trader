@@ -162,3 +162,71 @@ def test_the_close_price_in_the_alert_is_passed_on_when_usable(client) -> None:
     client.clock["mono"] += 500
     assert _post(client, secret=SECRET, signal="SELL", close=-5).json()["status"] == "accepted"
     assert client.runner.references == [Decimal("29395.0"), None, None]
+
+
+# ---- copying the alert to the other accounts' bots -------------------------------------------
+
+
+@pytest.fixture
+def copies(monkeypatch):
+    """Targets configured, and the copy run in-line so the test sees what was sent."""
+    monkeypatch.setenv(tv.FORWARD_URLS_ENV, "http://127.0.0.1:8002/a,http://127.0.0.1:8003/a")
+    sent: list[tuple[str, bytes]] = []
+    monkeypatch.setattr(
+        tv, "_send_copy", lambda url, body, timeout: sent.append((url, body)) or 200
+    )
+    monkeypatch.setattr(
+        tv, "_start_forward", lambda targets, body, signal: tv._forward(targets, body, signal)
+    )
+    return sent
+
+
+def test_an_accepted_alert_is_copied_to_every_other_account(client, copies) -> None:
+    response = _post(client, secret=SECRET, signal="BUY")
+    assert response.json()["status"] == "accepted"
+    assert sorted(url for url, _ in copies) == [
+        "http://127.0.0.1:8002/a",
+        "http://127.0.0.1:8003/a",
+    ]
+    assert all(b"BUY" in body for _, body in copies)
+
+
+def test_the_copy_happens_even_when_this_bot_cannot_trade(client, copies) -> None:
+    client.app.state.tai_demo_runtime = None
+    assert _post(client, secret=SECRET, signal="BUY").status_code == 503
+    assert len(copies) == 2
+
+
+def test_a_stale_or_duplicate_alert_here_is_still_judged_by_the_other_bots(client, copies) -> None:
+    client.clock["now"] = datetime(2026, 10, 28, 20, 13, 58, tzinfo=UTC)
+    assert _post(client, secret=SECRET, signal="SELL").json()["status"] == "stale"
+    assert len(copies) == 2
+
+
+def test_unauthenticated_and_non_entry_alerts_are_never_copied(client, copies) -> None:
+    assert _post(client, secret="nope", signal="BUY").status_code == 403
+    assert _post(client, signal="BUY").status_code == 403
+    assert _post(client, secret=SECRET, signal="TP1").json()["status"] == "ignored"
+    assert copies == []
+
+
+def test_an_alert_that_arrives_as_a_copy_is_not_copied_again(client, copies) -> None:
+    response = client.post(
+        "/webhooks/tradingview",
+        json={"secret": SECRET, "signal": "BUY"},
+        headers={tv.FORWARD_HEADER: "1"},
+    )
+    assert response.json()["status"] == "accepted"
+    assert copies == []
+
+
+def test_the_reply_to_tradingview_is_unchanged_when_copying_breaks(client, monkeypatch) -> None:
+    monkeypatch.setenv(tv.FORWARD_URLS_ENV, "http://127.0.0.1:8002/a")
+
+    def boom(targets, body, signal):
+        raise RuntimeError("copy machinery broken")
+
+    monkeypatch.setattr(tv, "_start_forward", boom)
+    response = _post(client, secret=SECRET, signal="BUY")
+    assert response.json()["status"] == "accepted"
+    assert client.runner.calls == [Direction.BUY]

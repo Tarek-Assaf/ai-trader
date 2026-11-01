@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import inspect
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Protocol, TypeGuard
 
+from trader.core.accounts import scoped_lease_key
 from trader.core.audit import AuditEvent
 from trader.core.settings import EnvironmentSettings
 from trader.execution.control import ControlSource
@@ -109,7 +110,7 @@ class RuntimeFactories:
     pnl_guard: RuntimeFactoryFn | None = None
     position_manager: RuntimeFactoryFn | None = None
     log_scanner: RuntimeFactoryFn | None = None
-    lease_key: str = "ai-trader:core:lease"
+    lease_key: str = field(default_factory=lambda: scoped_lease_key("ai-trader:core:lease"))
     lease_ttl_ms: int = 30_000
     autoscaler: RuntimeFactoryFn | None = None
 

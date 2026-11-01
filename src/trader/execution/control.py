@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from trader.control.totp import matching_totp_step
+from trader.core.accounts import ACCOUNT_ID_PATTERN
 
 
 class ControlMode(StrEnum):
@@ -49,10 +50,20 @@ class FlagFileControlSource:
             raise ControlUnavailable("control flag files are unavailable") from None
 
 
+GLOBAL_CONTROL_KEY = "ai_trader:execution:control"
+
+
+def control_key(account_id: str) -> str:
+    """The Redis key that pauses, kills or resumes exactly one account."""
+    if not ACCOUNT_ID_PATTERN.match(account_id):
+        raise ValueError("account id must look like acct-02")
+    return f"{GLOBAL_CONTROL_KEY}:{account_id}"
+
+
 class RedisControlSource:
     """Read and update a persistent Redis control key shared by service workers."""
 
-    def __init__(self, client: object, key: str = "ai_trader:execution:control") -> None:
+    def __init__(self, client: object, key: str = GLOBAL_CONTROL_KEY) -> None:
         if not key.strip():
             raise ValueError("control key must not be empty")
         self._client = client
@@ -189,6 +200,114 @@ class CompositeControlSource:
             if value in {"kill", "pause"}
             else {}
         )
+
+
+_SEVERITY = {
+    ControlMode.RUN: 0,
+    ControlMode.RESUME: 1,
+    ControlMode.PAUSE: 2,
+    ControlMode.KILL: 3,
+}
+
+
+class AllAccountsWriter:
+    """Control writer for "every account": one shared key stops all, resume goes per account."""
+
+    def __init__(
+        self, global_writer: RedisControlSource, account_writers: Mapping[str, RedisControlSource]
+    ) -> None:
+        self._global = global_writer
+        self._accounts = dict(account_writers)
+
+    def authorize(
+        self,
+        expected_token: str,
+        provided_token: str,
+        totp_secret: str,
+        code: str,
+        *,
+        now: float | None = None,
+    ) -> bool:
+        """Owner authentication shares the single set of replay and lockout counters."""
+        return self._global.authorize(expected_token, provided_token, totp_secret, code, now=now)
+
+    def set(self, mode: ControlMode) -> None:
+        if mode is not ControlMode.RESUME:
+            # Every account's controls read the shared key, so one write halts them all.
+            self._global.set(mode)
+            return
+        self._global.set(ControlMode.RUN)
+        for writer in self._accounts.values():
+            # A killed account stays killed: only a deliberate, per-account step clears a kill.
+            if writer.read() is not ControlMode.KILL:
+                writer.set(ControlMode.RESUME)
+
+
+class AccountControls:
+    """Pause, kill and resume for each account separately, or for all of them at once.
+
+    All accounts share one Redis.  An account obeys its own key, the shared key and the flag
+    files, with kill ahead of pause.  The Telegram process holds every account's writer; each
+    account's process reads only its own.
+    """
+
+    def __init__(self, client: object, account_ids: Sequence[str], flag_dir: Path) -> None:
+        if not account_ids:
+            raise ValueError("at least one account is required")
+        self._flags = FlagFileControlSource(flag_dir)
+        self._global = RedisControlSource(client)
+        self._accounts = {
+            account_id: RedisControlSource(client, control_key(account_id))
+            for account_id in dict.fromkeys(account_ids)
+        }
+
+    def numbers(self) -> tuple[str, ...]:
+        return tuple(account_id.removeprefix("acct-") for account_id in self._accounts)
+
+    def has(self, number: str) -> bool:
+        return f"acct-{number}" in self._accounts
+
+    def source_for(self, account_id: str) -> CompositeControlSource:
+        return CompositeControlSource((self._flags, self._global, self._accounts[account_id]))
+
+    def account_writer(self, account_id: str) -> RedisControlSource:
+        return self._accounts[account_id]
+
+    @property
+    def global_writer(self) -> RedisControlSource:
+        return self._global
+
+    def writer(self, number: str | None) -> ControlWriter:
+        """Writer for one account (``"02"``), or for every account when ``number`` is None."""
+        if number is None:
+            return AllAccountsWriter(self._global, self._accounts)
+        return self._accounts[f"acct-{number}"]
+
+    def mode(self, number: str | None) -> ControlMode:
+        """What the account (or the most restrictive account) is being told to do."""
+        accounts = list(self._accounts) if number is None else [f"acct-{number}"]
+        worst = ControlMode.RUN
+        for account_id in accounts:
+            current = self.source_for(account_id).read()
+            if _SEVERITY[current] > _SEVERITY[worst]:
+                worst = current
+        return worst
+
+    def global_mode(self) -> ControlMode:
+        return CompositeControlSource((self._flags, self._global)).read()
+
+
+def build_account_controls(
+    *, redis_url: str, account_ids: Sequence[str], control_dir: str | None = None
+) -> AccountControls:
+    """Construct the per-account controls without connecting until first use."""
+    from redis import Redis
+
+    url = redis_url.strip()
+    if not url:
+        raise ValueError("Redis URL is required for execution controls")
+    directory = Path(control_dir or os.getenv("CONTROL_DIR") or "/workspace/control")
+    return AccountControls(Redis.from_url(url, socket_connect_timeout=2), account_ids, directory)
 
 
 def build_control_sources(

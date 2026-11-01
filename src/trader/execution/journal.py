@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -11,11 +10,11 @@ from typing import Any, cast
 from sqlalchemy import Engine, insert, select, update
 from sqlalchemy.exc import IntegrityError
 
+from trader.core.accounts import ACCOUNT_ID_PATTERN, DEFAULT_ACCOUNT_ID
 from trader.core.db import tables
 from trader.execution.brokers.base import Direction, OrderRequest
 
-DEFAULT_ACCOUNT_ID = "acct-01"
-_ACCOUNT_ID = re.compile(r"^acct-\d{2,3}$")
+_ACCOUNT_ID = ACCOUNT_ID_PATTERN
 
 
 class JournalError(RuntimeError):

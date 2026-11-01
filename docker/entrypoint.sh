@@ -58,4 +58,13 @@ for path in /workspace /workspace/redisdata /workspace/logs /workspace/backups /
         exit 1
     fi
 done
+if [ "$ROLE" = "all" ]; then
+    # Extra trading accounts (CAPITAL_IDENTIFIER_02 ...) each get a worker process.  This only
+    # writes the worker list and the alert-forward list; if it fails, account 01 still runs alone.
+    if ! gosu trader /app/.venv/bin/python -m trader.runtime.account_workers render; then
+        echo "Extra account setup failed; only account 01 will run" >&2
+        : > /workspace/supervisord.accounts.conf
+        chown trader:trader /workspace/supervisord.accounts.conf 2>/dev/null || true
+    fi
+fi
 exec gosu trader supervisord -n -c "$CONFIG"

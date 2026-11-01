@@ -27,6 +27,7 @@ from trader.execution.brokers.base import Direction, OrderRequest, Position
 from trader.execution.control import ControlMode
 from trader.execution.manager import ExecutionPaused
 from trader.experiments.plain_reasons import refusal_text
+from trader.experiments.start_balance import StartBalanceStore, StartBalanceUnreadable
 
 LOGGER = logging.getLogger(__name__)
 RIYADH = ZoneInfo("Asia/Riyadh")
@@ -53,6 +54,8 @@ class TaiDemoSettings:
     # test fixtures can opt into/out of dry-run without shifting sizing fields.
     dry_run: bool = False
     base_lot: Decimal = Decimal("0.1")
+    # Zero means "take it from the account": the runner records the balance the first time it
+    # sizes a trade (see start_balance.py).  A positive value is an explicit owner override.
     start_balance: Decimal = Decimal("10000")
 
     @property
@@ -65,29 +68,30 @@ class TaiDemoSettings:
         )
 
     def __post_init__(self) -> None:
-        for name in ("base_lot", "start_balance"):
-            value = getattr(self, name)
-            if not isinstance(value, Decimal) or not value.is_finite() or value <= 0:
-                raise ValueError(f"{name} must be a positive finite Decimal")
+        if (
+            not isinstance(self.base_lot, Decimal)
+            or not self.base_lot.is_finite()
+            or self.base_lot <= 0
+        ):
+            raise ValueError("base_lot must be a positive finite Decimal")
+        if (
+            not isinstance(self.start_balance, Decimal)
+            or not self.start_balance.is_finite()
+            or self.start_balance < 0
+        ):
+            raise ValueError("start_balance must be a finite Decimal of zero or more")
 
     @classmethod
     def from_settings(cls, settings: object) -> TaiDemoSettings:
-        start = Decimal(str(getattr(settings, "tai_demo_start_balance", "0")))
-        if getattr(settings, "tai_demo_experiment", False) and start <= 0:
-            raise TaiDemoRefused(
-                "TAI_DEMO_START_BALANCE must be set to the demo balance at the start of the "
-                "experiment (lot = 0.1 x balance / start balance)"
-            )
+        start = Decimal(str(getattr(settings, "tai_demo_start_balance", "0") or "0"))
         return cls(
             broker_env=str(getattr(settings, "broker_env", "")),
             trading_mode=str(getattr(settings, "trading_mode", "")),
             live_trading_enabled=bool(getattr(settings, "live_trading_enabled", True)),
             experiment_enabled=bool(getattr(settings, "tai_demo_experiment", False)),
             base_lot=Decimal(str(getattr(settings, "tai_demo_base_lot", "0.1"))),
-            # The disabled default does not need a balance.  Keep the value
-            # valid for the immutable settings object; the enabled path above
-            # still refuses an unset owner-provided start balance.
-            start_balance=start if start > 0 else Decimal("1"),
+            # Zero (unset) means automatic: the runner records the account balance itself.
+            start_balance=start if start > 0 else Decimal("0"),
             dry_run=bool(getattr(settings, "tai_demo_dry_run", True)),
         )
 
@@ -308,9 +312,11 @@ class TaiDemoRunner:
         managed_state: Mapping[str, _ManagedPosition] | None = None,
         state_path: Path | None = None,
         epic: str | None = None,
+        start_balance_store: StartBalanceStore | None = None,
     ) -> None:
         settings.require_enabled()
         self.settings = settings
+        self._start_balances = start_balance_store
         self._orders = order_manager
         self._positions = position_gateway
         self._signal = signal_provider
@@ -1014,14 +1020,33 @@ class TaiDemoRunner:
         balance = self._balance_provider()
         if not isinstance(balance, Decimal) or not balance.is_finite() or balance <= 0:
             raise TaiDemoRefused("demo balance must be a positive finite Decimal")
-        raw = max(
-            self.settings.base_lot,
-            self.settings.base_lot * balance / self.settings.start_balance,
-        )
+        start = self.settings.start_balance
+        if start <= 0:
+            start = self._automatic_start_balance(balance)
+        raw = max(self.settings.base_lot, self.settings.base_lot * balance / start)
         aligned = (raw / rules.size_step).to_integral_value(rounding=ROUND_DOWN) * rules.size_step
         if aligned < rules.min_size:
             raise TaiDemoRefused("requested demo size is below the broker minimum size")
         return aligned
+
+    def _automatic_start_balance(self, balance: Decimal) -> Decimal:
+        """The account's saved start balance; the first sizing saves the balance it sees."""
+        if self._start_balances is None:
+            raise TaiDemoRefused(
+                "no start balance: set TAI_DEMO_START_BALANCE or let the bot record it "
+                "from the account"
+            )
+        try:
+            start, recorded = self._start_balances.record_if_missing(balance)
+        except StartBalanceUnreadable as exc:
+            raise TaiDemoRefused(f"start balance unavailable: {exc}") from exc
+        if recorded:
+            self._journal_event("", "start_balance_recorded", start_balance=str(start))
+            self._send_alert(
+                f"Start balance recorded from the account: {start}. Lots start at "
+                f"{self.settings.base_lot} and grow with the balance."
+            )
+        return start
 
     def _build_order(
         self, signal: TaiSignal, cycle_id: str, requested_size: Decimal | None
