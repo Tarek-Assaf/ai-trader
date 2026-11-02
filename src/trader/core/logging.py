@@ -19,11 +19,19 @@ class SecretRedactionFilter(logging.Filter):
         self._secrets = tuple(secret for secret in secrets if secret)
 
     def filter(self, record: logging.LogRecord) -> bool:
-        """Redact secrets from the rendered message and clear interpolation args."""
-        message = record.getMessage()
-        message = self._redact_text(message)
-        record.msg = message
-        record.args = ()
+        """Redact secrets without breaking formatters that consume ``record.args``."""
+        if record.name == "uvicorn.access" and isinstance(record.args, tuple):
+            # Uvicorn's AccessFormatter expects the original positional tuple
+            # (client, method, path, HTTP version, status). Clearing ``args``
+            # here makes it raise ``ValueError`` while formatting access logs.
+            # Redact each value in-place while preserving the tuple shape.
+            record.msg = self._redact_text(str(record.msg))
+            record.args = tuple(self._redact_value(value) for value in record.args)
+        else:
+            message = record.getMessage()
+            message = self._redact_text(message)
+            record.msg = message
+            record.args = ()
         if record.exc_info:
             # Format while the exception is still available, then replace the
             # exception tuple so the handler cannot append an unredacted
