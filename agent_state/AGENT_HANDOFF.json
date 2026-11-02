@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 608,
+  "revision": 609,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31383,6 +31383,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Profiled the 2026-11-02T15:39Z alert: webhook receipt to Capital.com position POST was about 4.6 seconds and submission logging about 6 seconds, with repeated market-rules GETs in the entry path. Added a request-scoped Capital.com instrument-rules snapshot shared by the TradingView signal builder, order factory and Guardian market context, and reused the fetched rules in _attempt_entry. Added unit coverage for one-fetch reuse. Compileall and git diff checks pass; pytest/Ruff are unavailable in this desktop runtime. No strategy, risk, broker, or trading-control change; deployment not restarted. Codex retains turn per owner instruction."
+    },
+    {
+      "revision": 609,
+      "ts": "2026-11-02T20:55:00Z",
+      "agent": "codex",
+      "action": "deploy_t269_latency_snapshot",
+      "task_ids": [
+        "T-269"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Deployed commit 691c41c to the local VM 192.168.187.50 by rebuilding the existing compose image tag and recreating only ai-trader. The previous image is retained as 24d133c9b56f08ad617ac82c79e26be33bdddd6c-pre-t269-latency for rollback. Post-deploy /health is healthy: paper/demo, live_enabled=false, DB and Redis reachable, expected_open=true, feed_stalled=false, stale_epics=[], rejected_candles=0, reconnect_count=0. Startup completed and Telegram polling is on. Effective Tai runtime logged experiment=on and dry_run=off; no strategy, risk, config, credential, or trading-control changes and no order was placed. Codex retains turn per owner instruction."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work now coalesces repeated instrument-rule fetches during one TradingView entry. Demo only. Remaining live validation is deployment timing and Telegram delivery; no strategy/risk/control changes made."
