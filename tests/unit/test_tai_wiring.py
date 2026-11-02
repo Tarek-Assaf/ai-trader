@@ -886,3 +886,71 @@ def test_external_signal_targets_follow_the_tradingview_close_when_usable() -> N
         provider.external_signal(Direction.SELL, rules, now, reference=Decimal("629")).levels()
         == own
     )
+
+
+def _gold_provider() -> tuple[TaiSignalProvider, datetime]:
+    first = datetime(2026, 10, 28, 11, 30, tzinfo=UTC)
+    provider = TaiSignalProvider(_bars_with_lows(["500"] * 12 + ["650"], first))
+    provider._latest_atr = Decimal("10")
+    return provider, datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
+
+
+def _min_rules(bid: str, ask: str, minimum: str) -> TaiInstrumentRules:
+    return TaiInstrumentRules(
+        Decimal("0.001"),
+        Decimal("0.001"),
+        Decimal("1"),
+        Decimal("0.1"),
+        Decimal(minimum),
+        Decimal("1"),
+        bid=Decimal(bid),
+        ask=Decimal(ask),
+    )
+
+
+def test_a_stop_inside_the_brokers_minimum_is_widened_and_the_signal_still_trades() -> None:
+    provider, now = _gold_provider()
+    # structure stop for a SELL = 656 + 2 = 658; price 656.5/657 leaves only 1.0 from the ask
+    rules = _min_rules("656.5", "657", "2")
+    signal = provider.external_signal(Direction.SELL, rules, now)
+    assert signal.stop == Decimal("659.1")  # ask 657 + 2 minimum + one tick
+    assert "widened from 658" in signal.note
+
+
+def test_the_distance_is_measured_from_the_far_side_of_the_spread() -> None:
+    provider, now = _gold_provider()
+    # 2.0 from the bid is not enough when the minimum is 2.4 measured from the ask
+    sell = provider.external_signal(Direction.SELL, _min_rules("656.0", "656.5", "2.4"), now)
+    assert sell.stop > Decimal("658")
+    # a stop that clears the minimum from the ask is left exactly as the indicator drew it
+    ok = provider.external_signal(Direction.SELL, _min_rules("656.0", "656.5", "1.4"), now)
+    assert ok.stop == Decimal("658.0") and ok.note == ""
+
+
+def test_buy_stops_are_widened_downwards_from_the_bid() -> None:
+    first = datetime(2026, 10, 28, 11, 30, tzinfo=UTC)
+    provider = TaiSignalProvider(_bars_with_lows(["500"] * 13, first))
+    provider._latest_atr = Decimal("10")
+    now = datetime(2026, 10, 28, 12, 12, 5, tzinfo=UTC)
+    # structure stop = 500 - 2 = 498; bid 500.5 / ask 501 gives only 2.5 from the bid
+    signal = provider.external_signal(Direction.BUY, _min_rules("500.5", "501", "4"), now)
+    assert signal.stop == Decimal("496.4")  # bid 500.5 - 4 - one tick
+    assert "widened" in signal.note
+
+
+def test_the_targets_stay_where_tradingview_put_them_when_the_stop_is_widened() -> None:
+    provider, now = _gold_provider()
+    narrow = provider.external_signal(
+        Direction.SELL, _min_rules("656.5", "657", "0.5"), now, reference=Decimal("656.4")
+    )
+    wide = provider.external_signal(
+        Direction.SELL, _min_rules("656.5", "657", "2"), now, reference=Decimal("656.4")
+    )
+    assert wide.stop > narrow.stop
+    assert wide.levels() == narrow.levels()
+
+
+def test_a_widening_of_more_than_twice_the_structure_stop_is_refused_clearly() -> None:
+    provider, now = _gold_provider()
+    with pytest.raises(ValueError, match="more than twice"):
+        provider.external_signal(Direction.SELL, _min_rules("656.5", "657", "30"), now)

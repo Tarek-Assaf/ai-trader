@@ -586,9 +586,14 @@ class TaiSignalProvider:
             stop = quote - atr if buy else quote + atr
             note = "structure stop was on the wrong side of price; stop set 1 ATR from entry"
         tick = rules.tick_size
+        # Targets follow TradingView's own 1R/2R/3R from the indicator's structure stop, so they are
+        # worked out before the stop is moved out to the broker's minimum distance.
         anchored = self._tradingview_targets(direction, quote, stop, atr, rules, reference)
         if anchored is not None and not note:
             note = f"targets follow TradingView's close {anchored[0]}"
+        stop, widened = self._stop_at_broker_minimum(direction, quote, stop, rules)
+        if widened:
+            note = (note + "; " if note else "") + widened
         if tick is None or tick <= 0:
             return TaiSignal(direction, quote, stop, anchored[1] if anchored else (), note=note)
         # Whole ticks only: the stop is never tighter than the indicator's, the targets are
@@ -614,6 +619,33 @@ class TaiSignalProvider:
         if any(target <= 0 for target in targets):
             return TaiSignal(direction, quote, stop, note=note)
         return TaiSignal(direction, quote, stop, targets, note)
+
+    @staticmethod
+    def _stop_at_broker_minimum(
+        direction: Direction, quote: Decimal, stop: Decimal, rules: TaiInstrumentRules
+    ) -> tuple[Decimal, str]:
+        """Move a structure stop out to the broker's minimum distance, so the signal still trades.
+
+        Capital.com measures a stop from the quote on the other side of the spread (the ask for a
+        SELL, the bid for a BUY) and refuses one that is closer than its minimum, which the old
+        check against the entry price missed by about one spread.  The stop is moved only as far
+        as the broker needs, plus one tick.  If that would more than double the structure
+        distance the signal is refused with a clear reason instead.
+        """
+        minimum = rules.min_stop_distance
+        buy = direction is Direction.BUY
+        measured_from = rules.bid if buy else rules.ask
+        if minimum is None or minimum <= 0 or measured_from is None or measured_from <= 0:
+            return stop, ""
+        margin = rules.tick_size or Decimal(0)
+        needed = measured_from - minimum - margin if buy else measured_from + minimum + margin
+        if (buy and stop <= needed) or (not buy and stop >= needed):
+            return stop, ""
+        if abs(quote - needed) > 2 * abs(quote - stop):
+            raise ValueError(
+                "the broker's minimum stop distance is more than twice the structure stop"
+            )
+        return needed, f"stop widened from {stop} to {needed} to meet the broker's minimum distance"
 
     @staticmethod
     def _tradingview_targets(
