@@ -932,6 +932,10 @@ class CapitalBalanceProvider:
             if isinstance(item, Mapping)
             and (self._account_id is None or item.get("accountId") == self._account_id)
         ]
+        if len(candidates) != 1 and self._account_id is None:
+            # A login can hold several accounts; orders go to the one Capital.com marks as the
+            # preferred (active) account, the same rule the broker view uses for /status.
+            candidates = [item for item in candidates if item.get("preferred") is True]
         if len(candidates) != 1:
             raise TaiDemoRefused("broker account balance is ambiguous")
         balance = candidates[0].get("balance")
