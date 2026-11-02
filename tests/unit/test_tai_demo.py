@@ -852,3 +852,17 @@ def test_external_signal_passes_the_tradingview_reference_to_the_builder() -> No
     )
     instance.on_external_signal(Direction.BUY, reference_price=Decimal("101"))
     assert seen == [Decimal("101")]
+
+
+def test_a_refusal_by_the_broker_is_not_reported_as_a_guardian_veto():
+    events = []
+    alerts = []
+    tai, manager = runner(Gateway(), journal=events.append, alerts=alerts)
+    manager.raises = ExecutionPaused(
+        "the broker refused the order: error.invalid.stoploss.minvalue: 3902.97"
+    )
+    result = tai.on_bar(bar())
+    assert result.reason == "broker_refused"
+    assert any(event["event"] == "broker_refused" for event in events)
+    assert not any(event["event"] == "guardian_veto" for event in events)
+    assert any("Capital.com refused" in alert and "3902.97" in alert for alert in alerts)

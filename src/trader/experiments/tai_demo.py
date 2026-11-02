@@ -711,11 +711,13 @@ class TaiDemoRunner:
                 receipt = self._orders.submit(cycle_id, order)
         except ExecutionPaused as exc:
             reason = str(exc) or "execution_paused"
-            self._journal_event(cycle_id, "guardian_veto", epic=epic, reason=reason)
+            # The broker's own refusal arrives the same way; say so instead of blaming the guard.
+            label = "broker_refused" if "broker refused" in reason.lower() else "guardian_veto"
+            self._journal_event(cycle_id, label, epic=epic, reason=reason)
             self._send_alert(
                 refusal_text(epic, signal.direction.value, reason, self._riyadh_time())
             )
-            return self._outcome(cycle_id, "REJECTED", "guardian_veto")
+            return self._outcome(cycle_id, "REJECTED", label)
         if receipt is None:
             self._journal_event(
                 cycle_id, "guardian_veto", epic=epic, reason="no_receipt_from_order_manager"
