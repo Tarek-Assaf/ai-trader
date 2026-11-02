@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import logging
 import math
+import threading
 import time
 from collections import defaultdict, deque
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal, InvalidOperation
@@ -917,7 +919,13 @@ def parse_tai_instrument_rules(payload: Mapping[str, Any]) -> TaiInstrumentRules
 
 
 class CapitalInstrumentRulesProvider:
-    """Read-only Capital.com rules provider; refreshes before every entry."""
+    """Read-only Capital.com rules provider; refreshes once per entry snapshot.
+
+    A TradingView entry needs the same instrument snapshot in the signal builder,
+    order factory, and Guardian market context.  Without a request-scoped snapshot,
+    each consumer refetches ``/markets`` and ``/markets/{epic}``, adding several
+    avoidable network round trips to the entry path.
+    """
 
     def __init__(self, client: Any, epic: str) -> None:
         if not epic.strip():
@@ -925,8 +933,34 @@ class CapitalInstrumentRulesProvider:
         self._client = client
         self.epic = epic.strip()
 
+        self._snapshot = threading.local()
+
+    @contextmanager
+    def snapshot(self, epic: str | None = None) -> Iterator[TaiInstrumentRules]:
+        """Fetch rules once and reuse them for one synchronous entry operation."""
+        target = (epic or self.epic).strip()
+        rules = self._fetch(target)
+        previous = getattr(self._snapshot, "value", None)
+        self._snapshot.value = (target, rules)
+        try:
+            yield rules
+        finally:
+            if previous is None:
+                try:
+                    del self._snapshot.value
+                except AttributeError:
+                    pass
+            else:
+                self._snapshot.value = previous
+
     def __call__(self, epic: str | None = None) -> TaiInstrumentRules:
         target = (epic or self.epic).strip()
+        cached = getattr(self._snapshot, "value", None)
+        if isinstance(cached, tuple) and len(cached) == 2 and cached[0] == target:
+            return cached[1]
+        return self._fetch(target)
+
+    def _fetch(self, target: str) -> TaiInstrumentRules:
         details = self._client.market_details(target)
         if not isinstance(details, Mapping):
             raise TaiDemoRefused("broker instrument rules are unavailable")

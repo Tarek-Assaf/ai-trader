@@ -614,21 +614,51 @@ class TaiDemoRunner:
             self._journal_event(
                 cycle_id, "external_signal", epic=epic, source=source, direction=direction.value
             )
-            try:
-                rules = self._rules_provider(epic) if self._rules_provider is not None else None
-                build = getattr(self._signal, "external_signal", None)
-                if rules is None or not callable(build):
-                    raise TaiDemoRefused("external signals need broker rules and a signal builder")
-                signal = (
-                    build(direction, rules, reference=reference_price)
-                    if reference_price is not None
-                    else build(direction, rules)
-                )
-            except (TaiDemoRefused, ValueError) as exc:
-                self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
-                self._send_alert(refusal_text(epic, direction.value, str(exc), self._riyadh_time()))
-                return self._outcome(cycle_id, "REJECTED", "external_signal_unusable")
-            return self._attempt_entry(signal, epic, cycle_id, external=True)
+            snapshot = getattr(self._rules_provider, "snapshot", None)
+            if callable(snapshot):
+                with snapshot(epic) as rules:
+                    return self._build_external_entry(
+                        direction,
+                        reference_price,
+                        epic,
+                        cycle_id,
+                        rules,
+                    )
+            rules = self._rules_provider(epic) if self._rules_provider is not None else None
+            return self._build_external_entry(
+                direction,
+                reference_price,
+                epic,
+                cycle_id,
+                rules,
+            )
+
+    def _build_external_entry(
+        self,
+        direction: Direction,
+        reference_price: Decimal | None,
+        epic: str,
+        cycle_id: str,
+        rules: TaiInstrumentRules | None,
+    ) -> DemoOutcome:
+        """Build and submit one external entry using one rules snapshot."""
+        try:
+            build = getattr(self._signal, "external_signal", None)
+            if rules is None or not callable(build):
+                raise TaiDemoRefused("external signals need broker rules and a signal builder")
+            signal = (
+                build(direction, rules, reference=reference_price)
+                if reference_price is not None
+                else build(direction, rules)
+            )
+        except (TaiDemoRefused, ValueError) as exc:
+            self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
+            self._send_alert(refusal_text(epic, direction.value, str(exc), self._riyadh_time()))
+            return self._outcome(cycle_id, "REJECTED", "external_signal_unusable")
+        # Reuse the broker rules fetched to build the external signal.  Refreshing
+        # the same market details again inside _attempt_entry adds avoidable
+        # Capital.com GETs to every TradingView entry.
+        return self._attempt_entry(signal, epic, cycle_id, external=True, rules=rules)
 
     def _has_open_position(self, epic: str, direction: Direction) -> bool:
         """Return whether this instrument already has exposure in this direction."""
@@ -681,9 +711,11 @@ class TaiDemoRunner:
         *,
         external: bool = False,
         retried: bool = False,
+        rules: TaiInstrumentRules | None = None,
     ) -> DemoOutcome:
         try:
-            rules = self._rules_provider(epic) if self._rules_provider is not None else None
+            if rules is None and self._rules_provider is not None:
+                rules = self._rules_provider(epic)
             refusal = None if external else self._spread_refusal(signal, rules)
             if refusal is not None:
                 reason, details = refusal
@@ -816,7 +848,12 @@ class TaiDemoRunner:
                     new_stop=retry.stop,
                 )
                 return self._attempt_entry(
-                    retry, epic, f"{cycle_id}-retry", external=external, retried=True
+                    retry,
+                    epic,
+                    f"{cycle_id}-retry",
+                    external=external,
+                    retried=True,
+                    rules=rules,
                 )
             self._journal_event(cycle_id, label, epic=epic, reason=reason)
             self._send_alert(

@@ -146,6 +146,38 @@ def test_capital_rules_provider_enriches_tick_from_market_search() -> None:
     assert rules.min_stop_distance == Decimal("2.89299")
 
 
+def test_capital_rules_snapshot_reuses_one_broker_fetch_for_entry_components() -> None:
+    class Client:
+        def __init__(self) -> None:
+            self.searches = 0
+            self.details = 0
+
+        def search_markets(self, epic: str) -> list[dict[str, object]]:
+            self.searches += 1
+            return [{"epic": epic, "tickSize": "0.1"}]
+
+        def market_details(self, epic: str) -> dict[str, object]:
+            self.details += 1
+            return {
+                "instrument": {"epic": epic, "lotSize": 1},
+                "dealingRules": {
+                    "minDealSize": {"value": "0.001", "unit": "POINTS"},
+                    "minSizeIncrement": {"value": "0.001", "unit": "POINTS"},
+                    "minStopOrProfitDistance": {"value": "0.01", "unit": "PERCENTAGE"},
+                },
+                "snapshot": {"bid": "28928.1", "offer": "28929.9"},
+            }
+
+    client = Client()
+    provider = CapitalInstrumentRulesProvider(client, "US100")
+    with provider.snapshot("US100"):
+        first = provider("US100")
+        second = provider("US100")
+
+    assert first == second
+    assert client.searches == 1 and client.details == 1
+
+
 def test_order_factory_rounds_price_levels_and_rejects_short_stop() -> None:
     rules = TaiInstrumentRules(
         Decimal("0.1"), Decimal("0.1"), Decimal("1"), Decimal("0.1"), Decimal("1"), Decimal("1")

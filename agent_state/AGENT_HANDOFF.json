@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 607,
+  "revision": 608,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31366,7 +31366,24 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Validated the 2026-11-02T15:39Z US100 BUY on both account logs: Capital.com position submission and confirmation returned HTTP 200; at 15:49Z both paths reconciled the position as closed by stop loss with RESULT US100 LOSS -$2.43 and no open position thereafter. This explains the empty Telegram open-positions view. Read-only Postgres inspection found orders, fills and positions tables empty in trader and trader_02 for this demo execution path, so broker reflection is confirmed but local trade persistence remains a separate T-271 gap. No orders or config changes were made; Codex retains turn."
+    },
+    {
+      "revision": 608,
+      "ts": "2026-11-02T21:15:00Z",
+      "agent": "codex",
+      "action": "reduce_tradingview_entry_latency",
+      "task_ids": [
+        "T-269"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/experiments/tai_wiring.py",
+        "tests/unit/test_tai_demo.py",
+        "tests/unit/test_tai_wiring.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Profiled the 2026-11-02T15:39Z alert: webhook receipt to Capital.com position POST was about 4.6 seconds and submission logging about 6 seconds, with repeated market-rules GETs in the entry path. Added a request-scoped Capital.com instrument-rules snapshot shared by the TradingView signal builder, order factory and Guardian market context, and reused the fetched rules in _attempt_entry. Added unit coverage for one-fetch reuse. Compileall and git diff checks pass; pytest/Ruff are unavailable in this desktop runtime. No strategy, risk, broker, or trading-control change; deployment not restarted. Codex retains turn per owner instruction."
     }
   ],
-  "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. Demo only. Not yet observed: one alert opening trades on both accounts (T-272). Codex next: T-269 review and adversarial tests of T-268, then review T-270/T-271; T-277 extends the CI backup drill; T-222 still waits on Codex."
+  "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work now coalesces repeated instrument-rule fetches during one TradingView entry. Demo only. Remaining live validation is deployment timing and Telegram delivery; no strategy/risk/control changes made."
 }

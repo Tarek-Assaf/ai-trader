@@ -779,6 +779,26 @@ def test_external_signal_enters_through_the_order_manager() -> None:
     assert order.stop_level == Decimal("90.5")
 
 
+def test_external_signal_reuses_rules_used_to_build_the_signal() -> None:
+    gateway = Gateway()
+    calls: list[bool] = []
+
+    def rules_provider(_epic):
+        calls.append(True)
+        return _spread_rules(bid="100", ask="100.5")
+
+    tai, _manager = runner(
+        gateway,
+        signal_provider=_ExternalSignals(),
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=rules_provider,
+        epic="NSXUSD",
+    )
+
+    assert tai.on_external_signal(Direction.BUY).action == "SUBMITTED"
+    assert len(calls) == 1
+
+
 def test_external_signal_replaces_the_open_trade_and_respects_kill_and_pause() -> None:
     gateway = Gateway()
     tai, manager = _external_runner(gateway)
