@@ -410,7 +410,9 @@ class _VirtualTrade:
         hit1, hit2, hit3 = reached(1), reached(2), reached(3)
         if hit3:
             return True
-        if hit2:
+        # Pine: `hitTP2 and highestTarget < 2`.  Once TP2 is booked a later bar that still
+        # touches the TP2 level must fall through to the break-even exit check.
+        if hit2 and self.highest < 2:
             self.highest, self.active_stop = 2, self.entry
             return False
         if self.highest == 0 and hit1:

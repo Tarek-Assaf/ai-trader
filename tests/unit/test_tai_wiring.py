@@ -954,3 +954,13 @@ def test_a_widening_of_more_than_twice_the_structure_stop_is_refused_clearly() -
     provider, now = _gold_provider()
     with pytest.raises(ValueError, match="more than twice"):
         provider.external_signal(Direction.SELL, _min_rules("656.5", "657", "30"), now)
+
+
+def test_virtual_trade_exits_at_break_even_after_tp2_even_when_the_bar_touches_tp2_again() -> None:
+    """Pine tests `hitTP2 and highestTarget < 2`; a later wide bar must still hit break-even."""
+    from trader.experiments.tai_wiring import _VirtualTrade
+
+    trade = _VirtualTrade(Direction.BUY, entry=100.0, risk=10.0, active_stop=90.0)
+    assert trade.manage(high=121.0, low=105.0) is False  # TP1 and TP2 reached: stop to entry
+    assert trade.highest == 2 and trade.active_stop == 100.0
+    assert trade.manage(high=125.0, low=99.0) is True  # touches TP2 level again and entry
