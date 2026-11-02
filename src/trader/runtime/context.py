@@ -374,7 +374,11 @@ class SizingContextSource:
             or leverage is None
         ):
             raise ContextUnavailable(decision.reason or "position sizing rejected")
-        return SizingEstimate(size, risk, margin, leverage * account.equity)
+        # The sizer's leverage is the projected total (what is open plus this trade).  The Guardian
+        # adds the account's open exposure itself, so hand it only this trade's notional or the open
+        # exposure is counted twice and an entry is refused whenever another position is open.
+        new_notional = max(leverage * account.equity - account.notional_exposure, Decimal(0))
+        return SizingEstimate(size, risk, margin, new_notional)
 
 
 class RuntimeContextProvider:

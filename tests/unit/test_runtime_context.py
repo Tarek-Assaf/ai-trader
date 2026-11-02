@@ -380,3 +380,39 @@ def test_broker_pnl_provider_builds_an_equity_curve_over_time(tmp_path: Any) -> 
 
     report = _broker_pnl_provider(Broker(), path)("daily")
     assert [float(point.equity) for point in report.equity_curve] == [11000.0, 11010.0]
+
+
+def test_the_sizing_estimate_carries_only_this_trades_notional_not_what_is_already_open() -> None:
+    """The Guardian adds the open exposure itself; counting it here refused every entry made
+    while another position was open and the sizer had to scale the size down."""
+    from dataclasses import replace as dc_replace
+
+    terms = dc_replace(
+        _terms(),
+        min_size=Decimal("0.001"),
+        size_step=Decimal("0.001"),
+        max_size=Decimal("100"),
+    )
+    base = AccountContextSource(Broker(), Journal(), clock=lambda: NOW)()
+    open_exposure = base.equity * Decimal("0.30")
+    account = dc_replace(base, notional_exposure=open_exposure)
+    intent = TradeIntent(
+        instrument="NAS100",
+        direction="BUY",
+        entry_type="market",
+        entry_level=Decimal("29800"),
+        stop_level=Decimal("29788"),  # tight stop: the size is scaled down to the leverage limit
+        target_levels=(Decimal("29836"),),
+        time_horizon="intraday",
+        thesis="t",
+        confidence=1.0,
+    )
+    source = SizingContextSource(
+        lambda _i: terms,
+        SizingLimits(Decimal("0.5"), Decimal("40"), Decimal("5")),
+        account_currency=lambda _a: "USD",
+    )
+    estimate = source(intent, account, ())
+    assert estimate.notional_exposure == estimate.size * Decimal("29800")
+    # what the Guardian will test: open exposure plus this trade, within the limit
+    assert open_exposure + estimate.notional_exposure <= Decimal("5") * account.equity
