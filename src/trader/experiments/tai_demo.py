@@ -12,12 +12,13 @@ import inspect
 import json
 import logging
 import os
+import re
 import tempfile
 import threading
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
-from decimal import ROUND_DOWN, ROUND_HALF_UP, Decimal
+from decimal import ROUND_CEILING, ROUND_DOWN, ROUND_FLOOR, ROUND_HALF_UP, Decimal
 from hashlib import sha256
 from pathlib import Path
 from typing import Protocol
@@ -619,7 +620,13 @@ class TaiDemoRunner:
         return True
 
     def _attempt_entry(
-        self, signal: TaiSignal, epic: str, cycle_id: str, *, external: bool = False
+        self,
+        signal: TaiSignal,
+        epic: str,
+        cycle_id: str,
+        *,
+        external: bool = False,
+        retried: bool = False,
     ) -> DemoOutcome:
         try:
             rules = self._rules_provider(epic) if self._rules_provider is not None else None
@@ -713,6 +720,21 @@ class TaiDemoRunner:
             reason = str(exc) or "execution_paused"
             # The broker's own refusal arrives the same way; say so instead of blaming the guard.
             label = "broker_refused" if "broker refused" in reason.lower() else "guardian_veto"
+            retry = None if retried else self._signal_at_broker_minimum(signal, reason, rules)
+            if retry is not None:
+                # The broker named the stop it will accept.  Try once more at that stop, through
+                # the same sizing and Risk Guardian path, instead of dropping the owner's signal.
+                self._journal_event(
+                    cycle_id,
+                    "order_retry",
+                    epic=epic,
+                    reason=reason,
+                    old_stop=signal.stop,
+                    new_stop=retry.stop,
+                )
+                return self._attempt_entry(
+                    retry, epic, f"{cycle_id}-retry", external=external, retried=True
+                )
             self._journal_event(cycle_id, label, epic=epic, reason=reason)
             self._send_alert(
                 refusal_text(epic, signal.direction.value, reason, self._riyadh_time())
@@ -768,6 +790,44 @@ class TaiDemoRunner:
             )
         )
         return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
+
+    _BROKER_STOP_LIMIT = re.compile(
+        r"error\.invalid\.stoploss\.(minvalue|maxvalue):\s*(-?\d+(?:\.\d+)?)"
+    )
+
+    def _signal_at_broker_minimum(
+        self, signal: TaiSignal, reason: str, rules: TaiInstrumentRules | None
+    ) -> TaiSignal | None:
+        """Rebuild the signal with the stop the broker just asked for, or None.
+
+        Capital.com answers a too-close stop with the limit it wants (``minvalue`` for a SELL,
+        ``maxvalue`` for a BUY).  The new stop sits one tick beyond that limit, on a tick, and is
+        refused here if it would more than double the structure distance.
+        """
+        found = self._BROKER_STOP_LIMIT.search(reason)
+        if found is None:
+            return None
+        sell = signal.direction is Direction.SELL
+        if (found.group(1) == "minvalue") != sell:
+            return None
+        limit = Decimal(found.group(2))
+        tick = rules.tick_size if rules is not None and rules.tick_size else None
+        if tick is None or tick <= 0:
+            return None
+        raw = limit + tick if sell else limit - tick
+        mode = ROUND_CEILING if sell else ROUND_FLOOR
+        stop = (raw / tick).to_integral_value(rounding=mode) * tick
+        if (sell and stop <= signal.stop) or (not sell and stop >= signal.stop):
+            return None  # the structure stop was already as far out as the broker asks
+        if abs(signal.entry - stop) > 2 * abs(signal.entry - signal.stop):
+            return None
+        note = f"stop moved from {signal.stop} to {stop} at the broker's minimum"
+        try:
+            return replace(
+                signal, stop=stop, note=f"{signal.note}; {note}" if signal.note else note
+            )
+        except ValueError:
+            return None
 
     def check_broker_closed(self) -> None:
         """Notice a trade the broker closed (stop, target, manual) without waiting for a bar."""

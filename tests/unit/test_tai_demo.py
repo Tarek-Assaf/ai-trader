@@ -866,3 +866,67 @@ def test_a_refusal_by_the_broker_is_not_reported_as_a_guardian_veto():
     assert any(event["event"] == "broker_refused" for event in events)
     assert not any(event["event"] == "guardian_veto" for event in events)
     assert any("Capital.com refused" in alert and "3902.97" in alert for alert in alerts)
+
+
+class _RefusesOnce(Manager):
+    """Refuses the first order the way Capital.com refuses a too-close stop."""
+
+    def __init__(self, gateway, message):
+        super().__init__(gateway)
+        self._message = message
+
+    def submit(self, cycle_id, order):
+        if not self.submits:
+            self.submits.append((cycle_id, order))
+            raise ExecutionPaused(self._message)
+        return super().submit(cycle_id, order)
+
+
+def _external_with_refusal(message, direction):
+    gateway = Gateway()
+    events: list[dict] = []
+    tai, manager = _external_runner(gateway, journal=events.append)
+    refusing = _RefusesOnce(gateway, message)
+    tai._orders = refusing
+    return tai, refusing, events, tai.on_external_signal(direction)
+
+
+def test_a_too_close_stop_is_retried_once_at_the_stop_the_broker_asked_for() -> None:
+    tai, manager, events, outcome = _external_with_refusal(
+        "the broker refused the order: error.invalid.stoploss.minvalue: 112.4", Direction.SELL
+    )
+    assert (outcome.action, outcome.reason) == ("SUBMITTED", "entry_submitted")
+    assert len(manager.submits) == 2
+    first, second = manager.submits[0][1], manager.submits[1][1]
+    assert first.stop_level == Decimal("110")
+    assert second.stop_level == Decimal("114")  # 112.4 + one tick, on a tick
+    assert manager.submits[1][0].endswith("-retry")
+    assert any(event["event"] == "order_retry" for event in events)
+
+
+def test_a_buy_is_retried_from_the_maxvalue_the_broker_names() -> None:
+    _tai, manager, _events, outcome = _external_with_refusal(
+        "the broker refused the order: error.invalid.stoploss.maxvalue: 87.6", Direction.BUY
+    )
+    assert outcome.action == "SUBMITTED" and len(manager.submits) == 2
+    assert manager.submits[1][1].stop_level == Decimal("86")  # 87.6 - one tick, floored
+
+
+def test_a_stop_that_would_more_than_double_the_risk_is_not_retried() -> None:
+    _tai, manager, events, outcome = _external_with_refusal(
+        "the broker refused the order: error.invalid.stoploss.minvalue: 125", Direction.SELL
+    )
+    assert (outcome.action, outcome.reason) == ("REJECTED", "broker_refused")
+    assert len(manager.submits) == 1
+    assert not any(event["event"] == "order_retry" for event in events)
+
+
+def test_the_retry_happens_only_once() -> None:
+    gateway = Gateway()
+    tai, manager = _external_runner(gateway)
+    manager.raises = ExecutionPaused(
+        "the broker refused the order: error.invalid.stoploss.minvalue: 112.4"
+    )
+    outcome = tai.on_external_signal(Direction.SELL)
+    assert outcome.reason == "broker_refused"
+    assert len(manager.submits) == 2
