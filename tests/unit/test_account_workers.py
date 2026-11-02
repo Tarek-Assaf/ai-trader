@@ -129,6 +129,10 @@ def test_the_supervisor_file_names_each_worker_and_holds_no_credentials(tmp_path
     text = (tmp_path / "sup.conf").read_text(encoding="utf-8")
     assert "[program:account_02]" in text and "[program:account_03]" in text
     assert f"command={aw.LAUNCHER} 02" in text and f"command={aw.LAUNCHER} 03" in text
+    assert "stdout_logfile_maxbytes=50MB" in text
+    assert "stdout_logfile_backups=3" in text
+    assert "stderr_logfile_maxbytes=50MB" in text
+    assert "stderr_logfile_backups=3" in text
     assert "[program:account_01]" not in text
     for secret in SECRETS:
         assert secret not in text

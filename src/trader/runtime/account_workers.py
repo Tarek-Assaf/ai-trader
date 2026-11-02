@@ -37,6 +37,8 @@ BASE_PORT = 8000
 SUPERVISOR_INCLUDE = Path("/workspace/supervisord.accounts.conf")
 FORWARD_FILE = Path("/workspace/state/forward_urls")
 LAUNCHER = "/app/scripts/start_account_api.sh"
+LOG_MAXBYTES = "50MB"
+LOG_BACKUPS = 3
 _NUMBER = re.compile(r"^\d{2,3}$")
 
 
@@ -109,9 +111,11 @@ autorestart=true
 startsecs=5
 startretries=30
 stdout_logfile=/workspace/logs/account_{number}.log
-stdout_logfile_maxbytes=0
+stdout_logfile_maxbytes={LOG_MAXBYTES}
+stdout_logfile_backups={LOG_BACKUPS}
 stderr_logfile=/workspace/logs/account_{number}.err.log
-stderr_logfile_maxbytes=0
+stderr_logfile_maxbytes={LOG_MAXBYTES}
+stderr_logfile_backups={LOG_BACKUPS}
 """
         )
     return "\n".join(blocks)
