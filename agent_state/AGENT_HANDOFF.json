@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 605,
+  "revision": 606,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31339,6 +31339,19 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Rebuilt the local VM image from commit 9db2487 and recreated only the ai-trader container using the same image tag; old image retained as 24d133c9b56f08ad617ac82c79e26be33bdddd6c-pre-logging. Post-deploy /health is healthy, paper/demo with live_enabled=false, DB and Redis reachable, expected_open=true, feed_stalled=false, stale_epics=[], rejected_candles=0, reconnect_count=0. Telegram account 01 polling=on and account 02 polling=off alerts-only. No new Uvicorn access-log formatter errors after restart; historical errors stop before deployment. No orders, secrets, risk, strategy, or trading-control changes. Codex retains turn per owner instruction."
+    },
+    {
+      "revision": 606,
+      "ts": "2026-11-02T19:55:00Z",
+      "agent": "codex",
+      "action": "record_t272_first_open_market_alert",
+      "task_ids": [
+        "T-272"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Observed the first open-market TradingView US100 BUY alert in the deployed logs at 2026-11-02T15:39:03Z. Account 01 (trader.log) and account 02 (trader_02.log) both recorded the same alert and per-account lot size 0.1; each startup had a recorded starting balance. Entry submitted at 28669.2 with SL 28645.5 and TP1/TP2/TP3 28722.6/28761.1/28799.6; Capital.com position POST returned HTTP 200 and the alert was copied to the other account. Current post-restart cycles have no new alert and remain awaiting_tradingview_alert. No config, risk, strategy, or control changes; no new order was manufactured. Codex retains turn per owner instruction."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. Demo only. Not yet observed: one alert opening trades on both accounts (T-272). Codex next: T-269 review and adversarial tests of T-268, then review T-270/T-271; T-277 extends the CI backup drill; T-222 still waits on Codex."
