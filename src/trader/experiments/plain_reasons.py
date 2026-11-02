@@ -2,6 +2,10 @@
 
 from __future__ import annotations
 
+import re
+
+_STOP_TOO_CLOSE = re.compile(r"error\.invalid\.stoploss\.minvalue:?\s*([0-9][0-9.,]*)")
+
 _FRAGMENTS: tuple[tuple[str, str], ...] = (
     (
         "entries are paused",
@@ -58,6 +62,16 @@ def plain_reason(raw: str) -> str:
     """Return a sentence for a known refusal code, or a generic one."""
     text = str(raw)
     lowered = text.lower()
+    too_close = _STOP_TOO_CLOSE.search(lowered)
+    if too_close is not None:
+        return (
+            "Capital.com refused the order: the stop-loss was too close to the current price "
+            f"(it has to be at least {too_close.group(1).rstrip('.,')})."
+        )
+    if "error.invalid.takeprofit" in lowered:
+        return "Capital.com refused the order: the take-profit was too close to the current price."
+    if "the broker refused the order" in lowered:
+        return "Capital.com refused the order (the reason is in the detail below)."
     for fragment, sentence in _FRAGMENTS:
         if fragment.lower() in lowered:
             return sentence
