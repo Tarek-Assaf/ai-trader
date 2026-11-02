@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 606,
+  "revision": 607,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31352,6 +31352,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Observed the first open-market TradingView US100 BUY alert in the deployed logs at 2026-11-02T15:39:03Z. Account 01 (trader.log) and account 02 (trader_02.log) both recorded the same alert and per-account lot size 0.1; each startup had a recorded starting balance. Entry submitted at 28669.2 with SL 28645.5 and TP1/TP2/TP3 28722.6/28761.1/28799.6; Capital.com position POST returned HTTP 200 and the alert was copied to the other account. Current post-restart cycles have no new alert and remain awaiting_tradingview_alert. No config, risk, strategy, or control changes; no new order was manufactured. Codex retains turn per owner instruction."
+    },
+    {
+      "revision": 607,
+      "ts": "2026-11-02T20:05:00Z",
+      "agent": "codex",
+      "action": "validate_t272_capital_close_and_persistence",
+      "task_ids": [
+        "T-271",
+        "T-272"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Validated the 2026-11-02T15:39Z US100 BUY on both account logs: Capital.com position submission and confirmation returned HTTP 200; at 15:49Z both paths reconciled the position as closed by stop loss with RESULT US100 LOSS -$2.43 and no open position thereafter. This explains the empty Telegram open-positions view. Read-only Postgres inspection found orders, fills and positions tables empty in trader and trader_02 for this demo execution path, so broker reflection is confirmed but local trade persistence remains a separate T-271 gap. No orders or config changes were made; Codex retains turn."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. Demo only. Not yet observed: one alert opening trades on both accounts (T-272). Codex next: T-269 review and adversarial tests of T-268, then review T-270/T-271; T-277 extends the CI backup drill; T-222 still waits on Codex."
