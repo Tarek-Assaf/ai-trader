@@ -994,16 +994,27 @@ class CapitalBalanceProvider:
         accounts = payload.get("accounts") if isinstance(payload, Mapping) else None
         if not isinstance(accounts, Sequence) or isinstance(accounts, str):
             raise TaiDemoRefused("broker account balance is unavailable")
-        candidates = [
+        usable = [
             item
             for item in accounts
             if isinstance(item, Mapping)
-            and (self._account_id is None or item.get("accountId") == self._account_id)
+            and item.get("accountId")
         ]
-        if len(candidates) != 1 and self._account_id is None:
-            # A login can hold several accounts; orders go to the one Capital.com marks as the
-            # preferred (active) account, the same rule the broker view uses for /status.
-            candidates = [item for item in candidates if item.get("preferred") is True]
+        candidates = (
+            [item for item in usable if item.get("accountId") == self._account_id]
+            if self._account_id is not None
+            else usable
+        )
+        # ``ACCOUNT_ID`` is the bot's stable internal label (``acct-01``), while
+        # Capital.com returns a broker-owned account UUID.  When the two namespaces
+        # do not match, retain the safety guard but use the broker's own unambiguous
+        # selection rules: one account, or exactly one preferred account.
+        if not candidates:
+            preferred = [item for item in usable if item.get("preferred") is True]
+            if len(usable) == 1:
+                candidates = usable
+            elif len(preferred) == 1:
+                candidates = preferred
         if len(candidates) != 1:
             raise TaiDemoRefused("broker account balance is ambiguous")
         balance = candidates[0].get("balance")
