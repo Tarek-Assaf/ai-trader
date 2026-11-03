@@ -44,6 +44,53 @@ def test_capital_balance_provider_scopes_multi_account_response() -> None:
     assert CapitalBalanceProvider(Client(), "acct-02")() == Decimal("987.65")
 
 
+def test_capital_balance_provider_maps_internal_id_to_single_broker_account() -> None:
+    class Client:
+        def account_info(self) -> dict[str, object]:
+            return {
+                "accounts": [
+                    {"accountId": "broker-uuid-01", "balance": {"balance": "1000.00"}}
+                ]
+            }
+
+    assert CapitalBalanceProvider(Client(), "acct-01")() == Decimal("1000.00")
+
+
+def test_capital_balance_provider_uses_unique_preferred_broker_account() -> None:
+    class Client:
+        def account_info(self) -> dict[str, object]:
+            return {
+                "accounts": [
+                    {
+                        "accountId": "broker-uuid-01",
+                        "preferred": False,
+                        "balance": {"balance": "1000.00"},
+                    },
+                    {
+                        "accountId": "broker-uuid-02",
+                        "preferred": True,
+                        "balance": {"balance": "987.65"},
+                    },
+                ]
+            }
+
+    assert CapitalBalanceProvider(Client(), "acct-02")() == Decimal("987.65")
+
+
+def test_capital_balance_provider_keeps_refusing_unresolved_multiple_accounts() -> None:
+    class Client:
+        def account_info(self) -> dict[str, object]:
+            return {
+                "accounts": [
+                    {"accountId": "broker-uuid-01", "balance": {"balance": "1000.00"}},
+                    {"accountId": "broker-uuid-02", "balance": {"balance": "987.65"}},
+                ]
+            }
+
+    with pytest.raises(TaiDemoRefused, match="ambiguous"):
+        CapitalBalanceProvider(Client(), "acct-02")()
+
+
 def minute(at: datetime, close: str = "100") -> TaiMinuteBar:
     value = Decimal(close)
     return TaiMinuteBar(at, "NSXUSD", value, value + 1, value - 1, value)
