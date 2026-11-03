@@ -1192,7 +1192,7 @@ class TaiDemoRunner:
     def _move_stop_to_entry(
         self, position: Position, state: _ManagedPosition, cycle_id: str
     ) -> None:
-        """Move the protective stop to break-even; a refusal is logged and retried."""
+        """Move the protective stop to broker-safe break-even; refusals are retried."""
         stop = state.entry
         # Capital.com requires a stop to remain strictly beyond the current position
         # level.  A fast market can move the quote through the exact entry before
@@ -1229,7 +1229,7 @@ class TaiDemoRunner:
             f"Time: {self._riyadh_time()}\n"
             "\n"
             f"New stop: {self._num(stop)}\n"
-            "The trade is now risk-free; TP3 stays as the target."
+            "The trade is protected at broker-safe break-even; TP3 stays as the target."
         )
 
     def _exit_failed(self, deal_id: str, event: str, exc: Exception, cycle_id: str) -> None:

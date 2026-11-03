@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 612,
+  "revision": 613,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31440,6 +31440,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Investigated the 2026-11-03T09:24:14Z TradingView BUY. Account 01 submitted successfully; the copy to account 02 first timed out, then succeeded at 09:24:16Z. Account 02 received the webhook but refused before order submission with 'broker account balance is ambiguous', mapped to order_rules_unavailable. The balance provider was constructed without the process account id, so a multi-account Capital.com response could not be scoped. Fixed app wiring to pass current_account_id() and added a regression test for a multi-account balance response. Compileall passes; pytest is unavailable in the desktop runtime. Fix is not deployed because deployment/restart requires explicit owner authorization. No orders, secrets, risk, strategy, or trading-control changes."
+    },
+    {
+      "revision": 613,
+      "ts": "2026-11-03T10:12:00Z",
+      "agent": "codex",
+      "action": "make_break_even_stop_broker_safe",
+      "task_ids": [
+        "T-269",
+        "T-273"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Fixed the TP1 stop move for Capital.com: the runner now uses the instrument tick size and places the BUY stop one tick below the fill (SELL one tick above) instead of requesting an exact entry stop that Capital.com rejects as not strictly beyond the position level. Generic gateways retain exact-entry behavior when no tick rules are available. Updated the alert wording to broker-safe break-even and added a regression test. Compileall and diff checks pass; pytest is unavailable. Deployment is intentionally deferred until the current open trade closes, per owner instruction. No order or risk-control changes."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work now coalesces repeated instrument-rule fetches during one TradingView entry. Demo only. Remaining live validation is deployment timing and Telegram delivery; no strategy/risk/control changes made."
