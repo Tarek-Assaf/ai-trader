@@ -10,6 +10,7 @@ the OrderManager receives, so an agent cannot approve a changed order.
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
@@ -243,6 +244,7 @@ class GuardedEntrySubmitter:
         return self.submit(cycle_id, order, relaxed=True)
 
     def submit(self, cycle_id: str, order: OrderRequest, *, relaxed: bool = False) -> Any:
+        started = time.perf_counter()
         if order.stop_level is None or order.profit_level is None:
             raise ExecutionPaused("guardian rejected: stop and target are required")
         try:
@@ -270,6 +272,12 @@ class GuardedEntrySubmitter:
         final = replace(order, size=size)
         self._approval._bound[cycle_id] = BoundApproval(
             final, cycle_id, replace(bound.decision, approved_size=size)
+        )
+        LOGGER.info(
+            "guardian submit timing cycle_id=%s evaluation_ms=%.1f approved_size=%s",
+            cycle_id,
+            (time.perf_counter() - started) * 1000,
+            size,
         )
         try:
             return self._manager.submit(cycle_id, final)

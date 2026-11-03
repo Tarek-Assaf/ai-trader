@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from threading import Barrier
 from typing import Any
 
 import pytest
@@ -146,6 +147,44 @@ def test_context_sources_build_account_market_size_and_positions() -> None:
     assert context.sizing is not None and context.sizing.size > 0
     assert context.open_positions[0].margin_required == Decimal("5")
     assert journal.snapshots["runtime:pnl-baseline"]["peak_equity"] == "10000"
+
+
+def test_context_provider_overlaps_marked_account_and_position_reads() -> None:
+    class ParallelBroker(Broker):
+        parallel_read_safe = True
+
+        def __init__(self) -> None:
+            self.barrier: Barrier | None = None
+
+        def get_account(self) -> dict[str, object]:
+            if self.barrier is not None:
+                self.barrier.wait(timeout=2)
+            return super().get_account()
+
+        def get_positions(self) -> tuple[Position, ...]:
+            if self.barrier is not None:
+                self.barrier.wait(timeout=2)
+            return super().get_positions()
+
+    broker = ParallelBroker()
+    journal = Journal()
+    account = AccountContextSource(broker, journal, clock=lambda: NOW)
+    positions = position_source(
+        broker,
+        valuation=lambda _position: OpenPosition(
+            "NAS100", Decimal("10"), Decimal("5"), Decimal("100")
+        ),
+    )
+    broker.barrier = Barrier(2)
+    provider = RuntimeContextProvider(
+        account,
+        lambda _instrument: MarketContextSource(Recorder(), clock=lambda: NOW)("NAS100"),
+        lambda _intent, _account, _positions: None,
+        positions,
+        clock=lambda: NOW,
+    )
+    # The barrier can only open if both broker reads are submitted together.
+    assert provider("cycle-parallel", _intent()) is not None
 
 
 def test_account_baseline_seeds_reloads_and_rolls_the_utc_day() -> None:

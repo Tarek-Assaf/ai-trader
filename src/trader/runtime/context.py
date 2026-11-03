@@ -9,6 +9,7 @@ proposal without inventing a market price, account baseline or size.
 from __future__ import annotations
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
@@ -64,6 +65,7 @@ class AccountContextSource:
         self.broker = broker
         self.journal = journal
         self.clock = clock
+        self.parallel_read_safe = bool(getattr(broker, "parallel_read_safe", False))
         # Neither the broker nor the baseline snapshot records a loss streak yet. A
         # deployment may declare a starting value; the default stays fail-closed.
         self.default_consecutive_losses = default_consecutive_losses
@@ -401,8 +403,18 @@ class RuntimeContextProvider:
 
     def __call__(self, _cycle_id: str, intent: GraphTradeIntent) -> GuardianInputs | None:
         try:
-            account = self.account()
-            positions = tuple(self.positions())
+            if bool(
+                getattr(self.account, "parallel_read_safe", False)
+                and getattr(self.positions, "parallel_read_safe", False)
+            ):
+                with ThreadPoolExecutor(max_workers=2, thread_name_prefix="guardian-read") as pool:
+                    account_future = pool.submit(self.account)
+                    positions_future = pool.submit(self.positions)
+                    account = account_future.result()
+                    positions = tuple(positions_future.result())
+            else:
+                account = self.account()
+                positions = tuple(self.positions())
             sizing = self.sizing(intent, account, positions)
             return GuardianInputs(
                 market=self.market(intent.instrument),
@@ -451,6 +463,7 @@ def position_source(
             result.append(value)
         return tuple(result)
 
+    read.parallel_read_safe = bool(getattr(broker, "parallel_read_safe", False))
     return read
 
 
