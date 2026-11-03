@@ -677,6 +677,17 @@ def test_break_even_stop_never_sits_on_the_wrong_side_of_the_fill():
     assert gateway.modified[0][1] == Decimal("99.5")
 
 
+def test_break_even_stop_uses_one_tick_buffer_for_broker_rules():
+    gateway = Gateway()
+    instance, _ = runner(
+        gateway,
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="99.9", ask="100.1", tick="0.1"),
+    )
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))
+    assert gateway.modified[0][1] == Decimal("99.9")
+
+
 class _ExternalSignals:
     """Signal source that only knows how to build an entry for an outside decision."""
 

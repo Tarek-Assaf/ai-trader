@@ -925,9 +925,29 @@ class TaiDemoRunner:
     def _move_stop_to_entry(
         self, position: Position, state: _ManagedPosition, cycle_id: str
     ) -> None:
-        """Move the protective stop to break-even; a refusal is logged and retried."""
+        """Move the protective stop to broker-safe break-even; refusals are retried."""
         stop = state.entry
-        if state.direction is Direction.BUY and stop > position.level:
+        # Capital.com requires a BUY stop to be strictly below the position
+        # level (and a SELL stop strictly above it).  An exact entry stop was
+        # therefore rejected after TP1.  When instrument rules are available,
+        # leave one tick of broker-valid buffer while keeping the stop as close
+        # to break-even as the fill permits.  Generic test/paper gateways keep
+        # the historical exact-entry behavior when no tick is available.
+        tick = None
+        if self._rules_provider is not None:
+            try:
+                rules = self._rules_provider(position.epic)
+                candidate = getattr(rules, "tick_size", None)
+                if isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:
+                    tick = candidate
+            except Exception:  # noqa: BLE001 - preserve the original stop on lookup failure
+                tick = None
+        if tick is not None:
+            if state.direction is Direction.BUY:
+                stop = min(stop, position.level) - tick
+            else:
+                stop = max(stop, position.level) + tick
+        elif state.direction is Direction.BUY and stop > position.level:
             stop = position.level
         elif state.direction is Direction.SELL and stop < position.level:
             stop = position.level
@@ -945,7 +965,7 @@ class TaiDemoRunner:
             f"Time: {self._riyadh_time()}\n"
             "\n"
             f"New stop: {self._num(stop)}\n"
-            "The trade is now risk-free; TP3 stays as the target."
+            "The trade is protected at broker-safe break-even; TP3 stays as the target."
         )
 
     def _exit_failed(self, deal_id: str, event: str, exc: Exception, cycle_id: str) -> None:
