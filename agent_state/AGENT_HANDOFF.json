@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 616,
+  "revision": 617,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31532,6 +31532,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Root cause confirmed from the live demo response: the bot's internal acct-01/acct-02 labels were compared directly with Capital.com's broker account IDs, so a valid single-account response produced zero matches and the safety refusal broker account balance is ambiguous. The guard remains fail-safe; it now accepts exactly one broker account or one uniquely preferred broker account when the internal label cannot match, while still refusing unresolved multi-account responses. Added regression coverage for single-account mapping, preferred-account mapping, and unresolved ambiguity. Compileall, diff check, and an in-container balance-provider smoke test pass; the image has not yet been rebuilt or restarted. Owner authorized Codex to retain the turn."
+    },
+    {
+      "revision": 617,
+      "ts": "2026-11-03T16:19:00Z",
+      "agent": "codex",
+      "action": "deploy_account_balance_mapping_fix",
+      "task_ids": [
+        "T-273",
+        "T-269"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "After VM recovery, deployed ghcr.io/tarek-assaf/ai-trader:7759355 (digest ef60e5503a02; minimal overlay of 5610ca8 with the balance mapping fix) using the existing runtime.env, volumes, paper/demo mode and live_enabled=false. Recreated ai-trader only after confirming both Tai position-state files were empty; reattached ai-ngrok to the new container and kept 5610ca8 as the rollback image/container. Post-deploy health is healthy: runtime running, DB/Redis reachable, expected_open=true, feed_stalled=false, stale_epics=[], rejected_candles=0, reconnect_count=0, both US100 and GOLD Tai cycles evaluated with awaiting_tradingview_alert, and both Account 01 and Account 02 startup paths reached Capital.com positions HTTP 200. Public webhook GET returns 405 and invalid-secret POST returns 403. Removed one failed intermediate build container; disk is 48% used. No orders or trading-control changes."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work now coalesces repeated instrument-rule fetches during one TradingView entry. Demo only. A T-273 balance-scope regression was found: internal account labels did not match Capital.com broker IDs; the safe single/preferred-account fallback is implemented and awaits image deployment. No strategy/risk/control changes made."
