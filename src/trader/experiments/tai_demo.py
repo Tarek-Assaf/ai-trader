@@ -269,6 +269,11 @@ class _ManagedPosition:
     one_r_value: Decimal | None = None
     hit: set[int] = field(default_factory=set)
     entry_stop_moved: bool = False
+    # A break-even update can be temporarily illegal when price has retraced
+    # through the entry or the broker's minimum stop distance is wider than the
+    # requested buffer.  Keep the original protective stop and re-check on a
+    # later bar without sending the same invalid request repeatedly.
+    entry_stop_blocked: bool = False
     shadow: bool = False
     remaining_size: Decimal | None = None
 
@@ -397,6 +402,7 @@ class TaiDemoRunner:
                     ),
                     hit={int(index) for index in raw.get("hit", [])},
                     entry_stop_moved=bool(raw.get("entry_stop_moved", False)),
+                    entry_stop_blocked=bool(raw.get("entry_stop_blocked", False)),
                     shadow=bool(raw.get("shadow", False)),
                     remaining_size=(
                         Decimal(str(raw["remaining_size"]))
@@ -472,6 +478,7 @@ class TaiDemoRunner:
                         str(state.one_r_value) if state.one_r_value is not None else None
                     ),
                     "entry_stop_moved": state.entry_stop_moved,
+                    "entry_stop_blocked": state.entry_stop_blocked,
                     "shadow": state.shadow,
                     "remaining_size": (
                         str(state.remaining_size) if state.remaining_size is not None else None
@@ -925,7 +932,13 @@ class TaiDemoRunner:
     def _move_stop_to_entry(
         self, position: Position, state: _ManagedPosition, cycle_id: str
     ) -> None:
-        """Move the protective stop to broker-safe break-even; refusals are retried."""
+        """Move the protective stop to broker-safe break-even when the quote allows it.
+
+        Capital.com validates a stop against the live bid/ask and its minimum
+        distance, not only against the position level.  If price has already
+        retraced through the requested break-even level, retain the original
+        protective stop and defer the update until a later bar is valid.
+        """
         stop = state.entry
         # Capital.com requires a BUY stop to be strictly below the position
         # level (and a SELL stop strictly above it).  An exact entry stop was
@@ -934,12 +947,28 @@ class TaiDemoRunner:
         # to break-even as the fill permits.  Generic test/paper gateways keep
         # the historical exact-entry behavior when no tick is available.
         tick = None
+        min_stop_distance = None
+        bid = None
+        ask = None
         if self._rules_provider is not None:
             try:
                 rules = self._rules_provider(position.epic)
                 candidate = getattr(rules, "tick_size", None)
                 if isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:
                     tick = candidate
+                candidate = getattr(rules, "min_stop_distance", None)
+                if (
+                    isinstance(candidate, Decimal)
+                    and candidate.is_finite()
+                    and candidate > 0
+                ):
+                    min_stop_distance = candidate
+                candidate = getattr(rules, "bid", None)
+                if isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:
+                    bid = candidate
+                candidate = getattr(rules, "ask", None)
+                if isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:
+                    ask = candidate
             except Exception:  # noqa: BLE001 - preserve the original stop on lookup failure
                 tick = None
         if tick is not None:
@@ -951,14 +980,78 @@ class TaiDemoRunner:
             stop = position.level
         elif state.direction is Direction.SELL and stop < position.level:
             stop = position.level
+        if min_stop_distance is not None:
+            reference = bid if state.direction is Direction.BUY else ask
+            if reference is not None:
+                boundary = (
+                    reference - min_stop_distance
+                    if state.direction is Direction.BUY
+                    else reference + min_stop_distance
+                )
+                invalid = stop >= boundary if state.direction is Direction.BUY else stop <= boundary
+                if invalid:
+                    state.entry_stop_blocked = True
+                    self._journal_event(
+                        cycle_id,
+                        "stop_to_entry_deferred",
+                        deal_id=position.deal_id,
+                        reason="market_distance",
+                        requested_stop=str(stop),
+                        reference_price=str(reference),
+                        minimum_stop_distance=str(min_stop_distance),
+                    )
+                    key = (position.deal_id, "stop_to_entry_deferred")
+                    if key not in self._spread_alerted:
+                        self._spread_alerted.add(key)
+                        self._send_alert(
+                            f"STOP TO ENTRY DEFERRED {position.epic}\n"
+                            f"Time: {self._riyadh_time()}\n\n"
+                            f"Requested stop: {self._num(stop)}\n"
+                            f"Live reference: {self._num(reference)}\n"
+                            f"Minimum distance: {self._num(min_stop_distance)}\n"
+                            "Original protective stop retained; break-even will be retried when valid."
+                        )
+                    self._persist_state()
+                    return
+                state.entry_stop_blocked = False
         try:
             self._positions.modify_position(
                 position.deal_id, stop_level=stop, profit_level=state.targets[2]
             )
         except Exception as exc:  # noqa: BLE001 - the original stop still protects it
+            # A 400 can race with a broker-side stop/close between the position
+            # snapshot and the PUT.  Reconcile once so a closed position is not
+            # retried forever; if it is still open, defer the update and retain
+            # the original stop rather than spamming an invalid request.
+            if getattr(exc, "status_code", None) == 400:
+                try:
+                    live_ids = {item.deal_id for item in self._positions.get_positions()}
+                except Exception:  # noqa: BLE001 - preserve the original failure path
+                    live_ids = None
+                if live_ids is not None:
+                    if position.deal_id not in live_ids:
+                        self._managed.pop(position.deal_id, None)
+                        self._journal_event(
+                            cycle_id,
+                            "reconcile_closed",
+                            deal_id=position.deal_id,
+                            reason="broker_closed_during_stop_update",
+                        )
+                        self._persist_state()
+                        return
+                    state.entry_stop_blocked = True
+                    self._journal_event(
+                        cycle_id,
+                        "stop_to_entry_deferred",
+                        deal_id=position.deal_id,
+                        reason=getattr(exc, "error_code", None) or "broker_rejected",
+                        requested_stop=str(stop),
+                    )
+                    self._persist_state()
             self._exit_failed(position.deal_id, "stop_to_entry_failed", exc, cycle_id)
             return
         state.entry_stop_moved = True
+        state.entry_stop_blocked = False
         self._journal_event(cycle_id, "stop_to_entry", deal_id=position.deal_id)
         self._send_alert(
             f"STOP MOVED TO ENTRY {position.epic}\n"
