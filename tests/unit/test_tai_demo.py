@@ -756,6 +756,48 @@ def test_break_even_stop_uses_one_tick_buffer_for_broker_rules():
     assert gateway.modified[0][1] == Decimal("99.9")
 
 
+def test_break_even_stop_is_deferred_when_live_market_is_too_close():
+    gateway = Gateway()
+    alerts = []
+    journal = []
+    instance, _ = runner(
+        gateway,
+        alerts=alerts,
+        journal=journal.append,
+        instrument_rules_provider=lambda _epic: _spread_rules(
+            bid="99.5", ask="99.7", tick="0.1"
+        ),
+    )
+
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))
+
+    assert gateway.modified == []
+    deferred = [event for event in journal if event.get("event") == "stop_to_entry_deferred"]
+    assert deferred and deferred[0]["reason"] == "market_distance"
+    assert len(alerts) == 1
+
+
+def test_break_even_stop_retries_after_market_distance_becomes_valid():
+    gateway = Gateway()
+    quotes = iter(
+        (
+            _spread_rules(bid="99.5", ask="99.7", tick="0.1"),
+            _spread_rules(bid="101.0", ask="101.2", tick="0.1"),
+        )
+    )
+    instance, _ = runner(
+        gateway,
+        instrument_rules_provider=lambda _epic: next(quotes),
+    )
+
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))
+    instance.on_bar(bar())
+
+    assert gateway.modified == [("deal-1", Decimal("99.9"), Decimal("103"))]
+
+
 class _ExternalSignals:
     """Signal source that only knows how to build an entry for an outside decision."""
 
