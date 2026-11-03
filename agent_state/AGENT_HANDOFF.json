@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 609,
+  "revision": 610,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31396,6 +31396,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Deployed commit 691c41c to the local VM 192.168.187.50 by rebuilding the existing compose image tag and recreating only ai-trader. The previous image is retained as 24d133c9b56f08ad617ac82c79e26be33bdddd6c-pre-t269-latency for rollback. Post-deploy /health is healthy: paper/demo, live_enabled=false, DB and Redis reachable, expected_open=true, feed_stalled=false, stale_epics=[], rejected_candles=0, reconnect_count=0. Startup completed and Telegram polling is on. Effective Tai runtime logged experiment=on and dry_run=off; no strategy, risk, config, credential, or trading-control changes and no order was placed. Codex retains turn per owner instruction."
+    },
+    {
+      "revision": 610,
+      "ts": "2026-11-03T07:20:00Z",
+      "agent": "codex",
+      "action": "diagnose_tradingview_404_ingress",
+      "task_ids": [
+        "T-269",
+        "T-272"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Compared the TradingView 404 alerts with the deployed VM. The application route is POST /webhooks/tradingview and the webhook secret is present; valid requests previously returned 200 or 403 in the bot access log. No TradingView POST requests appear after the Nov 2 20:52 UTC local-image deployment, while the bot continues healthy cycles with awaiting_tradingview_alert. The VM exposes port 8000 only on 127.0.0.1 and has no cloudflared/ngrok/Tailscale/reverse-proxy listener, so TradingView cannot reach it directly. The 404 alerts therefore target a stopped/old public URL or wrong path, not the latency code. NQ1! is also outside the configured US100/GOLD instruments. Required owner action: provide one stable public HTTPS ingress and set all four alerts to /webhooks/tradingview. No order, secret, risk, strategy, or deployment change made."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work now coalesces repeated instrument-rule fetches during one TradingView entry. Demo only. Remaining live validation is deployment timing and Telegram delivery; no strategy/risk/control changes made."
