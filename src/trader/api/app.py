@@ -424,7 +424,10 @@ def _build_tai_demo_runtime(
             control=app.state.execution_control_source,
             source=cycle_source,
             builder=builder,
-            balance_provider=CapitalBalanceProvider(capital_client),
+            # Scope the balance lookup to this process' account.  Capital.com can
+            # return more than one account from a valid session; without the
+            # process account id the worker refuses the alert as ambiguous.
+            balance_provider=CapitalBalanceProvider(capital_client, current_account_id()),
             rules_provider=rules_provider,
             signal_provider=signal,
             managed_state=previous_epic_state,

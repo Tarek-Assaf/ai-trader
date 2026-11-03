@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 611,
+  "revision": 612,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31424,6 +31424,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Root shell history confirmed the migration removed the Dockerized ai-ngrok container after recreating ai-trader and did not recreate the tunnel. Restored ai-ngrok from the existing ngrok/ngrok:latest image using the existing /opt/ai-trader/ngrok.env, reserved hostname disposal-surround-shortcake.ngrok-free.dev, --network container:ai-trader, and restart=always. Container is running with zero restarts; ngrok API reports the public URL and localhost:8000 target. Internal /health returns 200. A safe invalid-secret POST to the public /webhooks/tradingview returns 403, proving the TradingView webhook path reaches the bot without placing an order. No trading config, risk, strategy, credential, or order changes."
+    },
+    {
+      "revision": 612,
+      "ts": "2026-11-03T10:05:00Z",
+      "agent": "codex",
+      "action": "scope_account2_balance_guard",
+      "task_ids": [
+        "T-273",
+        "T-269"
+      ],
+      "files_changed": [
+        "src/trader/api/app.py",
+        "tests/unit/test_tai_wiring.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Investigated the 2026-11-03T09:24:14Z TradingView BUY. Account 01 submitted successfully; the copy to account 02 first timed out, then succeeded at 09:24:16Z. Account 02 received the webhook but refused before order submission with 'broker account balance is ambiguous', mapped to order_rules_unavailable. The balance provider was constructed without the process account id, so a multi-account Capital.com response could not be scoped. Fixed app wiring to pass current_account_id() and added a regression test for a multi-account balance response. Compileall passes; pytest is unavailable in the desktop runtime. Fix is not deployed because deployment/restart requires explicit owner authorization. No orders, secrets, risk, strategy, or trading-control changes."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work now coalesces repeated instrument-rule fetches during one TradingView entry. Demo only. Remaining live validation is deployment timing and Telegram delivery; no strategy/risk/control changes made."

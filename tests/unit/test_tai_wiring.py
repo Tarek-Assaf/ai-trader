@@ -19,6 +19,7 @@ from trader.experiments.tai_demo import (
 )
 from trader.experiments.tai_wiring import (
     REFRESH_BARS,
+    CapitalBalanceProvider,
     CapitalInstrumentRulesProvider,
     TaiMinuteBar,
     TaiOrderFactory,
@@ -28,6 +29,19 @@ from trader.experiments.tai_wiring import (
     build_tai_demo_runtime,
     parse_tai_instrument_rules,
 )
+
+
+def test_capital_balance_provider_scopes_multi_account_response() -> None:
+    class Client:
+        def account_info(self) -> dict[str, object]:
+            return {
+                "accounts": [
+                    {"accountId": "acct-01", "balance": {"balance": "1000.00"}},
+                    {"accountId": "acct-02", "balance": {"balance": "987.65"}},
+                ]
+            }
+
+    assert CapitalBalanceProvider(Client(), "acct-02")() == Decimal("987.65")
 
 
 def minute(at: datetime, close: str = "100") -> TaiMinuteBar:
