@@ -214,7 +214,12 @@ async def tradingview_alert(request: Request, background: BackgroundTasks) -> di
     # Answer at once and trade after the response has been sent.
     accepted_at = _monotonic()
     background.add_task(
-        _trade, runner, Direction(signal), signal, _close_price(payload), accepted_at
+        _trade,
+        runner,
+        Direction(signal),
+        signal,
+        _close_price(payload),
+        accepted_at,
     )
     return {"status": "accepted", "signal": signal}
 
@@ -240,6 +245,12 @@ def _trade(
 ) -> None:
     started = _monotonic()
     try:
+        if accepted_at is not None:
+            LOGGER.info(
+                "tradingview %s background queue delay_ms=%.1f",
+                signal,
+                max(0.0, (_monotonic() - accepted_at) * 1000),
+            )
         outcome = (
             runner.on_external_signal(direction, reference_price=close)
             if close is not None
