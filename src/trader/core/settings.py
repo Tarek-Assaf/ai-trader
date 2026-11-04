@@ -26,6 +26,7 @@ class EnvironmentSettings(BaseSettings):
     tai_demo_experiment: bool = False
     # T-186 remains a no-order dry run until the owner explicitly changes it.
     tai_demo_dry_run: bool = True
+    tai_demo_three_leg: bool = False
     # Match TradingView's realtime request.security value; closed is for parity
     # backtests and can be selected explicitly while investigating a signal.
     tai_demo_ha_mode: Literal["closed", "forming"] = "forming"

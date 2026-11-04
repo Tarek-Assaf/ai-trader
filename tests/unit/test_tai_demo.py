@@ -140,6 +140,17 @@ def test_three_flag_guard_refuses_every_unsafe_combination():
             )
 
 
+def test_three_leg_split_preserves_total_and_broker_step():
+    sizes = TaiDemoRunner._leg_sizes(Decimal("1"), Decimal("0.001"))
+    assert sizes == (Decimal("0.400"), Decimal("0.300"), Decimal("0.300"))
+    assert sum(sizes, Decimal("0")) == Decimal("1")
+
+
+def test_three_leg_split_keeps_remainder_in_last_leg():
+    sizes = TaiDemoRunner._leg_sizes(Decimal("0.002"), Decimal("0.001"))
+    assert sizes == (Decimal("0.000"), Decimal("0.000"), Decimal("0.002"))
+
+
 def _spread_rules(*, bid: str | None, ask: str | None, tick: str = "1") -> TaiInstrumentRules:
     return TaiInstrumentRules(
         Decimal("0.1"),

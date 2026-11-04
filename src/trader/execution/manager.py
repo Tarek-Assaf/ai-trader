@@ -661,6 +661,74 @@ class OrderManager:
                 raise ExecutionPaused("kill activated during order submission")
             return receipt
 
+    def submit_bracket(self, cycle_id: str, orders: Sequence[OrderRequest]) -> tuple[OrderReceipt, ...]:
+        """Submit a three-leg bracket under one lease/reconciliation preflight.
+
+        Each leg still receives its own durable reservation and broker receipt,
+        but the one-position Guardian context is evaluated before any leg is
+        opened and the broker is reconciled only once before and after the batch.
+        """
+        if not orders:
+            raise ValueError("at least one bracket order is required")
+        with self._mutex:
+            receipts: list[OrderReceipt] = []
+            if not self._started:
+                raise ExecutionPaused("execution has not started")
+            mode = self._apply_controls()
+            if mode is not ControlMode.RUN or self._paused:
+                raise ExecutionPaused("entries are paused")
+            try:
+                self._execution_lease.check()
+                if not self.reconcile():
+                    raise ExecutionPaused("broker state mismatch")
+                self._guardian_lease.check()
+                approvals: list[tuple[str, OrderRequest]] = []
+                for index, order in enumerate(orders, start=1):
+                    leg_cycle = f"{cycle_id}:leg{index}"
+                    approval = self._approve(order, leg_cycle)
+                    decision = approval.decision
+                    if (
+                        approval.order != order
+                        or approval.cycle_id != leg_cycle
+                        or not decision.approved
+                        or not decision.audit_written
+                        or decision.halt_system
+                        or decision.approved_size != order.size
+                    ):
+                        raise ExecutionPaused("exact-order Guardian approval is required")
+                    if not self._journal.reserve(leg_cycle, order):
+                        raise ExecutionPaused("duplicate bracket leg")
+                    approvals.append((leg_cycle, order))
+                for leg_cycle, order in approvals:
+                    receipt = self._broker.place_order(order)
+                    if (
+                        receipt.client_order_id != order.client_order_id
+                        or receipt.deal_id != receipt.position.deal_id
+                        or receipt.position.epic != order.epic
+                        or receipt.position.direction != order.direction
+                        or receipt.position.size != order.size
+                        or receipt.position.stop_level != order.stop_level
+                    ):
+                        raise ValueError("broker receipt mismatch")
+                    self._journal.mark(leg_cycle, "submitted", deal_id=receipt.deal_id)
+                    receipts.append(receipt)
+                self.reconcile()
+                LOGGER.info(
+                    "bracket submit timing cycle_id=%s legs=%s",
+                    cycle_id,
+                    len(receipts),
+                )
+                return tuple(receipts)
+            except Exception as exc:
+                for receipt in reversed(receipts):
+                    try:
+                        self._broker.close_position(receipt.deal_id)
+                    except Exception:
+                        LOGGER.exception("bracket rollback failed for deal=%s", receipt.deal_id)
+                self._pause("bracket_submission_failed")
+                LOGGER.error("bracket submission failed: %s: %s", type(exc).__name__, exc)
+                raise ExecutionPaused("bracket submission failed") from None
+
     def soak_observation(self) -> Mapping[str, object]:
         """Expose the last order stop invariant check without secrets."""
 

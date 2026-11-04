@@ -57,6 +57,9 @@ class TaiDemoSettings:
     # Zero means "take it from the account": the runner records the balance the first time it
     # sizes a trade (see start_balance.py).  A positive value is an explicit owner override.
     start_balance: Decimal = Decimal("10000")
+    # Optional broker-native three-leg mode.  The default remains the proven
+    # single-position scale-out path so rollback is one environment switch.
+    three_leg_mode: bool = False
 
     @property
     def enabled(self) -> bool:
@@ -93,6 +96,7 @@ class TaiDemoSettings:
             # Zero (unset) means automatic: the runner records the account balance itself.
             start_balance=start if start > 0 else Decimal("0"),
             dry_run=bool(getattr(settings, "tai_demo_dry_run", True)),
+            three_leg_mode=bool(getattr(settings, "tai_demo_three_leg", False)),
         )
 
     def require_enabled(self) -> None:
@@ -248,6 +252,16 @@ class PositionGateway(Protocol):
 class OrderManager(Protocol):
     def submit(self, cycle_id: str, order: OrderRequest) -> object | None: ...
 
+    def submit_bracket(
+        self,
+        cycle_id: str,
+        order: OrderRequest,
+        targets: tuple[Decimal, Decimal, Decimal],
+        *,
+        size_step: Decimal | None = None,
+        relaxed: bool = False,
+    ) -> Sequence[object]: ...
+
 
 SignalProvider = Callable[[ClosedBar], TaiSignal | None]
 OrderFactory = Callable[..., OrderRequest]
@@ -276,6 +290,10 @@ class _ManagedPosition:
     entry_stop_blocked: bool = False
     shadow: bool = False
     remaining_size: Decimal | None = None
+    # Set only for broker-native three-leg entries.  Each leg has one target
+    # and shares a group id so TP1 can protect the remaining legs together.
+    leg_index: int | None = None
+    group_id: str | None = None
 
 
 @dataclass
@@ -409,6 +427,10 @@ class TaiDemoRunner:
                         if raw.get("remaining_size") is not None
                         else None
                     ),
+                    leg_index=(
+                        int(raw["leg_index"]) if raw.get("leg_index") is not None else None
+                    ),
+                    group_id=(str(raw["group_id"]) if raw.get("group_id") else None),
                 )
             return loaded
         except (OSError, TypeError, ValueError, KeyError) as exc:
@@ -483,6 +505,8 @@ class TaiDemoRunner:
                     "remaining_size": (
                         str(state.remaining_size) if state.remaining_size is not None else None
                     ),
+                    "leg_index": state.leg_index,
+                    "group_id": state.group_id,
                 }
                 for deal_id, state in self._managed.items()
             },
@@ -709,6 +733,117 @@ class TaiDemoRunner:
         ):
             self._journal_event(cycle_id, "order_refused", reason="order_factory_mismatch")
             return self._outcome(cycle_id, "REJECTED", "order_factory_mismatch")
+        targets = signal.levels()
+        if self.settings.three_leg_mode:
+            submit_bracket = getattr(self._orders, "submit_bracket", None)
+            if not callable(submit_bracket) and not self._dry_run:
+                self._journal_event(
+                    cycle_id,
+                    "order_refused",
+                    epic=epic,
+                    reason="three_leg_unavailable",
+                )
+                return self._outcome(cycle_id, "REJECTED", "three_leg_unavailable")
+            if self._dry_run:
+                group_id = f"shadow-group:{cycle_id}"
+                leg_sizes = self._leg_sizes(order.size, rules.size_step if rules else None)
+                one_r = (
+                    abs(signal.entry - signal.stop)
+                    * order.size
+                    * rules.value_per_point
+                    if rules is not None and rules.value_per_point is not None
+                    else None
+                )
+                for index, leg_size in enumerate(leg_sizes):
+                    if leg_size <= 0:
+                        continue
+                    deal_id = f"shadow:{cycle_id}:leg{index + 1}"
+                    self._managed[deal_id] = _ManagedPosition(
+                        epic=epic,
+                        entry=signal.entry,
+                        risk=abs(signal.entry - signal.stop),
+                        direction=signal.direction,
+                        targets=targets,
+                        original_size=leg_size,
+                        size_step=rules.size_step if rules is not None else None,
+                        one_r_value=one_r,
+                        shadow=True,
+                        remaining_size=leg_size,
+                        leg_index=index,
+                        group_id=group_id,
+                    )
+                self._persist_state()
+                self._journal_event(
+                    cycle_id,
+                    "dry_run_would_submit_bracket",
+                    epic=epic,
+                    sizes=tuple(str(size) for size in leg_sizes),
+                    targets=tuple(str(target) for target in targets),
+                )
+                self._send_alert(
+                    self._entry_text(epic, signal, order.size, signal.entry, one_r)
+                )
+                return self._outcome(cycle_id, "DRY_RUN", "order_would_submit")
+            try:
+                receipts = tuple(
+                    submit_bracket(
+                        cycle_id,
+                        order,
+                        targets,
+                        size_step=rules.size_step if rules else None,
+                        relaxed=external,
+                    )
+                )
+            except ExecutionPaused as exc:
+                self._journal_event(cycle_id, "guardian_veto", epic=epic, reason=str(exc))
+                return self._outcome(cycle_id, "REJECTED", "guardian_veto")
+            except Exception as exc:  # noqa: BLE001 - bracket submission fails closed
+                self._exit_failed(cycle_id, "three_leg_submit_failed", exc, cycle_id)
+                return self._outcome(cycle_id, "REJECTED", "three_leg_submit_failed")
+            positions = tuple(
+                receipt.position
+                for receipt in receipts
+                if isinstance(getattr(receipt, "position", None), Position)
+            )
+            if len(positions) != 3:
+                self._journal_event(
+                    cycle_id, "order_refused", epic=epic, reason="three_leg_receipt_mismatch"
+                )
+                return self._outcome(cycle_id, "REJECTED", "three_leg_receipt_mismatch")
+            group_id = f"group:{cycle_id}"
+            one_r = (
+                abs(signal.entry - signal.stop)
+                * order.size
+                * rules.value_per_point
+                if rules is not None and rules.value_per_point is not None
+                else None
+            )
+            for index, position in enumerate(positions):
+                self._managed[position.deal_id] = _ManagedPosition(
+                    epic=epic,
+                    entry=signal.entry,
+                    risk=abs(signal.entry - signal.stop),
+                    direction=signal.direction,
+                    targets=targets,
+                    original_size=position.size,
+                    size_step=rules.size_step if rules is not None else None,
+                    one_r_value=one_r,
+                    leg_index=index,
+                    group_id=group_id,
+                )
+            self._persist_state()
+            self._journal_event(
+                cycle_id,
+                "entry_bracket",
+                epic=epic,
+                deal_ids=tuple(position.deal_id for position in positions),
+                sizes=tuple(position.size for position in positions),
+                tp1=targets[0],
+                tp2=targets[1],
+                tp3=targets[2],
+            )
+            self._send_alert(self._entry_text(epic, signal, order.size, positions[0].level, one_r))
+            return self._outcome(cycle_id, "SUBMITTED", "entry_bracket_submitted")
         if self._dry_run:
             shadow_id = f"shadow:{cycle_id}"
             self._managed[shadow_id] = _ManagedPosition(
@@ -859,6 +994,9 @@ class TaiDemoRunner:
             state = self._managed.get(position.deal_id)
             if state is None:
                 continue
+            if state.leg_index is not None:
+                self._manage_leg_exit(position, state, bar, cycle_id)
+                continue
             current_size = position.size
             if 1 in state.hit and not state.entry_stop_moved:
                 # An earlier attempt failed (price too close, broker busy): retry each bar.
@@ -928,6 +1066,60 @@ class TaiDemoRunner:
                             target=index,
                         )
                 self._persist_state()
+
+    def _manage_leg_exit(
+        self, position: Position, state: _ManagedPosition, bar: ClosedBar, cycle_id: str
+    ) -> None:
+        """Close one broker-native leg at its target and protect its siblings at TP1."""
+        index = state.leg_index
+        if (
+            index is None
+            or index in state.hit
+            or not self._target_hit(state.direction, bar, state.targets[index])
+        ):
+            return
+        state.hit.add(index)
+        target = state.targets[index]
+        if index == 0:
+            self._move_group_stop_to_entry(state.group_id, cycle_id)
+        try:
+            self._positions.close_position(position.deal_id)
+        except Exception as exc:  # noqa: BLE001 - broker remains protective
+            self._exit_failed(position.deal_id, "leg_close_failed", exc, cycle_id)
+            return
+        self._managed.pop(position.deal_id, None)
+        self._last_exit_at = bar.at
+        note_exit = getattr(self._signal, "note_exit", None)
+        if callable(note_exit):
+            note_exit(bar.at)
+        self._journal_event(
+            cycle_id,
+            "leg_exit",
+            deal_id=position.deal_id,
+            target=index + 1,
+            target_price=target,
+        )
+        self._record_exit(bar.epic)
+        self._send_alert(
+            f"PARTIAL EXIT {bar.epic}: TP{index + 1} reached\n"
+            f"Time: {self._riyadh_time()}\n\n"
+            f"Target: {self._num(target)}\n"
+            f"Closed: {self._num(position.size)}"
+        )
+        self._persist_state()
+
+    def _move_group_stop_to_entry(self, group_id: str | None, cycle_id: str) -> None:
+        """Move all still-open legs in a bracket to broker-safe break-even."""
+        if not group_id:
+            return
+        live = {item.deal_id: item for item in self._positions.get_positions()}
+        for deal_id, state in tuple(self._managed.items()):
+            if state.group_id != group_id:
+                continue
+            position = live.get(deal_id)
+            if position is None:
+                continue
+            self._move_stop_to_entry(position, state, cycle_id)
 
     def _move_stop_to_entry(
         self, position: Position, state: _ManagedPosition, cycle_id: str
@@ -1072,6 +1264,33 @@ class TaiDemoRunner:
     def _manage_shadow_exits(self, bar: ClosedBar, cycle_id: str) -> None:
         for deal_id, state in tuple(self._managed.items()):
             if not state.shadow or state.epic != bar.epic:
+                continue
+            if state.leg_index is not None:
+                index = state.leg_index
+                target = state.targets[index]
+                if index not in state.hit and self._target_hit(state.direction, bar, target):
+                    state.hit.add(index)
+                    if index == 0 and state.group_id:
+                        for sibling in self._managed.values():
+                            if sibling.group_id == state.group_id:
+                                sibling.entry_stop_moved = True
+                    self._managed.pop(deal_id, None)
+                    self._last_exit_at = bar.at
+                    self._journal_event(
+                        cycle_id,
+                        "leg_exit",
+                        deal_id=deal_id,
+                        target=index + 1,
+                        target_price=target,
+                    )
+                    self._record_exit(bar.epic)
+                    self._send_alert(
+                        f"PARTIAL EXIT {bar.epic}: TP{index + 1} reached\n"
+                        f"Time: {self._riyadh_time()}\n\n"
+                        f"Target: {self._num(target)}\n"
+                        f"Closed: {self._num(state.original_size)}"
+                    )
+                    self._persist_state()
                 continue
             current_size = state.remaining_size or state.original_size
             for index, target in enumerate(state.targets, start=1):
@@ -1219,6 +1438,26 @@ class TaiDemoRunner:
     @staticmethod
     def _exit_fraction(index: int) -> Decimal:
         return (Decimal("0.4"), Decimal("0.3"), Decimal("0.3"))[index - 1]
+
+    @classmethod
+    def _leg_sizes(
+        cls, total: Decimal, size_step: Decimal | None
+    ) -> tuple[Decimal, Decimal, Decimal]:
+        """Split one approved size into 40/30/30 legs without losing broker units."""
+        if size_step is None:
+            return (
+                total * Decimal("0.4"),
+                total * Decimal("0.3"),
+                total * Decimal("0.3"),
+            )
+        first = (
+            total * Decimal("0.4") / size_step
+        ).to_integral_value(rounding=ROUND_DOWN) * size_step
+        second = (
+            total * Decimal("0.3") / size_step
+        ).to_integral_value(rounding=ROUND_DOWN) * size_step
+        third = total - first - second
+        return first, second, third
 
     @classmethod
     def _partial_amount(cls, state: _ManagedPosition, current_size: Decimal, index: int) -> Decimal:

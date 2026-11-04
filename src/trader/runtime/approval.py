@@ -243,6 +243,103 @@ class GuardedEntrySubmitter:
         """Entry for an owner-directed signal: account-safety rules only (see the Guardian)."""
         return self.submit(cycle_id, order, relaxed=True)
 
+    @staticmethod
+    def _leg_sizes(total: Decimal, size_step: Decimal | None) -> tuple[Decimal, Decimal, Decimal]:
+        fractions = (Decimal("0.4"), Decimal("0.3"), Decimal("0.3"))
+        if size_step is None:
+            return (
+                total * fractions[0],
+                total * fractions[1],
+                total * fractions[2],
+            )
+        first = (total * fractions[0] / size_step).to_integral_value() * size_step
+        second = (total * fractions[1] / size_step).to_integral_value() * size_step
+        return first, second, total - first - second
+
+    def submit_bracket(
+        self,
+        cycle_id: str,
+        order: OrderRequest,
+        targets: tuple[Decimal, Decimal, Decimal],
+        *,
+        size_step: Decimal | None = None,
+        relaxed: bool = False,
+    ) -> tuple[Any, ...]:
+        """Approve once, then submit three independently protected TP legs.
+
+        The underlying OrderManager still reserves and reconciles each broker
+        deal.  If any leg fails, already-submitted legs are closed before the
+        error is returned, so a half-built bracket cannot remain open.
+        """
+        if len(targets) != 3 or any(not value.is_finite() or value <= 0 for value in targets):
+            raise ValueError("three finite positive targets are required")
+        if order.stop_level is None:
+            raise ExecutionPaused("guardian rejected: stop is required")
+        intent = GraphTradeIntent(
+            instrument=self._canonical(order.epic),
+            direction=order.direction.value,
+            entry_type="market",
+            entry_level=order.reference_price,
+            stop_level=order.stop_level,
+            target_levels=(targets[2],),
+            time_horizon="intraday",
+            thesis="deterministic three-leg strategy entry",
+            confidence=1.0,
+        )
+        decision = self._approval.evaluate_sync(intent, None, cycle_id, relaxed=relaxed)
+        bound = self._approval._bound.pop(cycle_id, None)
+        if not decision.approved or decision.approved_size is None or bound is None:
+            reasons = ",".join(decision.reasons) or "no_reason"
+            raise ExecutionPaused(f"guardian rejected: {reasons}")
+        total = min(order.size, bound.decision.approved_size or decision.approved_size)
+        sizes = self._leg_sizes(total, size_step)
+        if any(size <= 0 for size in sizes):
+            raise ExecutionPaused("guardian rejected: approved size is too small for three legs")
+        leg_orders: list[OrderRequest] = []
+        receipts: list[Any] = []
+        try:
+            for index, size in enumerate(sizes, start=1):
+                leg_id = f"{cycle_id}:leg{index}"
+                leg = replace(
+                    order,
+                    client_order_id=leg_id,
+                    size=size,
+                    profit_level=targets[index - 1],
+                )
+                leg_orders.append(leg)
+            batch_submit = getattr(self._manager, "submit_bracket", None)
+            if callable(batch_submit):
+                for leg in leg_orders:
+                    self._approval._bound[leg.client_order_id] = BoundApproval(
+                        leg,
+                        leg.client_order_id,
+                        replace(bound.decision, approved_size=leg.size),
+                    )
+                receipts = list(batch_submit(cycle_id, tuple(leg_orders)))
+            else:
+                receipts = []
+                for leg in leg_orders:
+                    self._approval._bound[leg.client_order_id] = BoundApproval(
+                        leg,
+                        leg.client_order_id,
+                        replace(bound.decision, approved_size=leg.size),
+                    )
+                    receipt = self._manager.submit(leg.client_order_id, leg)
+                    if receipt is None:
+                        raise ExecutionPaused("three-leg leg was not submitted")
+                    receipts.append(receipt)
+        except Exception:
+            for receipt in reversed(receipts):
+                position = getattr(receipt, "position", None)
+                deal_id = getattr(position, "deal_id", None)
+                if deal_id:
+                    try:
+                        self._manager._broker.close_position(deal_id)
+                    except Exception:  # noqa: BLE001 - preserve the original failure
+                        LOGGER.exception("three-leg rollback failed for deal=%s", deal_id)
+            raise
+        return tuple(receipts)
+
     def submit(self, cycle_id: str, order: OrderRequest, *, relaxed: bool = False) -> Any:
         started = time.perf_counter()
         if order.stop_level is None or order.profit_level is None:
