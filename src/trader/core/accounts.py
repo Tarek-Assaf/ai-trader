@@ -176,7 +176,10 @@ def _build(
         problems.append(
             AccountProblem(number, f"TAI_DEMO_BASE_LOT_{number}", "must be a number above zero")
         )
-    start_balance = _decimal(own("TAI_DEMO_START_BALANCE"), Decimal("0"))
+    # New accounts use the owner's standard $1,000 baseline unless an explicit
+    # per-account value is supplied.  An explicit zero still opts into the
+    # legacy broker-recorded baseline for callers that request it.
+    start_balance = _decimal(own("TAI_DEMO_START_BALANCE"), Decimal("1000"))
     if start_balance is None or start_balance < 0:
         problems.append(
             AccountProblem(

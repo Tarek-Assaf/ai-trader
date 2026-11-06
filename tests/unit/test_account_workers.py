@@ -86,7 +86,7 @@ def test_the_worker_environment_isolates_everything_that_must_not_be_shared() ->
     assert out["CAPITAL_API_KEY"] == "key-02-secret"
     assert out["CAPITAL_API_PASSWORD"] == "pass-02-secret"
     # Its own sizing: the main account's typed start balance must never leak across.
-    assert out["TAI_DEMO_START_BALANCE"] == "0"
+    assert out["TAI_DEMO_START_BALANCE"] == "1000"
     assert out["TAI_DEMO_BASE_LOT"] == "0.5"
     # Its own records and state, but the shared market data.
     assert out["DATABASE_URL"] == "postgresql+psycopg://trader@127.0.0.1:5432/trader_02"

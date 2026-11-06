@@ -30,7 +30,14 @@ class EnvironmentSettings(BaseSettings):
     # backtests and can be selected explicitly while investigating a signal.
     tai_demo_ha_mode: Literal["closed", "forming"] = "forming"
     tai_demo_base_lot: Decimal = Decimal("0.1")
-    tai_demo_start_balance: Decimal = Decimal("0")
+    # New accounts use the standard $1,000 baseline unless an owner explicitly
+    # sets a different value.  ``0`` remains an explicit opt-in to the legacy
+    # broker-recorded baseline.
+    tai_demo_start_balance: Decimal = Decimal("1000")
+    # The three-leg path is opt-in until the broker account mode has been
+    # verified in production; the image contains the implementation and the
+    # deployment can enable it with TAI_DEMO_THREE_LEGS=true.
+    tai_demo_three_legs: bool = False
     approval_mode: bool = False
     capital_api_key: SecretStr | None = None
     capital_identifier: SecretStr | None = None
