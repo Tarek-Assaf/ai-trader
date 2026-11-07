@@ -57,7 +57,11 @@ class TaiDemoSettings:
     base_lot: Decimal = Decimal("0.1")
     # Zero means "take it from the account": the runner records the balance the first time it
     # sizes a trade (see start_balance.py).  A positive value is an explicit owner override.
-    start_balance: Decimal = Decimal("10000")
+    start_balance: Decimal = Decimal("1000")
+    # When enabled, one Guardian decision is used to submit three independent
+    # same-direction market legs (40/30/30) with TP1/TP2/TP3 respectively.
+    # It remains disabled by default until the broker account mode is verified.
+    three_legs: bool = False
 
     @property
     def enabled(self) -> bool:
@@ -84,7 +88,10 @@ class TaiDemoSettings:
 
     @classmethod
     def from_settings(cls, settings: object) -> TaiDemoSettings:
-        start = Decimal(str(getattr(settings, "tai_demo_start_balance", "0") or "0"))
+        raw_start = getattr(settings, "tai_demo_start_balance", None)
+        # Missing/blank configuration means the standard $1,000 baseline;
+        # explicit zero remains the opt-in automatic broker-recorded mode.
+        start = Decimal("1000") if raw_start in (None, "") else Decimal(str(raw_start))
         return cls(
             broker_env=str(getattr(settings, "broker_env", "")),
             trading_mode=str(getattr(settings, "trading_mode", "")),
@@ -94,6 +101,7 @@ class TaiDemoSettings:
             # Zero (unset) means automatic: the runner records the account balance itself.
             start_balance=start if start > 0 else Decimal("0"),
             dry_run=bool(getattr(settings, "tai_demo_dry_run", True)),
+            three_legs=bool(getattr(settings, "tai_demo_three_legs", False)),
         )
 
     def require_enabled(self) -> None:
@@ -249,6 +257,16 @@ class PositionGateway(Protocol):
 class OrderManager(Protocol):
     def submit(self, cycle_id: str, order: OrderRequest) -> object | None: ...
 
+    def submit_legs(
+        self,
+        cycle_id: str,
+        orders: Sequence[OrderRequest],
+        *,
+        total_size: Decimal,
+        target_levels: tuple[Decimal, Decimal, Decimal],
+        relaxed: bool = False,
+    ) -> Sequence[object] | None: ...
+
 
 SignalProvider = Callable[[ClosedBar], TaiSignal | None]
 OrderFactory = Callable[..., OrderRequest]
@@ -272,6 +290,7 @@ class _ManagedPosition:
     entry_stop_moved: bool = False
     shadow: bool = False
     remaining_size: Decimal | None = None
+    leg_target: int | None = None
 
 
 @dataclass
@@ -404,6 +423,9 @@ class TaiDemoRunner:
                         if raw.get("remaining_size") is not None
                         else None
                     ),
+                    leg_target=(
+                        int(raw["leg_target"]) if raw.get("leg_target") is not None else None
+                    ),
                 )
             return loaded
         except (OSError, TypeError, ValueError, KeyError) as exc:
@@ -477,6 +499,7 @@ class TaiDemoRunner:
                     "remaining_size": (
                         str(state.remaining_size) if state.remaining_size is not None else None
                     ),
+                    "leg_target": state.leg_target,
                 }
                 for deal_id, state in self._managed.items()
             },
@@ -712,6 +735,32 @@ class TaiDemoRunner:
             return self._outcome(cycle_id, "DRY_RUN", "order_would_submit")
         try:
             submit_relaxed = getattr(self._orders, "submit_relaxed", None)
+            submit_legs = getattr(self._orders, "submit_legs", None)
+            if self.settings.three_legs and callable(submit_legs):
+                leg_sizes = self._split_leg_sizes(order.size, rules)
+                leg_orders = tuple(
+                    replace(
+                        order,
+                        client_order_id=f"{cycle_id}-tp{index}",
+                        size=size,
+                        profit_level=target,
+                    )
+                    for index, (size, target) in enumerate(
+                        zip(leg_sizes, signal.levels(), strict=True), start=1
+                    )
+                )
+                receipts = submit_legs(
+                    cycle_id,
+                    leg_orders,
+                    total_size=order.size,
+                    target_levels=signal.levels(),
+                    relaxed=external,
+                )
+                if receipts is None or len(receipts) != 3:
+                    raise ExecutionPaused("three-leg submission returned an incomplete receipt")
+                return self._record_three_leg_entry(
+                    signal, epic, cycle_id, receipts, leg_orders, rules
+                )
             if external and callable(submit_relaxed):
                 receipt = submit_relaxed(cycle_id, order)
             else:
@@ -790,6 +839,83 @@ class TaiDemoRunner:
             )
         )
         return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
+
+    @staticmethod
+    def _split_leg_sizes(total: Decimal, rules: TaiInstrumentRules | None) -> tuple[Decimal, ...]:
+        """Split a total into 40/30/30 while preserving broker step and total size."""
+        step = rules.size_step if rules is not None else Decimal("0.001")
+        minimum = rules.min_size if rules is not None else step
+        first = (total * Decimal("0.40") / step).to_integral_value(rounding=ROUND_DOWN) * step
+        second = (total * Decimal("0.30") / step).to_integral_value(rounding=ROUND_DOWN) * step
+        last = total - first - second
+        if first < minimum or second < minimum or last < minimum:
+            raise ExecutionPaused("three-leg sizing is below the broker minimum")
+        if any(
+            size <= 0 or (size / step) != (size / step).to_integral_value()
+            for size in (first, second, last)
+        ):
+            raise ExecutionPaused("three-leg sizing is not aligned to the broker step")
+        return (first, second, last)
+
+    def _record_three_leg_entry(
+        self,
+        signal: TaiSignal,
+        epic: str,
+        cycle_id: str,
+        receipts: Sequence[object],
+        orders: Sequence[OrderRequest],
+        rules: TaiInstrumentRules | None,
+    ) -> DemoOutcome:
+        """Track each independent leg without invoking the Guardian again."""
+        positions: list[Position] = []
+        for receipt, _order in zip(receipts, orders, strict=True):
+            position = getattr(receipt, "position", None)
+            if not isinstance(position, Position):
+                raise ExecutionPaused("three-leg receipt missing position")
+            positions.append(position)
+            risk = abs(signal.entry - signal.stop)
+            self._managed[position.deal_id] = _ManagedPosition(
+                epic=epic,
+                entry=signal.entry,
+                risk=risk,
+                direction=signal.direction,
+                targets=signal.levels(),
+                original_size=position.size,
+                size_step=rules.size_step if rules is not None else None,
+                one_r_value=(
+                    abs(signal.entry - signal.stop) * position.size * rules.value_per_point
+                    if rules is not None and rules.value_per_point is not None
+                    else None
+                ),
+                leg_target=len(positions),
+            )
+            self._journal_event(
+                f"{cycle_id}-tp{len(positions)}",
+                "entry",
+                epic=epic,
+                deal_id=position.deal_id,
+                direction=signal.direction.value,
+                size=position.size,
+                entry_price=position.level,
+                stop=signal.stop,
+                tp1=signal.levels()[0],
+                tp2=signal.levels()[1],
+                tp3=signal.levels()[2],
+                leg=len(positions),
+                fraction=("0.40" if len(positions) == 1 else "0.30"),
+            )
+        self._persist_state()
+        self._send_alert(
+            self._entry_text(
+                epic,
+                signal,
+                sum(position.size for position in positions),
+                positions[0].level,
+                None,
+            )
+            + "\nThree legs: 40% / 30% / 30% (one Guardian approval)."
+        )
+        return self._outcome(cycle_id, "SUBMITTED", "three_leg_entry_submitted")
 
     _BROKER_STOP_LIMIT = re.compile(
         r"error\.invalid\.stoploss\.(minvalue|maxvalue):\s*(-?\d+(?:\.\d+)?)"
@@ -878,6 +1004,43 @@ class TaiDemoRunner:
             if state is None:
                 continue
             current_size = position.size
+            if state.leg_target is not None:
+                target_index = state.leg_target
+                target = state.targets[target_index - 1]
+                if target_index not in state.hit and self._target_hit(state.direction, bar, target):
+                    state.hit.add(target_index)
+                    if target_index == 1:
+                        # TP1 protects the two remaining legs before this leg is closed.
+                        for remaining in positions:
+                            if remaining.deal_id == position.deal_id:
+                                continue
+                            remaining_state = self._managed.get(remaining.deal_id)
+                            if remaining_state is not None and not remaining_state.entry_stop_moved:
+                                self._move_stop_to_entry(remaining, remaining_state, cycle_id)
+                    try:
+                        self._positions.close_position(position.deal_id)
+                    except Exception as exc:  # noqa: BLE001 - broker target still protects it
+                        self._exit_failed(position.deal_id, "leg_close_failed", exc, cycle_id)
+                        continue
+                    self._managed.pop(position.deal_id, None)
+                    self._last_exit_at = bar.at
+                    self._journal_event(
+                        cycle_id,
+                        "exit",
+                        deal_id=position.deal_id,
+                        reason=f"target_{target_index}",
+                        leg=target_index,
+                    )
+                    self._record_exit(bar.epic)
+                    self._send_alert(
+                        f"PARTIAL EXIT {bar.epic}: TP{target_index} reached\n"
+                        f"Time: {self._riyadh_time()}\n\n"
+                        f"Target: {self._num(target)}\n"
+                        f"Closed: {self._num(current_size)}\n"
+                        "Three-leg position remains protected."
+                    )
+                    self._persist_state()
+                continue
             if 1 in state.hit and not state.entry_stop_moved:
                 # An earlier attempt failed (price too close, broker busy): retry each bar.
                 self._move_stop_to_entry(position, state, cycle_id)
@@ -958,7 +1121,13 @@ class TaiDemoRunner:
             stop = position.level
         try:
             self._positions.modify_position(
-                position.deal_id, stop_level=stop, profit_level=state.targets[2]
+                position.deal_id,
+                stop_level=stop,
+                profit_level=(
+                    state.targets[state.leg_target - 1]
+                    if state.leg_target is not None
+                    else state.targets[2]
+                ),
             )
         except Exception as exc:  # noqa: BLE001 - the original stop still protects it
             self._exit_failed(position.deal_id, "stop_to_entry_failed", exc, cycle_id)

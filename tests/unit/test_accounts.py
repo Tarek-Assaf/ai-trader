@@ -68,7 +68,7 @@ def test_the_start_balance_is_one_accounts_own_and_never_falls_back() -> None:
     }
     one, two, three = load_accounts(environ).accounts
     assert one.start_balance == Decimal("10999.80")
-    assert two.start_balance == Decimal("0")  # automatic: recorded from the account
+    assert two.start_balance == Decimal("1000")  # standard baseline for new accounts
     assert three.start_balance == Decimal("5000")
 
 

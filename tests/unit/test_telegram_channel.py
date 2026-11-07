@@ -448,3 +448,39 @@ def test_trades_command_offers_choice_then_answers() -> None:
     assert sent[-1][0] == "/trades|history"
     channel.handle_message("1", "/trades open")
     assert sent[-1][0] == "/positions|"
+
+
+def test_report_command_offers_period_choice_then_answers() -> None:
+    sent: list[tuple[str, object]] = []
+
+    class Transport:
+        def send_message(self, chat_id, text, *, reply_markup=None):
+            sent.append((text, reply_markup))
+
+        def send_photo(self, chat_id, photo, *, caption=""):
+            pass
+
+        def answer_callback(self, callback_id, text=""):
+            pass
+
+    channel = TelegramChannel(
+        Transport(),
+        ["1"],
+        control_writer=FakeWriter(),
+        render=lambda command, argument: f"{command}|{argument}",
+    )
+    channel.handle_message("1", "/report")
+    assert sent[-1][0] == "Which report would you like to see?"
+    markup = sent[-1][1]
+    assert markup is not None
+    assert [button["callback_data"] for button in markup["inline_keyboard"][0]] == [
+        "report_daily",
+        "report_weekly",
+        "report_monthly",
+    ]
+    channel.handle_update(
+        {"callback_query": {"id": "c", "data": "report_weekly", "message": {"chat": {"id": 1}}}}
+    )
+    assert sent[-1][0] == "/report|weekly"
+    channel.handle_message("1", "/report monthly")
+    assert sent[-1][0] == "/report|monthly"

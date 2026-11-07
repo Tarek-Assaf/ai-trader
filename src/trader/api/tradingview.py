@@ -212,7 +212,10 @@ async def tradingview_alert(request: Request, background: BackgroundTasks) -> di
         _last_accepted[key] = current
     # TradingView gives up after about 3 seconds, and placing the order takes longer.
     # Answer at once and trade after the response has been sent.
-    background.add_task(_trade, runner, Direction(signal), signal, _close_price(payload))
+    accepted_at = _monotonic()
+    background.add_task(
+        _trade, runner, Direction(signal), signal, _close_price(payload), accepted_at
+    )
     return {"status": "accepted", "signal": signal}
 
 
@@ -228,13 +231,33 @@ def _close_price(payload: dict[str, Any]) -> Decimal | None:
     return value if value.is_finite() and value > 0 else None
 
 
-def _trade(runner: Any, direction: Direction, signal: str, close: Decimal | None) -> None:
+def _trade(
+    runner: Any,
+    direction: Direction,
+    signal: str,
+    close: Decimal | None,
+    accepted_at: float | None = None,
+) -> None:
+    started = _monotonic()
     try:
         outcome = (
             runner.on_external_signal(direction, reference_price=close)
             if close is not None
             else runner.on_external_signal(direction)
         )
-        LOGGER.warning("tradingview %s alert -> %s %s", signal, outcome.action, outcome.reason)
+        LOGGER.warning(
+            "tradingview %s alert -> %s %s queue_ms=%.1f trade_ms=%.1f",
+            signal,
+            outcome.action,
+            outcome.reason,
+            max(0.0, (started - accepted_at) * 1000) if accepted_at is not None else 0.0,
+            (_monotonic() - started) * 1000,
+        )
     except Exception:  # noqa: BLE001 - nothing is waiting on this task
-        LOGGER.error("tradingview %s alert failed", signal, exc_info=True)
+        LOGGER.error(
+            "tradingview %s alert failed queue_ms=%.1f trade_ms=%.1f",
+            signal,
+            max(0.0, (started - accepted_at) * 1000) if accepted_at is not None else 0.0,
+            (_monotonic() - started) * 1000,
+            exc_info=True,
+        )

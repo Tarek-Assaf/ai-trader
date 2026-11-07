@@ -407,6 +407,44 @@ def test_unset_start_balance_means_automatic_not_a_startup_refusal():
     assert TaiDemoSettings.from_settings(Cfg()).start_balance == Decimal("0")
 
 
+def test_missing_start_balance_uses_the_standard_new_account_baseline():
+    class Cfg:
+        broker_env = "demo"
+        trading_mode = "paper"
+        live_trading_enabled = False
+        tai_demo_experiment = True
+        tai_demo_base_lot = "0.1"
+
+    assert TaiDemoSettings.from_settings(Cfg()).start_balance == Decimal("1000")
+
+
+def test_three_leg_mode_is_explicitly_configurable():
+    class Cfg:
+        broker_env = "demo"
+        trading_mode = "paper"
+        live_trading_enabled = False
+        tai_demo_experiment = True
+        tai_demo_base_lot = "0.1"
+        tai_demo_three_legs = True
+
+    assert TaiDemoSettings.from_settings(Cfg()).three_legs is True
+
+
+def test_three_leg_sizing_preserves_total_and_uses_40_30_30():
+    rules = TaiInstrumentRules(Decimal("0.001"), Decimal("0.001"))
+    assert TaiDemoRunner._split_leg_sizes(Decimal("1"), rules) == (
+        Decimal("0.400"),
+        Decimal("0.300"),
+        Decimal("0.300"),
+    )
+
+
+def test_three_leg_sizing_refuses_when_a_leg_is_below_minimum():
+    rules = TaiInstrumentRules(Decimal("0.1"), Decimal("0.1"))
+    with pytest.raises(ExecutionPaused, match="three-leg sizing"):
+        TaiDemoRunner._split_leg_sizes(Decimal("0.2"), rules)
+
+
 def _automatic_runner(balance, store, alerts=None, journal=None):
     gateway = Gateway()
     return TaiDemoRunner(

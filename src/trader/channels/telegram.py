@@ -363,6 +363,25 @@ class TelegramChannel:
                     },
                 )
             return
+        if command == "/report":
+            period = argument.lower().strip()
+            if period in {"daily", "weekly", "monthly"}:
+                self._send(chat_id, self._render("/report", period))
+            else:
+                self._send(
+                    chat_id,
+                    "Which report would you like to see?",
+                    reply_markup={
+                        "inline_keyboard": [
+                            [
+                                {"text": "Daily report", "callback_data": "report_daily"},
+                                {"text": "Weekly report", "callback_data": "report_weekly"},
+                                {"text": "Monthly report", "callback_data": "report_monthly"},
+                            ]
+                        ]
+                    },
+                )
+            return
         if (
             command == "/chart" or (command == "/lab" and argument.lower().startswith("chart"))
         ) and self._render_chart is not None:
@@ -505,6 +524,11 @@ class TelegramChannel:
                 self._send(chat_id, self._render("/positions", ""))
             else:
                 self._send(chat_id, self._render("/trades", "history"))
+            return
+        if action in {"report_daily", "report_weekly", "report_monthly"}:
+            self._transport.answer_callback(callback_id, "")
+            period = action.removeprefix("report_")
+            self._send(chat_id, self._render("/report", period))
             return
         if action == "cancel":
             self._nonces.consume_any(nonce)

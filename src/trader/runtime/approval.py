@@ -276,6 +276,77 @@ class GuardedEntrySubmitter:
         finally:
             self._approval._bound.pop(cycle_id, None)
 
+    def submit_legs(
+        self,
+        cycle_id: str,
+        orders: Sequence[OrderRequest],
+        *,
+        total_size: Decimal,
+        target_levels: tuple[Decimal, Decimal, Decimal],
+        relaxed: bool = False,
+    ) -> Sequence[Any] | None:
+        """Submit three legs after one aggregate Guardian decision.
+
+        Each leg keeps its own broker-side target and protective stop.  The
+        manager still performs its normal execution lease, reconciliation and
+        idempotency checks for every leg, but the expensive Guardian decision
+        is evaluated once for the aggregate intent.
+        """
+        if len(orders) != 3 or len(target_levels) != 3:
+            raise ExecutionPaused("three-leg submission requires exactly three orders")
+        if any(order.stop_level is None or order.profit_level is None for order in orders):
+            raise ExecutionPaused("guardian rejected: every leg needs stop and target")
+        first = orders[0]
+        try:
+            intent = GraphTradeIntent(
+                instrument=self._canonical(first.epic),
+                direction=first.direction.value,
+                entry_type="market",
+                entry_level=first.reference_price,
+                stop_level=first.stop_level,
+                target_levels=target_levels,
+                time_horizon="intraday",
+                thesis="deterministic three-leg strategy entry",
+                confidence=1.0,
+            )
+        except (TypeError, ValueError):
+            raise ExecutionPaused("guardian rejected: order could not be described") from None
+        decision = self._approval.evaluate_sync(intent, None, cycle_id, relaxed=relaxed)
+        bound = self._approval._bound.pop(cycle_id, None)
+        if not decision.approved or decision.approved_size is None or bound is None:
+            reasons = ",".join(decision.reasons) or "no_reason"
+            raise ExecutionPaused(f"guardian rejected: {reasons}")
+        if decision.approved_size != total_size:
+            raise ExecutionPaused("guardian rejected: approved three-leg size changed")
+        receipts: list[Any] = []
+        try:
+            for index, order in enumerate(orders, start=1):
+                leg_cycle = f"{cycle_id}-tp{index}"
+                self._approval._bound[leg_cycle] = BoundApproval(
+                    order,
+                    leg_cycle,
+                    replace(bound.decision, approved_size=order.size),
+                )
+                receipts.append(self._manager.submit(leg_cycle, order))
+            return tuple(receipts)
+        except Exception:
+            # If a later leg fails, close already confirmed legs immediately;
+            # never leave a partially-created three-leg group unattended.
+            broker = getattr(self._manager, "_broker", None)
+            for receipt in receipts:
+                position = getattr(receipt, "position", None)
+                deal_id = getattr(position, "deal_id", None)
+                if broker is not None and deal_id:
+                    try:
+                        broker.close_position(deal_id)
+                    except Exception:
+                        LOGGER.exception("three-leg rollback close failed")
+            raise
+        finally:
+            self._approval._bound.pop(cycle_id, None)
+            for index in range(1, 4):
+                self._approval._bound.pop(f"{cycle_id}-tp{index}", None)
+
 
 class RuntimeExecutor:
     """Graph executor that can only submit through the OrderManager."""
