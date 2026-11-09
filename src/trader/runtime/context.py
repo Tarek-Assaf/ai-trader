@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -405,11 +406,21 @@ class RuntimeContextProvider:
 
     def __call__(self, _cycle_id: str, intent: GraphTradeIntent) -> GuardianInputs | None:
         try:
-            account = self.account()
-            positions = tuple(self.positions())
-            sizing = self.sizing(intent, account, positions)
+            # These are independent, read-only broker snapshots.  Fetching them
+            # serially made every guarded TradingView entry wait behind multiple
+            # REST round-trips.  Keep the pool bounded: account workers each get
+            # their own executor, and the broker rate limiter still applies.
+            with ThreadPoolExecutor(max_workers=2, thread_name_prefix="guardian-read") as pool:
+                account_future = pool.submit(self.account)
+                positions_future = pool.submit(self.positions)
+                account = account_future.result()
+                positions = tuple(positions_future.result())
+                sizing_future = pool.submit(self.sizing, intent, account, positions)
+                market_future = pool.submit(self.market, intent.instrument)
+                sizing = sizing_future.result()
+                market = market_future.result()
             return GuardianInputs(
-                market=self.market(intent.instrument),
+                market=market,
                 account=account,
                 open_positions=positions,
                 sizing=sizing,

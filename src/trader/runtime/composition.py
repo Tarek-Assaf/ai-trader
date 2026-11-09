@@ -11,6 +11,8 @@ from __future__ import annotations
 import asyncio
 import inspect
 import logging
+import math
+import os
 import re
 from collections import deque
 from collections.abc import Awaitable, Callable, Iterable, Mapping, Sequence
@@ -24,6 +26,18 @@ from trader.execution.control import ControlMode, ControlSource
 from trader.runtime.soak import RuntimeSoakFeed
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _execution_tick_interval(default: float = 5.0) -> float:
+    """Use a bounded worker-specific tick interval to protect a small VM."""
+    try:
+        value = float(os.getenv("EXECUTION_TICK_INTERVAL_SECONDS", str(default)))
+    except (TypeError, ValueError):
+        return default
+    if not math.isfinite(value) or value <= 0:
+        return default
+    return min(value, 60.0)
+
 
 _DEPENDENCY_MESSAGE_LIMIT = 200
 _SENSITIVE_EXCEPTION_PATTERNS = (
@@ -631,7 +645,7 @@ def build_runtime(
     alert: Callable[[str], None] | None = None,
     cycle_source: CycleSource | None = None,
     lease_heartbeat_interval: float = 10.0,
-    execution_tick_interval: float = 5.0,
+    execution_tick_interval: float | None = None,
 ) -> RuntimeService:
     """Build the single core runtime from already validated dependencies."""
     return RuntimeService(
@@ -640,7 +654,11 @@ def build_runtime(
         alert=alert,
         cycle_source=cycle_source,
         lease_heartbeat_interval=lease_heartbeat_interval,
-        execution_tick_interval=execution_tick_interval,
+        execution_tick_interval=(
+            _execution_tick_interval()
+            if execution_tick_interval is None
+            else execution_tick_interval
+        ),
     )
 
 
