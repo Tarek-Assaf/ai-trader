@@ -1290,7 +1290,11 @@ class TaiDemoRunner:
             reference = bid if state.direction is Direction.BUY else ask
             if reference is not None:
                 invalid = stop > reference if state.direction is Direction.BUY else stop < reference
-                if not invalid and stop != reference:
+                if (
+                    not invalid
+                    and stop != reference
+                    and (tick is None or abs(position.level - stop) > tick)
+                ):
                     distance = abs(reference - stop)
                     invalid = distance < min_stop_distance
                 if invalid:
