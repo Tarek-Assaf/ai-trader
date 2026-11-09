@@ -758,6 +758,16 @@ def test_external_signal_replaces_the_open_trade_and_respects_kill_and_pause() -
     assert gateway.closed == ["deal-1"] and len(manager.submits) == 2
     assert manager.submits[1][1].direction is Direction.SELL
 
+
+def test_repeated_same_direction_external_signal_does_not_replace_open_trade() -> None:
+    gateway = Gateway()
+    tai, manager = _external_runner(gateway)
+    assert tai.on_external_signal(Direction.BUY).action == "SUBMITTED"
+    repeated = tai.on_external_signal(Direction.BUY)
+    assert (repeated.action, repeated.reason) == ("NO_TRADE", "duplicate_open_signal")
+    assert gateway.closed == []
+    assert len(manager.submits) == 1
+
     paused, paused_manager = _external_runner(Gateway(), control=Control(ControlMode.PAUSE))
     assert paused.on_external_signal(Direction.BUY).reason == "execution_paused"
     assert paused_manager.submits == []

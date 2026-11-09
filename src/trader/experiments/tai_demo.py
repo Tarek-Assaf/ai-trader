@@ -287,6 +287,9 @@ class _ManagedPosition:
     size_step: Decimal | None = None
     one_r_value: Decimal | None = None
     hit: set[int] = field(default_factory=set)
+    # Do not blindly retry a failed broker-side scale-out: Capital.com can
+    # create a stray opposite position before reporting that it did not net.
+    blocked_exits: set[int] = field(default_factory=set)
     entry_stop_moved: bool = False
     shadow: bool = False
     remaining_size: Decimal | None = None
@@ -365,7 +368,9 @@ class TaiDemoRunner:
         # Tai position bookkeeping across that retry so an open demo position
         # remains managed and cannot trigger a duplicate entry.
         self._managed = {
-            deal_id: replace(state, hit=set(state.hit))
+            deal_id: replace(
+                state, hit=set(state.hit), blocked_exits=set(state.blocked_exits)
+            )
             for deal_id, state in {**persisted_state, **(managed_state or {})}.items()
         }
         if self._epic is None and self._managed:
@@ -378,7 +383,10 @@ class TaiDemoRunner:
     def snapshot_state(self) -> dict[str, _ManagedPosition]:
         """Return detached state for an in-process runtime composition retry."""
         return {
-            deal_id: replace(state, hit=set(state.hit)) for deal_id, state in self._managed.items()
+            deal_id: replace(
+                state, hit=set(state.hit), blocked_exits=set(state.blocked_exits)
+            )
+            for deal_id, state in self._managed.items()
         }
 
     def _load_state(self) -> dict[str, _ManagedPosition]:
@@ -416,6 +424,7 @@ class TaiDemoRunner:
                         else None
                     ),
                     hit={int(index) for index in raw.get("hit", [])},
+                    blocked_exits={int(index) for index in raw.get("blocked_exits", [])},
                     entry_stop_moved=bool(raw.get("entry_stop_moved", False)),
                     shadow=bool(raw.get("shadow", False)),
                     remaining_size=(
@@ -490,6 +499,7 @@ class TaiDemoRunner:
                     "targets": [str(value) for value in state.targets],
                     "original_size": str(state.original_size),
                     "hit": sorted(state.hit),
+                    "blocked_exits": sorted(state.blocked_exits),
                     "size_step": str(state.size_step) if state.size_step is not None else None,
                     "one_r_value": (
                         str(state.one_r_value) if state.one_r_value is not None else None
@@ -588,6 +598,15 @@ class TaiDemoRunner:
                 return self._outcome(cycle_id, "NO_TRADE", "execution_paused")
             # No market-hours gate here: the broker refuses an order in a real closure and
             # that refusal is alerted; a wrong local flag must never block the owner's signal.
+            if self._has_open_position(epic, direction):
+                self._journal_event(
+                    cycle_id,
+                    "duplicate_external_signal",
+                    epic=epic,
+                    source=source,
+                    direction=direction.value,
+                )
+                return self._outcome(cycle_id, "NO_TRADE", "duplicate_open_signal")
             if not self._close_for_new_signal(epic, cycle_id, source):
                 return self._outcome(cycle_id, "REJECTED", "close_before_entry_failed")
             if self._startup_blocked:
@@ -610,6 +629,18 @@ class TaiDemoRunner:
                 self._send_alert(refusal_text(epic, direction.value, str(exc), self._riyadh_time()))
                 return self._outcome(cycle_id, "REJECTED", "external_signal_unusable")
             return self._attempt_entry(signal, epic, cycle_id, external=True)
+
+    def _has_open_position(self, epic: str, direction: Direction) -> bool:
+        """Return whether this instrument already has exposure in this direction."""
+        if self._dry_run:
+            return any(
+                state.shadow and state.epic == epic and state.direction is direction
+                for state in self._managed.values()
+            )
+        return any(
+            position.epic == epic and position.direction is direction
+            for position in self._positions.get_positions()
+        )
 
     def _close_for_new_signal(self, epic: str, cycle_id: str, source: str) -> bool:
         """A new owner signal replaces the open trade on that instrument."""
@@ -736,6 +767,8 @@ class TaiDemoRunner:
         try:
             submit_relaxed = getattr(self._orders, "submit_relaxed", None)
             submit_legs = getattr(self._orders, "submit_legs", None)
+            if self.settings.three_legs and not callable(submit_legs):
+                raise ExecutionPaused("three-leg execution is unavailable")
             if self.settings.three_legs and callable(submit_legs):
                 leg_sizes = self._split_leg_sizes(order.size, rules)
                 leg_orders = tuple(
@@ -1045,9 +1078,12 @@ class TaiDemoRunner:
                 # An earlier attempt failed (price too close, broker busy): retry each bar.
                 self._move_stop_to_entry(position, state, cycle_id)
             for index, target in enumerate(state.targets, start=1):
-                if index in state.hit or not self._target_hit(state.direction, bar, target):
+                if (
+                    index in state.hit
+                    or index in state.blocked_exits
+                    or not self._target_hit(state.direction, bar, target)
+                ):
                     continue
-                state.hit.add(index)
                 if index == 1 and not state.entry_stop_moved:
                     self._move_stop_to_entry(position, state, cycle_id)
                 if index == 3:
@@ -1082,8 +1118,11 @@ class TaiDemoRunner:
                         try:
                             close_partial(position.deal_id, amount)
                         except Exception as exc:  # noqa: BLE001 - stop and target still protect it
+                            state.blocked_exits.add(index)
                             self._exit_failed(position.deal_id, "scale_out_failed", exc, cycle_id)
+                            self._persist_state()
                             continue
+                        state.hit.add(index)
                         current_size -= amount
                         self._journal_event(
                             cycle_id,

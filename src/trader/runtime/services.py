@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 from collections.abc import Callable, Mapping
@@ -26,6 +27,17 @@ from trader.runtime.factory import RuntimeDependencyUnavailable
 
 LOGGER = logging.getLogger(__name__)
 EXECUTION_LEASE_TTL_MS = 120_000
+
+
+def _positive_interval(name: str, default: float, *, maximum: float = 300.0) -> float:
+    """Read a bounded runtime interval without allowing invalid env to break startup."""
+    try:
+        value = float(os.getenv(name, str(default)))
+    except (TypeError, ValueError):
+        return default
+    if not math.isfinite(value) or value <= 0:
+        return default
+    return min(value, maximum)
 
 
 def build_runtime_services(
@@ -344,6 +356,9 @@ def build_runtime_services(
             control_source,
             control_writer,
             position_manager,
+            reconcile_interval_seconds=max(
+                1, round(_positive_interval("EXECUTION_RECONCILE_INTERVAL_SECONDS", 5.0))
+            ),
             startup_lease_wait_seconds=EXECUTION_LEASE_TTL_MS / 1000 + 10,
         )
 

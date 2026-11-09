@@ -89,6 +89,12 @@ def worker_environment(account: AccountSettings, environ: Mapping[str, str]) -> 
         "TRADER_LOG_PATH": str(base_workspace / "logs" / f"trader_{number}.log"),
         # Only the main bot listens to Telegram; workers send through it.
         "TELEGRAM_POLLING": "off",
+        # Avoid broker polling starving the small shared VM. These remain
+        # deployment-overridable while providing safe worker defaults.
+        "EXECUTION_TICK_INTERVAL_SECONDS": environ.get("EXECUTION_TICK_INTERVAL_SECONDS", "10"),
+        "EXECUTION_RECONCILE_INTERVAL_SECONDS": environ.get(
+            "EXECUTION_RECONCILE_INTERVAL_SECONDS", "15"
+        ),
     }
     if account.epics:
         env["TAI_DEMO_EPICS"] = ",".join(account.epics)
