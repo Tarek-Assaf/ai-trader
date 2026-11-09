@@ -512,9 +512,7 @@ def test_break_even_stop_stays_strictly_beyond_buy_position_level():
     instance, _ = runner(
         gateway,
         balance_provider=lambda: Decimal("1000"),
-        instrument_rules_provider=lambda _epic: _spread_rules(
-            bid="100", ask="100", tick="0.1"
-        ),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="100", tick="0.1"),
     )
     assert instance.on_bar(bar()).action == "SUBMITTED"
     state = instance._managed["deal-1"]
