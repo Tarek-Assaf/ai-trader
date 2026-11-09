@@ -1497,9 +1497,9 @@ class TaiDemoRunner:
                 # Legacy injected gateways may provide instrument rules without a
                 # balance reader. Keep those deterministic fixtures on the explicit
                 # configured base lot; production wiring always supplies a provider.
-                aligned = (
-                    self.settings.base_lot / rules.size_step
-                ).to_integral_value(rounding=ROUND_DOWN) * rules.size_step
+                aligned = (self.settings.base_lot / rules.size_step).to_integral_value(
+                    rounding=ROUND_DOWN
+                ) * rules.size_step
                 if aligned < rules.min_size:
                     raise TaiDemoRefused("requested demo size is below the broker minimum size")
                 return aligned
