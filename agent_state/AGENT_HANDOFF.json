@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 627,
+  "revision": 628,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31704,6 +31704,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "CI tests found compatibility regressions: preferred-account selection was skipped when no explicit account label was set, injected Tai fixtures without a balance provider were refused, and a PaperBroker barrier fixture omitted execution costs. Restored safe deterministic fixture behavior without changing production account-scoped sizing or broker-cost paths."
+    },
+    {
+      "revision": 628,
+      "ts": "2026-11-09T17:50:00Z",
+      "agent": "codex",
+      "action": "preserve_canonical_account_selection_and_fixture_sizing",
+      "task_ids": [
+        "T-269",
+        "T-273"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/execution/brokers/paper.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Corrected the CI-test compatibility patch: preferred-account selection now applies only when no explicit account label is supplied, legacy rule-injected fixtures use the explicit base lot when no balance provider exists, and PaperBroker accepts omitted costs for reconciliation-only fixtures with an empty cost schedule. Production account-scoped sizing remains unchanged."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work coalesces repeated instrument-rule fetches and now prepares parallel Capital.com read-only reconciliation plus phase timing. The latency changes are local only and not deployed. Demo only. The T-273 balance-scope fallback is deployed in image 7759355. No strategy/risk/control changes made."
