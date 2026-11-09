@@ -1493,6 +1493,16 @@ class TaiDemoRunner:
         if rules is None:
             return None
         if self._balance_provider is None:
+            if self.settings.start_balance > 0:
+                # Legacy injected gateways may provide instrument rules without a
+                # balance reader. Keep those deterministic fixtures on the explicit
+                # configured base lot; production wiring always supplies a provider.
+                aligned = (
+                    self.settings.base_lot / rules.size_step
+                ).to_integral_value(rounding=ROUND_DOWN) * rules.size_step
+                if aligned < rules.min_size:
+                    raise TaiDemoRefused("requested demo size is below the broker minimum size")
+                return aligned
             raise TaiDemoRefused("demo balance provider is required")
         balance = self._balance_provider()
         if not isinstance(balance, Decimal) or not balance.is_finite() or balance <= 0:

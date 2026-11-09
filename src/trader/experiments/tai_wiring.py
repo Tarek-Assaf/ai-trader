@@ -1004,11 +1004,9 @@ class CapitalBalanceProvider:
         # Capital.com returns a broker-owned account UUID.  When the two namespaces
         # do not match, retain the safety guard but use the broker's own unambiguous
         # selection rules: one account, or exactly one preferred account.
-        if not candidates:
+        if self._account_id is None and len(candidates) > 1:
             preferred = [item for item in usable if item.get("preferred") is True]
-            if len(usable) == 1:
-                candidates = usable
-            elif len(preferred) == 1:
+            if len(preferred) == 1:
                 candidates = preferred
         if len(candidates) != 1:
             raise TaiDemoRefused("broker account balance is ambiguous")
