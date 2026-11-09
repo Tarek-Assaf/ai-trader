@@ -841,6 +841,7 @@ class TaiDemoRunner:
             targets=signal.levels(),
             original_size=position.size,
             size_step=rules.size_step if rules is not None else None,
+            tick_size=rules.tick_size if rules is not None else None,
             one_r_value=(
                 abs(signal.entry - signal.stop) * position.size * rules.value_per_point
                 if rules is not None and rules.value_per_point is not None
