@@ -766,6 +766,44 @@ class TaiDemoRunner:
             self._journal_event(cycle_id, "order_refused", reason="order_factory_mismatch")
             return self._outcome(cycle_id, "REJECTED", "order_factory_mismatch")
         if self._dry_run:
+            if self.settings.three_legs:
+                leg_sizes = self._split_leg_sizes(order.size, rules)
+                one_r = (
+                    abs(signal.entry - signal.stop)
+                    * order.size
+                    * rules.value_per_point
+                    if rules is not None and rules.value_per_point is not None
+                    else None
+                )
+                for index, leg_size in enumerate(leg_sizes, start=1):
+                    deal_id = f"shadow:{cycle_id}:leg{index}"
+                    self._managed[deal_id] = _ManagedPosition(
+                        epic=epic,
+                        entry=signal.entry,
+                        risk=abs(signal.entry - signal.stop),
+                        direction=signal.direction,
+                        targets=signal.levels(),
+                        original_size=leg_size,
+                        size_step=rules.size_step if rules is not None else None,
+                        tick_size=rules.tick_size if rules is not None else None,
+                        one_r_value=one_r,
+                        shadow=True,
+                        remaining_size=leg_size,
+                        leg_target=index,
+                    )
+                self._persist_state()
+                self._journal_event(
+                    cycle_id,
+                    "dry_run_would_submit_three_legs",
+                    epic=epic,
+                    sizes=tuple(str(size) for size in leg_sizes),
+                    targets=tuple(str(target) for target in signal.levels()),
+                )
+                self._send_alert(
+                    self._entry_text(epic, signal, order.size, signal.entry, one_r)
+                    + "\nThree legs: 40% / 30% / 30% (one Guardian approval)."
+                )
+                return self._outcome(cycle_id, "DRY_RUN", "three_leg_order_would_submit")
             shadow_id = f"shadow:{cycle_id}"
             self._managed[shadow_id] = _ManagedPosition(
                 epic=epic,
@@ -1349,15 +1387,27 @@ class TaiDemoRunner:
             if not state.shadow or state.epic != bar.epic:
                 continue
             current_size = state.remaining_size or state.original_size
-            for index, target in enumerate(state.targets, start=1):
+            target_indices = (
+                (state.leg_target,) if state.leg_target is not None else range(1, len(state.targets) + 1)
+            )
+            for index in target_indices:
+                target = state.targets[index - 1]
                 if index in state.hit or not self._target_hit(state.direction, bar, target):
                     continue
                 state.hit.add(index)
                 if index == 1 and not state.entry_stop_moved:
                     state.entry_stop_moved = True
+                    for sibling_id, sibling in self._managed.items():
+                        if (
+                            sibling_id != deal_id
+                            and sibling.shadow
+                            and sibling.epic == state.epic
+                            and sibling.leg_target is not None
+                        ):
+                            sibling.entry_stop_moved = True
                     self._journal_event(cycle_id, "stop_to_entry", deal_id=deal_id)
                     self._send_alert(f"stop moved to entry for {bar.epic}")
-                if index == 3:
+                if index == 3 or state.leg_target is not None:
                     self._managed.pop(deal_id, None)
                     self._last_exit_at = bar.at
                     note_exit = getattr(self._signal, "note_exit", None)
