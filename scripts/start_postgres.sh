@@ -17,6 +17,23 @@ if [ -z "$PG_BIN" ]; then
     exit 1
 fi
 PG_BIN=$(dirname "$PG_BIN")
+# A hard guest reset can leave PostgreSQL's PID file behind even though the
+# postmaster is gone.  Refuse to delete a live lock, but remove a stale one so
+# Supervisor can recover the database instead of respawning this script forever.
+POSTMASTER_PID_FILE="$DATA_DIR/postmaster.pid"
+if [ -f "$POSTMASTER_PID_FILE" ]; then
+    POSTMASTER_PID=$(sed -n '1p' "$POSTMASTER_PID_FILE" 2>/dev/null || true)
+    STALE_LOCK=true
+    if [ -n "$POSTMASTER_PID" ] && kill -0 "$POSTMASTER_PID" 2>/dev/null; then
+        if [ -r "/proc/$POSTMASTER_PID/cmdline" ] && tr '\000' ' ' < "/proc/$POSTMASTER_PID/cmdline" | grep -Fq "$DATA_DIR"; then
+            STALE_LOCK=false
+        fi
+    fi
+    if [ "$STALE_LOCK" = true ]; then
+        echo "Removing stale PostgreSQL lock file after an unclean shutdown"
+        rm -f "$POSTMASTER_PID_FILE"
+    fi
+fi
 NEW_CLUSTER=false
 if [ ! -s "$DATA_DIR/PG_VERSION" ]; then
     # Trust is safe because PostgreSQL listens on loopback only and port 5432 is never published.

@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 619,
+  "revision": 620,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31583,6 +31583,21 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Rebased the stale T-269 branch onto merged main and removed the duplicate conflicting three-leg commit that carried a wrong $10,000 baseline. Kept the merged $1,000 new-account default and account-scoped sizing. Three-leg mode is now enabled for the paper/demo experiment and dry-run journals three managed 40/30/30 legs; live trading remains blocked by the existing demo/paper/live gates. Runtime context keeps the broker reads bounded and overlaps independent sizing/market work; duplicate ThreadPoolExecutor import removed. Compileall, py_compile and git diff checks pass; pytest is unavailable on this desktop runtime. No VM restart, deployment, broker, credential or account-2 risk reset performed."
+    },
+    {
+      "revision": 620,
+      "ts": "2026-11-09T16:20:00Z",
+      "agent": "codex",
+      "action": "harden_postgres_unclean_shutdown_recovery",
+      "task_ids": [
+        "T-269",
+        "T-278"
+      ],
+      "files_changed": [
+        "scripts/start_postgres.sh",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Post-reset VM validation found the concrete hang: a stale PostgreSQL postmaster.pid caused repeated postgres Supervisor respawns, while API and account workers waited for .postgres-restore-ready and port 8000 reset connections. Added fail-safe stale-lock detection that removes the PID file only when its process is absent or is not PostgreSQL for this data directory; live locks are preserved. Shell syntax is structurally validated by inspection; image rebuild/deploy is still pending CI and explicit deployment authorization."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work coalesces repeated instrument-rule fetches and now prepares parallel Capital.com read-only reconciliation plus phase timing. The latency changes are local only and not deployed. Demo only. The T-273 balance-scope fallback is deployed in image 7759355. No strategy/risk/control changes made."
