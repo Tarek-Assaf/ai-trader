@@ -769,9 +769,7 @@ class TaiDemoRunner:
             if self.settings.three_legs:
                 leg_sizes = self._split_leg_sizes(order.size, rules)
                 one_r = (
-                    abs(signal.entry - signal.stop)
-                    * order.size
-                    * rules.value_per_point
+                    abs(signal.entry - signal.stop) * order.size * rules.value_per_point
                     if rules is not None and rules.value_per_point is not None
                     else None
                 )
