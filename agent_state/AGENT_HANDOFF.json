@@ -31323,39 +31323,49 @@
     },
     {
       "revision": 602,
-      "ts": "2026-11-02T00:00:00Z",
+      "ts": "2026-11-09T06:30:00Z",
       "agent": "codex",
-      "action": "review_t269_t270_t271_and_validate_runtime_access",
-      "task_ids": [
-        "T-269",
-        "T-272",
-        "T-273",
-        "T-278"
-      ],
-      "files_changed": [
-        "docker/supervisord.all.conf",
-        "docker/supervisord.core.conf",
-        "docker/supervisord.worker.conf",
-        "src/trader/runtime/account_workers.py",
-        "tests/unit/test_account_workers.py",
-        "agent_state/AGENT_HANDOFF.json"
-      ],
-      "summary": "T-269 review found unbounded stdout/stderr logs in every Supervisor program, including dynamically generated account workers; PR 492 sets 50MB rotation with three backups and adds assertions. Static compileall, Ruff check/format check and diff check pass; full dependency tests remain CI-only. T-270 backup code includes trader_NN dumps and encrypted HuggingFace upload; T-271 loopback command routing is read-only, bounded, account-labelled and rejects forwarded callers. T-272 could not be observed because no market-open TradingView alert occurred. T-273 could not be checked because the authorized VM SSH endpoint 192.168.187.50 timed out during banner exchange; no credentials or secrets were exposed. T-278 finding: PnlLossGuard trusts broker daily_pnl/weekly_pnl when present, so cash deposits or withdrawals included by the broker can mask or distort trading loss; the guard needs transaction-aware cash-flow exclusion before this is considered resolved. No risk.yaml, strategy gate, broker, order, restart or trading-control change. Turn to Claude for review/merge and owner VM access."
-    },
-    {
-      "revision": 604,
-      "ts": "2026-11-02T18:00:00Z",
-      "agent": "codex",
-      "action": "fix_uvicorn_access_redaction",
+      "action": "prepare_t269_runtime_safety_patch",
       "task_ids": [
         "T-269"
       ],
       "files_changed": [
-        "src/trader/core/logging.py",
-        "tests/unit/test_secret_redaction.py",
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/runtime/account_workers.py",
+        "src/trader/runtime/composition.py",
+        "src/trader/runtime/services.py",
+        "tests/unit/test_tai_demo.py",
         "agent_state/AGENT_HANDOFF.json"
       ],
-      "summary": "Fixed the Uvicorn access-log formatter failure by preserving and redacting its five positional arguments instead of clearing record.args. Added a regression test. Compileall and diff checks pass; pytest/Ruff remain CI-only. No broker calls, orders, risk, strategy, or trading-control changes. Owner instructed Codex to retain the turn until further notice."
+      "summary": "Prepared branch codex/t269-runtime-safety commit 360e97c. The patch blocks same-direction TradingView re-entry while exposure is open, fails closed when three-leg submission is unavailable, persists failed partial exits as blocked after Capital.com netting failure, and defaults worker tick/reconciliation to 10s/15s to reduce two-vCPU scheduler pressure. Python compileall and git diff --check pass; pytest/ruff/mypy and deployment remain pending CI/review and explicit authorization. Turn to Claude."
+    },
+    {
+      "revision": 603,
+      "ts": "2026-11-09T11:51:30Z",
+      "agent": "claude",
+      "action": "owner_modification_set_codex_turn",
+      "task_ids": [
+        "T-269"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Owner-modified handoff: revision 603 records the Codex turn after the T-269 runtime-safety patch review handoff. No source-code, image, deployment, or trading-control changes."
+    },
+    {
+      "revision": 604,
+      "ts": "2026-11-09T12:45:00Z",
+      "agent": "codex",
+      "action": "fix_account_local_baseline_and_strict_break_even_stop",
+      "task_ids": [
+        "T-269"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Account sizing now reads the persisted baseline from that account's own workspace before using the new-account default, preventing account 01's balance from influencing another account. Break-even stop moves use the broker tick when the quote reaches the exact entry, avoiding Capital.com's strict stop-side rejection. Added focused regression tests. No risk ceilings, trading controls, broker state, or deployment were changed."
     },
     {
       "revision": 605,
