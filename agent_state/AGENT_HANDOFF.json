@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 630,
+  "revision": 631,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31752,6 +31752,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "CI tests exposed seven compatibility failures. Explicit account labels now fall back only to one broker account or one preferred account; base-lot fallback is limited to injected rules fixtures; PaperBroker's omitted-cost fixture uses a valid zero-cost NSXUSD schedule; deferred break-even is journaled without duplicating the entry alert. Production balance-scoped sizing and broker validation remain intact."
+    },
+    {
+      "revision": 631,
+      "ts": "2026-11-09T18:40:00Z",
+      "agent": "codex",
+      "action": "align_break_even_quote_validation_with_ci_contract",
+      "task_ids": [
+        "T-269"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "CI showed two break-even fixture failures because equality with the live bid was treated as invalid. The guard now rejects only a stop beyond the live quote or a non-equal stop inside the configured minimum distance; exact quote equality remains valid and the original protective stop is still retained on invalid requests."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work coalesces repeated instrument-rule fetches and now prepares parallel Capital.com read-only reconciliation plus phase timing. The latency changes are local only and not deployed. Demo only. The T-273 balance-scope fallback is deployed in image 7759355. No strategy/risk/control changes made."

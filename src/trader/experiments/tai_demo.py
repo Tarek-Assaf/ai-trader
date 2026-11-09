@@ -1289,12 +1289,10 @@ class TaiDemoRunner:
         if min_stop_distance is not None:
             reference = bid if state.direction is Direction.BUY else ask
             if reference is not None:
-                boundary = (
-                    reference - min_stop_distance
-                    if state.direction is Direction.BUY
-                    else reference + min_stop_distance
-                )
-                invalid = stop >= boundary if state.direction is Direction.BUY else stop <= boundary
+                invalid = stop > reference if state.direction is Direction.BUY else stop < reference
+                if not invalid and stop != reference:
+                    distance = abs(reference - stop)
+                    invalid = distance < min_stop_distance
                 if invalid:
                     state.entry_stop_blocked = True
                     self._journal_event(
