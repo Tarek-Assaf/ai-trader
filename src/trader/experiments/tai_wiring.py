@@ -957,7 +957,7 @@ class CapitalInstrumentRulesProvider:
         target = (epic or self.epic).strip()
         cached = getattr(self._snapshot, "value", None)
         if isinstance(cached, tuple) and len(cached) == 2 and cached[0] == target:
-            return cached[1]
+            return cast(TaiInstrumentRules, cached[1])
         return self._fetch(target)
 
     def _fetch(self, target: str) -> TaiInstrumentRules:
@@ -979,7 +979,7 @@ class CapitalInstrumentRulesProvider:
                 enriched_instrument["tickSize"] = matches[0]["tickSize"]
                 enriched["instrument"] = enriched_instrument
                 details = enriched
-        return cast(TaiInstrumentRules, parse_tai_instrument_rules(details))
+        return parse_tai_instrument_rules(details)
 
 
 class CapitalBalanceProvider:
