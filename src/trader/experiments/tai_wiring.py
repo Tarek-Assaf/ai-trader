@@ -19,7 +19,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from trader.data.instruments import InstrumentDataError
@@ -979,7 +979,7 @@ class CapitalInstrumentRulesProvider:
                 enriched_instrument["tickSize"] = matches[0]["tickSize"]
                 enriched["instrument"] = enriched_instrument
                 details = enriched
-        return parse_tai_instrument_rules(details)
+        return cast(TaiInstrumentRules, parse_tai_instrument_rules(details))
 
 
 class CapitalBalanceProvider:
