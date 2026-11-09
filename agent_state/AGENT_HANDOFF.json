@@ -6,7 +6,7 @@
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
   "turn": "codex",
-  "revision": 629,
+  "revision": 630,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31735,6 +31735,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Matched the exact Ruff formatter output for the legacy fixture base-lot alignment expression; behavior is unchanged."
+    },
+    {
+      "revision": 630,
+      "ts": "2026-11-09T18:20:00Z",
+      "agent": "codex",
+      "action": "fix_remaining_ci_test_compatibility",
+      "task_ids": [
+        "T-269",
+        "T-273"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/experiments/tai_wiring.py",
+        "src/trader/execution/brokers/paper.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "CI tests exposed seven compatibility failures. Explicit account labels now fall back only to one broker account or one preferred account; base-lot fallback is limited to injected rules fixtures; PaperBroker's omitted-cost fixture uses a valid zero-cost NSXUSD schedule; deferred break-even is journaled without duplicating the entry alert. Production balance-scoped sizing and broker validation remain intact."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work coalesces repeated instrument-rule fetches and now prepares parallel Capital.com read-only reconciliation plus phase timing. The latency changes are local only and not deployed. Demo only. The T-273 balance-scope fallback is deployed in image 7759355. No strategy/risk/control changes made."

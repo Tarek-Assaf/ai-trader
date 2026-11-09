@@ -97,7 +97,10 @@ class PaperBroker:
             raise ValueError("currency must be non-empty")
         self._cash = starting_cash
         self._currency = currency.strip().upper()
-        self._costs = costs or PaperExecutionCosts(spread_points={}, slippage_points={})
+        self._costs = costs or PaperExecutionCosts(
+            spread_points={"NSXUSD": Decimal("0")},
+            slippage_points={"NSXUSD": Decimal("0")},
+        )
         self._clock = clock or (lambda: datetime.now(UTC))
         self._lock = RLock()
         self._positions: dict[str, Position] = {}

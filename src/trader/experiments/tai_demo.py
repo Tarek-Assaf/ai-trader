@@ -1306,18 +1306,7 @@ class TaiDemoRunner:
                         reference_price=str(reference),
                         minimum_stop_distance=str(min_stop_distance),
                     )
-                    key = (position.deal_id, "stop_to_entry_deferred")
-                    if key not in self._spread_alerted:
-                        self._spread_alerted.add(key)
-                        self._send_alert(
-                            f"STOP TO ENTRY DEFERRED {position.epic}\n"
-                            f"Time: {self._riyadh_time()}\n\n"
-                            f"Requested stop: {self._num(stop)}\n"
-                            f"Live reference: {self._num(reference)}\n"
-                            f"Minimum distance: {self._num(min_stop_distance)}\n"
-                            "Original protective stop retained; break-even will be retried "
-                            "when valid."
-                        )
+                    self._spread_alerted.add((position.deal_id, "stop_to_entry_deferred"))
                     self._persist_state()
                     return
                 state.entry_stop_blocked = False
@@ -1493,7 +1482,7 @@ class TaiDemoRunner:
         if rules is None:
             return None
         if self._balance_provider is None:
-            if self.settings.start_balance > 0:
+            if self._rules_provider is not None and self.settings.start_balance > 0:
                 # Legacy injected gateways may provide instrument rules without a
                 # balance reader. Keep those deterministic fixtures on the explicit
                 # configured base lot; production wiring always supplies a provider.
