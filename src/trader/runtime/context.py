@@ -475,7 +475,9 @@ def position_source(
             result.append(value)
         return tuple(result)
 
-    setattr(read, "parallel_read_safe", bool(getattr(broker, "parallel_read_safe", False)))
+    read.parallel_read_safe = bool(  # type: ignore[attr-defined]
+        getattr(broker, "parallel_read_safe", False)
+    )
     return read
 
 
