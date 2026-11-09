@@ -490,6 +490,36 @@ def test_automatic_start_balance_survives_a_restart(tmp_path):
     assert reopened._requested_size(RULES) == Decimal("0.20")
 
 
+def test_saved_account_baseline_wins_over_default_new_account_value(tmp_path):
+    path = tmp_path / "start.json"
+    store = StartBalanceStore(path)
+    store.record_if_missing(Decimal("20000"))
+    instance = TaiDemoRunner(
+        settings=TaiDemoSettings("demo", "paper", False, True),
+        order_manager=Manager(Gateway()),
+        position_gateway=Gateway(),
+        signal_provider=lambda _bar: None,
+        order_factory=lambda *_: None,
+        control=Control(),
+        balance_provider=lambda: Decimal("21000"),
+        start_balance_store=store,
+    )
+    assert instance._requested_size(RULES) == Decimal("0.10")
+
+
+def test_break_even_stop_stays_strictly_beyond_buy_position_level():
+    gateway = Gateway()
+    instance, _ = runner(
+        gateway,
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="100", tick="0.1"),
+    )
+    assert instance.on_bar(bar()).action == "SUBMITTED"
+    state = instance._managed["deal-1"]
+    instance._move_stop_to_entry(gateway.positions[0], state, "cycle")
+    assert gateway.modified[-1] == ("deal-1", Decimal("99.9"), Decimal("103"))
+
+
 def test_an_explicit_start_balance_overrides_the_saved_one(tmp_path):
     store = StartBalanceStore(tmp_path / "start.json")
     store.record_if_missing(Decimal("1000"))
