@@ -48,9 +48,7 @@ def test_capital_balance_provider_maps_internal_id_to_single_broker_account() ->
     class Client:
         def account_info(self) -> dict[str, object]:
             return {
-                "accounts": [
-                    {"accountId": "broker-uuid-01", "balance": {"balance": "1000.00"}}
-                ]
+                "accounts": [{"accountId": "broker-uuid-01", "balance": {"balance": "1000.00"}}]
             }
 
     assert CapitalBalanceProvider(Client(), "acct-01")() == Decimal("1000.00")

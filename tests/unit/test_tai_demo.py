@@ -764,9 +764,7 @@ def test_break_even_stop_is_deferred_when_live_market_is_too_close():
         gateway,
         alerts=alerts,
         journal=journal.append,
-        instrument_rules_provider=lambda _epic: _spread_rules(
-            bid="99.5", ask="99.7", tick="0.1"
-        ),
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="99.5", ask="99.7", tick="0.1"),
     )
 
     instance.on_bar(bar())

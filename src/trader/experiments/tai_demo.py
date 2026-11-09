@@ -1259,7 +1259,12 @@ class TaiDemoRunner:
             try:
                 rules = self._rules_provider(position.epic)
                 candidate = getattr(rules, "tick_size", None)
-                if tick is None and isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:
+                if (
+                    tick is None
+                    and isinstance(candidate, Decimal)
+                    and candidate.is_finite()
+                    and candidate > 0
+                ):
                     tick = candidate
                 candidate = getattr(rules, "min_stop_distance", None)
                 if (
@@ -1316,7 +1321,8 @@ class TaiDemoRunner:
                             f"Requested stop: {self._num(stop)}\n"
                             f"Live reference: {self._num(reference)}\n"
                             f"Minimum distance: {self._num(min_stop_distance)}\n"
-                            "Original protective stop retained; break-even will be retried when valid."
+                            "Original protective stop retained; break-even will be retried "
+                            "when valid."
                         )
                     self._persist_state()
                     return
@@ -1388,7 +1394,9 @@ class TaiDemoRunner:
                 continue
             current_size = state.remaining_size or state.original_size
             target_indices = (
-                (state.leg_target,) if state.leg_target is not None else range(1, len(state.targets) + 1)
+                (state.leg_target,)
+                if state.leg_target is not None
+                else range(1, len(state.targets) + 1)
             )
             for index in target_indices:
                 target = state.targets[index - 1]

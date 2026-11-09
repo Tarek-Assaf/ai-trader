@@ -9,8 +9,8 @@ proposal without inventing a market price, account baseline or size.
 from __future__ import annotations
 
 import logging
-from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
