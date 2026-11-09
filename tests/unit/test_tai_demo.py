@@ -745,6 +745,57 @@ def test_break_even_stop_never_sits_on_the_wrong_side_of_the_fill():
     assert gateway.modified[0][1] == Decimal("99.5")
 
 
+def test_break_even_stop_uses_one_tick_buffer_for_broker_rules():
+    gateway = Gateway()
+    instance, _ = runner(
+        gateway,
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="99.9", ask="100.1", tick="0.1"),
+    )
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))
+    assert gateway.modified[0][1] == Decimal("99.9")
+
+
+def test_break_even_stop_is_deferred_when_live_market_is_too_close():
+    gateway = Gateway()
+    alerts = []
+    journal = []
+    instance, _ = runner(
+        gateway,
+        alerts=alerts,
+        journal=journal.append,
+        instrument_rules_provider=lambda _epic: _spread_rules(bid="99.5", ask="99.7", tick="0.1"),
+    )
+
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))
+
+    assert gateway.modified == []
+    deferred = [event for event in journal if event.get("event") == "stop_to_entry_deferred"]
+    assert deferred and deferred[0]["reason"] == "market_distance"
+    assert len(alerts) == 1
+
+
+def test_break_even_stop_retries_after_market_distance_becomes_valid():
+    gateway = Gateway()
+    quotes = iter(
+        (
+            _spread_rules(bid="99.5", ask="99.7", tick="0.1"),
+            _spread_rules(bid="101.0", ask="101.2", tick="0.1"),
+        )
+    )
+    instance, _ = runner(
+        gateway,
+        instrument_rules_provider=lambda _epic: next(quotes),
+    )
+
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))
+    instance.on_bar(bar())
+
+    assert gateway.modified == [("deal-1", Decimal("99.9"), Decimal("103"))]
+
+
 class _ExternalSignals:
     """Signal source that only knows how to build an entry for an outside decision."""
 
@@ -777,6 +828,26 @@ def test_external_signal_enters_through_the_order_manager() -> None:
     assert cycle_id.startswith("tai-tv-")
     assert order.direction is Direction.BUY and order.reference_price == Decimal("100.5")
     assert order.stop_level == Decimal("90.5")
+
+
+def test_external_signal_reuses_rules_used_to_build_the_signal() -> None:
+    gateway = Gateway()
+    calls: list[bool] = []
+
+    def rules_provider(_epic):
+        calls.append(True)
+        return _spread_rules(bid="100", ask="100.5")
+
+    tai, _manager = runner(
+        gateway,
+        signal_provider=_ExternalSignals(),
+        balance_provider=lambda: Decimal("1000"),
+        instrument_rules_provider=rules_provider,
+        epic="NSXUSD",
+    )
+
+    assert tai.on_external_signal(Direction.BUY).action == "SUBMITTED"
+    assert len(calls) == 1
 
 
 def test_external_signal_replaces_the_open_trade_and_respects_kill_and_pause() -> None:

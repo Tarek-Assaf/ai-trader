@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from decimal import Decimal
+from threading import Barrier
 
 import pytest
 from sqlalchemy import create_engine
@@ -154,6 +155,49 @@ def test_concurrent_duplicate_triggers_submit_once(tmp_path):
         results = list(pool.map(lambda _: manager.submit("cycle-1", order), range(20)))
     assert sum(result is not None for result in results) == 1
     assert broker.calls == 1
+
+
+def test_capital_style_parallel_reconcile_reads_overlap(tmp_path):
+    class ParallelBroker(Broker):
+        parallel_read_safe = True
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.barrier = None
+
+        def get_positions(self):
+            if self.barrier is not None:
+                self.barrier.wait(timeout=2)
+            return super().get_positions()
+
+        def get_open_orders(self):
+            if self.barrier is not None:
+                self.barrier.wait(timeout=2)
+            return super().get_open_orders()
+
+    engine = create_engine(f"sqlite:///{tmp_path / 'execution.db'}")
+    tables["trade_intents"].create(engine)
+    tables["snapshots"].create(engine)
+    journal = ExecutionJournal(engine)
+    broker = ParallelBroker(starting_cash=Decimal("1000"), currency="USD")
+    lease = Lease()
+    manager = OrderManager(
+        broker,
+        journal,
+        lease,
+        Lease(),
+        lambda order, cycle: BoundApproval(order, cycle, RiskDecision(True, order.size, (), ())),
+        lambda positions: None,
+        lambda message: None,
+        CompositeControlSource(
+            (FlagFileControlSource(tmp_path / "control"), RedisControlSource(Redis()))
+        ),
+        RedisControlSource(Redis()),
+        lambda positions: None,
+    )
+    manager.startup()
+    broker.barrier = Barrier(2)
+    assert manager.reconcile()
 
 
 def test_runtime_order_calls_only_exist_in_manager():

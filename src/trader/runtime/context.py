@@ -65,6 +65,7 @@ class AccountContextSource:
         self.broker = broker
         self.journal = journal
         self.clock = clock
+        self.parallel_read_safe = bool(getattr(broker, "parallel_read_safe", False))
         # Neither the broker nor the baseline snapshot records a loss streak yet. A
         # deployment may declare a starting value; the default stays fail-closed.
         self.default_consecutive_losses = default_consecutive_losses
@@ -410,11 +411,19 @@ class RuntimeContextProvider:
             # serially made every guarded TradingView entry wait behind multiple
             # REST round-trips.  Keep the pool bounded: account workers each get
             # their own executor, and the broker rate limiter still applies.
+            parallel_reads = bool(
+                getattr(self.account, "parallel_read_safe", False)
+                and getattr(self.positions, "parallel_read_safe", False)
+            )
             with ThreadPoolExecutor(max_workers=2, thread_name_prefix="guardian-read") as pool:
-                account_future = pool.submit(self.account)
-                positions_future = pool.submit(self.positions)
-                account = account_future.result()
-                positions = tuple(positions_future.result())
+                if parallel_reads:
+                    account_future = pool.submit(self.account)
+                    positions_future = pool.submit(self.positions)
+                    account = account_future.result()
+                    positions = tuple(positions_future.result())
+                else:
+                    account = self.account()
+                    positions = tuple(self.positions())
                 sizing_future = pool.submit(self.sizing, intent, account, positions)
                 market_future = pool.submit(self.market, intent.instrument)
                 sizing = sizing_future.result()
@@ -466,6 +475,9 @@ def position_source(
             result.append(value)
         return tuple(result)
 
+    read.parallel_read_safe = bool(  # type: ignore[attr-defined]
+        getattr(broker, "parallel_read_safe", False)
+    )
     return read
 
 

@@ -110,6 +110,11 @@ class CapitalComBroker:
     id and intent before invoking this adapter (the durable order manager is T-026).
     """
 
+    # The underlying httpx client is safe for concurrent requests.  This marker
+    # lets the execution gate overlap independent read-only reconciliation calls
+    # without changing the conservative behavior of other broker adapters.
+    parallel_read_safe = True
+
     def __init__(self, client: _CapitalComClient, *, enable_demo_orders: bool = False) -> None:
         if client.environment != "demo":
             raise TradingDisabledError("CapitalComBroker only supports the demo environment")

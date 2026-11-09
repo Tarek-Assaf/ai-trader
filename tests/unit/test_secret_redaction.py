@@ -8,6 +8,7 @@ from io import StringIO
 from logging.handlers import RotatingFileHandler
 
 from pydantic import SecretStr
+from uvicorn.logging import AccessFormatter
 
 from trader.core.logging import SecretRedactionFilter, configure_logging
 
@@ -67,6 +68,25 @@ def test_structured_secret_value_is_redacted() -> None:
     record.credential = SecretStr("top-secret")
     assert SecretRedactionFilter(("top-secret",)).filter(record)
     assert record.credential == "[REDACTED]"
+
+
+def test_uvicorn_access_record_preserves_formatter_arguments() -> None:
+    """AccessFormatter still receives its five positional values after redaction."""
+    record = logging.LogRecord(
+        "uvicorn.access",
+        logging.INFO,
+        "test.py",
+        1,
+        '%s - "%s %s HTTP/%s" %s',
+        ("127.0.0.1", "GET", "/top-secret", "1.1", 200),
+        None,
+    )
+
+    assert SecretRedactionFilter(("top-secret",)).filter(record)
+    output = AccessFormatter("%(message)s").format(record)
+
+    assert "top-secret" not in output
+    assert "[REDACTED]" in output
 
 
 def test_exception_traceback_is_redacted() -> None:

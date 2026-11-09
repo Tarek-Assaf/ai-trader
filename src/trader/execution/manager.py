@@ -6,6 +6,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
@@ -272,10 +273,21 @@ class OrderManager:
         with self._mutex:
             self._execution_lease.check()
             self._guardian_lease.check()
-            positions = tuple(self._broker.get_positions())
+            # Capital.com's positions and working-orders reads are independent HTTP
+            # requests.  Run them concurrently only for adapters that explicitly
+            # declare their client thread-safe; every other adapter keeps the old
+            # sequential, conservative behavior.
+            if bool(getattr(self._broker, "parallel_read_safe", False)):
+                with ThreadPoolExecutor(max_workers=2, thread_name_prefix="broker-read") as pool:
+                    positions_future = pool.submit(self._broker.get_positions)
+                    working_orders_future = pool.submit(self._broker.get_open_orders)
+                    positions = tuple(positions_future.result())
+                    working_orders = working_orders_future.result()
+            else:
+                positions = tuple(self._broker.get_positions())
+                working_orders = self._broker.get_open_orders()
             if len({position.deal_id for position in positions}) != len(positions):
                 raise ValueError("duplicate broker deal ids")
-            working_orders = self._broker.get_open_orders()
             records = self._journal.records()
             known = {record["deal_id"]: record for record in records if record.get("deal_id")}
             mismatch = bool(working_orders)
@@ -542,6 +554,8 @@ class OrderManager:
 
     def submit(self, cycle_id: str, order: OrderRequest) -> OrderReceipt | None:
         with self._mutex:
+            submit_started = time.perf_counter()
+            preflight_started = submit_started
             self._order_without_server_side_stop = order.stop_level is None
             if not self._started:
                 raise ExecutionPaused("execution has not started")
@@ -556,6 +570,7 @@ class OrderManager:
                     if self._unreachable_retry_at is not None:
                         raise BrokerUnreachable("broker unreachable; entry skipped")
                     raise ExecutionPaused("broker state mismatch")
+                preflight_done = time.perf_counter()
                 self._guardian_lease.check()
                 approval = self._approve(order, cycle_id)
                 decision = approval.decision
@@ -568,8 +583,10 @@ class OrderManager:
                     or decision.approved_size != order.size
                 ):
                     raise ExecutionPaused("exact-order Guardian approval is required")
+                guardian_done = time.perf_counter()
                 if not self._journal.reserve(cycle_id, order):
                     return None
+                reserved_done = time.perf_counter()
                 self._execution_lease.check()
                 self._guardian_lease.check()
             except BrokerUnreachable:
@@ -586,6 +603,7 @@ class OrderManager:
                 raise ExecutionPaused("control activated before broker submission")
             try:
                 receipt = self._broker.place_order(order)
+                broker_done = time.perf_counter()
                 if (
                     receipt.client_order_id != order.client_order_id
                     or receipt.deal_id != receipt.position.deal_id
@@ -597,6 +615,18 @@ class OrderManager:
                     raise ValueError("broker receipt mismatch")
                 self._journal.mark(cycle_id, "submitted", deal_id=receipt.deal_id)
                 self.reconcile()
+                reconcile_done = time.perf_counter()
+                LOGGER.info(
+                    "order submit timing cycle_id=%s preflight_ms=%.1f guardian_ms=%.1f "
+                    "reserve_ms=%.1f broker_ms=%.1f post_reconcile_ms=%.1f total_ms=%.1f",
+                    cycle_id,
+                    (preflight_done - preflight_started) * 1000,
+                    (guardian_done - preflight_done) * 1000,
+                    (reserved_done - guardian_done) * 1000,
+                    (broker_done - reserved_done) * 1000,
+                    (reconcile_done - broker_done) * 1000,
+                    (reconcile_done - submit_started) * 1000,
+                )
             except OrderRejected as exc:
                 # The broker refused the request, so there is nothing to reconcile and nothing
                 # to hold the whole bot for: record it, tell the owner, keep running.

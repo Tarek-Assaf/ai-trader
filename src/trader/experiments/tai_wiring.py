@@ -10,14 +10,16 @@ from __future__ import annotations
 
 import logging
 import math
+import threading
 import time
 from collections import defaultdict, deque
-from collections.abc import Callable, Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from zoneinfo import ZoneInfo
 
 from trader.data.instruments import InstrumentDataError
@@ -917,7 +919,13 @@ def parse_tai_instrument_rules(payload: Mapping[str, Any]) -> TaiInstrumentRules
 
 
 class CapitalInstrumentRulesProvider:
-    """Read-only Capital.com rules provider; refreshes before every entry."""
+    """Read-only Capital.com rules provider; refreshes once per entry snapshot.
+
+    A TradingView entry needs the same instrument snapshot in the signal builder,
+    order factory, and Guardian market context.  Without a request-scoped snapshot,
+    each consumer refetches ``/markets`` and ``/markets/{epic}``, adding several
+    avoidable network round trips to the entry path.
+    """
 
     def __init__(self, client: Any, epic: str) -> None:
         if not epic.strip():
@@ -925,8 +933,34 @@ class CapitalInstrumentRulesProvider:
         self._client = client
         self.epic = epic.strip()
 
+        self._snapshot = threading.local()
+
+    @contextmanager
+    def snapshot(self, epic: str | None = None) -> Iterator[TaiInstrumentRules]:
+        """Fetch rules once and reuse them for one synchronous entry operation."""
+        target = (epic or self.epic).strip()
+        rules = self._fetch(target)
+        previous = getattr(self._snapshot, "value", None)
+        self._snapshot.value = (target, rules)
+        try:
+            yield rules
+        finally:
+            if previous is None:
+                try:
+                    del self._snapshot.value
+                except AttributeError:
+                    pass
+            else:
+                self._snapshot.value = previous
+
     def __call__(self, epic: str | None = None) -> TaiInstrumentRules:
         target = (epic or self.epic).strip()
+        cached = getattr(self._snapshot, "value", None)
+        if isinstance(cached, tuple) and len(cached) == 2 and cached[0] == target:
+            return cast(TaiInstrumentRules, cached[1])
+        return self._fetch(target)
+
+    def _fetch(self, target: str) -> TaiInstrumentRules:
         details = self._client.market_details(target)
         if not isinstance(details, Mapping):
             raise TaiDemoRefused("broker instrument rules are unavailable")
@@ -960,16 +994,22 @@ class CapitalBalanceProvider:
         accounts = payload.get("accounts") if isinstance(payload, Mapping) else None
         if not isinstance(accounts, Sequence) or isinstance(accounts, str):
             raise TaiDemoRefused("broker account balance is unavailable")
-        candidates = [
-            item
-            for item in accounts
-            if isinstance(item, Mapping)
-            and (self._account_id is None or item.get("accountId") == self._account_id)
-        ]
-        if len(candidates) != 1 and self._account_id is None:
-            # A login can hold several accounts; orders go to the one Capital.com marks as the
-            # preferred (active) account, the same rule the broker view uses for /status.
-            candidates = [item for item in candidates if item.get("preferred") is True]
+        usable = [item for item in accounts if isinstance(item, Mapping) and item.get("accountId")]
+        candidates = (
+            [item for item in usable if item.get("accountId") == self._account_id]
+            if self._account_id is not None
+            else usable
+        )
+        # ``ACCOUNT_ID`` is the bot's stable internal label (``acct-01``), while
+        # Capital.com returns a broker-owned account UUID.  When the two namespaces
+        # do not match, retain the safety guard but use the broker's own unambiguous
+        # selection rules: one account, or exactly one preferred account.
+        if self._account_id is None or not candidates:
+            preferred = [item for item in usable if item.get("preferred") is True]
+            if len(candidates) == 0 and len(usable) == 1:
+                candidates = usable
+            elif len(preferred) == 1:
+                candidates = preferred
         if len(candidates) != 1:
             raise TaiDemoRefused("broker account balance is ambiguous")
         balance = candidates[0].get("balance")

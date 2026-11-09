@@ -19,6 +19,7 @@ from trader.experiments.tai_demo import (
 )
 from trader.experiments.tai_wiring import (
     REFRESH_BARS,
+    CapitalBalanceProvider,
     CapitalInstrumentRulesProvider,
     TaiMinuteBar,
     TaiOrderFactory,
@@ -28,6 +29,64 @@ from trader.experiments.tai_wiring import (
     build_tai_demo_runtime,
     parse_tai_instrument_rules,
 )
+
+
+def test_capital_balance_provider_scopes_multi_account_response() -> None:
+    class Client:
+        def account_info(self) -> dict[str, object]:
+            return {
+                "accounts": [
+                    {"accountId": "acct-01", "balance": {"balance": "1000.00"}},
+                    {"accountId": "acct-02", "balance": {"balance": "987.65"}},
+                ]
+            }
+
+    assert CapitalBalanceProvider(Client(), "acct-02")() == Decimal("987.65")
+
+
+def test_capital_balance_provider_maps_internal_id_to_single_broker_account() -> None:
+    class Client:
+        def account_info(self) -> dict[str, object]:
+            return {
+                "accounts": [{"accountId": "broker-uuid-01", "balance": {"balance": "1000.00"}}]
+            }
+
+    assert CapitalBalanceProvider(Client(), "acct-01")() == Decimal("1000.00")
+
+
+def test_capital_balance_provider_uses_unique_preferred_broker_account() -> None:
+    class Client:
+        def account_info(self) -> dict[str, object]:
+            return {
+                "accounts": [
+                    {
+                        "accountId": "broker-uuid-01",
+                        "preferred": False,
+                        "balance": {"balance": "1000.00"},
+                    },
+                    {
+                        "accountId": "broker-uuid-02",
+                        "preferred": True,
+                        "balance": {"balance": "987.65"},
+                    },
+                ]
+            }
+
+    assert CapitalBalanceProvider(Client(), "acct-02")() == Decimal("987.65")
+
+
+def test_capital_balance_provider_keeps_refusing_unresolved_multiple_accounts() -> None:
+    class Client:
+        def account_info(self) -> dict[str, object]:
+            return {
+                "accounts": [
+                    {"accountId": "broker-uuid-01", "balance": {"balance": "1000.00"}},
+                    {"accountId": "broker-uuid-02", "balance": {"balance": "987.65"}},
+                ]
+            }
+
+    with pytest.raises(TaiDemoRefused, match="ambiguous"):
+        CapitalBalanceProvider(Client(), "acct-02")()
 
 
 def minute(at: datetime, close: str = "100") -> TaiMinuteBar:
@@ -144,6 +203,38 @@ def test_capital_rules_provider_enriches_tick_from_market_search() -> None:
 
     assert rules.tick_size == Decimal("0.1")
     assert rules.min_stop_distance == Decimal("2.89299")
+
+
+def test_capital_rules_snapshot_reuses_one_broker_fetch_for_entry_components() -> None:
+    class Client:
+        def __init__(self) -> None:
+            self.searches = 0
+            self.details = 0
+
+        def search_markets(self, epic: str) -> list[dict[str, object]]:
+            self.searches += 1
+            return [{"epic": epic, "tickSize": "0.1"}]
+
+        def market_details(self, epic: str) -> dict[str, object]:
+            self.details += 1
+            return {
+                "instrument": {"epic": epic, "lotSize": 1},
+                "dealingRules": {
+                    "minDealSize": {"value": "0.001", "unit": "POINTS"},
+                    "minSizeIncrement": {"value": "0.001", "unit": "POINTS"},
+                    "minStopOrProfitDistance": {"value": "0.01", "unit": "PERCENTAGE"},
+                },
+                "snapshot": {"bid": "28928.1", "offer": "28929.9"},
+            }
+
+    client = Client()
+    provider = CapitalInstrumentRulesProvider(client, "US100")
+    with provider.snapshot("US100"):
+        first = provider("US100")
+        second = provider("US100")
+
+    assert first == second
+    assert client.searches == 1 and client.details == 1
 
 
 def test_order_factory_rounds_price_levels_and_rejects_short_stop() -> None:

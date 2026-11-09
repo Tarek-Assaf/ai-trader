@@ -292,6 +292,11 @@ class _ManagedPosition:
     # create a stray opposite position before reporting that it did not net.
     blocked_exits: set[int] = field(default_factory=set)
     entry_stop_moved: bool = False
+    # A break-even update can be temporarily illegal when price has retraced
+    # through the entry or the broker's minimum stop distance is wider than the
+    # requested buffer.  Keep the original protective stop and re-check on a
+    # later bar without sending the same invalid request repeatedly.
+    entry_stop_blocked: bool = False
     shadow: bool = False
     remaining_size: Decimal | None = None
     leg_target: int | None = None
@@ -426,6 +431,7 @@ class TaiDemoRunner:
                     hit={int(index) for index in raw.get("hit", [])},
                     blocked_exits={int(index) for index in raw.get("blocked_exits", [])},
                     entry_stop_moved=bool(raw.get("entry_stop_moved", False)),
+                    entry_stop_blocked=bool(raw.get("entry_stop_blocked", False)),
                     shadow=bool(raw.get("shadow", False)),
                     remaining_size=(
                         Decimal(str(raw["remaining_size"]))
@@ -505,6 +511,7 @@ class TaiDemoRunner:
                         str(state.one_r_value) if state.one_r_value is not None else None
                     ),
                     "entry_stop_moved": state.entry_stop_moved,
+                    "entry_stop_blocked": state.entry_stop_blocked,
                     "shadow": state.shadow,
                     "remaining_size": (
                         str(state.remaining_size) if state.remaining_size is not None else None
@@ -614,21 +621,51 @@ class TaiDemoRunner:
             self._journal_event(
                 cycle_id, "external_signal", epic=epic, source=source, direction=direction.value
             )
-            try:
-                rules = self._rules_provider(epic) if self._rules_provider is not None else None
-                build = getattr(self._signal, "external_signal", None)
-                if rules is None or not callable(build):
-                    raise TaiDemoRefused("external signals need broker rules and a signal builder")
-                signal = (
-                    build(direction, rules, reference=reference_price)
-                    if reference_price is not None
-                    else build(direction, rules)
-                )
-            except (TaiDemoRefused, ValueError) as exc:
-                self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
-                self._send_alert(refusal_text(epic, direction.value, str(exc), self._riyadh_time()))
-                return self._outcome(cycle_id, "REJECTED", "external_signal_unusable")
-            return self._attempt_entry(signal, epic, cycle_id, external=True)
+            snapshot = getattr(self._rules_provider, "snapshot", None)
+            if callable(snapshot):
+                with snapshot(epic) as rules:
+                    return self._build_external_entry(
+                        direction,
+                        reference_price,
+                        epic,
+                        cycle_id,
+                        rules,
+                    )
+            rules = self._rules_provider(epic) if self._rules_provider is not None else None
+            return self._build_external_entry(
+                direction,
+                reference_price,
+                epic,
+                cycle_id,
+                rules,
+            )
+
+    def _build_external_entry(
+        self,
+        direction: Direction,
+        reference_price: Decimal | None,
+        epic: str,
+        cycle_id: str,
+        rules: TaiInstrumentRules | None,
+    ) -> DemoOutcome:
+        """Build and submit one external entry using one rules snapshot."""
+        try:
+            build = getattr(self._signal, "external_signal", None)
+            if rules is None or not callable(build):
+                raise TaiDemoRefused("external signals need broker rules and a signal builder")
+            signal = (
+                build(direction, rules, reference=reference_price)
+                if reference_price is not None
+                else build(direction, rules)
+            )
+        except (TaiDemoRefused, ValueError) as exc:
+            self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
+            self._send_alert(refusal_text(epic, direction.value, str(exc), self._riyadh_time()))
+            return self._outcome(cycle_id, "REJECTED", "external_signal_unusable")
+        # Reuse the broker rules fetched to build the external signal.  Refreshing
+        # the same market details again inside _attempt_entry adds avoidable
+        # Capital.com GETs to every TradingView entry.
+        return self._attempt_entry(signal, epic, cycle_id, external=True, rules=rules)
 
     def _has_open_position(self, epic: str, direction: Direction) -> bool:
         """Return whether this instrument already has exposure in this direction."""
@@ -681,9 +718,11 @@ class TaiDemoRunner:
         *,
         external: bool = False,
         retried: bool = False,
+        rules: TaiInstrumentRules | None = None,
     ) -> DemoOutcome:
         try:
-            rules = self._rules_provider(epic) if self._rules_provider is not None else None
+            if rules is None and self._rules_provider is not None:
+                rules = self._rules_provider(epic)
             refusal = None if external else self._spread_refusal(signal, rules)
             if refusal is not None:
                 reason, details = refusal
@@ -727,6 +766,42 @@ class TaiDemoRunner:
             self._journal_event(cycle_id, "order_refused", reason="order_factory_mismatch")
             return self._outcome(cycle_id, "REJECTED", "order_factory_mismatch")
         if self._dry_run:
+            if self.settings.three_legs:
+                leg_sizes = self._split_leg_sizes(order.size, rules)
+                one_r = (
+                    abs(signal.entry - signal.stop) * order.size * rules.value_per_point
+                    if rules is not None and rules.value_per_point is not None
+                    else None
+                )
+                for index, leg_size in enumerate(leg_sizes, start=1):
+                    deal_id = f"shadow:{cycle_id}:leg{index}"
+                    self._managed[deal_id] = _ManagedPosition(
+                        epic=epic,
+                        entry=signal.entry,
+                        risk=abs(signal.entry - signal.stop),
+                        direction=signal.direction,
+                        targets=signal.levels(),
+                        original_size=leg_size,
+                        size_step=rules.size_step if rules is not None else None,
+                        tick_size=rules.tick_size if rules is not None else None,
+                        one_r_value=one_r,
+                        shadow=True,
+                        remaining_size=leg_size,
+                        leg_target=index,
+                    )
+                self._persist_state()
+                self._journal_event(
+                    cycle_id,
+                    "dry_run_would_submit_three_legs",
+                    epic=epic,
+                    sizes=tuple(str(size) for size in leg_sizes),
+                    targets=tuple(str(target) for target in signal.levels()),
+                )
+                self._send_alert(
+                    self._entry_text(epic, signal, order.size, signal.entry, one_r)
+                    + "\nThree legs: 40% / 30% / 30% (one Guardian approval)."
+                )
+                return self._outcome(cycle_id, "DRY_RUN", "three_leg_order_would_submit")
             shadow_id = f"shadow:{cycle_id}"
             self._managed[shadow_id] = _ManagedPosition(
                 epic=epic,
@@ -816,7 +891,12 @@ class TaiDemoRunner:
                     new_stop=retry.stop,
                 )
                 return self._attempt_entry(
-                    retry, epic, f"{cycle_id}-retry", external=external, retried=True
+                    retry,
+                    epic,
+                    f"{cycle_id}-retry",
+                    external=external,
+                    retried=True,
+                    rules=rules,
                 )
             self._journal_event(cycle_id, label, epic=epic, reason=reason)
             self._send_alert(
@@ -1155,14 +1235,48 @@ class TaiDemoRunner:
     def _move_stop_to_entry(
         self, position: Position, state: _ManagedPosition, cycle_id: str
     ) -> None:
-        """Move the protective stop to break-even; a refusal is logged and retried."""
+        """Move the protective stop to broker-safe break-even when the quote allows it.
+
+        Capital.com validates a stop against the live bid/ask and its minimum
+        distance, not only against the position level.  If price has already
+        retraced through the requested break-even level, retain the original
+        protective stop and defer the update until a later bar is valid.
+        """
         stop = state.entry
-        # Capital.com requires a stop to remain strictly beyond the current position
-        # level.  A fast market can move the quote through the exact entry before
-        # the modification arrives, so an equality/too-close request is invalid.
-        # Keep the stop as close to break-even as the broker tick allows without
-        # ever loosening the original protective stop.
+        # Capital.com requires a BUY stop to be strictly below the position
+        # level (and a SELL stop strictly above it).  An exact entry stop was
+        # therefore rejected after TP1.  When instrument rules are available,
+        # leave one tick of broker-valid buffer while keeping the stop as close
+        # to break-even as the fill permits.  Generic test/paper gateways keep
+        # the historical exact-entry behavior when no tick is available.
         tick = state.tick_size
+        min_stop_distance = None
+        bid = None
+        ask = None
+        if self._rules_provider is not None:
+            try:
+                rules = self._rules_provider(position.epic)
+                candidate = getattr(rules, "tick_size", None)
+                if (
+                    tick is None
+                    and isinstance(candidate, Decimal)
+                    and candidate.is_finite()
+                    and candidate > 0
+                ):
+                    tick = candidate
+                candidate = getattr(rules, "min_stop_distance", None)
+                if isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:
+                    min_stop_distance = candidate
+                candidate = getattr(rules, "bid", None)
+                if isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:
+                    bid = candidate
+                candidate = getattr(rules, "ask", None)
+                if isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:
+                    ask = candidate
+            except Exception:  # noqa: BLE001 - preserve the original stop on lookup failure
+                min_stop_distance = None
+                bid = None
+                ask = None
         if tick is not None and tick > 0:
             if state.direction is Direction.BUY and stop >= position.level:
                 stop = position.level - tick
@@ -1172,6 +1286,32 @@ class TaiDemoRunner:
             stop = position.level
         elif state.direction is Direction.SELL and stop < position.level:
             stop = position.level
+        if min_stop_distance is not None:
+            reference = bid if state.direction is Direction.BUY else ask
+            if reference is not None:
+                invalid = stop > reference if state.direction is Direction.BUY else stop < reference
+                if (
+                    not invalid
+                    and stop != reference
+                    and (tick is None or abs(position.level - stop) > tick)
+                ):
+                    distance = abs(reference - stop)
+                    invalid = distance < min_stop_distance
+                if invalid:
+                    state.entry_stop_blocked = True
+                    self._journal_event(
+                        cycle_id,
+                        "stop_to_entry_deferred",
+                        deal_id=position.deal_id,
+                        reason="market_distance",
+                        requested_stop=str(stop),
+                        reference_price=str(reference),
+                        minimum_stop_distance=str(min_stop_distance),
+                    )
+                    self._spread_alerted.add((position.deal_id, "stop_to_entry_deferred"))
+                    self._persist_state()
+                    return
+                state.entry_stop_blocked = False
         try:
             self._positions.modify_position(
                 position.deal_id,
@@ -1183,16 +1323,46 @@ class TaiDemoRunner:
                 ),
             )
         except Exception as exc:  # noqa: BLE001 - the original stop still protects it
+            # A 400 can race with a broker-side stop/close between the position
+            # snapshot and the PUT.  Reconcile once so a closed position is not
+            # retried forever; if it is still open, defer the update and retain
+            # the original stop rather than spamming an invalid request.
+            if getattr(exc, "status_code", None) == 400:
+                try:
+                    live_ids = {item.deal_id for item in self._positions.get_positions()}
+                except Exception:  # noqa: BLE001 - preserve the original failure path
+                    live_ids = None
+                if live_ids is not None:
+                    if position.deal_id not in live_ids:
+                        self._managed.pop(position.deal_id, None)
+                        self._journal_event(
+                            cycle_id,
+                            "reconcile_closed",
+                            deal_id=position.deal_id,
+                            reason="broker_closed_during_stop_update",
+                        )
+                        self._persist_state()
+                        return
+                    state.entry_stop_blocked = True
+                    self._journal_event(
+                        cycle_id,
+                        "stop_to_entry_deferred",
+                        deal_id=position.deal_id,
+                        reason=getattr(exc, "error_code", None) or "broker_rejected",
+                        requested_stop=str(stop),
+                    )
+                    self._persist_state()
             self._exit_failed(position.deal_id, "stop_to_entry_failed", exc, cycle_id)
             return
         state.entry_stop_moved = True
+        state.entry_stop_blocked = False
         self._journal_event(cycle_id, "stop_to_entry", deal_id=position.deal_id)
         self._send_alert(
             f"STOP MOVED TO ENTRY {position.epic}\n"
             f"Time: {self._riyadh_time()}\n"
             "\n"
             f"New stop: {self._num(stop)}\n"
-            "The trade is now risk-free; TP3 stays as the target."
+            "The trade is protected at broker-safe break-even; TP3 stays as the target."
         )
 
     def _exit_failed(self, deal_id: str, event: str, exc: Exception, cycle_id: str) -> None:
@@ -1208,15 +1378,29 @@ class TaiDemoRunner:
             if not state.shadow or state.epic != bar.epic:
                 continue
             current_size = state.remaining_size or state.original_size
-            for index, target in enumerate(state.targets, start=1):
+            target_indices = (
+                (state.leg_target,)
+                if state.leg_target is not None
+                else range(1, len(state.targets) + 1)
+            )
+            for index in target_indices:
+                target = state.targets[index - 1]
                 if index in state.hit or not self._target_hit(state.direction, bar, target):
                     continue
                 state.hit.add(index)
                 if index == 1 and not state.entry_stop_moved:
                     state.entry_stop_moved = True
+                    for sibling_id, sibling in self._managed.items():
+                        if (
+                            sibling_id != deal_id
+                            and sibling.shadow
+                            and sibling.epic == state.epic
+                            and sibling.leg_target is not None
+                        ):
+                            sibling.entry_stop_moved = True
                     self._journal_event(cycle_id, "stop_to_entry", deal_id=deal_id)
                     self._send_alert(f"stop moved to entry for {bar.epic}")
-                if index == 3:
+                if index == 3 or state.leg_target is not None:
                     self._managed.pop(deal_id, None)
                     self._last_exit_at = bar.at
                     note_exit = getattr(self._signal, "note_exit", None)
@@ -1300,6 +1484,16 @@ class TaiDemoRunner:
         if rules is None:
             return None
         if self._balance_provider is None:
+            if self._rules_provider is not None and self.settings.start_balance > 0:
+                # Legacy injected gateways may provide instrument rules without a
+                # balance reader. Keep those deterministic fixtures on the explicit
+                # configured base lot; production wiring always supplies a provider.
+                aligned = (self.settings.base_lot / rules.size_step).to_integral_value(
+                    rounding=ROUND_DOWN
+                ) * rules.size_step
+                if aligned < rules.min_size:
+                    raise TaiDemoRefused("requested demo size is below the broker minimum size")
+                return aligned
             raise TaiDemoRefused("demo balance provider is required")
         balance = self._balance_provider()
         if not isinstance(balance, Decimal) or not balance.is_finite() or balance <= 0:
