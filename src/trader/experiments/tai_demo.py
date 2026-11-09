@@ -285,6 +285,7 @@ class _ManagedPosition:
     targets: tuple[Decimal, Decimal, Decimal]
     original_size: Decimal
     size_step: Decimal | None = None
+    tick_size: Decimal | None = None
     one_r_value: Decimal | None = None
     hit: set[int] = field(default_factory=set)
     # Do not blindly retry a failed broker-side scale-out: Capital.com can
@@ -413,6 +414,9 @@ class TaiDemoRunner:
                     original_size=Decimal(str(raw["original_size"])),
                     size_step=(
                         Decimal(str(raw["size_step"])) if raw.get("size_step") is not None else None
+                    ),
+                    tick_size=(
+                        Decimal(str(raw["tick_size"])) if raw.get("tick_size") is not None else None
                     ),
                     one_r_value=(
                         Decimal(str(raw["one_r_value"]))
@@ -732,6 +736,7 @@ class TaiDemoRunner:
                 targets=signal.levels(),
                 original_size=order.size,
                 size_step=rules.size_step if rules is not None else None,
+                tick_size=rules.tick_size if rules is not None else None,
                 one_r_value=(
                     abs(signal.entry - signal.stop) * order.size * rules.value_per_point
                     if rules is not None and rules.value_per_point is not None
@@ -911,6 +916,7 @@ class TaiDemoRunner:
                 targets=signal.levels(),
                 original_size=position.size,
                 size_step=rules.size_step if rules is not None else None,
+                tick_size=rules.tick_size if rules is not None else None,
                 one_r_value=(
                     abs(signal.entry - signal.stop) * position.size * rules.value_per_point
                     if rules is not None and rules.value_per_point is not None
@@ -1150,7 +1156,18 @@ class TaiDemoRunner:
     ) -> None:
         """Move the protective stop to break-even; a refusal is logged and retried."""
         stop = state.entry
-        if state.direction is Direction.BUY and stop > position.level:
+        # Capital.com requires a stop to remain strictly beyond the current position
+        # level.  A fast market can move the quote through the exact entry before
+        # the modification arrives, so an equality/too-close request is invalid.
+        # Keep the stop as close to break-even as the broker tick allows without
+        # ever loosening the original protective stop.
+        tick = state.tick_size
+        if tick is not None and tick > 0:
+            if state.direction is Direction.BUY and stop >= position.level:
+                stop = position.level - tick
+            elif state.direction is Direction.SELL and stop <= position.level:
+                stop = position.level + tick
+        elif state.direction is Direction.BUY and stop > position.level:
             stop = position.level
         elif state.direction is Direction.SELL and stop < position.level:
             stop = position.level
@@ -1286,7 +1303,16 @@ class TaiDemoRunner:
         balance = self._balance_provider()
         if not isinstance(balance, Decimal) or not balance.is_finite() or balance <= 0:
             raise TaiDemoRefused("demo balance must be a positive finite Decimal")
-        start = self.settings.start_balance
+        # A saved baseline belongs to this account/workspace and must win over the
+        # process default.  Without this lookup, an existing account with a saved
+        # $20k baseline silently fell back to the new-account $1k default and its
+        # lots grew roughly 20x after every restart.
+        try:
+            start = self._start_balances.get() if self._start_balances is not None else None
+        except StartBalanceUnreadable as exc:
+            raise TaiDemoRefused(f"start balance unavailable: {exc}") from exc
+        if start is None:
+            start = self.settings.start_balance
         if start <= 0:
             start = self._automatic_start_balance(balance)
         raw = max(self.settings.base_lot, self.settings.base_lot * balance / start)
