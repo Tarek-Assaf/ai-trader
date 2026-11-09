@@ -37,7 +37,6 @@ def _execution_tick_interval(default: float = 5.0) -> float:
     if not math.isfinite(value) or value <= 0:
         return default
     return min(value, 60.0)
-
 _DEPENDENCY_MESSAGE_LIMIT = 200
 _SENSITIVE_EXCEPTION_PATTERNS = (
     re.compile(r"(?i)(password|passwd|token|secret|api[_-]?key)=([^\s&]+)"),

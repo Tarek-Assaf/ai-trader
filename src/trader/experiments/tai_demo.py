@@ -368,9 +368,7 @@ class TaiDemoRunner:
         # Tai position bookkeeping across that retry so an open demo position
         # remains managed and cannot trigger a duplicate entry.
         self._managed = {
-            deal_id: replace(
-                state, hit=set(state.hit), blocked_exits=set(state.blocked_exits)
-            )
+            deal_id: replace(state, hit=set(state.hit), blocked_exits=set(state.blocked_exits))
             for deal_id, state in {**persisted_state, **(managed_state or {})}.items()
         }
         if self._epic is None and self._managed:
@@ -383,9 +381,7 @@ class TaiDemoRunner:
     def snapshot_state(self) -> dict[str, _ManagedPosition]:
         """Return detached state for an in-process runtime composition retry."""
         return {
-            deal_id: replace(
-                state, hit=set(state.hit), blocked_exits=set(state.blocked_exits)
-            )
+            deal_id: replace(state, hit=set(state.hit), blocked_exits=set(state.blocked_exits))
             for deal_id, state in self._managed.items()
         }
 
