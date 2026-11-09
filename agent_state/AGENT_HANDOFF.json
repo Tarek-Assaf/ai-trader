@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 603,
+  "turn": "claude",
+  "revision": 604,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -34,7 +34,7 @@
     "commit_rule": "Commit messages start with the task id, for example 'T-010: Capital.com REST client'."
   },
   "project_state": {
-    "summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. Demo only. Not yet observed: one alert opening trades on both accounts (T-272). Codex next: T-269 review and adversarial tests of T-268, then review T-270/T-271; T-277 extends the CI backup drill; T-222 still waits on Codex.",
+    "summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. Demo only. T-269 now also preserves each account's saved start-balance baseline and keeps break-even stops strictly valid for Capital.com; CI/review and authorized deployment remain pending.",
     "how_to_run_tests": "make check (lint, typecheck, unit/integration tests, handoff validation and secret scan); CI applies Postgres migrations and builds/runs the ROLE=all container.",
     "known_failing": [
       "The prior authorized T-028 demo round trip returned CapitalComError during the account capture; cleanup confirmed flat and no order retry was attempted. Exact HTTP status/errorCode were not persisted by that run.",
@@ -7519,9 +7519,11 @@
       ],
       "evidence": [
         "https://github.com/Tarek-Assaf/ai-trader/tree/codex/t269-runtime-safety",
-        "360e97c"
+        "360e97c",
+        "3ccab5f",
+        "37e0a3d"
       ],
-      "completion_note": "Review patch prepared on codex/t269-runtime-safety. It blocks repeated same-direction TradingView entries while exposure is open, fails closed if three-leg execution is unavailable, persists a failed scale-out as blocked instead of retrying unsafe opposite orders, and raises worker tick/reconciliation intervals to 10s/15s on the small VM. Static compileall and git diff --check pass; desktop lacks pytest/ruff/mypy and CI is required before merge. Live VM remains on the prior image pending review/authorized deployment.",
+      "completion_note": "Review patch prepared on codex/t269-runtime-safety. It blocks repeated same-direction TradingView entries while exposure is open, fails closed if three-leg execution is unavailable, persists a failed scale-out as blocked instead of retrying unsafe opposite orders, raises worker tick/reconciliation intervals to 10s/15s on the small VM, uses the account's persisted start-balance baseline instead of silently applying the process default, and keeps break-even stops strictly beyond the live Capital.com position level. Static compileall, AST parsing, and git diff --check pass; desktop lacks pytest/ruff/mypy and CI is required before merge. Live VM remains on the prior image pending review/authorized deployment.",
       "review_cycles": 1
     },
     {
@@ -31324,7 +31326,22 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner-modified handoff: revision 603 records the Codex turn after the T-269 runtime-safety patch review handoff. No source-code, image, deployment, or trading-control changes."
+    },
+    {
+      "revision": 604,
+      "ts": "2026-11-09T12:45:00Z",
+      "agent": "codex",
+      "action": "fix_account_local_baseline_and_strict_break_even_stop",
+      "task_ids": [
+        "T-269"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "tests/unit/test_tai_demo.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Account sizing now reads the persisted baseline from that account's own workspace before using the new-account default, preventing account 01's balance from influencing another account. Break-even stop moves use the broker tick when the quote reaches the exact entry, avoiding Capital.com's strict stop-side rejection. Added focused regression tests. No risk ceilings, trading controls, broker state, or deployment were changed."
     }
   ],
-  "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM. T-269 runtime-safety patch is prepared on codex/t269-runtime-safety (360e97c), pending CI/review and authorized deployment. It addresses duplicate same-direction TradingView churn, unsafe retry of Capital.com partial exits, silent three-leg fallback, and worker polling pressure on the 2-vCPU VM. Demo only; live VM remains on image 2816f1711c69525631e585b9dc862a1e3d852a7f until review and deployment authorization."
+  "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM. T-269 runtime-safety patch is prepared on codex/t269-runtime-safety (3ccab5f plus handoff alignment), pending CI/review and authorized deployment. It addresses duplicate same-direction TradingView churn, unsafe retry of Capital.com partial exits, silent three-leg fallback, worker polling pressure on the 2-vCPU VM, account-local start-balance baselines, and strict break-even stop validation. Demo only; live VM remains on image 2816f1711c69525631e585b9dc862a1e3d852a7f until review and deployment authorization."
 }
