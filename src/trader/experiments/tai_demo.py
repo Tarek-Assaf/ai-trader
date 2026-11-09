@@ -1267,11 +1267,7 @@ class TaiDemoRunner:
                 ):
                     tick = candidate
                 candidate = getattr(rules, "min_stop_distance", None)
-                if (
-                    isinstance(candidate, Decimal)
-                    and candidate.is_finite()
-                    and candidate > 0
-                ):
+                if isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:
                     min_stop_distance = candidate
                 candidate = getattr(rules, "bid", None)
                 if isinstance(candidate, Decimal) and candidate.is_finite() and candidate > 0:

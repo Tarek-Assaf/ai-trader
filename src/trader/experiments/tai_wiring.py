@@ -994,12 +994,7 @@ class CapitalBalanceProvider:
         accounts = payload.get("accounts") if isinstance(payload, Mapping) else None
         if not isinstance(accounts, Sequence) or isinstance(accounts, str):
             raise TaiDemoRefused("broker account balance is unavailable")
-        usable = [
-            item
-            for item in accounts
-            if isinstance(item, Mapping)
-            and item.get("accountId")
-        ]
+        usable = [item for item in accounts if isinstance(item, Mapping) and item.get("accountId")]
         candidates = (
             [item for item in usable if item.get("accountId") == self._account_id]
             if self._account_id is not None
