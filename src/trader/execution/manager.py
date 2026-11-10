@@ -699,8 +699,12 @@ class OrderManager:
             started = time.perf_counter()
             receipts: list[OrderReceipt | None] = []
             prepared: list[tuple[str, OrderRequest]] = []
+            batch_place: Callable[..., Sequence[OrderReceipt]] | None = None
+            broker_started = False
             try:
-                batch_place = getattr(self._broker, "place_orders_batch", None)
+                candidate_batch_place = getattr(self._broker, "place_orders_batch", None)
+                if callable(candidate_batch_place):
+                    batch_place = candidate_batch_place
                 if callable(batch_place):
                     for index, order in enumerate(orders, start=1):
                         leg_cycle = f"{cycle_id}-tp{index}"
@@ -733,6 +737,7 @@ class OrderManager:
                     mode = self._apply_controls()
                     if mode is not ControlMode.RUN:
                         raise ExecutionPaused("control activated before broker submission")
+                    broker_started = True
                     batch_receipts = tuple(batch_place(tuple(order for _, order in prepared)))
                     if len(batch_receipts) != len(prepared):
                         raise ValueError("broker batch receipt count mismatch")
@@ -766,6 +771,20 @@ class OrderManager:
                 )
                 return tuple(receipts)
             except Exception:
+                if broker_started and callable(batch_place):
+                    self._pause("order_outcome_ambiguous")
+                    for leg_cycle, _order in prepared:
+                        try:
+                            self._journal.mark(leg_cycle, "ambiguous")
+                        except Exception:
+                            pass
+                    try:
+                        self.reconcile()
+                    except Exception:
+                        pass
+                    raise ExecutionPaused(
+                        "order outcome requires reconciliation; do not retry"
+                    ) from None
                 for receipt in receipts:
                     position = getattr(receipt, "position", None)
                     deal_id = getattr(position, "deal_id", None)
