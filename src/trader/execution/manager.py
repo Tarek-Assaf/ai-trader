@@ -606,10 +606,13 @@ class OrderManager:
                     self._pause("control_blocked_order_persistence_failed")
                 raise ExecutionPaused("control activated before broker submission")
             try:
-                place_order = self._broker.place_order
                 if self._batch_submission:
-                    place_order = getattr(self._broker, "place_order_batch", place_order)
-                receipt = place_order(order)
+                    place_order = getattr(
+                        self._broker, "place_order_batch", self._broker.place_order
+                    )
+                    receipt = place_order(order)
+                else:
+                    receipt = self._broker.place_order(order)
                 broker_done = time.perf_counter()
                 if (
                     receipt.client_order_id != order.client_order_id
