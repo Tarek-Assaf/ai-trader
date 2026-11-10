@@ -238,9 +238,7 @@ def _seed_atr(bars: Sequence[ClosedBar]) -> float | None:
         if index == ADX_PERIOD - 1:
             current = (
                 sum(
-                    _true_range(
-                        item, float(bars[item_index - 1].close) if item_index else None
-                    )
+                    _true_range(item, float(bars[item_index - 1].close) if item_index else None)
                     for item_index, item in enumerate(bars[:ADX_PERIOD])
                 )
                 / ADX_PERIOD
