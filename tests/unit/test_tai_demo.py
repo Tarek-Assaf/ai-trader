@@ -809,9 +809,10 @@ class _ExternalSignals:
 
 
 def _external_runner(gateway, **kwargs):
+    signal_provider = kwargs.pop("signal_provider", _ExternalSignals())
     return runner(
         gateway,
-        signal_provider=_ExternalSignals(),
+        signal_provider=signal_provider,
         balance_provider=lambda: Decimal("1000"),
         instrument_rules_provider=lambda _epic: _spread_rules(bid="100", ask="100.5"),
         epic="NSXUSD",
@@ -906,6 +907,28 @@ def test_tradingview_mode_never_opens_an_entry_from_the_local_signal() -> None:
     outcome = tai.on_bar(bar())
     assert (outcome.action, outcome.reason) == ("NO_TRADE", "awaiting_tradingview_alert")
     assert manager.submits == []
+
+
+def test_tradingview_mode_updates_state_without_running_local_signal_features() -> None:
+    class Provider(_ExternalSignals):
+        def __init__(self) -> None:
+            self.calls = 0
+            self.update_calls = 0
+
+        def __call__(self, _bar):
+            self.calls += 1
+            return super().__call__(_bar)
+
+        def update_only(self, _bar):
+            self.update_calls += 1
+
+    provider = Provider()
+    tai, _manager = _external_runner(Gateway(), signal_provider=provider)
+    tai.external_signals_only = True
+
+    assert tai.on_bar(bar()).reason == "awaiting_tradingview_alert"
+    assert provider.calls == 0
+    assert provider.update_calls == 1
 
 
 def test_external_signal_that_cannot_be_built_is_refused_not_traded() -> None:

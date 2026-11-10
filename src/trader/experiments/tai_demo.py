@@ -573,9 +573,15 @@ class TaiDemoRunner:
             return self._outcome(cycle_id, "NO_TRADE", "one_position_rule")
         if self._startup_blocked:
             return self._outcome(cycle_id, "REJECTED", "startup_reconciliation_failed")
-        signal = self._signal(bar)
         if self.external_signals_only:
+            # TradingView already made the entry decision.  Keep the provider's
+            # ATR/structure state current, but do not rebuild the full local Tai
+            # feature matrix over the entire lake on every 3-minute bar.
+            update_only = getattr(self._signal, "update_only", None)
+            if callable(update_only):
+                update_only(bar)
             return self._outcome(cycle_id, "NO_TRADE", "awaiting_tradingview_alert")
+        signal = self._signal(bar)
         if signal is None:
             return self._outcome(cycle_id, "NO_TRADE", "no_signal")
         return self._attempt_entry(signal, bar.epic, cycle_id)
