@@ -694,7 +694,7 @@ def test_three_leg_entry_resplits_when_guardian_caps_total_size(tmp_path) -> Non
     )
     assert len(receipts) == 3
     assert broker.calls == 3
-    assert sum(position["size"] for position in broker._positions.values()) == Decimal("1")
+    assert sum(position.size for position in broker._positions.values()) == Decimal("1")
 
 
 def test_guardian_refusal_is_a_veto_not_a_latched_pause(tmp_path) -> None:
