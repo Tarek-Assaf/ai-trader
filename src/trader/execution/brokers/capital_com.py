@@ -148,7 +148,8 @@ class CapitalComBroker:
         return tuple(self._client.get_activity(start, end))
 
     def place_order(self, order: OrderRequest) -> OrderReceipt:
-        return self._place_order(order, verify_position=True)
+        with self._write_lock:
+            return self._place_order(order, verify_position=True, reserve_order_id=False)
 
     def place_order_batch(self, order: OrderRequest) -> OrderReceipt:
         """Open one leg for a batch; the manager verifies all legs once afterward."""
@@ -179,16 +180,28 @@ class CapitalComBroker:
                     LOGGER.exception("batch broker rollback close failed")
             raise
 
-    def _place_order(self, order: OrderRequest, *, verify_position: bool) -> OrderReceipt:
+    def _place_order(
+        self,
+        order: OrderRequest,
+        *,
+        verify_position: bool,
+        reserve_order_id: bool = True,
+    ) -> OrderReceipt:
         if not self._enable_demo_orders:
             raise TradingDisabledError("demo order placement is disabled")
         if order.size <= 0 or not order.size.is_finite():
             raise ValueError("order size must be finite and positive")
-        with self._write_lock:
-            if order.client_order_id in self._used_order_ids:
-                raise BrokerError("client_order_id has already been submitted")
-            # Reserve before the network call; ambiguous failures must not be retried
-            # with the same in-process id. T-026 provides durable reservation.
+        if reserve_order_id:
+            with self._write_lock:
+                if order.client_order_id in self._used_order_ids:
+                    raise BrokerError("client_order_id has already been submitted")
+                # Reserve before the network call; ambiguous failures must not be retried
+                # with the same in-process id. T-026 provides durable reservation.
+                self._used_order_ids.add(order.client_order_id)
+        elif order.client_order_id in self._used_order_ids:
+            raise BrokerError("client_order_id has already been submitted")
+        else:
+            # The caller holds _write_lock for serialized single-order mutations.
             self._used_order_ids.add(order.client_order_id)
         payload: dict[str, object] = {
             "epic": order.epic,
