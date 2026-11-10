@@ -134,6 +134,18 @@ def test_order_attaches_stop_and_confirms_open_position() -> None:
     assert ("confirm_deal", "open-ref") in client.calls
 
 
+def test_batch_order_uses_open_confirmation_without_per_leg_position_read() -> None:
+    client = FakeCapitalClient()
+    broker = CapitalComBroker(client, enable_demo_orders=True)
+
+    receipt = broker.place_order_batch(order())
+
+    assert receipt.deal_id == "deal-1"
+    assert receipt.position.deal_id == "deal-1"
+    assert receipt.position.stop_level == Decimal("99.0")
+    assert not any(name == "get_positions" for name, _ in client.calls)
+
+
 def test_rejected_confirmation_never_claims_open_success() -> None:
     client = FakeCapitalClient()
     client.confirm_reply = {"dealStatus": "REJECTED", "affectedDeals": []}

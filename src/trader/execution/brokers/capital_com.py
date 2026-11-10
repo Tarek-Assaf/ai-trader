@@ -145,6 +145,13 @@ class CapitalComBroker:
         return tuple(self._client.get_activity(start, end))
 
     def place_order(self, order: OrderRequest) -> OrderReceipt:
+        return self._place_order(order, verify_position=True)
+
+    def place_order_batch(self, order: OrderRequest) -> OrderReceipt:
+        """Open one leg for a batch; the manager verifies all legs once afterward."""
+        return self._place_order(order, verify_position=False)
+
+    def _place_order(self, order: OrderRequest, *, verify_position: bool) -> OrderReceipt:
         if not self._enable_demo_orders:
             raise TradingDisabledError("demo order placement is disabled")
         if order.size <= 0 or not order.size.is_finite():
@@ -155,68 +162,79 @@ class CapitalComBroker:
             # Reserve before the network call; ambiguous failures must not be retried
             # with the same in-process id. T-026 provides durable reservation.
             self._used_order_ids.add(order.client_order_id)
-            payload: dict[str, object] = {
-                "epic": order.epic,
-                "direction": order.direction.value,
-                "size": float(order.size),
-                "guaranteedStop": False,
-                "stopLevel": float(order.stop_level),
-            }
-            if order.profit_level is not None:
-                payload["profitLevel"] = float(order.profit_level)
-            try:
-                created = self._client.open_position(payload)
-            except Exception as exc:
-                # A 4xx on the order request itself means Capital.com did not accept it, so no
-                # position exists. Anything else (timeout, 5xx) may have been accepted, so it
-                # stays ambiguous.
-                if getattr(exc, "status_code", None) in _REFUSED_STATUS:
-                    code = getattr(exc, "error_code", None)
-                    raise OrderRejected(code if isinstance(code, str) else None) from None
-                raise
-            reference = _required_text(created.get("dealReference"), "dealReference")
-            confirmation = self._client.confirm_deal(reference)
-            self._require_accepted(confirmation, "open")
-            deals = confirmation.get("affectedDeals")
-            if not isinstance(deals, list) or len(deals) != 1:
-                raise BrokerProtocolError("Capital.com open confirmation is ambiguous")
-            affected = _object(deals[0], "affectedDeals[0]")
-            if affected.get("status") != "OPENED":
-                raise BrokerProtocolError("Capital.com did not confirm the position opened")
-            deal_id = _required_text(affected.get("dealId"), "affectedDeals[0].dealId")
-            positions = self._client.get_positions()
-            matches: list[Position] = []
-            for item in positions:
-                position_data = item.get("position")
-                if isinstance(position_data, Mapping) and position_data.get("dealId") == deal_id:
-                    matches.append(_position(item))
-            if len(matches) != 1:
-                raise BrokerProtocolError("Capital.com opened position was not uniquely confirmed")
-            opened = matches[0]
-            if (
-                opened.epic != order.epic
-                or opened.direction is not order.direction
-                or opened.size != order.size
-                or opened.stop_level != order.stop_level
-            ):
-                # The order was submitted with the stop in the same request. If the
-                # broker's confirmed state differs, immediately request a close.
-                try:
-                    close = self._client.close_position(deal_id)
-                    close_reference = _required_text(
-                        close.get("dealReference"), "close dealReference"
-                    )
-                    self._require_accepted(
-                        self._client.confirm_deal(close_reference), "protective close"
-                    )
-                except Exception:
-                    raise BrokerProtocolError(
-                        "Capital.com did not confirm the protective stop; close status is uncertain"
-                    ) from None
-                raise BrokerProtocolError(
-                    "Capital.com did not retain the requested stop; a close was requested"
-                )
+        payload: dict[str, object] = {
+            "epic": order.epic,
+            "direction": order.direction.value,
+            "size": float(order.size),
+            "guaranteedStop": False,
+            "stopLevel": float(order.stop_level),
+        }
+        if order.profit_level is not None:
+            payload["profitLevel"] = float(order.profit_level)
+        try:
+            created = self._client.open_position(payload)
+        except Exception as exc:
+            # A 4xx on the order request itself means Capital.com did not accept it, so no
+            # position exists. Anything else (timeout, 5xx) may have been accepted, so it
+            # stays ambiguous.
+            if getattr(exc, "status_code", None) in _REFUSED_STATUS:
+                code = getattr(exc, "error_code", None)
+                raise OrderRejected(code if isinstance(code, str) else None) from None
+            raise
+        reference = _required_text(created.get("dealReference"), "dealReference")
+        confirmation = self._client.confirm_deal(reference)
+        self._require_accepted(confirmation, "open")
+        deals = confirmation.get("affectedDeals")
+        if not isinstance(deals, list) or len(deals) != 1:
+            raise BrokerProtocolError("Capital.com open confirmation is ambiguous")
+        affected = _object(deals[0], "affectedDeals[0]")
+        if affected.get("status") != "OPENED":
+            raise BrokerProtocolError("Capital.com did not confirm the position opened")
+        deal_id = _required_text(affected.get("dealId"), "affectedDeals[0].dealId")
+        if not verify_position:
+            opened = Position(
+                deal_id=deal_id,
+                epic=order.epic,
+                direction=order.direction,
+                size=order.size,
+                level=order.reference_price,
+                stop_level=order.stop_level,
+                profit_level=order.profit_level,
+            )
             return OrderReceipt(order.client_order_id, reference, deal_id, opened)
+        positions = self._client.get_positions()
+        matches: list[Position] = []
+        for item in positions:
+            position_data = item.get("position")
+            if isinstance(position_data, Mapping) and position_data.get("dealId") == deal_id:
+                matches.append(_position(item))
+        if len(matches) != 1:
+            raise BrokerProtocolError("Capital.com opened position was not uniquely confirmed")
+        opened = matches[0]
+        if (
+            opened.epic != order.epic
+            or opened.direction is not order.direction
+            or opened.size != order.size
+            or opened.stop_level != order.stop_level
+        ):
+            # The order was submitted with the stop in the same request. If the
+            # broker's confirmed state differs, immediately request a close.
+            try:
+                close = self._client.close_position(deal_id)
+                close_reference = _required_text(
+                    close.get("dealReference"), "close dealReference"
+                )
+                self._require_accepted(
+                    self._client.confirm_deal(close_reference), "protective close"
+                )
+            except Exception:
+                raise BrokerProtocolError(
+                    "Capital.com did not confirm the protective stop; close status is uncertain"
+                ) from None
+            raise BrokerProtocolError(
+                "Capital.com did not retain the requested stop; a close was requested"
+            )
+        return OrderReceipt(order.client_order_id, reference, deal_id, opened)
 
     @staticmethod
     def _require_accepted(reply: Mapping[str, object], operation: str) -> None:
