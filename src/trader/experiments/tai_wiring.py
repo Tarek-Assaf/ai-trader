@@ -1009,7 +1009,7 @@ class CapitalInstrumentRulesProvider:
         target = (epic or self.epic).strip()
         cached = self._snapshot.get()
         if isinstance(cached, tuple) and len(cached) == 2 and cached[0] == target:
-            return cast(TaiInstrumentRules, cached[1])
+            return cached[1]
         return self._fetch(target)
 
     def _fetch(self, target: str) -> TaiInstrumentRules:
