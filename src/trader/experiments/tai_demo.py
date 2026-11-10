@@ -688,7 +688,8 @@ class TaiDemoRunner:
             )
         current = positions if positions is not None else self._positions.get_positions()
         return any(
-            position.epic == epic and position.direction is direction
+            position.epic == epic
+            and position.direction is direction
             for position in current
         )
 
