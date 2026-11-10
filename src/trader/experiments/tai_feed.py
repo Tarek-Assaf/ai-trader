@@ -52,6 +52,21 @@ def _lake_paths(lake_root: Path, epic: str) -> tuple[Path, ...]:
     return tuple(lake_root.glob("*/1m_capital/*/*.parquet"))
 
 
+def _window_paths(paths: tuple[Path, ...], after: datetime, before: datetime) -> tuple[Path, ...]:
+    """Skip month partitions that cannot contain the bounded tail window."""
+    lower = (after.year, after.month)
+    upper = (before.year, before.month)
+
+    def in_window(path: Path) -> bool:
+        try:
+            key = (int(path.parent.name), int(path.stem))
+        except ValueError:
+            return True
+        return lower <= key <= upper
+
+    return tuple(path for path in paths if in_window(path))
+
+
 def _tail_only(table: Any, after: datetime) -> Any:
     """Keep only rows at or after ``after`` using Arrow (no per-row Python work)."""
     import pyarrow as pa  # type: ignore[import-untyped]
@@ -87,7 +102,10 @@ def read_closed_lake_minutes(
     boundary = _utc_minute(before)
     accepted_epics = set(epic_aliases(epic))
     paired: dict[datetime, dict[str, Mapping[str, Any]]] = defaultdict(dict)
-    for path in _lake_paths(Path(lake_root), epic):
+    paths = _lake_paths(Path(lake_root), epic)
+    if after is not None:
+        paths = _window_paths(paths, _utc_minute(after), boundary)
+    for path in paths:
         try:
             table = pq.read_table(
                 path,

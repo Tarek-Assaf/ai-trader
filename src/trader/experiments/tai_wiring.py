@@ -533,6 +533,7 @@ class TaiSignalProvider:
         *,
         minimum_history: int = 300,
         ha_mode: str = "closed",
+        lookback_days: int | None = None,
     ) -> TaiSignalProvider:
         """Load recent 1m bid/ask mid bars and aggregate them for warm-up."""
         try:
@@ -548,6 +549,22 @@ class TaiSignalProvider:
         # silently start empty.
         if not paths:
             paths = tuple(Path(lake_root).glob("*/1m_capital/*/*.parquet"))
+        if lookback_days is not None:
+            if lookback_days <= 0:
+                raise ValueError("lookback_days must be positive")
+            now = datetime.now(UTC)
+            start = now - timedelta(days=lookback_days)
+            lower = (start.year, start.month)
+            upper = (now.year, now.month)
+
+            def in_window(path: Path) -> bool:
+                try:
+                    key = (int(path.parent.name), int(path.stem))
+                except ValueError:
+                    return True
+                return lower <= key <= upper
+
+            paths = tuple(path for path in paths if in_window(path))
         for path in paths:
             try:
                 rows = pq.read_table(
