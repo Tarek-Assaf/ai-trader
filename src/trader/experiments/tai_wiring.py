@@ -220,7 +220,7 @@ def _ema(values: Sequence[float], period: int) -> tuple[float | None, ...]:
 
 def _true_range(bar: ClosedBar, previous_close: float | None) -> float:
     """Return one Wilder true-range value without rebuilding the full feature set."""
-    high, low, close = float(bar.high), float(bar.low), float(bar.close)
+    high, low = float(bar.high), float(bar.low)
     if previous_close is None:
         return high - low
     return max(high - low, abs(high - previous_close), abs(low - previous_close))
@@ -236,10 +236,15 @@ def _seed_atr(bars: Sequence[ClosedBar]) -> float | None:
         value = _true_range(bar, previous)
         previous = float(bar.close)
         if index == ADX_PERIOD - 1:
-            current = sum(
-                _true_range(item, float(bars[item_index - 1].close) if item_index else None)
-                for item_index, item in enumerate(bars[:ADX_PERIOD])
-            ) / ADX_PERIOD
+            current = (
+                sum(
+                    _true_range(
+                        item, float(bars[item_index - 1].close) if item_index else None
+                    )
+                    for item_index, item in enumerate(bars[:ADX_PERIOD])
+                )
+                / ADX_PERIOD
+            )
         elif index >= ADX_PERIOD and current is not None:
             current = (current * (ADX_PERIOD - 1) + value) / ADX_PERIOD
     return current
@@ -749,9 +754,7 @@ class TaiSignalProvider:
                 self._latest_atr = Decimal(str(seed))
             return
         current = float(self._latest_atr)
-        self._latest_atr = Decimal(
-            str((current * (ADX_PERIOD - 1) + value) / ADX_PERIOD)
-        )
+        self._latest_atr = Decimal(str((current * (ADX_PERIOD - 1) + value) / ADX_PERIOD))
 
     def __call__(self, bar: ClosedBar) -> TaiSignal | None:
         self._last_failure_gate = None
