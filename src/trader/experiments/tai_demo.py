@@ -687,11 +687,7 @@ class TaiDemoRunner:
                 for state in self._managed.values()
             )
         current = positions if positions is not None else self._positions.get_positions()
-        return any(
-            position.epic == epic
-            and position.direction is direction
-            for position in current
-        )
+        return any(position.epic == epic and position.direction is direction for position in current)  # noqa: E501
 
     def _close_for_new_signal(
         self,
