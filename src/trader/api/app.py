@@ -498,19 +498,35 @@ def _build_tai_demo_runtime(
     from trader.runtime.market_watch import DiskWatcher, MarketWatcher
 
     app.state.market_watcher = MarketWatcher(capital_client, epics, alert)
-    app.state.closed_trade_sync = _closed_trade_sync(app, capital_client, alert)
+    app.state.closed_trade_sync = _closed_trade_sync(
+        app,
+        capital_client,
+        alert,
+        account_label=(os.getenv("ACCOUNT_LABEL", "01 Main Account").strip() or "01 Main Account"),
+    )
     app.state.disk_watcher = DiskWatcher(alert)
     return runtime_adapter
 
 
-def _closed_trade_sync(app: FastAPI, capital_client: Any, alert: Any) -> Any:
+def _closed_trade_sync(
+    app: FastAPI,
+    capital_client: Any,
+    alert: Any,
+    *,
+    account_label: str = "01 Main Account",
+) -> Any:
     """Poller that stores Capital.com's closed-trade results and sends RESULT messages."""
     services = getattr(app.state, "runtime_services", None) or {}
     writer = services.get("audit_writer") if hasattr(services, "get") else None
     engine = getattr(writer, "engine", None)
     if engine is None or not callable(getattr(capital_client, "_request_trading", None)):
         return None
-    return ClosedTradeSync(capital_client, TradeLedger(engine, writer), alert)
+    return ClosedTradeSync(
+        capital_client,
+        TradeLedger(engine, writer),
+        alert,
+        account_label=account_label,
+    )
 
 
 def _tai_market_open(capital_client: Any, epic: str) -> Callable[[datetime], bool]:

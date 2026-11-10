@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -191,16 +191,43 @@ class TradeLedger:
         return sum((item["pnl_dec"] for item in self.results_since(start)), Decimal(0))
 
 
-def result_text(leg: ClosedLeg, reason: str, day_total: Decimal) -> str:
+def result_text(
+    leg: ClosedLeg,
+    reason: str,
+    day_total: Decimal,
+    *,
+    account_label: str | None = None,
+) -> str:
     when = leg.closed_at.astimezone(RIYADH).strftime("%d %b %H:%M") + " (Riyadh)"
     verdict = "WIN" if leg.pnl > 0 else "LOSS" if leg.pnl < 0 else "FLAT"
-    lines = [
+    lines = ([f"Account: {account_label}"] if account_label else []) + [
         f"RESULT {leg.epic}: {verdict} {money(leg.pnl, leg.currency)}",
         f"Time: {when}",
     ]
     if reason:
         lines.append(f"Closed by: {reason}")
     lines += ["", f"Today so far: {money(day_total, leg.currency)}"]
+    return "\n".join(lines)
+
+
+def result_summary_text(
+    legs: Sequence[ClosedLeg],
+    reason: str,
+    day_total: Decimal,
+    *,
+    account_label: str | None = None,
+) -> str:
+    """Render one result for all broker legs belonging to one logical trade."""
+    if not legs:
+        raise ValueError("result summary requires at least one leg")
+    first = legs[0]
+    total = sum((leg.pnl for leg in legs), Decimal("0"))
+    summary = replace(first, pnl=total)
+    text = result_text(summary, reason, day_total, account_label=account_label)
+    if len(legs) == 1:
+        return text
+    lines = text.splitlines()
+    lines.insert(2, f"Closed legs: {len(legs)}")
     return "\n".join(lines)
 
 
@@ -214,11 +241,13 @@ class ClosedTradeSync:
         alert: Callable[[str], None],
         *,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
+        account_label: str = "01 Main Account",
     ) -> None:
         self._client = client
         self._ledger = ledger
         self._alert = alert
         self._now = now
+        self._account_label = account_label.strip() or "01 Main Account"
 
     def poll(self) -> int:
         end = self._now() - timedelta(seconds=END_MARGIN_SECONDS)
@@ -246,9 +275,39 @@ class ClosedTradeSync:
         day_start = (
             end.astimezone(RIYADH).replace(hour=0, minute=0, second=0, microsecond=0)
         ).astimezone(UTC)
+        enriched: list[tuple[ClosedLeg, str]] = []
         for leg in new:
             reason = closing_reason(leg, activities)
+            enriched.append((leg, reason))
             self._ledger.record(leg, reason)
-            if (end - leg.closed_at).total_seconds() <= FRESH_ALERT_SECONDS:
-                self._alert(result_text(leg, reason, self._ledger.day_total(day_start)))
+        # Capital.com returns each three-leg close as a separate transaction.  Keep
+        # those rows in the ledger, but send one owner-facing result per logical
+        # close rather than three duplicate alerts.
+        batches: list[list[tuple[ClosedLeg, str]]] = []
+        for leg, reason in enriched:
+            if (
+                batches
+                and batches[-1][0][0].epic == leg.epic
+                and batches[-1][0][0].currency == leg.currency
+                and batches[-1][0][1] == reason
+                and (leg.closed_at - batches[-1][-1][0].closed_at).total_seconds() <= 2
+            ):
+                batches[-1].append((leg, reason))
+            else:
+                batches.append([(leg, reason)])
+        day_total = self._ledger.day_total(day_start)
+        for batch in batches:
+            batch_legs = [leg for leg, _reason in batch]
+            batch_reason = batch[0][1]
+            if all(
+                (end - leg.closed_at).total_seconds() <= FRESH_ALERT_SECONDS for leg in batch_legs
+            ):
+                self._alert(
+                    result_summary_text(
+                        batch_legs,
+                        batch_reason,
+                        day_total,
+                        account_label=self._account_label,
+                    )
+                )
         return len(new)

@@ -6,11 +6,13 @@ from sqlalchemy import create_engine
 from trader.core.audit import AuditEvent, SqlAuditWriter
 from trader.core.db import metadata
 from trader.reports.trade_ledger import (
+    ClosedLeg,
     ClosedTradeSync,
     TradeLedger,
     closing_reason,
     money,
     parse_transactions,
+    result_summary_text,
     result_text,
 )
 
@@ -98,6 +100,23 @@ def test_money_and_result_text_layout() -> None:
     assert "Today so far: -$14.20" in lines
 
 
+def test_result_summary_aggregates_legs_and_labels_account() -> None:
+    legs = [
+        ClosedLeg("r1", "d1", NOW - timedelta(seconds=30), "US100", Decimal("-0.71"), "USD"),
+        ClosedLeg("r2", "d2", NOW - timedelta(seconds=29), "US100", Decimal("-0.52"), "USD"),
+        ClosedLeg("r3", "d3", NOW - timedelta(seconds=28), "US100", Decimal("-0.52"), "USD"),
+    ]
+    text = result_summary_text(
+        legs,
+        "stop loss",
+        Decimal("-1.75"),
+        account_label="02 Abody's Account",
+    )
+    assert text.splitlines()[0] == "Account: 02 Abody's Account"
+    assert "RESULT US100: LOSS -$1.75" in text
+    assert "Closed legs: 3" in text
+
+
 def test_sync_stores_once_alerts_only_fresh_trades_and_survives_restarts() -> None:
     ledger, _writer = _ledger()
     alerts: list[str] = []
@@ -111,6 +130,62 @@ def test_sync_stores_once_alerts_only_fresh_trades_and_survives_restarts() -> No
     assert sync.poll() == 0
     again = ClosedTradeSync(client, ledger, alerts.append, now=lambda: NOW)
     assert again.poll() == 0 and len(alerts) == 1
+
+
+def test_sync_aggregates_three_leg_close_into_one_account_labeled_alert() -> None:
+    rows = [
+        {
+            "dateUtc": "2026-10-29T15:39:30.000",
+            "instrumentName": "US100",
+            "transactionType": "TRADE",
+            "note": "Trade closed",
+            "reference": "leg-1",
+            "size": "-0.71",
+            "currency": "USD",
+            "dealId": "deal-1",
+        },
+        {
+            "dateUtc": "2026-10-29T15:39:31.000",
+            "instrumentName": "US100",
+            "transactionType": "TRADE",
+            "note": "Trade closed",
+            "reference": "leg-2",
+            "size": "-0.52",
+            "currency": "USD",
+            "dealId": "deal-2",
+        },
+        {
+            "dateUtc": "2026-10-29T15:39:32.000",
+            "instrumentName": "US100",
+            "transactionType": "TRADE",
+            "note": "Trade closed",
+            "reference": "leg-3",
+            "size": "-0.52",
+            "currency": "USD",
+            "dealId": "deal-3",
+        },
+    ]
+    ledger, _writer = _ledger()
+    alerts: list[str] = []
+    client = FakeClient(
+        rows,
+        [
+            {"dealId": deal, "dateUTC": "2026-10-29T15:39:32.000", "source": "SL"}
+            for deal in ("deal-1", "deal-2", "deal-3")
+        ],
+    )
+    sync = ClosedTradeSync(
+        client,
+        ledger,
+        alerts.append,
+        now=lambda: NOW,
+        account_label="02 Abody's Account",
+    )
+    assert sync.poll() == 3
+    assert len(alerts) == 1
+    assert "Account: 02 Abody's Account" in alerts[0]
+    assert "RESULT US100: LOSS -$1.75" in alerts[0]
+    assert "Closed legs: 3" in alerts[0]
 
 
 def test_r_multiples_sum_partials_per_deal_and_use_the_entry_risk() -> None:
