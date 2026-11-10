@@ -218,6 +218,33 @@ def _ema(values: Sequence[float], period: int) -> tuple[float | None, ...]:
     return tuple(result)
 
 
+def _true_range(bar: ClosedBar, previous_close: float | None) -> float:
+    """Return one Wilder true-range value without rebuilding the full feature set."""
+    high, low, close = float(bar.high), float(bar.low), float(bar.close)
+    if previous_close is None:
+        return high - low
+    return max(high - low, abs(high - previous_close), abs(low - previous_close))
+
+
+def _seed_atr(bars: Sequence[ClosedBar]) -> float | None:
+    """Seed the ATR used by TradingView alerts with one linear pass over the lake."""
+    if len(bars) < ADX_PERIOD:
+        return None
+    previous: float | None = None
+    current: float | None = None
+    for index, bar in enumerate(bars):
+        value = _true_range(bar, previous)
+        previous = float(bar.close)
+        if index == ADX_PERIOD - 1:
+            current = sum(
+                _true_range(item, float(bars[item_index - 1].close) if item_index else None)
+                for item_index, item in enumerate(bars[:ADX_PERIOD])
+            ) / ADX_PERIOD
+        elif index >= ADX_PERIOD and current is not None:
+            current = (current * (ADX_PERIOD - 1) + value) / ADX_PERIOD
+    return current
+
+
 def _features(bars: Sequence[ClosedBar], *, ha_mode: str = "closed") -> dict[str, tuple[Any, ...]]:
     if ha_mode not in HA_MODES:
         raise ValueError(f"ha_mode must be one of {sorted(HA_MODES)}")
@@ -459,6 +486,11 @@ class TaiSignalProvider:
         # indicators) whenever a long-running session crossed the cutoff, which
         # made the runtime disagree with the port at otherwise identical bars.
         self._bars: deque[ClosedBar] = deque(history)
+        # TradingView mode does not need the full local signal feature set on every
+        # bar, but external alerts still need a current ATR and recent structure bars.
+        # Seed ATR once from the lake, then update it in O(1) as new bars arrive.
+        seed = _seed_atr(tuple(self._bars))
+        self._latest_atr: Decimal | None = Decimal(str(seed)) if seed is not None else None
         self._last_exit_at: datetime | None = None
         self._last_failure_gate: str | None = None
         # T-223: virtual trade chain.  Rebuilt deterministically from the bars (no
@@ -699,6 +731,27 @@ class TaiSignalProvider:
     def latest_atr(self) -> Decimal | None:
         """ATR of the last evaluated bar, used as the Guardian's volatility input."""
         return getattr(self, "_latest_atr", None)
+
+    def update_only(self, bar: ClosedBar) -> None:
+        """Append a bar without running the local signal/HA feature pipeline.
+
+        When ``TAI_SIGNAL_SOURCE=tradingview`` the local signal is deliberately ignored,
+        so rebuilding EMA/ADX/VWAP/Heikin-Ashi over the entire lake is wasted work.  Keep
+        only the state external alerts need: recent bars for the structure stop and the
+        rolling ATR used for targets.
+        """
+        previous_close = float(self._bars[-1].close) if self._bars else None
+        value = _true_range(bar, previous_close)
+        self._bars.append(bar)
+        if self._latest_atr is None:
+            seed = _seed_atr(tuple(self._bars))
+            if seed is not None:
+                self._latest_atr = Decimal(str(seed))
+            return
+        current = float(self._latest_atr)
+        self._latest_atr = Decimal(
+            str((current * (ADX_PERIOD - 1) + value) / ADX_PERIOD)
+        )
 
     def __call__(self, bar: ClosedBar) -> TaiSignal | None:
         self._last_failure_gate = None
