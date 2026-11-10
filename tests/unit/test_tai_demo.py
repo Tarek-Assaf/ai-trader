@@ -29,11 +29,13 @@ class Control:
 class Gateway:
     def __init__(self):
         self.positions = []
+        self.get_positions_calls = 0
         self.partial = []
         self.modified = []
         self.closed = []
 
     def get_positions(self):
+        self.get_positions_calls += 1
         return tuple(self.positions)
 
     def modify_position(self, deal_id, *, stop_level, profit_level=None):
@@ -858,6 +860,10 @@ def test_external_signal_replaces_the_open_trade_and_respects_kill_and_pause() -
     again = tai.on_external_signal(Direction.SELL)
     assert (again.action, again.reason) == ("SUBMITTED", "entry_submitted")
     assert gateway.closed == ["deal-1"] and len(manager.submits) == 2
+    # Startup reconciliation reads positions once; each external signal then
+    # reuses its single snapshot instead of issuing duplicate reads within the
+    # signal path.
+    assert gateway.get_positions_calls == 3
     assert manager.submits[1][1].direction is Direction.SELL
 
 

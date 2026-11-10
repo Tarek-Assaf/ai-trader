@@ -34,6 +34,25 @@ if [ -f "$POSTMASTER_PID_FILE" ]; then
         rm -f "$POSTMASTER_PID_FILE"
     fi
 fi
+# A hard guest reset can also leave PostgreSQL's Unix-socket lock behind.  The
+# data-dir PID check above does not cover this file because it lives in the
+# socket directory.  Remove it only when its recorded PID is not a live
+# postmaster for this data directory; never disturb a running database.
+SOCKET_DIR=/var/run/postgresql
+SOCKET_LOCK_FILE="$SOCKET_DIR/.s.PGSQL.5432.lock"
+if [ -f "$SOCKET_LOCK_FILE" ]; then
+    SOCKET_PID=$(sed -n '1p' "$SOCKET_LOCK_FILE" 2>/dev/null || true)
+    STALE_SOCKET_LOCK=true
+    if [ -n "$SOCKET_PID" ] && kill -0 "$SOCKET_PID" 2>/dev/null; then
+        if [ -r "/proc/$SOCKET_PID/cmdline" ] && tr '\000' ' ' < "/proc/$SOCKET_PID/cmdline" | grep -Fq "$DATA_DIR"; then
+            STALE_SOCKET_LOCK=false
+        fi
+    fi
+    if [ "$STALE_SOCKET_LOCK" = true ]; then
+        echo "Removing stale PostgreSQL socket lock after an unclean shutdown"
+        rm -f "$SOCKET_LOCK_FILE" "$SOCKET_DIR/.s.PGSQL.5432"
+    fi
+fi
 NEW_CLUSTER=false
 if [ ! -s "$DATA_DIR/PG_VERSION" ]; then
     # Trust is safe because PostgreSQL listens on loopback only and port 5432 is never published.

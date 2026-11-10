@@ -187,6 +187,25 @@ def test_context_provider_overlaps_marked_account_and_position_reads() -> None:
     assert provider("cycle-parallel", _intent()) is not None
 
 
+def test_context_provider_copies_request_context_into_market_worker() -> None:
+    from contextvars import ContextVar
+
+    snapshot = ContextVar("snapshot", default="missing")
+    token = snapshot.set("shared-rules")
+    try:
+        provider = RuntimeContextProvider(
+            lambda: "account",
+            lambda _instrument: snapshot.get(),
+            lambda *_args: None,
+            lambda: (),
+            clock=lambda: NOW,
+        )
+        context = provider("cycle-context", _intent())
+    finally:
+        snapshot.reset(token)
+    assert context is not None and context.market == "shared-rules"
+
+
 def test_account_baseline_seeds_reloads_and_rolls_the_utc_day() -> None:
     broker, journal = Broker(), Journal()
     current = [NOW]

@@ -611,7 +611,8 @@ class TaiDemoRunner:
                 return self._outcome(cycle_id, "NO_TRADE", "execution_paused")
             # No market-hours gate here: the broker refuses an order in a real closure and
             # that refusal is alerted; a wrong local flag must never block the owner's signal.
-            if self._has_open_position(epic, direction):
+            positions = None if self._dry_run else tuple(self._positions.get_positions())
+            if self._has_open_position(epic, direction, positions):
                 self._journal_event(
                     cycle_id,
                     "duplicate_external_signal",
@@ -620,7 +621,7 @@ class TaiDemoRunner:
                     direction=direction.value,
                 )
                 return self._outcome(cycle_id, "NO_TRADE", "duplicate_open_signal")
-            if not self._close_for_new_signal(epic, cycle_id, source):
+            if not self._close_for_new_signal(epic, cycle_id, source, positions):
                 return self._outcome(cycle_id, "REJECTED", "close_before_entry_failed")
             if self._startup_blocked:
                 return self._outcome(cycle_id, "REJECTED", "startup_reconciliation_failed")
@@ -673,19 +674,30 @@ class TaiDemoRunner:
         # Capital.com GETs to every TradingView entry.
         return self._attempt_entry(signal, epic, cycle_id, external=True, rules=rules)
 
-    def _has_open_position(self, epic: str, direction: Direction) -> bool:
+    def _has_open_position(
+        self,
+        epic: str,
+        direction: Direction,
+        positions: Sequence[Position] | None = None,
+    ) -> bool:
         """Return whether this instrument already has exposure in this direction."""
         if self._dry_run:
             return any(
                 state.shadow and state.epic == epic and state.direction is direction
                 for state in self._managed.values()
             )
+        current = positions if positions is not None else self._positions.get_positions()
         return any(
-            position.epic == epic and position.direction is direction
-            for position in self._positions.get_positions()
-        )
+            position.epic == epic and position.direction is direction for position in current
+        )  # noqa: E501
 
-    def _close_for_new_signal(self, epic: str, cycle_id: str, source: str) -> bool:
+    def _close_for_new_signal(
+        self,
+        epic: str,
+        cycle_id: str,
+        source: str,
+        positions: Sequence[Position] | None = None,
+    ) -> bool:
         """A new owner signal replaces the open trade on that instrument."""
         if self._dry_run:
             for deal_id, state in tuple(self._managed.items()):
@@ -693,7 +705,8 @@ class TaiDemoRunner:
                     self._managed.pop(deal_id, None)
             self._persist_state()
             return True
-        for position in tuple(p for p in self._positions.get_positions() if p.epic == epic):
+        current = positions if positions is not None else self._positions.get_positions()
+        for position in tuple(p for p in current if p.epic == epic):
             try:
                 self._positions.close_position(position.deal_id)
             except Exception as exc:  # noqa: BLE001 - never open a second trade on top of it

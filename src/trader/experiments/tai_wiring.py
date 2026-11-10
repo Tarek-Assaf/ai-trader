@@ -10,16 +10,16 @@ from __future__ import annotations
 
 import logging
 import math
-import threading
 import time
 from collections import defaultdict, deque
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from decimal import ROUND_CEILING, ROUND_FLOOR, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 from zoneinfo import ZoneInfo
 
 from trader.data.instruments import InstrumentDataError
@@ -987,31 +987,29 @@ class CapitalInstrumentRulesProvider:
         self._client = client
         self.epic = epic.strip()
 
-        self._snapshot = threading.local()
+        # ContextVar values are copied into the bounded Guardian worker threads by
+        # RuntimeContextProvider.  A thread-local cache stopped at the pool
+        # boundary, so the market-context read fetched /markets/{epic} again.
+        self._snapshot: ContextVar[tuple[str, TaiInstrumentRules] | None] = ContextVar(
+            "tai_instrument_rules_snapshot", default=None
+        )
 
     @contextmanager
     def snapshot(self, epic: str | None = None) -> Iterator[TaiInstrumentRules]:
         """Fetch rules once and reuse them for one synchronous entry operation."""
         target = (epic or self.epic).strip()
         rules = self._fetch(target)
-        previous = getattr(self._snapshot, "value", None)
-        self._snapshot.value = (target, rules)
+        token = self._snapshot.set((target, rules))
         try:
             yield rules
         finally:
-            if previous is None:
-                try:
-                    del self._snapshot.value
-                except AttributeError:
-                    pass
-            else:
-                self._snapshot.value = previous
+            self._snapshot.reset(token)
 
     def __call__(self, epic: str | None = None) -> TaiInstrumentRules:
         target = (epic or self.epic).strip()
-        cached = getattr(self._snapshot, "value", None)
+        cached = self._snapshot.get()
         if isinstance(cached, tuple) and len(cached) == 2 and cached[0] == target:
-            return cast(TaiInstrumentRules, cached[1])
+            return cached[1]
         return self._fetch(target)
 
     def _fetch(self, target: str) -> TaiInstrumentRules:
