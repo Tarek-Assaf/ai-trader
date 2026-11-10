@@ -131,6 +131,8 @@ class CapitalComStreamClient:
         self._last_frame_at: datetime | None = None
         self._last_boundary_minute: datetime | None = None
         self._next_lag_sample: float | None = None
+        self._last_lag_log_at: float | None = None
+        self._max_unreported_lag = 0.0
 
     @property
     def reconnect_count(self) -> int:
@@ -354,11 +356,15 @@ class CapitalComStreamClient:
         while self._next_lag_sample <= now:
             self._next_lag_sample += 1.0
         if lag > 0.250:
-            _LOG.warning(
-                "Capital.com stream event-loop lag: lag_seconds=%.3f thread=%s",
-                lag,
-                threading.current_thread().name,
-            )
+            self._max_unreported_lag = max(self._max_unreported_lag, lag)
+            if self._last_lag_log_at is None or now - self._last_lag_log_at >= 10.0:
+                _LOG.warning(
+                    "Capital.com stream event-loop lag: lag_seconds=%.3f thread=%s",
+                    self._max_unreported_lag,
+                    threading.current_thread().name,
+                )
+                self._last_lag_log_at = now
+                self._max_unreported_lag = 0.0
 
     @staticmethod
     def _number(value: object) -> float:
