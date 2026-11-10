@@ -112,6 +112,10 @@ class OrderManager:
         self._shutdown_event = threading.Event()
         self._last_pause_alert: str | None = None
         self._unreachable_retry_at: datetime | None = None
+        # Three-leg submissions share one broker preflight and one final
+        # reconciliation.  The flag is only held while submit_batch() owns the
+        # manager mutex, so ordinary single-order safety checks are unchanged.
+        self._batch_submission = False
 
     @property
     def paused(self) -> bool:
@@ -566,7 +570,7 @@ class OrderManager:
                 raise ExecutionPaused("entries are paused")
             try:
                 self._execution_lease.check()
-                if not self.reconcile():
+                if not self._batch_submission and not self.reconcile():
                     if self._unreachable_retry_at is not None:
                         raise BrokerUnreachable("broker unreachable; entry skipped")
                     raise ExecutionPaused("broker state mismatch")
@@ -602,7 +606,13 @@ class OrderManager:
                     self._pause("control_blocked_order_persistence_failed")
                 raise ExecutionPaused("control activated before broker submission")
             try:
-                receipt = self._broker.place_order(order)
+                if self._batch_submission:
+                    place_order = getattr(
+                        self._broker, "place_order_batch", self._broker.place_order
+                    )
+                    receipt = place_order(order)
+                else:
+                    receipt = self._broker.place_order(order)
                 broker_done = time.perf_counter()
                 if (
                     receipt.client_order_id != order.client_order_id
@@ -614,7 +624,8 @@ class OrderManager:
                 ):
                     raise ValueError("broker receipt mismatch")
                 self._journal.mark(cycle_id, "submitted", deal_id=receipt.deal_id)
-                self.reconcile()
+                if not self._batch_submission:
+                    self.reconcile()
                 reconcile_done = time.perf_counter()
                 LOGGER.info(
                     "order submit timing cycle_id=%s preflight_ms=%.1f guardian_ms=%.1f "
@@ -649,10 +660,11 @@ class OrderManager:
                     self._journal.mark(cycle_id, "ambiguous")
                 except Exception:
                     pass
-                try:
-                    self.reconcile()
-                except Exception:
-                    pass
+                if not self._batch_submission:
+                    try:
+                        self.reconcile()
+                    except Exception:
+                        pass
                 raise ExecutionPaused(
                     "order outcome requires reconciliation; do not retry"
                 ) from None
@@ -660,6 +672,134 @@ class OrderManager:
             if mode is ControlMode.KILL:
                 raise ExecutionPaused("kill activated during order submission")
             return receipt
+
+    def submit_batch(
+        self, cycle_id: str, orders: Sequence[OrderRequest]
+    ) -> Sequence[OrderReceipt | None]:
+        """Submit a pre-approved three-leg group with shared broker checks.
+
+        The caller has already evaluated Guardian once and bound each leg to
+        ``<cycle_id>-tpN``.  Run one reconciliation before the group and one
+        after it; individual ``submit`` calls keep their lease, control,
+        journal, receipt and stop validation while avoiding nine repeated
+        position/activity reads for a three-leg entry.
+        """
+        if len(orders) != 3:
+            raise ExecutionPaused("batch submission requires exactly three orders")
+        with self._mutex:
+            if self._batch_submission:
+                raise ExecutionPaused("nested batch submission")
+            if not self._started:
+                raise ExecutionPaused("execution has not started")
+            mode = self._apply_controls()
+            if mode is not ControlMode.RUN or self._paused:
+                raise ExecutionPaused("entries are paused")
+            if not self.reconcile():
+                if self._unreachable_retry_at is not None:
+                    raise BrokerUnreachable("broker unreachable; entry skipped")
+                raise ExecutionPaused("broker state mismatch")
+            self._batch_submission = True
+            started = time.perf_counter()
+            receipts: list[OrderReceipt | None] = []
+            prepared: list[tuple[str, OrderRequest]] = []
+            batch_place: Callable[..., Sequence[OrderReceipt]] | None = None
+            broker_started = False
+            try:
+                candidate_batch_place = getattr(self._broker, "place_orders_batch", None)
+                if callable(candidate_batch_place):
+                    batch_place = candidate_batch_place
+                if callable(batch_place):
+                    for index, order in enumerate(orders, start=1):
+                        leg_cycle = f"{cycle_id}-tp{index}"
+                        self._order_without_server_side_stop = order.stop_level is None
+                        try:
+                            self._execution_lease.check()
+                            self._guardian_lease.check()
+                            approval = self._approve(order, leg_cycle)
+                            decision = approval.decision
+                            if (
+                                approval.order != order
+                                or approval.cycle_id != leg_cycle
+                                or not decision.approved
+                                or not decision.audit_written
+                                or decision.halt_system
+                                or decision.approved_size != order.size
+                            ):
+                                raise ExecutionPaused("exact-order Guardian approval is required")
+                            if self._journal.reserve(leg_cycle, order):
+                                prepared.append((leg_cycle, order))
+                            self._execution_lease.check()
+                            self._guardian_lease.check()
+                        except BrokerUnreachable:
+                            raise
+                        except Exception:
+                            self._pause("entry_preflight_failed")
+                            raise ExecutionPaused("entry preflight failed") from None
+                    if len(prepared) == 0:
+                        return (None, None, None)
+                    mode = self._apply_controls()
+                    if mode is not ControlMode.RUN:
+                        raise ExecutionPaused("control activated before broker submission")
+                    broker_started = True
+                    batch_receipts = tuple(batch_place(tuple(order for _, order in prepared)))
+                    if len(batch_receipts) != len(prepared):
+                        raise ValueError("broker batch receipt count mismatch")
+                    receipt_by_id = {receipt.client_order_id: receipt for receipt in batch_receipts}
+                    for leg_cycle, order in prepared:
+                        receipt = receipt_by_id.get(order.client_order_id)
+                        if (
+                            receipt is None
+                            or receipt.client_order_id != order.client_order_id
+                            or receipt.deal_id != receipt.position.deal_id
+                            or receipt.position.epic != order.epic
+                            or receipt.position.direction != order.direction
+                            or receipt.position.size != order.size
+                            or receipt.position.stop_level != order.stop_level
+                        ):
+                            raise ValueError("broker receipt mismatch")
+                        self._journal.mark(leg_cycle, "submitted", deal_id=receipt.deal_id)
+                    receipts.extend(receipt_by_id.get(order.client_order_id) for order in orders)
+                else:
+                    for index, order in enumerate(orders, start=1):
+                        receipts.append(self.submit(f"{cycle_id}-tp{index}", order))
+                mode = self._apply_controls()
+                if mode is ControlMode.KILL:
+                    raise ExecutionPaused("kill activated during batch submission")
+                self.reconcile()
+                LOGGER.info(
+                    "batch order submit timing cycle_id=%s legs=%s total_ms=%.1f",
+                    cycle_id,
+                    len(receipts),
+                    (time.perf_counter() - started) * 1000,
+                )
+                return tuple(receipts)
+            except Exception:
+                if broker_started and callable(batch_place):
+                    self._pause("order_outcome_ambiguous")
+                    for leg_cycle, _order in prepared:
+                        try:
+                            self._journal.mark(leg_cycle, "ambiguous")
+                        except Exception:
+                            pass
+                    try:
+                        self.reconcile()
+                    except Exception:
+                        pass
+                    raise ExecutionPaused(
+                        "order outcome requires reconciliation; do not retry"
+                    ) from None
+                for receipt in receipts:
+                    position = getattr(receipt, "position", None)
+                    deal_id = getattr(position, "deal_id", None)
+                    if not deal_id:
+                        continue
+                    try:
+                        self._broker.close_position(deal_id)
+                    except Exception:
+                        LOGGER.exception("batch rollback close failed")
+                raise
+            finally:
+                self._batch_submission = False
 
     def soak_observation(self) -> Mapping[str, object]:
         """Expose the last order stop invariant check without secrets."""

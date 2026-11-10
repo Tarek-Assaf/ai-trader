@@ -40,6 +40,19 @@ def test_event_loop_lag_sampler_logs_material_delay(caplog) -> None:
     assert any("lag_seconds=1.400" in record.getMessage() for record in caplog.records)
 
 
+def test_event_loop_lag_sampler_rate_limits_repeated_warnings(caplog) -> None:
+    client = CapitalComStreamClient(RestStub(), ["US100"], lambda _update: None)
+    client._next_lag_sample = 0.0
+
+    with caplog.at_level(logging.WARNING, logger="trader.integrations.capital_com.stream"):
+        client._sample_loop_lag(1.4)
+        client._sample_loop_lag(2.4)
+        client._sample_loop_lag(11.4)
+
+    warnings = [record for record in caplog.records if "event-loop lag" in record.getMessage()]
+    assert len(warnings) == 2
+
+
 def test_drop_record_contains_exception_chain_and_errno(caplog) -> None:
     client = CapitalComStreamClient(
         RestStub(),

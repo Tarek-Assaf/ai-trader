@@ -355,7 +355,12 @@ class GuardedEntrySubmitter:
                     leg_cycle,
                     replace(bound.decision, approved_size=order.size),
                 )
-                receipts.append(self._manager.submit(leg_cycle, order))
+            batch_submit = getattr(self._manager, "submit_batch", None)
+            if callable(batch_submit):
+                receipts.extend(batch_submit(cycle_id, submission_orders))
+            else:
+                for index, order in enumerate(submission_orders, start=1):
+                    receipts.append(self._manager.submit(f"{cycle_id}-tp{index}", order))
             return tuple(receipts)
         except Exception:
             # If a later leg fails, close already confirmed legs immediately;

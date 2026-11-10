@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -132,6 +133,31 @@ def test_order_attaches_stop_and_confirms_open_position() -> None:
     assert sent["guaranteedStop"] is False
     assert sent["stopLevel"] == 99.0
     assert ("confirm_deal", "open-ref") in client.calls
+
+
+def test_batch_order_uses_open_confirmation_without_per_leg_position_read() -> None:
+    client = FakeCapitalClient()
+    broker = CapitalComBroker(client, enable_demo_orders=True)
+
+    receipt = broker.place_order_batch(order())
+
+    assert receipt.deal_id == "deal-1"
+    assert receipt.position.deal_id == "deal-1"
+    assert receipt.position.stop_level == Decimal("99.0")
+    assert not any(name == "get_positions" for name, _ in client.calls)
+
+
+def test_batch_orders_use_one_open_confirmation_per_leg_without_position_reads() -> None:
+    client = FakeCapitalClient()
+    broker = CapitalComBroker(client, enable_demo_orders=True)
+    orders = tuple(replace(order(), client_order_id=f"local-00{index}") for index in range(1, 4))
+
+    receipts = broker.place_orders_batch(orders)
+
+    assert len(receipts) == 3
+    assert sum(name == "open_position" for name, _ in client.calls) == 3
+    assert sum(name == "confirm_deal" for name, _ in client.calls) == 3
+    assert not any(name == "get_positions" for name, _ in client.calls)
 
 
 def test_rejected_confirmation_never_claims_open_success() -> None:

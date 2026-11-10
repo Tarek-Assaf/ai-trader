@@ -15,6 +15,7 @@ from trader.experiments.tai_demo import (
     TaiDemoSettings,
     TaiInstrumentRules,
     TaiSignal,
+    _ManagedPosition,
 )
 
 
@@ -1010,6 +1011,44 @@ def test_check_broker_closed_notices_a_closed_trade_without_a_bar():
     assert any("CLOSED" in alert for alert in alerts)
     instance.check_broker_closed()  # nothing tracked any more: quiet
     assert sum(event["event"] == "reconcile_closed" for event in events) == 1
+
+
+def test_check_broker_closed_aggregates_three_legs_into_one_alert():
+    gateway = Gateway()
+    alerts: list[str] = []
+    legs = []
+    managed = {}
+    for index, size in enumerate((Decimal("1.2"), Decimal("0.9"), Decimal("0.9")), start=1):
+        deal_id = f"deal-{index}"
+        legs.append(
+            Position(
+                deal_id,
+                "NSXUSD",
+                Direction.BUY,
+                size,
+                Decimal("100"),
+                Decimal("99"),
+                Decimal("103"),
+            )
+        )
+        managed[deal_id] = _ManagedPosition(
+            epic="NSXUSD",
+            entry=Decimal("100"),
+            risk=Decimal("1"),
+            direction=Direction.BUY,
+            targets=(Decimal("101"), Decimal("102"), Decimal("103")),
+            original_size=size,
+            leg_target=index,
+        )
+    gateway.positions.extend(legs)
+    instance, _manager = runner(gateway, alerts=alerts, managed_state=managed)
+    gateway.positions.clear()
+    instance.check_broker_closed()
+    closed = [alert for alert in alerts if "CLOSED NSXUSD" in alert]
+    assert len(closed) == 1
+    assert "Account: 01 Main Account" in closed[0]
+    assert "Closed legs: 3" in closed[0]
+    assert "Closed size: 3" in closed[0]
 
 
 def test_external_signal_passes_the_tradingview_reference_to_the_builder() -> None:

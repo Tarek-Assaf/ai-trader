@@ -62,6 +62,9 @@ class TaiDemoSettings:
     # same-direction market legs (40/30/30) with TP1/TP2/TP3 respectively.
     # It remains disabled by default until the broker account mode is verified.
     three_legs: bool = False
+    # Human-facing label included on every Tai notification.  Keep this field
+    # last so existing positional construction in callers/tests remains stable.
+    account_label: str = "01 Main Account"
 
     @property
     def enabled(self) -> bool:
@@ -102,6 +105,14 @@ class TaiDemoSettings:
             start_balance=start if start > 0 else Decimal("0"),
             dry_run=bool(getattr(settings, "tai_demo_dry_run", True)),
             three_legs=bool(getattr(settings, "tai_demo_three_legs", False)),
+            account_label=(
+                str(
+                    getattr(settings, "account_label", "")
+                    or os.getenv("ACCOUNT_LABEL", "")
+                    or "01 Main Account"
+                ).strip()
+                or "01 Main Account"
+            ),
         )
 
     def require_enabled(self) -> None:
@@ -1106,26 +1117,33 @@ class TaiDemoRunner:
         self, epic: str, positions: tuple[Position, ...], cycle_id: str, at: datetime
     ) -> None:
         present_ids = {position.deal_id for position in positions}
+        closed: list[_ManagedPosition] = []
         for deal_id, tracked in tuple(self._managed.items()):
             if tracked.shadow or tracked.epic != epic or deal_id in present_ids:
                 continue
             self._managed.pop(deal_id, None)
-            self._last_exit_at = at
-            note_exit = getattr(self._signal, "note_exit", None)
-            if callable(note_exit):
-                note_exit(at)
+            closed.append(tracked)
             self._journal_event(
                 cycle_id, "reconcile_closed", deal_id=deal_id, reason="broker_closed"
             )
             self._record_exit(epic)
-            self._send_alert(
-                f"CLOSED {epic}\n"
-                f"Time: {self._riyadh_time()}\n"
-                "\n"
-                "The trade is no longer open on Capital.com (stop, target or manual).\n"
-                "Exact result: see Capital.com History."
-            )
-            self._persist_state()
+        if not closed:
+            return
+        self._last_exit_at = at
+        note_exit = getattr(self._signal, "note_exit", None)
+        if callable(note_exit):
+            note_exit(at)
+        total_size = sum((state.original_size for state in closed), Decimal("0"))
+        legs_text = f"Closed legs: {len(closed)}\nClosed size: {self._num(total_size)}\n"
+        self._send_alert(
+            f"CLOSED {epic}\n"
+            f"Time: {self._riyadh_time()}\n"
+            "\n"
+            f"{legs_text}"
+            "The trade is no longer open on Capital.com (stop, target or manual).\n"
+            "Exact result: see Capital.com History."
+        )
+        self._persist_state()
 
     def _manage_exits(self, bar: ClosedBar, cycle_id: str) -> None:
         if self._dry_run:
@@ -1647,7 +1665,7 @@ class TaiDemoRunner:
 
     def _send_alert(self, message: str) -> None:
         prefix = "DRY-RUN: " if self._dry_run else ""
-        self._alert(f"{prefix}Tai: {message}")
+        self._alert(f"{prefix}Account: {self.settings.account_label}\nTai: {message}")
 
     @staticmethod
     def _spread_refusal(
