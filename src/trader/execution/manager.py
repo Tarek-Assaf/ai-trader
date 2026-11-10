@@ -112,6 +112,10 @@ class OrderManager:
         self._shutdown_event = threading.Event()
         self._last_pause_alert: str | None = None
         self._unreachable_retry_at: datetime | None = None
+        # Three-leg submissions share one broker preflight and one final
+        # reconciliation.  The flag is only held while submit_batch() owns the
+        # manager mutex, so ordinary single-order safety checks are unchanged.
+        self._batch_submission = False
 
     @property
     def paused(self) -> bool:
@@ -566,7 +570,7 @@ class OrderManager:
                 raise ExecutionPaused("entries are paused")
             try:
                 self._execution_lease.check()
-                if not self.reconcile():
+                if not self._batch_submission and not self.reconcile():
                     if self._unreachable_retry_at is not None:
                         raise BrokerUnreachable("broker unreachable; entry skipped")
                     raise ExecutionPaused("broker state mismatch")
@@ -614,7 +618,8 @@ class OrderManager:
                 ):
                     raise ValueError("broker receipt mismatch")
                 self._journal.mark(cycle_id, "submitted", deal_id=receipt.deal_id)
-                self.reconcile()
+                if not self._batch_submission:
+                    self.reconcile()
                 reconcile_done = time.perf_counter()
                 LOGGER.info(
                     "order submit timing cycle_id=%s preflight_ms=%.1f guardian_ms=%.1f "
@@ -649,10 +654,11 @@ class OrderManager:
                     self._journal.mark(cycle_id, "ambiguous")
                 except Exception:
                     pass
-                try:
-                    self.reconcile()
-                except Exception:
-                    pass
+                if not self._batch_submission:
+                    try:
+                        self.reconcile()
+                    except Exception:
+                        pass
                 raise ExecutionPaused(
                     "order outcome requires reconciliation; do not retry"
                 ) from None
@@ -660,6 +666,62 @@ class OrderManager:
             if mode is ControlMode.KILL:
                 raise ExecutionPaused("kill activated during order submission")
             return receipt
+
+    def submit_batch(
+        self, cycle_id: str, orders: Sequence[OrderRequest]
+    ) -> Sequence[OrderReceipt | None]:
+        """Submit a pre-approved three-leg group with shared broker checks.
+
+        The caller has already evaluated Guardian once and bound each leg to
+        ``<cycle_id>-tpN``.  Run one reconciliation before the group and one
+        after it; individual ``submit`` calls keep their lease, control,
+        journal, receipt and stop validation while avoiding nine repeated
+        position/activity reads for a three-leg entry.
+        """
+        if len(orders) != 3:
+            raise ExecutionPaused("batch submission requires exactly three orders")
+        with self._mutex:
+            if self._batch_submission:
+                raise ExecutionPaused("nested batch submission")
+            if not self._started:
+                raise ExecutionPaused("execution has not started")
+            mode = self._apply_controls()
+            if mode is not ControlMode.RUN or self._paused:
+                raise ExecutionPaused("entries are paused")
+            if not self.reconcile():
+                if self._unreachable_retry_at is not None:
+                    raise BrokerUnreachable("broker unreachable; entry skipped")
+                raise ExecutionPaused("broker state mismatch")
+            self._batch_submission = True
+            started = time.perf_counter()
+            receipts: list[OrderReceipt | None] = []
+            try:
+                for index, order in enumerate(orders, start=1):
+                    receipts.append(self.submit(f"{cycle_id}-tp{index}", order))
+                mode = self._apply_controls()
+                if mode is ControlMode.KILL:
+                    raise ExecutionPaused("kill activated during batch submission")
+                self.reconcile()
+                LOGGER.info(
+                    "batch order submit timing cycle_id=%s legs=%s total_ms=%.1f",
+                    cycle_id,
+                    len(receipts),
+                    (time.perf_counter() - started) * 1000,
+                )
+                return tuple(receipts)
+            except Exception:
+                for receipt in receipts:
+                    position = getattr(receipt, "position", None)
+                    deal_id = getattr(position, "deal_id", None)
+                    if not deal_id:
+                        continue
+                    try:
+                        self._broker.close_position(deal_id)
+                    except Exception:
+                        LOGGER.exception("batch rollback close failed")
+                raise
+            finally:
+                self._batch_submission = False
 
     def soak_observation(self) -> Mapping[str, object]:
         """Expose the last order stop invariant check without secrets."""
