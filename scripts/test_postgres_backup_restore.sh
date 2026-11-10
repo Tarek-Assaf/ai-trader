@@ -27,6 +27,20 @@ start_container() {
 
 start_container
 docker exec ai-trader-backup test -s /var/lib/ai-trader/pgdata/PG_VERSION
+# A hard guest reset can leave the socket lock behind even when the data-dir
+# postmaster PID file is clean.  Verify the startup script removes only this
+# stale lock and brings the service back without losing the persistent volume.
+docker exec --user trader ai-trader-backup sh -c 'printf 999999 > /var/run/postgresql/.s.PGSQL.5432.lock'
+docker restart --time 120 ai-trader-backup >/dev/null
+for attempt in $(seq 1 60); do
+    if curl --fail --silent http://127.0.0.1:8001/health > /tmp/backup-health.json; then
+        if grep --quiet '"status":"healthy"' /tmp/backup-health.json; then
+            break
+        fi
+    fi
+    sleep 2
+done
+grep --quiet '"status":"healthy"' /tmp/backup-health.json
 docker exec --user trader ai-trader-backup psql -h 127.0.0.1 -U trader -d trader -v ON_ERROR_STOP=1 \
     -c "INSERT INTO audit_log (id,event_type,payload) VALUES ('11111111-1111-4111-8111-111111111111','restore_test',jsonb_build_object('marker','first')::text)"
 docker exec --user trader ai-trader-backup psql -h 127.0.0.1 -U trader -d trader -v ON_ERROR_STOP=1 \
