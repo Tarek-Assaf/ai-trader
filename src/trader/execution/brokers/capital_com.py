@@ -221,9 +221,7 @@ class CapitalComBroker:
             # broker's confirmed state differs, immediately request a close.
             try:
                 close = self._client.close_position(deal_id)
-                close_reference = _required_text(
-                    close.get("dealReference"), "close dealReference"
-                )
+                close_reference = _required_text(close.get("dealReference"), "close dealReference")
                 self._require_accepted(
                     self._client.confirm_deal(close_reference), "protective close"
                 )
