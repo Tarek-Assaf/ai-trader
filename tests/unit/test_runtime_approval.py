@@ -674,6 +674,29 @@ def test_strategy_entry_is_guardian_approved_capped_and_reaches_the_broker(tmp_p
     assert not manager.paused
 
 
+def test_three_leg_entry_resplits_when_guardian_caps_total_size(tmp_path) -> None:
+    submitter, manager, broker = _guarded_stack(tmp_path)
+    orders = (
+        _us100_order("1.2"),
+        _us100_order("0.9"),
+        _us100_order("0.9"),
+    )
+    orders = tuple(
+        replace(order, client_order_id=f"cycle-1-tp{index}")
+        for index, order in enumerate(orders, start=1)
+    )
+    receipts = submitter.submit_legs(
+        "cycle-1",
+        orders,
+        total_size=Decimal("3"),
+        target_levels=(Decimal("102"), Decimal("103"), Decimal("104")),
+        size_step=Decimal("0.001"),
+    )
+    assert len(receipts) == 3
+    assert broker.calls == 3
+    assert sum(position.size for position in broker._positions.values()) == Decimal("1")
+
+
 def test_guardian_refusal_is_a_veto_not_a_latched_pause(tmp_path) -> None:
     import pytest
 
