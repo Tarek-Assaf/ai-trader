@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 from collections.abc import Callable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -424,8 +425,16 @@ class RuntimeContextProvider:
                 else:
                     account = self.account()
                     positions = tuple(self.positions())
-                sizing_future = pool.submit(self.sizing, intent, account, positions)
-                market_future = pool.submit(self.market, intent.instrument)
+                # Preserve request-scoped read snapshots (for example the Tai
+                # instrument rules fetched before the Guardian call) across the
+                # pool boundary.  Without copying the context, the market task
+                # lost the snapshot and issued another Capital.com market GET.
+                sizing_context = copy_context()
+                market_context = copy_context()
+                sizing_future = pool.submit(
+                    sizing_context.run, self.sizing, intent, account, positions
+                )
+                market_future = pool.submit(market_context.run, self.market, intent.instrument)
                 sizing = sizing_future.result()
                 market = market_future.result()
             return GuardianInputs(
