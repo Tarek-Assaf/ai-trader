@@ -14,7 +14,7 @@ import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import ROUND_DOWN, Decimal
 from typing import Any
 
 from trader.agents.graph import (
@@ -291,6 +291,7 @@ class GuardedEntrySubmitter:
         *,
         total_size: Decimal,
         target_levels: tuple[Decimal, Decimal, Decimal],
+        size_step: Decimal | None = None,
         relaxed: bool = False,
     ) -> Sequence[Any] | None:
         """Submit three legs after one aggregate Guardian decision.
@@ -324,11 +325,30 @@ class GuardedEntrySubmitter:
         if not decision.approved or decision.approved_size is None or bound is None:
             reasons = ",".join(decision.reasons) or "no_reason"
             raise ExecutionPaused(f"guardian rejected: {reasons}")
-        if decision.approved_size != total_size:
-            raise ExecutionPaused("guardian rejected: approved three-leg size changed")
+        approved_total = min(total_size, decision.approved_size)
+        submission_orders = tuple(orders)
+        if approved_total != total_size:
+            step = size_step or Decimal("0.001")
+            if step <= 0:
+                raise ExecutionPaused("guardian rejected: invalid three-leg size step")
+            first_size = (approved_total * orders[0].size / total_size / step).to_integral_value(
+                rounding=ROUND_DOWN
+            ) * step
+            second_size = (approved_total * orders[1].size / total_size / step).to_integral_value(
+                rounding=ROUND_DOWN
+            ) * step
+            last_size = approved_total - first_size - second_size
+            sizes = (first_size, second_size, last_size)
+            if any(
+                size <= 0 or (size / step) != (size / step).to_integral_value() for size in sizes
+            ):
+                raise ExecutionPaused("guardian rejected: approved three-leg size cannot be split")
+            submission_orders = tuple(
+                replace(order, size=size) for order, size in zip(orders, sizes, strict=True)
+            )
         receipts: list[Any] = []
         try:
-            for index, order in enumerate(orders, start=1):
+            for index, order in enumerate(submission_orders, start=1):
                 leg_cycle = f"{cycle_id}-tp{index}"
                 self._approval._bound[leg_cycle] = BoundApproval(
                     order,

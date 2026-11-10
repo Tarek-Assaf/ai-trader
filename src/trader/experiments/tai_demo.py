@@ -869,6 +869,7 @@ class TaiDemoRunner:
                     leg_orders,
                     total_size=order.size,
                     target_levels=signal.levels(),
+                    size_step=rules.size_step if rules is not None else None,
                     relaxed=external,
                 )
                 if receipts is None or len(receipts) != 3:
