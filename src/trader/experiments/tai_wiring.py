@@ -1190,6 +1190,8 @@ class TaiDemoRuntimeAdapter:
         self._alert = alert or (lambda message: LOGGER.info("tai demo: %s", message))
         self._feed_stale = False
         self._bars = dict(pending_bars or {})
+        self._last_quiet_cycle_log_at = 0.0
+        self._suppressed_quiet_cycle_logs = 0
 
     @property
     def feed_stale(self) -> bool:
@@ -1255,12 +1257,24 @@ class TaiDemoRuntimeAdapter:
             return DemoOutcome("NO_TRADE", "feed_stale", event_id)
         started = time.monotonic()
         outcome = self.runner.on_bar(bar)
-        LOGGER.info(
-            "tai demo cycle seconds=%.3f outcome=%s reason=%s",
-            time.monotonic() - started,
-            outcome.action,
-            outcome.reason,
+        elapsed = time.monotonic() - started
+        quiet_cycle = (
+            outcome.action == "NO_TRADE" and outcome.reason == "awaiting_tradingview_alert"
         )
+        now = time.monotonic()
+        if quiet_cycle and now - self._last_quiet_cycle_log_at < 30.0:
+            self._suppressed_quiet_cycle_logs += 1
+        else:
+            suppressed = self._suppressed_quiet_cycle_logs
+            self._suppressed_quiet_cycle_logs = 0
+            self._last_quiet_cycle_log_at = now
+            LOGGER.info(
+                "tai demo cycle seconds=%.3f outcome=%s reason=%s%s",
+                elapsed,
+                outcome.action,
+                outcome.reason,
+                f" suppressed={suppressed}" if suppressed else "",
+            )
         return outcome
 
 
