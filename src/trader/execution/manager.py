@@ -698,9 +698,62 @@ class OrderManager:
             self._batch_submission = True
             started = time.perf_counter()
             receipts: list[OrderReceipt | None] = []
+            prepared: list[tuple[str, OrderRequest]] = []
             try:
-                for index, order in enumerate(orders, start=1):
-                    receipts.append(self.submit(f"{cycle_id}-tp{index}", order))
+                batch_place = getattr(self._broker, "place_orders_batch", None)
+                if callable(batch_place):
+                    for index, order in enumerate(orders, start=1):
+                        leg_cycle = f"{cycle_id}-tp{index}"
+                        self._order_without_server_side_stop = order.stop_level is None
+                        try:
+                            self._execution_lease.check()
+                            self._guardian_lease.check()
+                            approval = self._approve(order, leg_cycle)
+                            decision = approval.decision
+                            if (
+                                approval.order != order
+                                or approval.cycle_id != leg_cycle
+                                or not decision.approved
+                                or not decision.audit_written
+                                or decision.halt_system
+                                or decision.approved_size != order.size
+                            ):
+                                raise ExecutionPaused("exact-order Guardian approval is required")
+                            if self._journal.reserve(leg_cycle, order):
+                                prepared.append((leg_cycle, order))
+                            self._execution_lease.check()
+                            self._guardian_lease.check()
+                        except BrokerUnreachable:
+                            raise
+                        except Exception:
+                            self._pause("entry_preflight_failed")
+                            raise ExecutionPaused("entry preflight failed") from None
+                    if len(prepared) == 0:
+                        return (None, None, None)
+                    mode = self._apply_controls()
+                    if mode is not ControlMode.RUN:
+                        raise ExecutionPaused("control activated before broker submission")
+                    batch_receipts = tuple(batch_place(tuple(order for _, order in prepared)))
+                    if len(batch_receipts) != len(prepared):
+                        raise ValueError("broker batch receipt count mismatch")
+                    receipt_by_id = {receipt.client_order_id: receipt for receipt in batch_receipts}
+                    for leg_cycle, order in prepared:
+                        receipt = receipt_by_id.get(order.client_order_id)
+                        if (
+                            receipt is None
+                            or receipt.client_order_id != order.client_order_id
+                            or receipt.deal_id != receipt.position.deal_id
+                            or receipt.position.epic != order.epic
+                            or receipt.position.direction != order.direction
+                            or receipt.position.size != order.size
+                            or receipt.position.stop_level != order.stop_level
+                        ):
+                            raise ValueError("broker receipt mismatch")
+                        self._journal.mark(leg_cycle, "submitted", deal_id=receipt.deal_id)
+                    receipts.extend(receipt_by_id.get(order.client_order_id) for order in orders)
+                else:
+                    for index, order in enumerate(orders, start=1):
+                        receipts.append(self.submit(f"{cycle_id}-tp{index}", order))
                 mode = self._apply_controls()
                 if mode is ControlMode.KILL:
                     raise ExecutionPaused("kill activated during batch submission")

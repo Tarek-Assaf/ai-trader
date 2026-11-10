@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import logging
 import threading
 from collections.abc import Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
 from typing import Protocol
@@ -20,6 +22,7 @@ from trader.execution.brokers.base import (
 )
 
 _REFUSED_STATUS = frozenset({400, 403, 404, 422})
+LOGGER = logging.getLogger(__name__)
 
 
 class _CapitalComClient(Protocol):
@@ -150,6 +153,31 @@ class CapitalComBroker:
     def place_order_batch(self, order: OrderRequest) -> OrderReceipt:
         """Open one leg for a batch; the manager verifies all legs once afterward."""
         return self._place_order(order, verify_position=False)
+
+    def place_orders_batch(self, orders: Sequence[OrderRequest]) -> Sequence[OrderReceipt]:
+        """Open a three-leg group concurrently after shared manager preflight."""
+        if len(orders) != 3:
+            raise ValueError("Capital.com batch requires exactly three orders")
+        receipts: list[OrderReceipt] = []
+        try:
+            with ThreadPoolExecutor(max_workers=3, thread_name_prefix="capital-order") as pool:
+                futures = [pool.submit(self.place_order_batch, order) for order in orders]
+                first_error: Exception | None = None
+                for future in futures:
+                    try:
+                        receipts.append(future.result())
+                    except Exception as exc:
+                        first_error = first_error or exc
+                if first_error is not None:
+                    raise first_error
+            return tuple(receipts)
+        except Exception:
+            for receipt in receipts:
+                try:
+                    self.close_position(receipt.deal_id)
+                except Exception:
+                    LOGGER.exception("batch broker rollback close failed")
+            raise
 
     def _place_order(self, order: OrderRequest, *, verify_position: bool) -> OrderReceipt:
         if not self._enable_demo_orders:
