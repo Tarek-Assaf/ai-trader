@@ -28,6 +28,7 @@ eval "$EXPORTS"
 unset EXPORTS
 
 mkdir -p "$WORKSPACE_DIR/state"
+/app/scripts/wait_for_core_api.sh
 python /app/scripts/wait_for_services.py
 alembic upgrade head
 
