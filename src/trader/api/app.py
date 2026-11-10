@@ -398,7 +398,16 @@ def _build_tai_demo_runtime(
         signal = (
             previous_signal
             if isinstance(previous_signal, TaiSignalProvider) and previous_signal.ha_mode == ha_mode
-            else TaiSignalProvider.from_lake(lake_root, epic, ha_mode=ha_mode)
+            else TaiSignalProvider.from_lake(
+                lake_root,
+                epic,
+                ha_mode=ha_mode,
+                # TradingView decides entries externally; a bounded recent window is
+                # enough for ATR/structure stops and avoids rescanning years of lake data.
+                lookback_days=45
+                if os.getenv("TAI_SIGNAL_SOURCE", "local").strip().lower() == "tradingview"
+                else None,
+            )
         )
         previous_builder = getattr(previous_adapter, "builder", None)
         builder = (
