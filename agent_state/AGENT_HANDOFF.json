@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 633,
+  "turn": "claude",
+  "revision": 634,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31803,7 +31803,23 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Append-only protocol bookkeeping after the CI rebase repair; the owner-directed top-level turn remains codex and no Claude implementation turn was assigned."
+    },
+    {
+      "revision": 634,
+      "ts": "2026-11-12T13:00:00Z",
+      "agent": "codex",
+      "action": "flush_worker_trade_alerts_and_stage_latency_fix",
+      "task_ids": [
+        "T-269",
+        "T-272"
+      ],
+      "files_changed": [
+        "src/trader/api/app.py",
+        "tests/unit/test_api_startup.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Account workers with TELEGRAM_POLLING=off were queueing Tai entry, TP, stop-loss and result alerts without a polling loop to flush them; worker alert delivery now flushes immediately while preserving the single main polling loop. The branch also contains the bounded shared-preflight, parallel reconciliation and concurrent three-leg submission changes; deployment remains pending CI and owner authorization. Balance-scaled requested sizing remains separate from the 0.5% Guardian risk cap and was not bypassed."
     }
   ],
-  "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; T-269 latency work coalesces repeated instrument-rule fetches and now prepares parallel Capital.com read-only reconciliation plus phase timing. The latency changes are local only and not deployed. Demo only. The T-273 balance-scope fallback is deployed in image 7759355. No strategy/risk/control changes made."
+  "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; worker Tai alerts now flush immediately so Account 02 entry, TP, stop-loss and result messages carry its account label. T-269 latency work coalesces repeated instrument-rule fetches and prepares parallel Capital.com reconciliation plus concurrent three-leg submission; these changes are local only and not deployed. Demo only. The T-273 balance-scope fallback is deployed in image 7759355. No risk-control bypass was made."
 }

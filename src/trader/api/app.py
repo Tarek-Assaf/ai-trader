@@ -101,6 +101,45 @@ def _report_telegram_transport(state: Any, token: str) -> TelegramBotTransport:
     return configured or TelegramBotTransport(token, label=os.getenv("ACCOUNT_LABEL") or None)
 
 
+def _telegram_polling_enabled() -> bool:
+    """Return whether this process owns the Telegram polling loop.
+
+    Worker accounts deliberately set ``TELEGRAM_POLLING=off`` so only account 01
+    consumes updates.  They still need to flush alert messages themselves; otherwise
+    ``TelegramChannel.send_alert`` only queues the message and no polling loop ever
+    drains that queue.
+    """
+    return os.getenv("TELEGRAM_POLLING", "on").strip().lower() not in {
+        "off",
+        "no",
+        "0",
+        "false",
+    }
+
+
+def _send_tai_telegram_alert(app: Any, message: str) -> None:
+    """Deliver a Tai alert from either the main process or an account worker."""
+    channel = getattr(app.state, "telegram_channel", None)
+    send_alert = getattr(channel, "send_alert", None)
+    if not callable(send_alert):
+        return
+    from trader.channels.telegram import Alert
+
+    sent = send_alert(Alert(f"tai_demo:{time.time_ns()}", message[:900]))
+    # Account workers do not poll Telegram.  Flush their bounded alert queue immediately
+    # so TP, SL, stop-to-entry and result notifications are delivered with the account label.
+    # Do this off the trading thread: Telegram outages must never add network latency to
+    # order submission or stop/target management.
+    if sent and not _telegram_polling_enabled():
+        flush = getattr(channel, "flush", None)
+        if callable(flush):
+            threading.Thread(
+                target=flush,
+                name="telegram-worker-alert-flush",
+                daemon=True,
+            ).start()
+
+
 _WORKER_ENGINES: dict[str, Any] = {}
 
 
@@ -363,14 +402,10 @@ def _build_tai_demo_runtime(
 
     def alert(message: str) -> None:
         _LOG.error("tai demo alert: %s", message)
-        channel = getattr(app.state, "telegram_channel", None)
-        send_alert = getattr(channel, "send_alert", None)
-        if callable(send_alert):
-            from trader.channels.telegram import Alert
-
-            # One key per message: the limiter exists for flapping conditions, and a trade's
-            # entry, partial exit and stop move can follow each other within seconds.
-            send_alert(Alert(f"tai_demo:{time.time_ns()}", message[:900]))
+        # One key per message: the limiter exists for flapping conditions, and a trade's
+        # entry, partial exit and stop move can follow each other within seconds.  Worker
+        # processes flush immediately because they intentionally do not poll Telegram.
+        _send_tai_telegram_alert(app, message)
 
     guarded_manager = cast(
         Any,
