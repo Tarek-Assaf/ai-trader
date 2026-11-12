@@ -162,6 +162,63 @@ def test_missing_report_transport_uses_fallback_without_state_attribute() -> Non
     assert isinstance(transport, app_module.TelegramBotTransport)
 
 
+def test_worker_tai_alert_flushes_without_telegram_polling(monkeypatch) -> None:
+    """Account workers must deliver TP/SL/order alerts without consuming updates."""
+
+    class _AlertChannel:
+        def __init__(self) -> None:
+            self.messages: list[str] = []
+            self.flushes = 0
+
+        def send_alert(self, alert) -> bool:
+            self.messages.append(alert.text)
+            return True
+
+        def flush(self) -> None:
+            self.flushes += 1
+
+    channel = _AlertChannel()
+    app = SimpleNamespace(state=SimpleNamespace(telegram_channel=channel))
+    monkeypatch.setenv("TELEGRAM_POLLING", "off")
+
+    class _ImmediateThread:
+        def __init__(self, *, target, name, daemon) -> None:
+            del name, daemon
+            self._target = target
+
+        def start(self) -> None:
+            self._target()
+
+    monkeypatch.setattr(app_module.threading, "Thread", _ImmediateThread)
+
+    app_module._send_tai_telegram_alert(app, "Account: 02 Abody's Account\nTai: TP1 reached")
+
+    assert channel.messages == ["Account: 02 Abody's Account\nTai: TP1 reached"]
+    assert channel.flushes == 1
+
+
+def test_main_tai_alert_leaves_polling_queue_for_flusher(monkeypatch) -> None:
+    """The main process's polling loop remains responsible for draining its queue."""
+
+    class _AlertChannel:
+        def __init__(self) -> None:
+            self.flushes = 0
+
+        def send_alert(self, _alert) -> bool:
+            return True
+
+        def flush(self) -> None:
+            self.flushes += 1
+
+    channel = _AlertChannel()
+    app = SimpleNamespace(state=SimpleNamespace(telegram_channel=channel))
+    monkeypatch.setenv("TELEGRAM_POLLING", "on")
+
+    app_module._send_tai_telegram_alert(app, "Account: 01 Main Account\nTai: ENTRY BUY US100")
+
+    assert channel.flushes == 0
+
+
 def test_runtime_retry_loop_uses_long_backoff_and_recovers(monkeypatch) -> None:
     """Transient runtime failures retry in the background without blocking startup."""
     app = SimpleNamespace(state=SimpleNamespace(runtime=None))
