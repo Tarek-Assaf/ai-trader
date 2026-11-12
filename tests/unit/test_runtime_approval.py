@@ -555,7 +555,7 @@ def test_loss_guard_keeps_shared_baseline_fields_and_peak() -> None:
     assert journal.snapshot["last_loss_at"] == "2026-10-07T10:00:00+00:00"
 
 
-def _guarded_stack(tmp_path, *, bid="99.95", ask="100.05"):
+def _guarded_stack(tmp_path, *, bid="99.95", ask="100.05", bypass_guardian=False):
     """Real Guardian + RuntimeApproval + GuardedEntrySubmitter + OrderManager + paper broker."""
     from sqlalchemy import create_engine
 
@@ -648,7 +648,9 @@ def _guarded_stack(tmp_path, *, bid="99.95", ask="100.05"):
         ProtectivePositionManager(broker, control_writer=controls, alert=lambda _message: None),
     )
     manager.startup()
-    submitter = GuardedEntrySubmitter(approval, manager, lambda epic: "NAS100")
+    submitter = GuardedEntrySubmitter(
+        approval, manager, lambda epic: "NAS100", bypass_guardian=bypass_guardian
+    )
     return submitter, manager, broker
 
 
@@ -671,6 +673,15 @@ def test_strategy_entry_is_guardian_approved_capped_and_reaches_the_broker(tmp_p
     assert broker.calls == 1
     assert receipt.position.epic == "US100"
     assert receipt.position.size == Decimal("1")  # capped at the Guardian's approved size
+    assert not manager.paused
+
+
+def test_paper_demo_guardian_bypass_preserves_requested_size(tmp_path) -> None:
+    submitter, manager, broker = _guarded_stack(tmp_path, bypass_guardian=True)
+    receipt = submitter.submit("cycle-1", _us100_order("3"))
+    assert receipt is not None
+    assert broker.calls == 1
+    assert receipt.position.size == Decimal("3")
     assert not manager.paused
 
 
