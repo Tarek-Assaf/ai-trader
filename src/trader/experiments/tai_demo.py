@@ -65,6 +65,15 @@ class TaiDemoSettings:
     # Human-facing label included on every Tai notification.  Keep this field
     # last so existing positional construction in callers/tests remains stable.
     account_label: str = "01 Main Account"
+    # Explicit paper/demo sizing experiment; live trading is rejected by the
+    # runtime wiring before a runner can be created with this enabled.
+    bypass_guardian: bool = False
+
+    @property
+    def three_leg_approval_text(self) -> str:
+        if self.bypass_guardian:
+            return "paper/demo sizing bypass (Guardian cap disabled)"
+        return "one Guardian approval"
 
     @property
     def enabled(self) -> bool:
@@ -113,6 +122,7 @@ class TaiDemoSettings:
                 ).strip()
                 or "01 Main Account"
             ),
+            bypass_guardian=bool(getattr(settings, "tai_demo_bypass_guardian", False)),
         )
 
     def require_enabled(self) -> None:
@@ -829,7 +839,9 @@ class TaiDemoRunner:
                 )
                 self._send_alert(
                     self._entry_text(epic, signal, order.size, signal.entry, one_r)
-                    + "\nThree legs: 40% / 30% / 30% (one Guardian approval)."
+                    + "\nThree legs: 40% / 30% / 30% ("
+                    + self.settings.three_leg_approval_text
+                    + ")."
                 )
                 return self._outcome(cycle_id, "DRY_RUN", "three_leg_order_would_submit")
             shadow_id = f"shadow:{cycle_id}"
@@ -1060,7 +1072,9 @@ class TaiDemoRunner:
                 positions[0].level,
                 None,
             )
-            + "\nThree legs: 40% / 30% / 30% (one Guardian approval)."
+            + "\nThree legs: 40% / 30% / 30% ("
+            + self.settings.three_leg_approval_text
+            + ")."
         )
         return self._outcome(cycle_id, "SUBMITTED", "three_leg_entry_submitted")
 
