@@ -231,10 +231,13 @@ class GuardedEntrySubmitter:
         approval: RuntimeApproval,
         manager: Any,
         canonical: Callable[[str], str] = lambda epic: epic,
+        *,
+        bypass_guardian: bool = False,
     ) -> None:
         self._approval = approval
         self._manager = manager
         self._canonical = canonical
+        self._bypass_guardian = bypass_guardian
 
     def __getattr__(self, name: str) -> Any:
         return getattr(self._manager, name)
@@ -261,8 +264,24 @@ class GuardedEntrySubmitter:
             )
         except (TypeError, ValueError):
             raise ExecutionPaused("guardian rejected: order could not be described") from None
-        decision = self._approval.evaluate_sync(intent, None, cycle_id, relaxed=relaxed)
-        bound = self._approval._bound.pop(cycle_id, None)
+        if self._bypass_guardian:
+            decision = RiskDecision(
+                approved=True,
+                approved_size=order.size,
+                reasons=("paper_demo_guardian_bypassed",),
+                rules_checked=("paper_demo_sizing_bypass",),
+                audit_written=True,
+            )
+            bound = BoundApproval(order, cycle_id, decision)
+            self._approval._bound[cycle_id] = bound
+            LOGGER.warning(
+                "paper/demo Guardian sizing bypass enabled cycle_id=%s size=%s",
+                cycle_id,
+                order.size,
+            )
+        else:
+            decision = self._approval.evaluate_sync(intent, None, cycle_id, relaxed=relaxed)
+            bound = self._approval._bound.pop(cycle_id, None)
         if not decision.approved or decision.approved_size is None or bound is None:
             reasons = ",".join(decision.reasons) or "no_reason"
             raise ExecutionPaused(f"guardian rejected: {reasons}")
@@ -320,8 +339,28 @@ class GuardedEntrySubmitter:
             )
         except (TypeError, ValueError):
             raise ExecutionPaused("guardian rejected: order could not be described") from None
-        decision = self._approval.evaluate_sync(intent, None, cycle_id, relaxed=relaxed)
-        bound = self._approval._bound.pop(cycle_id, None)
+        if self._bypass_guardian:
+            decision = RiskDecision(
+                approved=True,
+                approved_size=total_size,
+                reasons=("paper_demo_guardian_bypassed",),
+                rules_checked=("paper_demo_sizing_bypass",),
+                audit_written=True,
+            )
+            bound = BoundApproval(
+                replace(orders[0], size=total_size),
+                cycle_id,
+                decision,
+            )
+            self._approval._bound[cycle_id] = bound
+            LOGGER.warning(
+                "paper/demo Guardian sizing bypass enabled cycle_id=%s total_size=%s",
+                cycle_id,
+                total_size,
+            )
+        else:
+            decision = self._approval.evaluate_sync(intent, None, cycle_id, relaxed=relaxed)
+            bound = self._approval._bound.pop(cycle_id, None)
         if not decision.approved or decision.approved_size is None or bound is None:
             reasons = ",".join(decision.reasons) or "no_reason"
             raise ExecutionPaused(f"guardian rejected: {reasons}")

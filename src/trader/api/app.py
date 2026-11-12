@@ -409,7 +409,12 @@ def _build_tai_demo_runtime(
 
     guarded_manager = cast(
         Any,
-        _guarded_order_manager(app, components.order_manager, _canonical_symbol_resolver(configs)),
+        _guarded_order_manager(
+            app,
+            components.order_manager,
+            _canonical_symbol_resolver(configs),
+            settings=settings,
+        ),
     )
     market_sources: dict[str, Any] = {}
     adapters: dict[str, Any] = {}
@@ -807,7 +812,13 @@ def _canonical_symbol_resolver(configs: Mapping[str, Any]) -> Callable[[str], st
     return lambda epic: names.get(str(epic).upper(), str(epic))
 
 
-def _guarded_order_manager(app: FastAPI, manager: Any, canonical: Callable[[str], str]) -> Any:
+def _guarded_order_manager(
+    app: FastAPI,
+    manager: Any,
+    canonical: Callable[[str], str],
+    *,
+    settings: EnvironmentSettings,
+) -> Any:
     """Route deterministic-strategy entries through the Risk Guardian first."""
     from trader.runtime.approval import GuardedEntrySubmitter, RuntimeApproval
 
@@ -815,7 +826,19 @@ def _guarded_order_manager(app: FastAPI, manager: Any, canonical: Callable[[str]
     if not isinstance(approval, RuntimeApproval):
         _LOG.warning("Guardian approval adapter unavailable; strategy entries stay unguarded")
         return manager
-    return GuardedEntrySubmitter(approval, manager, canonical)
+    bypass = bool(getattr(settings, "tai_demo_bypass_guardian", False))
+    if bypass and (
+        settings.broker_env != "demo"
+        or settings.trading_mode != "paper"
+        or settings.live_trading_enabled
+    ):
+        raise RuntimeDependencyUnavailable(
+            "TAI demo Guardian bypass requires broker_env=demo, trading_mode=paper, "
+            "and live trading disabled"
+        )
+    if bypass:
+        _LOG.warning("Tai demo Guardian sizing bypass enabled for paper/demo only")
+    return GuardedEntrySubmitter(approval, manager, canonical, bypass_guardian=bypass)
 
 
 def _capital_execution_enabled(settings: EnvironmentSettings) -> bool:

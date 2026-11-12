@@ -37,6 +37,10 @@ class EnvironmentSettings(BaseSettings):
     # Three-leg execution is enabled for the paper/demo experiment; live orders
     # remain blocked by the existing demo/paper/live-trading gates.
     tai_demo_three_legs: bool = True
+    # Explicit owner-directed sizing experiment.  This is only accepted by the
+    # Tai demo wiring when broker_env=demo, trading_mode=paper, and live trading
+    # is disabled; it never weakens live-order safety controls.
+    tai_demo_bypass_guardian: bool = False
     approval_mode: bool = False
     capital_api_key: SecretStr | None = None
     capital_identifier: SecretStr | None = None
