@@ -290,7 +290,10 @@ class GuardedEntrySubmitter:
             )
         else:
             decision = self._approval.evaluate_sync(intent, None, cycle_id, relaxed=relaxed)
-            bound = self._approval._bound.pop(cycle_id) if cycle_id in self._approval._bound else None
+            if cycle_id in self._approval._bound:
+                bound = self._approval._bound.pop(cycle_id)
+            else:
+                bound = None
         if not decision.approved or decision.approved_size is None or bound is None:
             reasons = ",".join(decision.reasons) or "no_reason"
             raise ExecutionPaused(f"guardian rejected: {reasons}")
@@ -378,7 +381,10 @@ class GuardedEntrySubmitter:
             )
         else:
             decision = self._approval.evaluate_sync(intent, None, cycle_id, relaxed=relaxed)
-            bound = self._approval._bound.pop(cycle_id) if cycle_id in self._approval._bound else None
+            if cycle_id in self._approval._bound:
+                bound = self._approval._bound.pop(cycle_id)
+            else:
+                bound = None
         if not decision.approved or decision.approved_size is None or bound is None:
             reasons = ",".join(decision.reasons) or "no_reason"
             raise ExecutionPaused(f"guardian rejected: {reasons}")
