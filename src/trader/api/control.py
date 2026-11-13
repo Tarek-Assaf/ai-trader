@@ -28,9 +28,7 @@ class ResolveIntentRequest(ControlRequest):
     reason: str = Field(min_length=1, max_length=500)
 
 
-def _authorized_writer(
-    request: Request, x_control_token: str
-) -> tuple[Any, str, str]:
+def _authorized_writer(request: Request, x_control_token: str) -> tuple[Any, str, str]:
     """Return the authenticated control writer or raise a bounded HTTP error."""
     settings = EnvironmentSettings()
     expected_token = (
