@@ -108,6 +108,47 @@ def test_control_api_requires_token_and_second_factor(monkeypatch):
         assert redis.values[writer._key] == "kill"
 
 
+def test_resolve_intent_requires_owner_auth_and_delegates(monkeypatch):
+    owner_credential = "control-token-for-unit-test"
+    totp_seed = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+    monkeypatch.setenv("CONTROL_API_TOKEN", owner_credential)
+    monkeypatch.setenv("OWNER_TOTP_SECRET", totp_seed)
+    monkeypatch.setenv("ROLE", "worker")
+    monkeypatch.setenv("REDIS_URL", "")
+
+    class FakeManager:
+        def __init__(self):
+            self.calls = []
+
+        def resolve_intent(self, *args, **kwargs):
+            self.calls.append((args, kwargs))
+
+    manager = FakeManager()
+    with TestClient(app) as client:
+        app.state.execution_control_writer = RedisControlSource(FakeRedis())
+        app.state.runtime_services = {"order_manager": manager}
+        response = client.post(
+            "/control/resolve-intent",
+            headers={"X-Control-Token": owner_credential},
+            json={
+                "totp_code": _totp_now(totp_seed),
+                "cycle_id": "tai-tv-test-US100",
+                "outcome": "rejected",
+                "reason": "Owner verified no broker position or activity",
+            },
+        )
+        assert response.status_code == 202
+        assert manager.calls == [
+            (
+                ("tai-tv-test-US100", "rejected"),
+                {
+                    "deal_id": None,
+                    "reason": "Owner verified no broker position or activity",
+                },
+            )
+        ]
+
+
 def _totp_at(secret: str, now: float) -> str:
     key = base64.b32decode(secret)
     counter = int(now // 30)
