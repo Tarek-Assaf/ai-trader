@@ -47,24 +47,6 @@ def _authorized_writer(request: Request, x_control_token: str) -> tuple[Any, str
     return writer, expected_token, totp_secret
 
 
-@router.post("/control/{action}", status_code=202)
-def control_action(
-    action: Literal["pause", "kill", "resume"],
-    payload: ControlRequest,
-    request: Request,
-    x_control_token: str = Header(default="", alias="X-Control-Token"),
-) -> dict[str, str]:
-    """Publish an owner-authenticated action for deterministic execution loops."""
-    writer, expected_token, totp_secret = _authorized_writer(request, x_control_token)
-    try:
-        if not writer.authorize(expected_token, x_control_token, totp_secret, payload.totp_code):
-            raise HTTPException(status_code=401, detail="owner authorization failed")
-        writer.set(ControlMode(action))
-    except ControlUnavailable:
-        raise HTTPException(status_code=503, detail="execution control is unavailable") from None
-    return {"status": "accepted", "action": action}
-
-
 @router.post("/control/resolve-intent", status_code=202)
 def resolve_intent(
     payload: ResolveIntentRequest,
@@ -101,3 +83,21 @@ def resolve_intent(
     except Exception:
         raise HTTPException(status_code=409, detail="intent resolution rejected") from None
     return {"status": "accepted", "cycle_id": payload.cycle_id, "outcome": payload.outcome}
+
+
+@router.post("/control/{action}", status_code=202)
+def control_action(
+    action: Literal["pause", "kill", "resume"],
+    payload: ControlRequest,
+    request: Request,
+    x_control_token: str = Header(default="", alias="X-Control-Token"),
+) -> dict[str, str]:
+    """Publish an owner-authenticated action for deterministic execution loops."""
+    writer, expected_token, totp_secret = _authorized_writer(request, x_control_token)
+    try:
+        if not writer.authorize(expected_token, x_control_token, totp_secret, payload.totp_code):
+            raise HTTPException(status_code=401, detail="owner authorization failed")
+        writer.set(ControlMode(action))
+    except ControlUnavailable:
+        raise HTTPException(status_code=503, detail="execution control is unavailable") from None
+    return {"status": "accepted", "action": action}
