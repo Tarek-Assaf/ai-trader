@@ -324,7 +324,8 @@ def test_rejected_resolution_chunks_activity_older_than_one_day(tmp_path):
     payload["reserved_at"] = (datetime.now(UTC) - timedelta(days=2)).isoformat()
     with manager._journal._engine.begin() as connection:
         connection.execute(
-            tables["trade_intents"].update()
+            tables["trade_intents"]
+            .update()
             .where(tables["trade_intents"].c.id == "cycle-1")
             .values(payload=payload)
         )
