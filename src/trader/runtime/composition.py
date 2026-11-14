@@ -263,6 +263,7 @@ class RuntimeService:
         backoff_max: float = 60.0,
         lease_heartbeat_interval: float = 10.0,
         execution_tick_interval: float = 5.0,
+        execution_startup_retry_interval: float = 60.0,
     ) -> None:
         if backoff_initial <= 0 or backoff_max < backoff_initial:
             raise ValueError("backoff bounds are invalid")
@@ -270,7 +271,10 @@ class RuntimeService:
             raise ValueError("lease heartbeat interval must be positive")
         if execution_tick_interval <= 0:
             raise ValueError("execution tick interval must be positive")
+        if execution_startup_retry_interval <= 0:
+            raise ValueError("execution startup retry interval must be positive")
         self._execution_tick_interval = execution_tick_interval
+        self._execution_startup_retry_interval = execution_startup_retry_interval
         self.components = components
         self.control_source = control_source
         self._alert = alert or (lambda message: LOGGER.error("runtime alert: %s", message))
@@ -530,20 +534,31 @@ class RuntimeService:
             )
 
     async def _execution_supervisor(self) -> None:
-        """Start the order manager once, then keep its leases and controls ticking.
+        """Start the order manager, retrying safely after transient startup failures.
 
         Without this the manager never starts (every entry is refused with
         "execution has not started") and its own lease would expire between orders.
-        Both calls block on the broker and Redis, so they run off the event loop.
+        A failed startup is fail-closed: entries remain paused while the bounded
+        retry waits for broker/network recovery or a new P&L day.  Both calls
+        block on the broker and Redis, so they run off the event loop.
         """
         manager: Any = self.components.order_manager
-        try:
-            await asyncio.to_thread(manager.startup)
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            LOGGER.error("order manager startup failed; entries stay paused")
-            self._notify("runtime_execution_startup_failed")
+        while not self._stop.is_set():
+            try:
+                await asyncio.to_thread(manager.startup)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                LOGGER.error(
+                    "order manager startup failed; entries stay paused; retrying in %.1fs: %s",
+                    self._execution_startup_retry_interval,
+                    _redacted_exception_message(exc),
+                )
+                self._notify("runtime_execution_startup_failed")
+                await self._wait(self._execution_startup_retry_interval)
+                continue
+            break
+        if self._stop.is_set():
             return
         LOGGER.info("order manager started")
         while not self._stop.is_set():
@@ -646,6 +661,7 @@ def build_runtime(
     cycle_source: CycleSource | None = None,
     lease_heartbeat_interval: float = 10.0,
     execution_tick_interval: float | None = None,
+    execution_startup_retry_interval: float = 60.0,
 ) -> RuntimeService:
     """Build the single core runtime from already validated dependencies."""
     return RuntimeService(
@@ -659,6 +675,7 @@ def build_runtime(
             if execution_tick_interval is None
             else execution_tick_interval
         ),
+        execution_startup_retry_interval=execution_startup_retry_interval,
     )
 
 
