@@ -296,12 +296,18 @@ class FakeManager:
         self.shutdowns += 1
 
 
-def execution_service(manager: FakeManager, alerts: list[str]) -> RuntimeService:
+def execution_service(
+    manager: FakeManager,
+    alerts: list[str],
+    *,
+    startup_retry_interval: float = 60.0,
+) -> RuntimeService:
     return RuntimeService(
         RuntimeComponents(leader=FakeLease(), decision_loop=FakeLoop(), order_manager=manager),
         control_source=FakeControl(),
         alert=alerts.append,
         execution_tick_interval=0.01,
+        execution_startup_retry_interval=startup_retry_interval,
     )
 
 
@@ -331,6 +337,27 @@ def test_failed_order_manager_startup_alerts_and_never_ticks() -> None:
         await asyncio.sleep(0.1)
         assert manager.startups == 1
         assert manager.ticks == 0
+        assert "runtime_execution_startup_failed" in alerts
+        await runtime.stop()
+
+    asyncio.run(run())
+
+
+def test_failed_order_manager_startup_retries_until_dependency_recovers() -> None:
+    async def run() -> None:
+        class RecoveringManager(FakeManager):
+            def startup(self) -> None:
+                self.startups += 1
+                if self.startups == 1:
+                    raise RuntimeError("broker temporarily unavailable")
+
+        manager = RecoveringManager()
+        alerts: list[str] = []
+        runtime = execution_service(manager, alerts, startup_retry_interval=0.001)
+        await runtime.start()
+        await asyncio.sleep(0.03)
+        assert manager.startups >= 2
+        assert manager.ticks >= 1
         assert "runtime_execution_startup_failed" in alerts
         await runtime.stop()
 
