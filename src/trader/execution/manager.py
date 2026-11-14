@@ -50,6 +50,7 @@ BROKER_UNREACHABLE = "broker_unreachable"
 _TRANSIENT_ATTEMPTS = 3
 _TRANSIENT_RETRY_SECONDS = 2.0
 _UNREACHABLE_RETRY_SECONDS = 15.0
+_ACTIVITY_WINDOW = timedelta(hours=23)
 
 
 class ExecutionPaused(RuntimeError):
@@ -530,7 +531,7 @@ class OrderManager:
                 order = restored_order(record["execution_order"])
                 positions = tuple(self._broker.get_positions())
                 start = datetime.fromisoformat(record["reserved_at"])
-                activity = self._broker.get_activity(start, datetime.now(UTC))
+                activity = self._activity_since(start, datetime.now(UTC))
                 if outcome == "matched":
                     matches = [p for p in positions if p.deal_id == deal_id]
                     if len(matches) != 1:
@@ -555,6 +556,25 @@ class OrderManager:
             except Exception:
                 self._pause("operator_intent_resolution_failed")
                 raise ExecutionPaused("operator resolution failed") from None
+
+    def _activity_since(self, start: datetime, end: datetime) -> Sequence[Mapping[str, object]]:
+        """Read activity in bounded windows accepted by every broker adapter.
+
+        Capital.com limits a history/activity request to one day. An ambiguous
+        intent can legitimately remain paused longer than that, so resolving it
+        must walk the interval without weakening the requirement that *all*
+        activity be absent. A 23-hour window leaves room for timestamp and
+        rounding differences at the broker boundary.
+        """
+        if start.tzinfo is None or end.tzinfo is None or start >= end:
+            return ()
+        activity: list[Mapping[str, object]] = []
+        cursor = start
+        while cursor < end:
+            window_end = min(cursor + _ACTIVITY_WINDOW, end)
+            activity.extend(self._broker.get_activity(cursor, window_end))
+            cursor = window_end
+        return activity
 
     def submit(self, cycle_id: str, order: OrderRequest) -> OrderReceipt | None:
         with self._mutex:
