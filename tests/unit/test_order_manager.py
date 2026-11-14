@@ -314,9 +314,10 @@ def test_process_killed_after_reservation_never_resubmits(tmp_path):
 
 def test_rejected_resolution_chunks_activity_older_than_one_day(tmp_path):
     manager, broker, journal, _, _, order = setup(tmp_path)
-    broker.timeout = True
-    with pytest.raises(ExecutionPaused):
-        manager.submit("cycle-1", order)
+    journal.reserve("cycle-1", order)
+    journal.mark("cycle-1", "ambiguous")
+    assert manager.reconcile() is False
+    assert manager.paused
 
     payload = journal.get("cycle-1")
     assert payload is not None
