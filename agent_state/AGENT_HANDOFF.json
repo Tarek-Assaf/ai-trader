@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 635,
+  "turn": "claude",
+  "revision": 636,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31833,6 +31833,20 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner-authorized handoff assigns the next coordination turn to Codex for the protected operator resolver investigation. This is coordination-only: no runtime code, deployment, credentials, risk controls, or orders were changed; implementation remains gated on reviewed handoff and CI."
+    },
+    {
+      "revision": 636,
+      "ts": "2026-11-14T19:50:35Z",
+      "agent": "codex",
+      "action": "diagnose_operator_resolver_activity_window",
+      "task_ids": [
+        "T-269",
+        "T-273"
+      ],
+      "files_changed": [
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Investigation confirmed the protected resolver rejects the owner-verified intent because CapitalComTradingClient.get_activity enforces a maximum one-day interval while the intent was reserved at 2026-11-13T13:27:05Z, now older than one day. /resume therefore rechecks and re-latches broker_state_mismatch. No code, deployment, database, credentials, risk controls or orders were changed; a bounded-window implementation requires reviewed handoff and CI."
     }
   ],
   "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; worker Tai alerts now flush immediately so Account 02 entry, TP, stop-loss and result messages carry its account label. T-269 latency work coalesces repeated instrument-rule fetches and prepares parallel Capital.com reconciliation plus concurrent three-leg submission; these changes are local only and not deployed. Demo only. The T-273 balance-scope fallback is deployed in image 7759355. No risk-control bypass was made."
