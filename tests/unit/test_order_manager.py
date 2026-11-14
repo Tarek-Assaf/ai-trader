@@ -1,6 +1,7 @@
 """Offline execution failure and recovery checks."""
 
 from dataclasses import replace
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from threading import Barrier
 
@@ -309,6 +310,35 @@ def test_process_killed_after_reservation_never_resubmits(tmp_path):
     manager.resume()
     assert manager.submit("cycle-1", order) is None
     assert broker.calls == 0
+
+
+def test_rejected_resolution_chunks_activity_older_than_one_day(tmp_path):
+    manager, broker, journal, _, _, order = setup(tmp_path)
+    broker.timeout = True
+    with pytest.raises(ExecutionPaused):
+        manager.submit("cycle-1", order)
+
+    payload = journal.get("cycle-1")
+    assert payload is not None
+    payload["reserved_at"] = (datetime.now(UTC) - timedelta(days=2)).isoformat()
+    with manager._journal._engine.begin() as connection:
+        connection.execute(
+            tables["trade_intents"].update()
+            .where(tables["trade_intents"].c.id == "cycle-1")
+            .values(payload=payload)
+        )
+
+    windows: list[timedelta] = []
+    original_get_activity = broker.get_activity
+
+    def bounded_get_activity(start, end):
+        windows.append(end - start)
+        return original_get_activity(start, end)
+
+    broker.get_activity = bounded_get_activity
+    manager.resolve_intent("cycle-1", "rejected", reason="owner verified no broker activity")
+    assert len(windows) >= 3
+    assert max(windows) <= timedelta(hours=23)
 
 
 def test_accepted_timeout_can_be_matched_and_resumed_without_resubmission(tmp_path):
