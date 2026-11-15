@@ -376,6 +376,25 @@ def test_accepted_and_broker_closed_intent_can_be_resolved_without_resubmission(
     assert broker.calls == 1
 
 
+def test_closed_resolution_requires_distinct_acceptance_and_close_evidence(tmp_path):
+    manager, _, _, _, _, order = setup(tmp_path)
+    assert not manager._activity_confirms_closed(
+        order,
+        [{"epic": "US100", "type": "POSITION", "status": "EXECUTED"}],
+    )
+    assert not manager._activity_confirms_closed(
+        order,
+        [{"epic": "US100", "source": "TP"}],
+    )
+    assert manager._activity_confirms_closed(
+        order,
+        [
+            {"epic": "US100", "type": "POSITION", "status": "EXECUTED"},
+            {"epic": "US100", "source": "TP"},
+        ],
+    )
+
+
 def test_normal_exit_and_partial_close_allow_next_cycle(tmp_path):
     manager, broker, _, _, _, order = setup(tmp_path)
     receipt = manager.submit("cycle-1", order)
