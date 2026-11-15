@@ -376,8 +376,8 @@ def test_accepted_and_broker_closed_intent_can_be_resolved_without_resubmission(
     assert broker.calls == 1
 
 
-def test_closed_resolution_requires_distinct_acceptance_and_close_evidence(monkeypatch):
-    manager = _manager(monkeypatch)
+def test_closed_resolution_requires_distinct_acceptance_and_close_evidence(tmp_path):
+    manager, _, _, _, _, _ = setup(tmp_path)
     assert not manager._activity_confirms_closed(
         [{"kind": "POSITION", "status": "EXECUTED", "action": "OPENED"}]
     )
