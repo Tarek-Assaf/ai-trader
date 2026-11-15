@@ -376,6 +376,22 @@ def test_accepted_and_broker_closed_intent_can_be_resolved_without_resubmission(
     assert broker.calls == 1
 
 
+def test_closed_resolution_requires_distinct_acceptance_and_close_evidence(monkeypatch):
+    manager = _manager(monkeypatch)
+    assert not manager._activity_confirms_closed(
+        [{"kind": "POSITION", "status": "EXECUTED", "action": "OPENED"}]
+    )
+    assert not manager._activity_confirms_closed(
+        [{"kind": "POSITION", "status": "CLOSED", "action": "TAKE_PROFIT"}]
+    )
+    assert manager._activity_confirms_closed(
+        [
+            {"kind": "POSITION", "status": "EXECUTED", "action": "OPENED"},
+            {"kind": "POSITION", "status": "CLOSED", "action": "TAKE_PROFIT"},
+        ]
+    )
+
+
 def test_normal_exit_and_partial_close_allow_next_cycle(tmp_path):
     manager, broker, _, _, _, order = setup(tmp_path)
     receipt = manager.submit("cycle-1", order)
