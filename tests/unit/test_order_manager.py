@@ -358,6 +358,24 @@ def test_accepted_timeout_can_be_matched_and_resumed_without_resubmission(tmp_pa
     assert broker.calls == 1
 
 
+def test_accepted_and_broker_closed_intent_can_be_resolved_without_resubmission(tmp_path):
+    manager, broker, journal, _, _, order = setup(tmp_path)
+    broker.timeout = True
+    with pytest.raises(ExecutionPaused):
+        manager.submit("cycle-1", order)
+    deal = broker.get_positions()[0].deal_id
+    broker.close_position(deal)
+    manager.resolve_intent(
+        "cycle-1",
+        "closed",
+        reason="broker activity proved acceptance and take-profit closure",
+    )
+    manager.resume()
+    assert journal.get("cycle-1")["execution_state"] == "closed"
+    assert manager.submit("cycle-1", order) is None
+    assert broker.calls == 1
+
+
 def test_normal_exit_and_partial_close_allow_next_cycle(tmp_path):
     manager, broker, _, _, _, order = setup(tmp_path)
     receipt = manager.submit("cycle-1", order)

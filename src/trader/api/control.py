@@ -23,7 +23,7 @@ class ResolveIntentRequest(ControlRequest):
     """Owner-only evidence used to resolve one ambiguous broker intent."""
 
     cycle_id: str = Field(min_length=1, max_length=200)
-    outcome: Literal["matched", "rejected"]
+    outcome: Literal["matched", "closed", "rejected"]
     deal_id: str | None = Field(default=None, max_length=128)
     reason: str = Field(min_length=1, max_length=500)
 
