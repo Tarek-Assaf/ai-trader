@@ -574,7 +574,8 @@ class OrderManager:
         on the reserved epic; deposits, withdrawals and unrelated instruments
         cannot clear an ambiguous intent.
         """
-        accepted_statuses = {"ACCEPTED", "EXECUTED", "COMPLETED", "CLOSED"}
+        accepted_statuses = {"ACCEPTED", "EXECUTED", "OPENED"}
+        closed_statuses = {"CLOSED", "COMPLETED"}
         accepted_types = {"POSITION", "WORKING_ORDER", "ORDER"}
         accepted_actions = {"OPENED", "CLOSED", "REDUCED", "TAKE_PROFIT", "STOP_LOSS"}
         seen_acceptance = False
@@ -591,17 +592,19 @@ class OrderManager:
             action = str(item.get("action") or item.get("source") or "").upper()
             if kind in accepted_types and status in accepted_statuses:
                 seen_acceptance = True
-                if status in {"EXECUTED", "COMPLETED", "CLOSED"} or action in {
-                    "TP",
-                    "STOP",
-                    "TAKE_PROFIT",
-                    "STOP_LOSS",
-                }:
-                    seen_close = True
-            if action in accepted_actions:
+            if status in closed_statuses or action in {
+                "CLOSED",
+                "REDUCED",
+                "TAKE_PROFIT",
+                "STOP_LOSS",
+                "TP",
+                "STOP",
+            }:
+                seen_close = True
+            if action == "OPENED":
                 seen_acceptance = True
-                if action != "OPENED":
-                    seen_close = True
+            elif action in accepted_actions:
+                seen_close = True
         return seen_acceptance and seen_close
 
     def _activity_since(self, start: datetime, end: datetime) -> Sequence[Mapping[str, object]]:
