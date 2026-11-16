@@ -272,6 +272,33 @@ def test_errors_never_include_api_credentials_or_response_body(
     assert "token-private" not in rendered
 
 
+def test_transport_errors_retry_with_bounded_backoff() -> None:
+    calls = 0
+    sleeps: list[float] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            raise httpx.ConnectError("temporary network failure", request=request)
+        if request.method == "POST":
+            return response(request, headers={"CST": "cst", "X-SECURITY-TOKEN": "token"})
+        return response(request, {})
+
+    http = httpx.Client(transport=httpx.MockTransport(handler))
+    with CapitalComClient(
+        make_settings(),
+        limiter=AllowAllLimiter(),
+        http_client=http,
+        sleep=sleeps.append,
+        jitter=lambda _: 0.0,
+    ) as client:
+        assert client.ping() == {}
+
+    assert calls == 4
+    assert sleeps == [1.0, 2.0]
+
+
 def test_invalid_history_arguments_fail_before_request() -> None:
     with CapitalComClient(
         make_settings(), limiter=AllowAllLimiter(), http_client=httpx.Client()

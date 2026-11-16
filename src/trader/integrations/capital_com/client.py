@@ -29,6 +29,8 @@ _RESOLUTIONS = frozenset(
     {"MINUTE", "MINUTE_5", "MINUTE_15", "MINUTE_30", "HOUR", "HOUR_4", "DAY", "WEEK"}
 )
 _MAX_429_ATTEMPTS = 4
+_MAX_TRANSPORT_ATTEMPTS = 3
+_TRANSPORT_RETRY_BASE_SECONDS = 1.0
 _KEEPALIVE_SECONDS = 300.0
 _SHARED_SESSION_LOCK = threading.RLock()
 _SHARED_SESSIONS: dict[tuple[str, str, int], dict[str, object]] = {}
@@ -178,15 +180,28 @@ class CapitalComClient:
         retry_429: bool = True,
     ) -> httpx.Response:
         assert self._limiter is not None
-        for attempt in range(1, _MAX_429_ATTEMPTS + 1):
+        max_attempts = max(_MAX_429_ATTEMPTS, _MAX_TRANSPORT_ATTEMPTS)
+        transport_attempt = 0
+        for attempt in range(1, max_attempts + 1):
             self._limiter.acquire(session=session_request, history=history)
             try:
                 response = self._http.request(
                     method, f"{self._base_url}{path}", params=params, json=json, headers=headers
                 )
             except httpx.HTTPError as exc:
-                _LOG.warning("Capital.com transport error for %s (%s)", path, type(exc).__name__)
-                raise CapitalComError(None, path) from None
+                transport_attempt += 1
+                _LOG.warning(
+                    "Capital.com transport error for %s (%s), attempt %s/%s",
+                    path,
+                    type(exc).__name__,
+                    transport_attempt,
+                    _MAX_TRANSPORT_ATTEMPTS,
+                )
+                if transport_attempt >= _MAX_TRANSPORT_ATTEMPTS:
+                    raise CapitalComError(None, path, attempt=transport_attempt) from None
+                base = _TRANSPORT_RETRY_BASE_SECONDS * (2 ** (transport_attempt - 1))
+                self._sleep(max(0.0, base + self._jitter(base)))
+                continue
             if response.status_code == 401 and not session_request:
                 return response
             if response.status_code != 429 or not retry_429 or attempt == _MAX_429_ATTEMPTS:
