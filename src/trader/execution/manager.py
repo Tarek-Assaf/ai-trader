@@ -335,7 +335,10 @@ class OrderManager:
             self._last_reconcile = datetime.now(UTC)
             if mismatch:
                 self._pause("broker_state_mismatch")
-            elif self._journal.pause_reason() == "broker_state_mismatch":
+            elif self._journal.pause_reason() in {
+                "broker_state_mismatch",
+                "order_outcome_ambiguous",
+            }:
                 # An exact, unique broker snapshot now proves the prior
                 # ambiguous leg; clear only this self-healing mismatch latch.
                 self._journal.clear_pause()
