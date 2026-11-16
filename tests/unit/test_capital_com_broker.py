@@ -16,8 +16,8 @@ from trader.execution.brokers.base import (
     OrderRequest,
     TradingDisabledError,
 )
-from trader.integrations.capital_com.client import CapitalComError
 from trader.execution.brokers.capital_com import CapitalComBroker
+from trader.integrations.capital_com.client import CapitalComError
 
 
 def position(
