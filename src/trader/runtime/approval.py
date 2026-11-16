@@ -13,7 +13,7 @@ import logging
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import ROUND_DOWN, Decimal
 from typing import Any
 
@@ -487,6 +487,7 @@ class PnlLossGuard:
         control_writer: Any | None,
         alert: Callable[[str], None],
         journal: object | None = None,
+        realized_pnl_provider: Callable[[datetime], Decimal] | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self.broker = broker
@@ -495,6 +496,10 @@ class PnlLossGuard:
         self.control_writer = control_writer
         self.alert = alert
         self.journal = journal
+        # When available, use the broker-backed closed-trade ledger for loss
+        # checks.  Balance deltas can include deposits/withdrawals and must not
+        # be treated as realized trading P&L (T-278).
+        self.realized_pnl_provider = realized_pnl_provider
         self.clock = clock
         self._day_baseline: Decimal | None = None
         self._week_baseline: Decimal | None = None
@@ -557,6 +562,7 @@ class PnlLossGuard:
         return self._day_baseline, self._week_baseline
 
     def __call__(self, _positions: Sequence[Position]) -> None:
+        now = self.clock().astimezone(UTC)
         account = self.broker.get_account()
         raw_equity = (
             account.get("equity", account.get("balance")) if isinstance(account, Mapping) else None
@@ -571,8 +577,19 @@ class PnlLossGuard:
         daily = account.get("daily_pnl") if isinstance(account, Mapping) else None
         weekly = account.get("weekly_pnl") if isinstance(account, Mapping) else None
         try:
-            daily_pnl = Decimal(str(daily)) if daily is not None else equity - day_baseline
-            weekly_pnl = Decimal(str(weekly)) if weekly is not None else equity - week_baseline
+            if self.realized_pnl_provider is not None:
+                daily_pnl = self.realized_pnl_provider(
+                    now.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+                )
+                week_start = (
+                    (now - timedelta(days=now.weekday()))
+                    .astimezone(UTC)
+                    .replace(hour=0, minute=0, second=0, microsecond=0)
+                )
+                weekly_pnl = self.realized_pnl_provider(week_start)
+            else:
+                daily_pnl = Decimal(str(daily)) if daily is not None else equity - day_baseline
+                weekly_pnl = Decimal(str(weekly)) if weekly is not None else equity - week_baseline
         except (ArithmeticError, TypeError, ValueError):
             raise RuntimeError("account P&L is unavailable") from None
         breached = []

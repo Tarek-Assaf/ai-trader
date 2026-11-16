@@ -211,6 +211,34 @@ def test_pnl_guard_persists_baseline_and_pauses_on_restart() -> None:
     assert Decimal(str(observed["daily_loss_limit_pct"])) == Decimal("2")
 
 
+def test_pnl_guard_uses_closed_trade_pnl_instead_of_balance_delta() -> None:
+    class Broker:
+        def get_account(self) -> dict[str, Decimal]:
+            return {"equity": Decimal("1000")}
+
+    class Journal:
+        snapshot: dict[str, object] | None = None
+
+        def get_snapshot(self, _snapshot_id: str) -> dict[str, object] | None:
+            return self.snapshot
+
+        def save_snapshot(self, _snapshot_id: str, payload: dict[str, object]) -> None:
+            self.snapshot = payload
+
+    alerts: list[str] = []
+    guard = PnlLossGuard(
+        Broker(),
+        max_daily_loss_pct=Decimal("2"),
+        max_weekly_loss_pct=Decimal("5"),
+        control_writer=None,
+        alert=alerts.append,
+        journal=Journal(),
+        realized_pnl_provider=lambda _start: Decimal("4.69"),
+    )
+    guard(())
+    assert alerts == []
+
+
 def test_position_manager_and_reconciler_alert_on_safety_mismatch() -> None:
     class Writer:
         def __init__(self) -> None:
