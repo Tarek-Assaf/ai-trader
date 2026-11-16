@@ -13,7 +13,7 @@ import logging
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import ROUND_DOWN, Decimal
 from typing import Any
 
@@ -581,8 +581,10 @@ class PnlLossGuard:
                 daily_pnl = self.realized_pnl_provider(
                     now.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
                 )
-                week_start = (now - timedelta(days=now.weekday())).astimezone(UTC).replace(
-                    hour=0, minute=0, second=0, microsecond=0
+                week_start = (
+                    (now - timedelta(days=now.weekday()))
+                    .astimezone(UTC)
+                    .replace(hour=0, minute=0, second=0, microsecond=0)
                 )
                 weekly_pnl = self.realized_pnl_provider(week_start)
             else:
