@@ -29,6 +29,10 @@ from trader.execution.reconciliation import (
 class CapitalRuntimeBroker:
     """Demo-only broker with the flat account view the runtime expects."""
 
+    # Delegate the Capital.com exact-snapshot recovery capability to the order
+    # manager; generic broker adapters remain manual-reconciliation only.
+    auto_recover_exact_unresolved = True
+
     def __init__(
         self,
         client: Any,
