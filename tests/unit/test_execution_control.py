@@ -149,6 +149,39 @@ def test_resolve_intent_requires_owner_auth_and_delegates(monkeypatch):
         ]
 
 
+def test_resolve_intent_accepts_closed_outcome(monkeypatch):
+    owner_credential = "control-token-for-unit-test"
+    totp_seed = "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ"
+    monkeypatch.setenv("CONTROL_API_TOKEN", owner_credential)
+    monkeypatch.setenv("OWNER_TOTP_SECRET", totp_seed)
+    monkeypatch.setenv("ROLE", "worker")
+    monkeypatch.setenv("REDIS_URL", "")
+
+    class FakeManager:
+        def __init__(self):
+            self.calls = []
+
+        def resolve_intent(self, *args, **kwargs):
+            self.calls.append((args, kwargs))
+
+    manager = FakeManager()
+    with TestClient(app) as client:
+        app.state.execution_control_writer = RedisControlSource(FakeRedis())
+        app.state.runtime_services = {"order_manager": manager}
+        response = client.post(
+            "/control/resolve-intent",
+            headers={"X-Control-Token": owner_credential},
+            json={
+                "totp_code": _totp_now(totp_seed),
+                "cycle_id": "tai-tv-test-US100",
+                "outcome": "closed",
+                "reason": "Owner verified broker acceptance and later closure",
+            },
+        )
+        assert response.status_code == 202
+        assert manager.calls[0][0] == ("tai-tv-test-US100", "closed")
+
+
 def _totp_at(secret: str, now: float) -> str:
     key = base64.b32decode(secret)
     counter = int(now // 30)
