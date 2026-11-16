@@ -545,6 +545,12 @@ class OrderManager:
                     ):
                         raise ValueError("position does not match reserved intent")
                     state = "submitted"
+                elif outcome == "closed":
+                    if deal_id is not None or positions or self._broker.get_open_orders():
+                        raise ValueError("broker exposure remains")
+                    if not self._activity_confirms_closed(order, activity):
+                        raise ValueError("broker activity does not prove acceptance and closure")
+                    state = "closed"
                 elif outcome == "rejected":
                     if deal_id is not None or positions or activity:
                         raise ValueError("broker evidence does not prove rejection")
@@ -556,6 +562,41 @@ class OrderManager:
             except Exception:
                 self._pause("operator_intent_resolution_failed")
                 raise ExecutionPaused("operator resolution failed") from None
+
+    @staticmethod
+    def _activity_confirms_closed(
+        order: OrderRequest, activity: Sequence[Mapping[str, object]]
+    ) -> bool:
+        """Require broker evidence of this epic being accepted and later closed."""
+        accepted_statuses = {"ACCEPTED", "EXECUTED", "OPENED"}
+        closed_statuses = {"CLOSED", "COMPLETED"}
+        accepted_types = {"POSITION", "WORKING_ORDER", "ORDER"}
+        accepted_actions = {"OPENED", "CLOSED", "REDUCED", "TAKE_PROFIT", "STOP_LOSS"}
+        seen_acceptance = False
+        seen_close = False
+        for item in activity:
+            epic = item.get("epic")
+            market = item.get("market")
+            if epic is None and isinstance(market, Mapping):
+                epic = market.get("epic")
+            if epic != order.epic:
+                continue
+            kind = str(
+                item.get("type") or item.get("activityType") or item.get("kind") or ""
+            ).upper()
+            status = str(item.get("status") or "").upper()
+            action = str(item.get("action") or item.get("source") or "").upper()
+            if kind in accepted_types and status in accepted_statuses:
+                seen_acceptance = True
+            if status in closed_statuses or action in {
+                "CLOSED", "REDUCED", "TAKE_PROFIT", "STOP_LOSS", "TP", "STOP"
+            }:
+                seen_close = True
+            if action == "OPENED":
+                seen_acceptance = True
+            elif action in accepted_actions:
+                seen_close = True
+        return seen_acceptance and seen_close
 
     def _activity_since(self, start: datetime, end: datetime) -> Sequence[Mapping[str, object]]:
         """Read activity in bounded windows accepted by every broker adapter.
