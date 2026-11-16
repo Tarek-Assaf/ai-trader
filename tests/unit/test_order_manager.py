@@ -385,7 +385,7 @@ def test_closed_resolution_requires_distinct_acceptance_and_close_evidence(tmp_p
         order,
         [
             {"type": "POSITION", "status": "EXECUTED", "action": "OPENED", "epic": "US100"},
-            {"type": "POSITION", "status": "CLOSED", "action": "TAKE_PROFIT", "epic": "US100"},
+            {"type": "POSITION", "status": "ACCEPTED", "source": "SL", "epic": "US100"},
         ],
     )
 

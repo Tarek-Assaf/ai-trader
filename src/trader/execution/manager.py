@@ -571,7 +571,17 @@ class OrderManager:
         accepted_statuses = {"ACCEPTED", "EXECUTED", "OPENED"}
         closed_statuses = {"CLOSED", "COMPLETED"}
         accepted_types = {"POSITION", "WORKING_ORDER", "ORDER"}
-        accepted_actions = {"OPENED", "CLOSED", "REDUCED", "TAKE_PROFIT", "STOP_LOSS"}
+        accepted_actions = {
+            "OPENED",
+            "CLOSED",
+            "REDUCED",
+            "TAKE_PROFIT",
+            "STOP_LOSS",
+            # Capital.com's history/activity endpoint abbreviates stop-loss
+            # closures as ``SL``. Treat it as closure evidence only; acceptance
+            # still must be proven by a distinct accepted/opened activity.
+            "SL",
+        }
         seen_acceptance = False
         seen_close = False
         for item in activity:
