@@ -600,6 +600,28 @@ def test_corrupt_state_fails_closed_without_entry(tmp_path: Path):
     assert any("corrupt" in alert for alert in alerts)
 
 
+def test_transient_startup_reconciliation_failure_recovers_on_next_broker_read():
+    class FlakyGateway(Gateway):
+        def __init__(self):
+            super().__init__()
+            self.fail_once = True
+
+        def get_positions(self):
+            if self.fail_once:
+                self.fail_once = False
+                raise RuntimeError("temporary broker outage")
+            return super().get_positions()
+
+    gateway = FlakyGateway()
+    instance, manager = runner(gateway)
+
+    outcome = instance.on_bar(bar())
+
+    assert outcome.action == "SUBMITTED"
+    assert outcome.reason == "entry_submitted"
+    assert len(manager.submits) == 1
+
+
 def test_dry_run_shadow_survives_restart_without_gateway_calls(tmp_path: Path):
     class NoBrokerGateway(Gateway):
         def get_positions(self):

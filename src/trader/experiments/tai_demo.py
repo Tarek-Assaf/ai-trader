@@ -382,6 +382,11 @@ class TaiDemoRunner:
         self._last_exit_at: datetime | None = None
         self._spread_alerted: set[tuple[str, str]] = set()
         self._startup_blocked = False
+        # A broker read can fail transiently during process startup. Keep that
+        # failure fail-closed for the current cycle, but retry reconciliation on
+        # the next bar so a recovered broker does not leave this runner latched
+        # forever.
+        self._startup_reconciliation_pending = False
         self._state_corrupt = False
         self._last_epic: str | None = epic
         self._lock = threading.RLock()
@@ -472,16 +477,23 @@ class TaiDemoRunner:
             return {}
 
     def _reconcile_startup(self) -> None:
+        if self._state_corrupt:
+            return
         if self._dry_run:
             self._persist_state()
+            self._startup_reconciliation_pending = False
+            self._startup_blocked = False
             return
         try:
             positions = tuple(self._positions.get_positions())
         except Exception as exc:  # noqa: BLE001 - startup must fail closed
             self._startup_blocked = True
+            self._startup_reconciliation_pending = True
             self._journal_event("tai-startup", "reconcile_failed", reason=type(exc).__name__)
             self._send_alert("Tai demo startup reconciliation failed; entries are refused.")
             return
+        self._startup_reconciliation_pending = False
+        unmanaged = False
         by_id = {position.deal_id: position for position in positions}
         for deal_id, state in tuple(self._managed.items()):
             if state.shadow:
@@ -497,6 +509,7 @@ class TaiDemoRunner:
                 and position.epic == self._epic
                 and position.deal_id not in self._managed
             ):
+                unmanaged = True
                 self._startup_blocked = True
                 self._journal_event(
                     "tai-startup",
@@ -507,7 +520,16 @@ class TaiDemoRunner:
                 self._send_alert(
                     f"Tai demo found an unmanaged {position.epic} position; entries are refused."
                 )
+        # A successful broker read is enough to clear only a transient startup
+        # failure. Unmanaged positions remain a deliberate hard block.
+        if not unmanaged:
+            self._startup_blocked = False
         self._persist_state()
+
+    def _retry_startup_reconciliation(self) -> None:
+        """Retry a startup broker read that failed before the service was ready."""
+        if self._startup_reconciliation_pending:
+            self._reconcile_startup()
 
     def _persist_state(self) -> None:
         if self._state_path is None or self._state_corrupt:
@@ -592,6 +614,7 @@ class TaiDemoRunner:
         ):
             self._journal_event(cycle_id, "position_open", epic=bar.epic)
             return self._outcome(cycle_id, "NO_TRADE", "one_position_rule")
+        self._retry_startup_reconciliation()
         if self._startup_blocked:
             return self._outcome(cycle_id, "REJECTED", "startup_reconciliation_failed")
         if self.external_signals_only:
@@ -644,6 +667,7 @@ class TaiDemoRunner:
                 return self._outcome(cycle_id, "NO_TRADE", "duplicate_open_signal")
             if not self._close_for_new_signal(epic, cycle_id, source, positions):
                 return self._outcome(cycle_id, "REJECTED", "close_before_entry_failed")
+            self._retry_startup_reconciliation()
             if self._startup_blocked:
                 return self._outcome(cycle_id, "REJECTED", "startup_reconciliation_failed")
             self._journal_event(
