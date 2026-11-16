@@ -236,6 +236,23 @@ def test_timeout_after_acceptance_polls_and_does_not_retry(tmp_path):
     assert broker.calls == 1 and alerts
 
 
+def test_exact_broker_position_recovers_ambiguous_intent_without_resubmission(tmp_path):
+    manager, broker, journal, _, _, order = setup(tmp_path)
+    broker.auto_recover_exact_unresolved = True
+    broker.timeout = True
+    with pytest.raises(ExecutionPaused):
+        manager.submit("cycle-1", order)
+    deal = broker.get_positions()[0].deal_id
+
+    assert manager.reconcile()
+    assert not manager.paused
+    recovered = journal.get("cycle-1")
+    assert recovered is not None
+    assert recovered["execution_state"] == "submitted"
+    assert recovered["deal_id"] == deal
+    assert broker.calls == 1
+
+
 def test_approval_for_changed_order_is_rejected(tmp_path):
     def wrong(order, cycle):
         return BoundApproval(

@@ -294,6 +294,12 @@ class OrderManager:
             if len({position.deal_id for position in positions}) != len(positions):
                 raise ValueError("duplicate broker deal ids")
             records = self._journal.records()
+            recovered_unresolved = False
+            if bool(getattr(self._broker, "auto_recover_exact_unresolved", False)):
+                recovered_unresolved = self._recover_exact_unresolved(records, positions)
+            # Refresh after any exact broker-snapshot recovery so the recovered
+            # deal is included in the known-id map below.
+            records = self._journal.records()
             known = {record["deal_id"]: record for record in records if record.get("deal_id")}
             mismatch = bool(working_orders)
             for position in positions:
@@ -330,7 +336,64 @@ class OrderManager:
             self._last_reconcile = datetime.now(UTC)
             if mismatch:
                 self._pause("broker_state_mismatch")
+            elif recovered_unresolved and self._journal.pause_reason() in {
+                "broker_state_mismatch",
+                "order_outcome_ambiguous",
+            }:
+                # An exact, unique broker snapshot now proves the prior
+                # ambiguous leg; clear only this self-healing mismatch latch.
+                self._journal.clear_pause()
+                self._paused = False
             return not mismatch
+
+    def _recover_exact_unresolved(
+        self, records: Sequence[Mapping[str, object]], positions: Sequence[Position]
+    ) -> bool:
+        """Adopt unresolved intents only when broker truth is uniquely exact.
+
+        This never sends a request.  It closes the gap where Capital.com accepts
+        a position but its confirmation endpoint returns 404, leaving a durable
+        ambiguous intent and a stale pause after restart.
+        """
+        candidates: list[tuple[OrderRequest, tuple[Position, ...]]] = []
+        claims: dict[str, int] = {}
+        recovered = False
+        for record in records:
+            if record.get("execution_state") not in {"reserved", "ambiguous"}:
+                continue
+            raw_order = record.get("execution_order")
+            if not isinstance(raw_order, Mapping):
+                continue
+            try:
+                order = restored_order(raw_order)
+            except Exception:
+                continue
+            matches = tuple(
+                position
+                for position in positions
+                if (
+                    position.epic == order.epic
+                    and position.direction is order.direction
+                    and position.size == order.size
+                    and position.stop_level == order.stop_level
+                    and position.profit_level == order.profit_level
+                )
+            )
+            candidates.append((order, matches))
+            if len(matches) == 1:
+                claims[matches[0].deal_id] = claims.get(matches[0].deal_id, 0) + 1
+        for order, matches in candidates:
+            if len(matches) != 1 or claims.get(matches[0].deal_id) != 1:
+                continue
+            cycle_id = order.client_order_id
+            self._journal.mark(
+                cycle_id,
+                "submitted",
+                deal_id=matches[0].deal_id,
+                resolution_reason="exact broker position matched unresolved intent; no retry",
+            )
+            recovered = True
+        return recovered
 
     def tick(self) -> None:
         """Check emergency controls and service open positions on every loop."""
