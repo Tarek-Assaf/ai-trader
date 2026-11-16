@@ -17,6 +17,7 @@ from trader.execution.brokers.base import (
     TradingDisabledError,
 )
 from trader.execution.brokers.capital_com import CapitalComBroker
+from trader.integrations.capital_com.client import CapitalComError
 
 
 def position(
@@ -169,6 +170,37 @@ def test_rejected_confirmation_never_claims_open_success() -> None:
         broker.place_order(order())
 
     assert not any(name == "get_positions" for name, _ in client.calls)
+
+
+def test_missing_confirmation_recovers_unique_broker_position_without_retry() -> None:
+    client = FakeCapitalClient()
+    client.confirm_reply = {"dealStatus": "ACCEPTED", "affectedDeals": []}
+
+    def missing(_reference: str) -> Mapping[str, object]:
+        raise CapitalComError(404, "confirms")
+
+    client.confirm_deal = missing
+    broker = CapitalComBroker(client, enable_demo_orders=True)
+
+    receipt = broker.place_order(order())
+
+    assert receipt.deal_id == "deal-1"
+    assert sum(name == "open_position" for name, _ in client.calls) == 1
+    assert sum(name == "get_positions" for name, _ in client.calls) == 1
+
+
+def test_missing_confirmation_without_unique_position_stays_ambiguous() -> None:
+    client = FakeCapitalClient()
+
+    def missing(_reference: str) -> Mapping[str, object]:
+        raise CapitalComError(404, "confirms")
+
+    client.confirm_deal = missing
+    client.position_rows = []
+    broker = CapitalComBroker(client, enable_demo_orders=True)
+
+    with pytest.raises(BrokerProtocolError, match="not uniquely recoverable"):
+        broker.place_order(order())
 
 
 def test_missing_confirmed_stop_requests_close_and_never_returns_receipt() -> None:

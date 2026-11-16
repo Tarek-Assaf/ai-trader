@@ -20,6 +20,7 @@ from trader.execution.brokers.base import (
     Position,
     TradingDisabledError,
 )
+from trader.integrations.capital_com.client import CapitalComError
 
 _REFUSED_STATUS = frozenset({400, 403, 404, 422})
 LOGGER = logging.getLogger(__name__)
@@ -223,7 +224,27 @@ class CapitalComBroker:
                 raise OrderRejected(code if isinstance(code, str) else None) from None
             raise
         reference = _required_text(created.get("dealReference"), "dealReference")
-        confirmation = self._client.confirm_deal(reference)
+        try:
+            confirmation = self._client.confirm_deal(reference)
+        except CapitalComError as exc:
+            # Capital.com's demo confirmation endpoint can return 404 after the
+            # position was accepted.  Never retry the mutation: prove acceptance
+            # from the broker's current position snapshot when it uniquely matches
+            # the submitted leg, otherwise keep the outcome ambiguous and fail closed.
+            if exc.status_code != 404:
+                raise
+            recovered = self._recover_position_after_missing_confirmation(order)
+            if recovered is not None:
+                LOGGER.warning(
+                    "Capital.com open confirmation returned 404; recovered accepted "
+                    "position from broker snapshot deal_id=%s",
+                    recovered.deal_id,
+                )
+                return OrderReceipt(order.client_order_id, reference, recovered.deal_id, recovered)
+            raise BrokerProtocolError(
+                "Capital.com open confirmation was not found and the position was not "
+                "uniquely recoverable"
+            ) from None
         self._require_accepted(confirmation, "open")
         deals = confirmation.get("affectedDeals")
         if not isinstance(deals, list) or len(deals) != 1:
@@ -274,6 +295,28 @@ class CapitalComBroker:
                 "Capital.com did not retain the requested stop; a close was requested"
             )
         return OrderReceipt(order.client_order_id, reference, deal_id, opened)
+
+    def _recover_position_after_missing_confirmation(self, order: OrderRequest) -> Position | None:
+        """Return a uniquely matching open position after a confirmation 404."""
+        try:
+            positions = self._client.get_positions()
+        except Exception:
+            return None
+        matches: list[Position] = []
+        for item in positions:
+            try:
+                position = _position(item)
+            except BrokerProtocolError:
+                continue
+            if (
+                position.epic == order.epic
+                and position.direction is order.direction
+                and position.size == order.size
+                and position.stop_level == order.stop_level
+                and position.profit_level == order.profit_level
+            ):
+                matches.append(position)
+        return matches[0] if len(matches) == 1 else None
 
     @staticmethod
     def _require_accepted(reply: Mapping[str, object], operation: str) -> None:
