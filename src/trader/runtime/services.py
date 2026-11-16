@@ -166,11 +166,12 @@ def build_runtime_services(
     # Reports are a read-only view over the same objects used by the runtime.
     # Build these providers here, rather than in the LLM/router layer, so a
     # failed model can never prevent an owner command from returning facts.
+    trade_ledger = TradeLedger(engine, audit)
     if "pnl_provider" not in provided:
         provided["pnl_provider"] = _broker_pnl_provider(
             broker,
             Path(os.getenv("WORKSPACE_DIR", "/workspace")) / "state" / "pnl_baselines.json",
-            TradeLedger(engine, audit),
+            trade_ledger,
         )
     if "risk_provider" not in provided:
         risk_values = _dump_mapping(configs.get("risk"))
@@ -340,6 +341,7 @@ def build_runtime_services(
             control_writer=control_writer,
             alert=_log_alert,
             journal=journal,
+            realized_pnl_provider=lambda start: trade_ledger.day_total(start),
         )
         position_manager = ProtectivePositionManager(
             broker, control_writer=control_writer, alert=_log_alert
