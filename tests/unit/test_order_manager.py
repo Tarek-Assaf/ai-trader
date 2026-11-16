@@ -238,6 +238,7 @@ def test_timeout_after_acceptance_polls_and_does_not_retry(tmp_path):
 
 def test_exact_broker_position_recovers_ambiguous_intent_without_resubmission(tmp_path):
     manager, broker, journal, _, _, order = setup(tmp_path)
+    broker.auto_recover_exact_unresolved = True
     broker.timeout = True
     with pytest.raises(ExecutionPaused):
         manager.submit("cycle-1", order)

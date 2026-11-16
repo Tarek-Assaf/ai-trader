@@ -118,6 +118,7 @@ class CapitalComBroker:
     # lets the execution gate overlap independent read-only reconciliation calls
     # without changing the conservative behavior of other broker adapters.
     parallel_read_safe = True
+    auto_recover_exact_unresolved = True
 
     def __init__(self, client: _CapitalComClient, *, enable_demo_orders: bool = False) -> None:
         if client.environment != "demo":

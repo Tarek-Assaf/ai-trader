@@ -294,7 +294,8 @@ class OrderManager:
             if len({position.deal_id for position in positions}) != len(positions):
                 raise ValueError("duplicate broker deal ids")
             records = self._journal.records()
-            self._recover_exact_unresolved(records, positions)
+            if bool(getattr(self._broker, "auto_recover_exact_unresolved", False)):
+                self._recover_exact_unresolved(records, positions)
             # Refresh after any exact broker-snapshot recovery so the recovered
             # deal is included in the known-id map below.
             records = self._journal.records()
