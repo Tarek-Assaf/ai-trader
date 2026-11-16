@@ -589,7 +589,12 @@ class OrderManager:
             if kind in accepted_types and status in accepted_statuses:
                 seen_acceptance = True
             if status in closed_statuses or action in {
-                "CLOSED", "REDUCED", "TAKE_PROFIT", "STOP_LOSS", "TP", "STOP"
+                "CLOSED",
+                "REDUCED",
+                "TAKE_PROFIT",
+                "STOP_LOSS",
+                "TP",
+                "STOP",
             }:
                 seen_close = True
             if action == "OPENED":
