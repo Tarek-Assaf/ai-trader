@@ -296,9 +296,7 @@ class CapitalComBroker:
             )
         return OrderReceipt(order.client_order_id, reference, deal_id, opened)
 
-    def _recover_position_after_missing_confirmation(
-        self, order: OrderRequest
-    ) -> Position | None:
+    def _recover_position_after_missing_confirmation(self, order: OrderRequest) -> Position | None:
         """Return a uniquely matching open position after a confirmation 404."""
         try:
             positions = self._client.get_positions()
