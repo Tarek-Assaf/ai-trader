@@ -355,8 +355,11 @@ class OrderManager:
         for record in records:
             if record.get("execution_state") not in {"reserved", "ambiguous"}:
                 continue
+            raw_order = record.get("execution_order")
+            if not isinstance(raw_order, Mapping):
+                continue
             try:
-                order = restored_order(record["execution_order"])
+                order = restored_order(raw_order)
             except Exception:
                 continue
             matches = tuple(
