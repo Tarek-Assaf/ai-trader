@@ -294,8 +294,9 @@ class OrderManager:
             if len({position.deal_id for position in positions}) != len(positions):
                 raise ValueError("duplicate broker deal ids")
             records = self._journal.records()
+            recovered_unresolved = False
             if bool(getattr(self._broker, "auto_recover_exact_unresolved", False)):
-                self._recover_exact_unresolved(records, positions)
+                recovered_unresolved = self._recover_exact_unresolved(records, positions)
             # Refresh after any exact broker-snapshot recovery so the recovered
             # deal is included in the known-id map below.
             records = self._journal.records()
@@ -335,7 +336,7 @@ class OrderManager:
             self._last_reconcile = datetime.now(UTC)
             if mismatch:
                 self._pause("broker_state_mismatch")
-            elif self._journal.pause_reason() in {
+            elif recovered_unresolved and self._journal.pause_reason() in {
                 "broker_state_mismatch",
                 "order_outcome_ambiguous",
             }:
@@ -347,7 +348,7 @@ class OrderManager:
 
     def _recover_exact_unresolved(
         self, records: Sequence[Mapping[str, object]], positions: Sequence[Position]
-    ) -> None:
+    ) -> bool:
         """Adopt unresolved intents only when broker truth is uniquely exact.
 
         This never sends a request.  It closes the gap where Capital.com accepts
@@ -356,6 +357,7 @@ class OrderManager:
         """
         candidates: list[tuple[OrderRequest, tuple[Position, ...]]] = []
         claims: dict[str, int] = {}
+        recovered = False
         for record in records:
             if record.get("execution_state") not in {"reserved", "ambiguous"}:
                 continue
@@ -390,6 +392,8 @@ class OrderManager:
                 deal_id=matches[0].deal_id,
                 resolution_reason="exact broker position matched unresolved intent; no retry",
             )
+            recovered = True
+        return recovered
 
     def tick(self) -> None:
         """Check emergency controls and service open positions on every loop."""
