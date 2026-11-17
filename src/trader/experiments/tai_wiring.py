@@ -27,6 +27,7 @@ from trader.data.resample import Candle
 from trader.execution.brokers.base import Direction, OrderRequest
 from trader.experiments.start_balance import StartBalanceStore
 from trader.experiments.tai_demo import (
+    MIN_SPREAD_TICKS,
     Alert,
     ClosedBar,
     Control,
@@ -48,6 +49,7 @@ EMA_PERIOD = 200
 ADX_PERIOD = 14
 SWING_LOOKBACK = 5
 MAX_RISK_ATR = 2.0
+MIN_EXTERNAL_STOP_ATR = Decimal("0.5")
 VWAP_DISTANCE_ATR = 1.5
 GROUP_BARS = 18
 # A 54m group with at most two recorder holes still closes like TradingView's, which
@@ -611,12 +613,68 @@ class TaiSignalProvider:
         rules: TaiInstrumentRules,
         now: datetime | None = None,
         reference: Decimal | None = None,
+        entry: Decimal | None = None,
+        stop: Decimal | None = None,
+        targets: Sequence[Decimal] = (),
     ) -> TaiSignal:
         """Build the entry for a signal decided elsewhere (the owner's TradingView alert).
 
         Entry is the live quote.  The stop is the indicator's own structure stop: the
         extreme of the five closed bars before the signal bar, plus or minus 0.20 ATR.
         """
+        buy = direction is Direction.BUY
+        quote = rules.ask if buy else rules.bid
+        if quote is None or quote <= 0:
+            raise ValueError("broker quote is unavailable")
+        explicit_plan = entry is not None or stop is not None or bool(targets)
+        if explicit_plan:
+            if entry is None or stop is None:
+                raise ValueError("TradingView plan requires entry and stop")
+            if len(targets) > 3:
+                raise ValueError("TradingView plan supports at most three targets")
+            explicit_tick = rules.tick_size or Decimal("0")
+            external_atr = self.latest_atr
+            if external_atr is None or external_atr <= 0:
+                raise ValueError("ATR is not ready for an external signal")
+            if abs(entry - stop) < MIN_EXTERNAL_STOP_ATR * external_atr:
+                raise ValueError("TradingView stop is tighter than the configured ATR floor")
+            drift_limit = max(
+                abs(entry - stop) * Decimal("0.25"),
+                explicit_tick * MIN_SPREAD_TICKS,
+            )
+            if abs(quote - entry) > drift_limit:
+                raise ValueError(
+                    "TradingView entry drift exceeds the allowed stop-distance tolerance"
+                )
+            if (buy and stop >= quote) or (not buy and stop <= quote):
+                raise ValueError("TradingView stop is already through the live broker quote")
+            if any(
+                (buy and target <= quote) or (not buy and target >= quote) for target in targets
+            ):
+                raise ValueError("TradingView target is already through the live broker quote")
+            explicit_stop, widened = self._stop_at_broker_minimum(direction, quote, stop, rules)
+            if widened:
+                raise ValueError("TradingView stop is inside the broker minimum distance")
+            if explicit_tick > 0:
+                explicit_stop = (
+                    (explicit_stop / explicit_tick).to_integral_value(rounding=ROUND_FLOOR)
+                    if buy
+                    else (explicit_stop / explicit_tick).to_integral_value(rounding=ROUND_CEILING)
+                ) * explicit_tick
+                explicit_targets = tuple(
+                    (target / explicit_tick).to_integral_value(rounding=ROUND_HALF_UP)
+                    * explicit_tick
+                    for target in targets
+                )
+            else:
+                explicit_targets = tuple(targets)
+            return TaiSignal(
+                direction,
+                quote,
+                explicit_stop,
+                explicit_targets,
+                note=f"TradingView explicit plan; live quote {quote} vs alert entry {entry}",
+            )
         atr = self.latest_atr
         if atr is None or atr <= 0:
             raise ValueError("ATR is not ready for an external signal")
@@ -625,10 +683,6 @@ class TaiSignalProvider:
         previous = [bar for bar in self._bars if bar.at < signal_bar_start][-SWING_LOOKBACK:]
         if len(previous) < SWING_LOOKBACK:
             raise ValueError("not enough closed bars before the signal bar")
-        buy = direction is Direction.BUY
-        quote = rules.ask if buy else rules.bid
-        if quote is None or quote <= 0:
-            raise ValueError("broker quote is unavailable")
         buffer = atr * Decimal("0.20")
         stop = (
             min(bar.low for bar in previous) - buffer

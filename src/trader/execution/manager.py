@@ -833,14 +833,19 @@ class OrderManager:
             mode = self._apply_controls()
             if mode is not ControlMode.RUN or self._paused:
                 raise ExecutionPaused("entries are paused")
+            batch_started = time.perf_counter()
+            reconcile_started = batch_started
             if not self.reconcile():
                 if self._unreachable_retry_at is not None:
                     raise BrokerUnreachable("broker unreachable; entry skipped")
                 raise ExecutionPaused("broker state mismatch")
+            reconcile_before_ms = (time.perf_counter() - reconcile_started) * 1000
             self._batch_submission = True
             started = time.perf_counter()
             receipts: list[OrderReceipt | None] = []
             prepared: list[tuple[str, OrderRequest]] = []
+            preflight_ms = 0.0
+            broker_call_ms = 0.0
             batch_place: Callable[..., Sequence[OrderReceipt]] | None = None
             broker_started = False
             try:
@@ -876,11 +881,14 @@ class OrderManager:
                             raise ExecutionPaused("entry preflight failed") from None
                     if len(prepared) == 0:
                         return (None, None, None)
+                    preflight_ms = (time.perf_counter() - started) * 1000
                     mode = self._apply_controls()
                     if mode is not ControlMode.RUN:
                         raise ExecutionPaused("control activated before broker submission")
                     broker_started = True
+                    broker_call_started = time.perf_counter()
                     batch_receipts = tuple(batch_place(tuple(order for _, order in prepared)))
+                    broker_call_ms = (time.perf_counter() - broker_call_started) * 1000
                     if len(batch_receipts) != len(prepared):
                         raise ValueError("broker batch receipt count mismatch")
                     receipt_by_id = {receipt.client_order_id: receipt for receipt in batch_receipts}
@@ -906,10 +914,14 @@ class OrderManager:
                     raise ExecutionPaused("kill activated during batch submission")
                 self.reconcile()
                 LOGGER.info(
-                    "batch order submit timing cycle_id=%s legs=%s total_ms=%.1f",
+                    "batch order submit timing cycle_id=%s legs=%s reconcile_before_ms=%.1f "
+                    "preflight_ms=%.1f broker_call_ms=%.1f total_ms=%.1f",
                     cycle_id,
                     len(receipts),
-                    (time.perf_counter() - started) * 1000,
+                    reconcile_before_ms,
+                    preflight_ms,
+                    broker_call_ms,
+                    (time.perf_counter() - batch_started) * 1000,
                 )
                 return tuple(receipts)
             except Exception:

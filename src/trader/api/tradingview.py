@@ -1,8 +1,9 @@
 """TradingView alert receiver: the owner's Tai Smart Filter decides when a signal exists.
 
-TradingView sends the alert as a webhook.  This route only authenticates it and hands a
-BUY or SELL to the Tai runner, which still applies the spread guard, the Risk Guardian
-and the OrderManager.  The route has no way to choose size, stop or broker action.
+TradingView sends the alert as a webhook.  This route authenticates it and hands a BUY or
+SELL plus the optional TradingView plan to the Tai runner, which still applies the spread
+guard, the Risk Guardian and the OrderManager.  The route never chooses size or bypasses
+broker controls.
 """
 
 from __future__ import annotations
@@ -203,6 +204,7 @@ async def tradingview_alert(request: Request, background: BackgroundTasks) -> di
     if MAX_ALERT_AGE_SECONDS < age < BAR_SECONDS - EARLY_ALERT_SECONDS:
         LOGGER.warning("tradingview %s alert ignored: %ss after the bar closed", signal, age)
         return {"status": "stale", "signal": signal, "age_seconds": age}
+    plan = _plan(payload)
     key = f"{symbol}:{signal}"
     with _lock:
         previous = _last_accepted.get(key)
@@ -219,6 +221,7 @@ async def tradingview_alert(request: Request, background: BackgroundTasks) -> di
         Direction(signal),
         signal,
         _close_price(payload),
+        plan,
         accepted_at,
     )
     return {"status": "accepted", "signal": signal}
@@ -236,11 +239,48 @@ def _close_price(payload: dict[str, Any]) -> Decimal | None:
     return value if value.is_finite() and value > 0 else None
 
 
+def _price_field(payload: dict[str, Any], name: str) -> Decimal | None:
+    """Parse one optional positive TradingView price without exposing the raw payload."""
+    raw = payload.get(name)
+    if raw is None or isinstance(raw, bool):
+        return None
+    try:
+        value = Decimal(str(raw).strip())
+    except (InvalidOperation, ValueError):
+        return None
+    return value if value.is_finite() and value > 0 else None
+
+
+def _plan(payload: dict[str, Any]) -> tuple[Decimal, Decimal, tuple[Decimal, ...]] | None:
+    """Return a complete explicit TV plan, or None for legacy close-only alerts."""
+    names = ("entry", "stop", "tp1", "tp2", "tp3")
+    if not any(name in payload for name in names):
+        return None
+    entry = _price_field(payload, "entry")
+    stop = _price_field(payload, "stop")
+    if entry is None or stop is None:
+        raise HTTPException(status_code=400, detail="invalid tradingview plan")
+    targets: list[Decimal] = []
+    for name in ("tp1", "tp2", "tp3"):
+        if name not in payload:
+            break
+        target = _price_field(payload, name)
+        if target is None:
+            raise HTTPException(status_code=400, detail="invalid tradingview plan")
+        targets.append(target)
+    if "tp2" in payload and len(targets) < 2:
+        raise HTTPException(status_code=400, detail="invalid tradingview plan")
+    if "tp3" in payload and len(targets) < 3:
+        raise HTTPException(status_code=400, detail="invalid tradingview plan")
+    return entry, stop, tuple(targets)
+
+
 def _trade(
     runner: Any,
     direction: Direction,
     signal: str,
     close: Decimal | None,
+    plan: tuple[Decimal, Decimal, tuple[Decimal, ...]] | None = None,
     accepted_at: float | None = None,
 ) -> None:
     started = _monotonic()
@@ -251,24 +291,28 @@ def _trade(
                 signal,
                 max(0.0, (_monotonic() - accepted_at) * 1000),
             )
-        outcome = (
-            runner.on_external_signal(direction, reference_price=close)
-            if close is not None
-            else runner.on_external_signal(direction)
-        )
+        kwargs: dict[str, Any] = {}
+        if close is not None:
+            kwargs["reference_price"] = close
+        if plan is not None:
+            kwargs["entry_price"], kwargs["stop_price"], kwargs["target_prices"] = plan
+        if accepted_at is not None:
+            kwargs["alert_received_at"] = accepted_at
+        outcome = runner.on_external_signal(direction, **kwargs)
+        completed = _monotonic()
         LOGGER.warning(
-            "tradingview %s alert -> %s %s queue_ms=%.1f trade_ms=%.1f",
+            "tradingview %s alert -> %s %s queue_ms=%.1f alert_to_result_ms=%.1f",
             signal,
             outcome.action,
             outcome.reason,
             max(0.0, (started - accepted_at) * 1000) if accepted_at is not None else 0.0,
-            (_monotonic() - started) * 1000,
+            max(0.0, (completed - accepted_at) * 1000) if accepted_at is not None else 0.0,
         )
     except Exception:  # noqa: BLE001 - nothing is waiting on this task
         LOGGER.error(
-            "tradingview %s alert failed queue_ms=%.1f trade_ms=%.1f",
+            "tradingview %s alert failed queue_ms=%.1f alert_to_result_ms=%.1f",
             signal,
             max(0.0, (started - accepted_at) * 1000) if accepted_at is not None else 0.0,
-            (_monotonic() - started) * 1000,
+            max(0.0, (_monotonic() - accepted_at) * 1000) if accepted_at is not None else 0.0,
             exc_info=True,
         )
