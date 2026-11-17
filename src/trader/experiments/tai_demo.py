@@ -15,6 +15,7 @@ import os
 import re
 import tempfile
 import threading
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
@@ -635,6 +636,10 @@ class TaiDemoRunner:
         direction: Direction,
         source: str = "tradingview",
         reference_price: Decimal | None = None,
+        entry_price: Decimal | None = None,
+        stop_price: Decimal | None = None,
+        target_prices: Sequence[Decimal] | None = None,
+        alert_received_at: float | None = None,
     ) -> DemoOutcome:
         """Enter on a signal produced outside this process (the owner's TradingView alert).
 
@@ -679,26 +684,38 @@ class TaiDemoRunner:
                     return self._build_external_entry(
                         direction,
                         reference_price,
+                        entry_price,
+                        stop_price,
+                        target_prices,
                         epic,
                         cycle_id,
                         rules,
+                        alert_received_at,
                     )
             rules = self._rules_provider(epic) if self._rules_provider is not None else None
             return self._build_external_entry(
                 direction,
                 reference_price,
+                entry_price,
+                stop_price,
+                target_prices,
                 epic,
                 cycle_id,
                 rules,
+                alert_received_at,
             )
 
     def _build_external_entry(
         self,
         direction: Direction,
         reference_price: Decimal | None,
+        entry_price: Decimal | None,
+        stop_price: Decimal | None,
+        target_prices: Sequence[Decimal] | None,
         epic: str,
         cycle_id: str,
         rules: TaiInstrumentRules | None,
+        alert_received_at: float | None,
     ) -> DemoOutcome:
         """Build and submit one external entry using one rules snapshot."""
         try:
@@ -706,9 +723,20 @@ class TaiDemoRunner:
             if rules is None or not callable(build):
                 raise TaiDemoRefused("external signals need broker rules and a signal builder")
             signal = (
-                build(direction, rules, reference=reference_price)
-                if reference_price is not None
-                else build(direction, rules)
+                build(
+                    direction,
+                    rules,
+                    reference=reference_price,
+                    entry=entry_price,
+                    stop=stop_price,
+                    targets=tuple(target_prices or ()),
+                )
+                if entry_price is not None or stop_price is not None or target_prices
+                else (
+                    build(direction, rules, reference=reference_price)
+                    if reference_price is not None
+                    else build(direction, rules)
+                )
             )
         except (TaiDemoRefused, ValueError) as exc:
             self._journal_event(cycle_id, "order_refused", epic=epic, reason=str(exc))
@@ -717,7 +745,14 @@ class TaiDemoRunner:
         # Reuse the broker rules fetched to build the external signal.  Refreshing
         # the same market details again inside _attempt_entry adds avoidable
         # Capital.com GETs to every TradingView entry.
-        return self._attempt_entry(signal, epic, cycle_id, external=True, rules=rules)
+        return self._attempt_entry(
+            signal,
+            epic,
+            cycle_id,
+            external=True,
+            rules=rules,
+            alert_received_at=alert_received_at,
+        )
 
     def _has_open_position(
         self,
@@ -783,6 +818,7 @@ class TaiDemoRunner:
         external: bool = False,
         retried: bool = False,
         rules: TaiInstrumentRules | None = None,
+        alert_received_at: float | None = None,
     ) -> DemoOutcome:
         try:
             if rules is None and self._rules_provider is not None:
@@ -924,6 +960,13 @@ class TaiDemoRunner:
                         zip(leg_sizes, signal.levels(), strict=True), start=1
                     )
                 )
+                if alert_received_at is not None:
+                    LOGGER.info(
+                        "tradingview alert_to_order_ms=%.1f cycle_id=%s phase=submit_call",
+                        max(0.0, (time.monotonic() - alert_received_at) * 1000),
+                        cycle_id,
+                    )
+                submit_started = time.perf_counter()
                 receipts = submit_legs(
                     cycle_id,
                     leg_orders,
@@ -934,12 +977,30 @@ class TaiDemoRunner:
                 )
                 if receipts is None or len(receipts) != 3:
                     raise ExecutionPaused("three-leg submission returned an incomplete receipt")
+                LOGGER.info(
+                    "tradingview order_submit_ms=%.1f cycle_id=%s legs=%s",
+                    (time.perf_counter() - submit_started) * 1000,
+                    cycle_id,
+                    len(receipts),
+                )
                 return self._record_three_leg_entry(
                     signal, epic, cycle_id, receipts, leg_orders, rules
                 )
             if external and callable(submit_relaxed):
+                if alert_received_at is not None:
+                    LOGGER.info(
+                        "tradingview alert_to_order_ms=%.1f cycle_id=%s phase=submit_call",
+                        max(0.0, (time.monotonic() - alert_received_at) * 1000),
+                        cycle_id,
+                    )
                 receipt = submit_relaxed(cycle_id, order)
             else:
+                if alert_received_at is not None:
+                    LOGGER.info(
+                        "tradingview alert_to_order_ms=%.1f cycle_id=%s phase=submit_call",
+                        max(0.0, (time.monotonic() - alert_received_at) * 1000),
+                        cycle_id,
+                    )
                 receipt = self._orders.submit(cycle_id, order)
         except ExecutionPaused as exc:
             reason = str(exc) or "execution_paused"
@@ -964,6 +1025,7 @@ class TaiDemoRunner:
                     external=external,
                     retried=True,
                     rules=rules,
+                    alert_received_at=alert_received_at,
                 )
             self._journal_event(cycle_id, label, epic=epic, reason=reason)
             self._send_alert(

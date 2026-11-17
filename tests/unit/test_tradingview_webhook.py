@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
@@ -20,10 +21,12 @@ class _Runner:
     def __init__(self) -> None:
         self.calls: list[Direction] = []
         self.references: list[object] = []
+        self.plans: list[dict[str, object]] = []
 
     def on_external_signal(self, direction: Direction, **kwargs: object) -> SimpleNamespace:
         self.calls.append(direction)
         self.references.append(kwargs.get("reference_price"))
+        self.plans.append(kwargs)
         return SimpleNamespace(action="SUBMITTED", reason="entry_submitted")
 
 
@@ -154,14 +157,40 @@ def test_alerts_just_before_or_after_the_bar_close_are_traded(client) -> None:
 
 
 def test_the_close_price_in_the_alert_is_passed_on_when_usable(client) -> None:
-    from decimal import Decimal
-
     assert _post(client, secret=SECRET, signal="SELL", close=29395.0).json()["status"] == "accepted"
     client.clock["mono"] += 500
     assert _post(client, secret=SECRET, signal="SELL", close="oops").json()["status"] == "accepted"
     client.clock["mono"] += 500
     assert _post(client, secret=SECRET, signal="SELL", close=-5).json()["status"] == "accepted"
     assert client.runner.references == [Decimal("29395.0"), None, None]
+
+
+def test_explicit_tradingview_plan_is_forwarded_without_raw_payload(client) -> None:
+    response = _post(
+        client,
+        secret=SECRET,
+        signal="BUY",
+        close="100.1",
+        entry="100",
+        stop="99",
+        tp1="101",
+        tp2="102",
+        tp3="103",
+    )
+    assert response.json()["status"] == "accepted"
+    assert client.runner.plans[0]["entry_price"] == Decimal("100")
+    assert client.runner.plans[0]["stop_price"] == Decimal("99")
+    assert client.runner.plans[0]["target_prices"] == (
+        Decimal("101"),
+        Decimal("102"),
+        Decimal("103"),
+    )
+
+
+def test_partial_or_invalid_tradingview_plan_is_rejected(client) -> None:
+    response = _post(client, secret=SECRET, signal="BUY", entry="100")
+    assert response.status_code == 400
+    assert client.runner.calls == []
 
 
 # ---- copying the alert to the other accounts' bots -------------------------------------------
