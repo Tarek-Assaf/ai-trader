@@ -13,7 +13,7 @@ import logging
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from decimal import ROUND_DOWN, Decimal
 from typing import Any
 
@@ -36,6 +36,7 @@ from trader.risk.guardian import (
     SizingEstimate,
     TradeIntent,
 )
+from trader.runtime.calendar import trading_day, trading_week
 
 LOGGER = logging.getLogger(__name__)
 
@@ -488,6 +489,7 @@ class PnlLossGuard:
         alert: Callable[[str], None],
         journal: object | None = None,
         realized_pnl_provider: Callable[[datetime], Decimal] | None = None,
+        risk_override_source: object | None = None,
         clock: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
         self.broker = broker
@@ -500,6 +502,7 @@ class PnlLossGuard:
         # checks.  Balance deltas can include deposits/withdrawals and must not
         # be treated as realized trading P&L (T-278).
         self.realized_pnl_provider = realized_pnl_provider
+        self.risk_override_source = risk_override_source
         self.clock = clock
         self._day_baseline: Decimal | None = None
         self._week_baseline: Decimal | None = None
@@ -510,9 +513,8 @@ class PnlLossGuard:
 
     def _load_or_store_baseline(self, equity: Decimal) -> tuple[Decimal, Decimal]:
         now = self.clock().astimezone(UTC)
-        day = now.date().isoformat()
-        iso = now.date().isocalendar()
-        week = f"{iso.year}-W{iso.week:02d}"
+        day, _day_start = trading_day(now)
+        week, _week_start = trading_week(now)
         snapshot: Any = None
         getter = getattr(self.journal, "get_snapshot", None)
         if callable(getter):
@@ -561,6 +563,21 @@ class PnlLossGuard:
         assert self._day_baseline is not None and self._week_baseline is not None
         return self._day_baseline, self._week_baseline
 
+    def _risk_override_active(self) -> bool:
+        source = self.risk_override_source
+        active = getattr(source, "risk_override_active", None)
+        if not callable(active):
+            return False
+        try:
+            return bool(active())
+        except Exception:  # noqa: BLE001 - an unavailable override fails closed
+            return False
+
+    def risk_override_active(self) -> bool:
+        """Expose the bounded override state to reconciliation self-healing."""
+
+        return self._risk_override_active()
+
     def __call__(self, _positions: Sequence[Position]) -> None:
         now = self.clock().astimezone(UTC)
         account = self.broker.get_account()
@@ -578,14 +595,9 @@ class PnlLossGuard:
         weekly = account.get("weekly_pnl") if isinstance(account, Mapping) else None
         try:
             if self.realized_pnl_provider is not None:
-                daily_pnl = self.realized_pnl_provider(
-                    now.astimezone(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
-                )
-                week_start = (
-                    (now - timedelta(days=now.weekday()))
-                    .astimezone(UTC)
-                    .replace(hour=0, minute=0, second=0, microsecond=0)
-                )
+                day_start = trading_day(now)[1]
+                week_start = trading_week(now)[1]
+                daily_pnl = self.realized_pnl_provider(day_start)
                 weekly_pnl = self.realized_pnl_provider(week_start)
             else:
                 daily_pnl = Decimal(str(daily)) if daily is not None else equity - day_baseline
@@ -593,13 +605,17 @@ class PnlLossGuard:
         except (ArithmeticError, TypeError, ValueError):
             raise RuntimeError("account P&L is unavailable") from None
         breached = []
+        override = self._risk_override_active()
         for name, pnl, baseline, limit in (
             ("daily", daily_pnl, day_baseline, self.max_daily_loss_pct),
             ("weekly", weekly_pnl, week_baseline, self.max_weekly_loss_pct),
         ):
             if not isinstance(pnl, Decimal) or pnl.is_nan() or pnl.is_infinite():
                 raise RuntimeError(f"{name} P&L is unavailable")
-            if max(Decimal(0), -pnl) / baseline * 100 >= limit:
+            if (
+                not (override and name in {"daily", "weekly"})
+                and max(Decimal(0), -pnl) / baseline * 100 >= limit
+            ):
                 breached.append(name)
         self._daily_loss_pct = max(Decimal(0), -daily_pnl) / day_baseline * 100
         if breached:

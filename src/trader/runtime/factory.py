@@ -285,6 +285,7 @@ def build_default_factories(
                 RiskLimits.from_mapping(risk_values),
                 audit,
                 canonical_symbols=symbols.keys(),
+                risk_override_source=supplied.get("control_source"),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise RuntimeDependencyUnavailable("risk guardian configuration is invalid") from exc

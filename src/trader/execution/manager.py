@@ -333,6 +333,30 @@ class OrderManager:
                     self._journal.mark(record["execution_order"]["client_order_id"], "closed")
             self._positions = positions
             self._check_pnl(positions)
+            # A P&L latch is only valid while the current Riyadh-day/week
+            # calculation still breaches.  Once the fresh calculation passes,
+            # clear the stale P&L-only latch automatically; broker, reconciliation
+            # and safety pauses remain untouched.
+            if self._journal.pause_reason() in {
+                "pnl_limit_daily",
+                "pnl_limit_weekly",
+                "pnl_limit_daily_and_weekly",
+            }:
+                self._journal.clear_pause()
+                self._paused = False
+            override_active = bool(
+                getattr(self._check_pnl, "risk_override_active", lambda: False)()
+            )
+            if override_active and self._journal.pause_reason() in {
+                "pnl_limit_daily",
+                "pnl_limit_weekly",
+                "pnl_limit_daily_and_weekly",
+            }:
+                # An owner-authenticated, time-limited paper/demo override may
+                # clear only a P&L latch.  Reconciliation, broker and safety
+                # pauses remain untouched and still require their own recovery.
+                self._journal.clear_pause()
+                self._paused = False
             self._last_reconcile = datetime.now(UTC)
             if mismatch:
                 self._pause("broker_state_mismatch")

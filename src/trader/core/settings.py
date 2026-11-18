@@ -34,9 +34,11 @@ class EnvironmentSettings(BaseSettings):
     # sets a different value.  ``0`` remains an explicit opt-in to the legacy
     # broker-recorded baseline.
     tai_demo_start_balance: Decimal = Decimal("1000")
-    # Three-leg execution is enabled for the paper/demo experiment; live orders
-    # remain blocked by the existing demo/paper/live-trading gates.
-    tai_demo_three_legs: bool = True
+    # A single broker position is the safe default.  The runner manages TP1/TP2
+    # partial closes and TP3 on that position, so entry is one idempotent broker
+    # mutation rather than three independent open/confirm requests.  Three-leg
+    # entry remains an explicit paper/demo opt-in for controlled experiments.
+    tai_demo_three_legs: bool = False
     # Explicit owner-directed sizing experiment.  This is only accepted by the
     # Tai demo wiring when broker_env=demo, trading_mode=paper, and live trading
     # is disabled; it never weakens live-order safety controls.

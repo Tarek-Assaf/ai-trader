@@ -51,6 +51,7 @@ class FlagFileControlSource:
 
 
 GLOBAL_CONTROL_KEY = "ai_trader:execution:control"
+RISK_OVERRIDE_SUFFIX = ":risk-override"
 
 
 def control_key(account_id: str) -> str:
@@ -63,16 +64,57 @@ def control_key(account_id: str) -> str:
 class RedisControlSource:
     """Read and update a persistent Redis control key shared by service workers."""
 
-    def __init__(self, client: object, key: str = GLOBAL_CONTROL_KEY) -> None:
+    def __init__(self, client: Any, key: str = GLOBAL_CONTROL_KEY) -> None:
         if not key.strip():
             raise ValueError("control key must not be empty")
-        self._client = client
+        self._client: Any = client
         self._key = key
         self._last_requested: ControlMode | None = None
         self._last_honored: bool | None = None
 
     def _auth_key(self, suffix: str) -> str:
         return f"{self._key}:auth:{suffix}"
+
+    @property
+    def _risk_override_key(self) -> str:
+        return f"{self._key}{RISK_OVERRIDE_SUFFIX}"
+
+    def set_risk_override(self, enabled: bool, *, ttl_seconds: int = 900) -> None:
+        """Set a short-lived, owner-authenticated P&L-only override.
+
+        This is deliberately separate from the pause/kill control key.  It can
+        never clear a kill, reconciliation, stale-data, stop-loss or broker
+        safety failure, and expires automatically when its TTL elapses.
+        """
+        if ttl_seconds <= 0 or ttl_seconds > 1800:
+            raise ValueError("risk override TTL must be between 1 and 1800 seconds")
+        try:
+            if enabled:
+                expires = time.time() + ttl_seconds
+                try:
+                    self._client.set(self._risk_override_key, str(expires), ex=ttl_seconds)
+                except TypeError:
+                    self._client.set(self._risk_override_key, str(expires))
+            else:
+                self._client.delete(self._risk_override_key)
+        except Exception:
+            raise ControlUnavailable("risk override state is unavailable") from None
+
+    def risk_override_active(self) -> bool:
+        """Return whether this control scope has an unexpired risk override."""
+        try:
+            raw = self._client.get(self._risk_override_key)
+            if raw is None:
+                return False
+            expires = float(raw)
+            if expires <= time.time():
+                self._client.delete(self._risk_override_key)
+                return False
+            return True
+        except (TypeError, ValueError):
+            return False
+        except Exception:
+            raise ControlUnavailable("risk override state is unavailable") from None
 
     def authorize(
         self,
@@ -118,7 +160,7 @@ class RedisControlSource:
 
     def read(self) -> ControlMode:
         try:
-            value = self._client.get(self._key)  # type: ignore[attr-defined]
+            value = self._client.get(self._key)
         except Exception:
             raise ControlUnavailable("Redis control key is unavailable") from None
         if value is None:
@@ -140,9 +182,9 @@ class RedisControlSource:
                 self._last_honored = False
                 return
             if mode is ControlMode.RUN:
-                self._client.delete(self._key)  # type: ignore[attr-defined]
+                self._client.delete(self._key)
             else:
-                self._client.set(self._key, mode.value)  # type: ignore[attr-defined]
+                self._client.set(self._key, mode.value)
             self._last_honored = self.read() is mode
         except Exception:
             self._last_honored = False
@@ -182,6 +224,19 @@ class CompositeControlSource:
         if errors:
             raise ControlUnavailable("one or more control sources are unavailable") from None
         return ControlMode.RUN
+
+    def risk_override_active(self) -> bool:
+        """Return true when any constituent scope has an active override."""
+        active = False
+        for source in self._sources:
+            checker = getattr(source, "risk_override_active", None)
+            if not callable(checker):
+                continue
+            try:
+                active = active or bool(checker())
+            except ControlUnavailable:
+                raise
+        return active
 
     def soak_observation(self) -> Mapping[str, object]:
         result: dict[str, object] = {}
@@ -295,6 +350,21 @@ class AccountControls:
 
     def global_mode(self) -> ControlMode:
         return CompositeControlSource((self._flags, self._global)).read()
+
+    def set_risk_override(
+        self, number: str | None, *, enabled: bool, ttl_seconds: int = 900
+    ) -> None:
+        """Set the bounded risk override for one account or every account."""
+        if number is None:
+            self._global.set_risk_override(enabled, ttl_seconds=ttl_seconds)
+            return
+        self._accounts[f"acct-{number}"].set_risk_override(enabled, ttl_seconds=ttl_seconds)
+
+    def risk_override_active(self, number: str | None) -> bool:
+        """Read the effective global-plus-account override for one account."""
+        if number is None:
+            return self._global.risk_override_active()
+        return self.source_for(f"acct-{number}").risk_override_active()
 
 
 def build_account_controls(

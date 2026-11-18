@@ -1275,6 +1275,34 @@ async def lifespan(_app: FastAPI) -> Any:
                     return "Execution control is unavailable; execution remains halted."
                 return f"{command} accepted; execution mode is {mode.value}."
 
+            def risk_override_handler(account: str | None, enabled: bool) -> str:
+                """Apply only the short-lived P&L override in paper/demo mode."""
+                if enabled and (
+                    settings.trading_mode != "paper"
+                    or settings.broker_env != "demo"
+                    or settings.live_trading_enabled
+                ):
+                    return (
+                        "Risk override is disabled outside paper/demo mode; risk remains enforced."
+                    )
+                controls = getattr(_app.state, "account_controls", None)
+                setter = getattr(controls, "set_risk_override", None)
+                if not callable(setter):
+                    return "Risk override is unavailable; risk remains enforced."
+                try:
+                    setter(account, enabled=enabled, ttl_seconds=900)
+                except Exception:
+                    return "Risk override is unavailable; risk remains enforced."
+                target = f" for account {account}" if account else " for all accounts"
+                if enabled:
+                    return (
+                        f"Bounded P&L override enabled{target} for 15 minutes in paper/demo only. "
+                        "Broker, reconciliation, stop and data-safety checks remain active."
+                    )
+                return (
+                    f"Bounded P&L override disabled{target}; configured loss limits are enforced."
+                )
+
             command_service = getattr(_app.state, "command_data_service", None)
             command_handlers = (
                 command_service.handlers()
@@ -1344,6 +1372,7 @@ async def lifespan(_app: FastAPI) -> Any:
                     else None
                 ),
                 accounts=getattr(_app.state, "account_controls", None),
+                risk_override_handler=risk_override_handler,
             )
             # Only the main bot listens for commands.  An extra account's process sends its
             # alerts and reports through the same bot but never competes for the updates.
@@ -1426,6 +1455,8 @@ TELEGRAM_MENU = (
     {"command": "chart", "description": "Equity chart"},
     {"command": "pause", "description": "Pause new entries"},
     {"command": "resume", "description": "Resume entries (asks for your code)"},
+    {"command": "risk_override", "description": "Bounded P&L override (paper/demo, owner code)"},
+    {"command": "risk_override_off", "description": "Disable bounded P&L override"},
     {"command": "stop", "description": "Pause and close positions"},
     {"command": "kill", "description": "Emergency stop"},
     {"command": "help", "description": "List commands"},
