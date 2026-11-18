@@ -7,6 +7,7 @@ import logging
 import random
 import threading
 import time
+import weakref
 from collections.abc import Callable, Iterator, Mapping
 from datetime import UTC, datetime, timedelta
 from email.utils import parsedate_to_datetime
@@ -33,7 +34,7 @@ _MAX_TRANSPORT_ATTEMPTS = 3
 _TRANSPORT_RETRY_BASE_SECONDS = 1.0
 _KEEPALIVE_SECONDS = 300.0
 _SHARED_SESSION_LOCK = threading.RLock()
-_SHARED_SESSIONS: dict[tuple[str, str, int], dict[str, object]] = {}
+_SHARED_SESSIONS: dict[tuple[str, str, object], dict[str, object]] = {}
 
 
 _NO_PRICES_CODE = "error.prices.not-found"
@@ -97,7 +98,11 @@ class CapitalComClient:
         self._password = password
         self._base_url = _BASE_URLS[settings.broker_env]
         credential_digest = hashlib.sha256(f"{api_key}\0{identifier}".encode()).hexdigest()
-        transport_scope = id(http_client) if http_client is not None else 0
+        # Keep sessions shared for clients that use the same HTTP transport, but do
+        # not key by ``id(http_client)``.  Object ids can be reused after a test or
+        # short-lived client is collected, which can attach a stale CST/token pair
+        # to a new transport and make the first request look unauthorized.
+        transport_scope: object = weakref.ref(http_client) if http_client is not None else "default"
         self._session_cache_key = (self._base_url, credential_digest, transport_scope)
         self._limiter = limiter
         if self._limiter is None:
