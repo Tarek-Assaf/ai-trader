@@ -15,6 +15,7 @@ def test_environment_defaults_keep_live_trading_disabled() -> None:
     assert settings.live_trading_enabled is False
     assert settings.tai_demo_experiment is False
     assert settings.tai_demo_ha_mode == "forming"
+    assert settings.tai_demo_three_legs is False
 
 
 def test_secrets_are_masked_from_repr_and_exposed_for_redaction() -> None:
