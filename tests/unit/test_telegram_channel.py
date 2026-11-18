@@ -384,11 +384,43 @@ def test_a_used_code_cannot_resume_twice() -> None:
     assert writer.set_modes == [ControlMode.RESUME]
 
 
+def test_risk_override_requires_totp_and_calls_bounded_handler() -> None:
+    transport = FakeTransport()
+    calls: list[tuple[str | None, bool]] = []
+
+    def override(account: str | None, enabled: bool) -> str:
+        calls.append((account, enabled))
+        return "override enabled"
+
+    channel, _ = make_channel(
+        transport,
+        risk_override_handler=override,
+        resume_totp_secret=_TOTP_SECRET,
+    )
+    channel.handle_message("owner", "/risk_override")
+    markup = transport.messages[-1][2]
+    nonce = markup["inline_keyboard"][0][0]["callback_data"].split(":", 1)[1]
+    channel.handle_update(callback_update(nonce, action="confirm_risk_override"))
+    channel.handle_message("owner", _totp_now())
+    assert calls == [(None, True)]
+    assert transport.messages[-1][1] == "override enabled"
+
+
 def test_published_menu_lists_every_owner_command_including_resume() -> None:
     from trader.api.app import TELEGRAM_MENU
 
     names = {item["command"] for item in TELEGRAM_MENU}
-    assert {"resume", "pause", "kill", "stop", "status", "pnl", "positions"} <= names
+    assert {
+        "resume",
+        "pause",
+        "kill",
+        "stop",
+        "status",
+        "pnl",
+        "positions",
+        "risk_override",
+        "risk_override_off",
+    } <= names
     assert all("/" + name in TelegramChannel.COMMANDS for name in names if name != "help")
     assert all(0 < len(item["description"]) <= 256 for item in TELEGRAM_MENU)
 

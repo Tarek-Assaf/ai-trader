@@ -195,7 +195,10 @@ def build_runtime_services(
 
         symbols: Any = instruments.get("instruments", instruments)
         guardian = RiskGuardian(
-            RiskLimits.from_mapping(risk_values), audit, canonical_symbols=symbols.keys()
+            RiskLimits.from_mapping(risk_values),
+            audit,
+            canonical_symbols=symbols.keys(),
+            risk_override_source=control_source,
         )
 
     approval_adapter: Any = provided.get("approval")
@@ -209,6 +212,7 @@ def build_runtime_services(
                 journal,
                 clock=lambda: datetime.now(UTC),
                 default_consecutive_losses=0,
+                realized_pnl_provider=lambda start: trade_ledger.day_total(start),
             )
         market_source = provided.get("market_context_source")
         if market_source is None and provided.get("recorder") is not None:
@@ -342,6 +346,7 @@ def build_runtime_services(
             alert=_log_alert,
             journal=journal,
             realized_pnl_provider=lambda start: trade_ledger.day_total(start),
+            risk_override_source=control_source,
         )
         position_manager = ProtectivePositionManager(
             broker, control_writer=control_writer, alert=_log_alert

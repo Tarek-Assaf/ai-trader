@@ -229,6 +229,16 @@ def test_resume_of_a_killed_account_is_refused(tmp_path: Path) -> None:
     assert mode_of(controls, "02") is ControlMode.KILL
 
 
+def test_risk_override_is_account_scoped_and_clearable(tmp_path: Path) -> None:
+    controls, redis = make_controls(tmp_path)
+    controls.set_risk_override("02", enabled=True, ttl_seconds=60)
+    assert controls.risk_override_active("02") is True
+    assert controls.risk_override_active("01") is False
+    controls.set_risk_override("02", enabled=False)
+    assert controls.risk_override_active("02") is False
+    assert not any(key.endswith(":risk-override") for key in redis.values.keys())
+
+
 def test_resume_of_one_account_is_refused_while_every_account_is_paused(tmp_path) -> None:
     channel, controls, transport = make_channel(tmp_path)
     channel.handle_message(OWNER, "/pause")

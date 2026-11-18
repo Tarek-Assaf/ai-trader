@@ -576,6 +576,7 @@ class RiskGuardian:
         audit_writer: AuditWriter,
         *,
         canonical_symbols: Collection[str],
+        risk_override_source: object | None = None,
     ) -> None:
         if isinstance(canonical_symbols, str):
             raise ValueError("canonical instrument symbols must be a collection of symbols")
@@ -589,7 +590,17 @@ class RiskGuardian:
         self._limits = limits
         self._audit_writer = audit_writer
         self._canonical_symbols = frozenset(normalized_symbols)
+        self._risk_override_source = risk_override_source
         self._last_risk_pct: Decimal | None = None
+
+    def _risk_override_active(self) -> bool:
+        checker = getattr(self._risk_override_source, "risk_override_active", None)
+        if not callable(checker):
+            return False
+        try:
+            return bool(checker())
+        except Exception:  # noqa: BLE001 - unavailable state fails closed
+            return False
 
     def with_soft_filters_off(self) -> RiskGuardian:
         """Copy that leaves out the strategy-quality filters, for an owner-directed signal.
@@ -608,7 +619,12 @@ class RiskGuardian:
             min_reward_risk=tiny,
             min_trade_quality_score=tiny,
         )
-        return RiskGuardian(limits, self._audit_writer, canonical_symbols=self._canonical_symbols)
+        return RiskGuardian(
+            limits,
+            self._audit_writer,
+            canonical_symbols=self._canonical_symbols,
+            risk_override_source=self._risk_override_source,
+        )
 
     def evaluate(
         self,
@@ -640,6 +656,7 @@ class RiskGuardian:
             self._last_risk_pct = sizing.risk_amount / account.equity * 100
         checked: list[str] = []
         failures: list[str] = []
+        risk_override = self._risk_override_active()
         for name, rule in _RULES:
             checked.append(name)
             try:
@@ -647,7 +664,7 @@ class RiskGuardian:
             except Exception:
                 LOGGER.error("risk rule %s failed unexpectedly; rejecting entry", name)
                 result = _RuleResult(False, "rule_evaluation_failed")
-            if not result.passed:
+            if not result.passed and not (risk_override and name in {"daily_loss", "weekly_loss"}):
                 failures.append(f"{name}:{result.reason or 'rejected'}")
         approved = not failures
         halt_system = any(reason.startswith("drawdown:") for reason in failures)

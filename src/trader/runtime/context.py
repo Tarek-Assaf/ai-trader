@@ -28,6 +28,7 @@ from trader.risk.guardian import (
 )
 from trader.risk.sizing import SizingDecision, SizingLimits, size_position
 from trader.runtime.approval import GuardianInputs
+from trader.runtime.calendar import trading_day, trading_week
 
 LOGGER = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ class AccountContextSource:
         *,
         clock: Callable[[], datetime],
         default_consecutive_losses: int | None = None,
+        realized_pnl_provider: Callable[[datetime], Decimal] | None = None,
     ) -> None:
         self.broker = broker
         self.journal = journal
@@ -70,6 +72,7 @@ class AccountContextSource:
         # Neither the broker nor the baseline snapshot records a loss streak yet. A
         # deployment may declare a starting value; the default stays fail-closed.
         self.default_consecutive_losses = default_consecutive_losses
+        self.realized_pnl_provider = realized_pnl_provider
 
     def __call__(self) -> AccountState:
         raw = self.broker.get_account()
@@ -90,8 +93,15 @@ class AccountContextSource:
         day_start = field("day_start_equity", positive=True)
         week_start = field("week_start_equity", positive=True)
         peak = field("peak_equity", positive=True)
-        daily = _decimal(raw.get("daily_pnl", equity - day_start), "daily_pnl")
-        weekly = _decimal(raw.get("weekly_pnl", equity - week_start), "weekly_pnl")
+        if self.realized_pnl_provider is not None:
+            try:
+                daily = self.realized_pnl_provider(trading_day(self.clock())[1])
+                weekly = self.realized_pnl_provider(trading_week(self.clock())[1])
+            except Exception:  # noqa: BLE001 - unavailable ledger data fails closed
+                raise ContextUnavailable("account P&L is unavailable") from None
+        else:
+            daily = _decimal(raw.get("daily_pnl", equity - day_start), "daily_pnl")
+            weekly = _decimal(raw.get("weekly_pnl", equity - week_start), "weekly_pnl")
         margin = field("margin_used")
         exposure = field("notional_exposure")
         orders = raw.get("orders_last_hour")
@@ -133,16 +143,15 @@ class AccountContextSource:
     def _load_or_store_baseline(self, equity: Decimal) -> Mapping[str, object]:
         """Load and atomically refresh the single durable P&L baseline store.
 
-        The first observed equity seeds the UTC day and ISO week.  A restart
-        reloads the same values, a new UTC day rolls only the day baseline, and
+        The first observed equity seeds the Riyadh trading day and ISO week.  A restart
+        reloads the same values, a new Riyadh day rolls only the day baseline, and
         the peak is retained and advanced monotonically.  Account context and
         :class:`PnlLossGuard` intentionally share this snapshot id/schema.
         """
         getter = getattr(self.journal, "get_snapshot", None)
         now = self.clock().astimezone(UTC)
-        iso = now.date().isocalendar()
-        current_day = now.date().isoformat()
-        current_week = f"{iso.year}-W{iso.week:02d}"
+        current_day, _day_start = trading_day(now)
+        current_week, _week_start = trading_week(now)
         value = getter("runtime:pnl-baseline") if callable(getter) else None
 
         def stored(name: str) -> Decimal | None:

@@ -239,6 +239,73 @@ def test_pnl_guard_uses_closed_trade_pnl_instead_of_balance_delta() -> None:
     assert alerts == []
 
 
+def test_pnl_guard_uses_riyadh_day_boundary_for_closed_trade_pnl() -> None:
+    class Broker:
+        def get_account(self) -> dict[str, Decimal]:
+            return {"equity": Decimal("1000")}
+
+    class Journal:
+        snapshot: dict[str, object] | None = None
+
+        def get_snapshot(self, _snapshot_id: str) -> dict[str, object] | None:
+            return self.snapshot
+
+        def save_snapshot(self, _snapshot_id: str, payload: dict[str, object]) -> None:
+            self.snapshot = payload
+
+    starts: list[datetime] = []
+
+    def realized(start: datetime) -> Decimal:
+        starts.append(start)
+        return Decimal("0")
+
+    guard = PnlLossGuard(
+        Broker(),
+        max_daily_loss_pct=Decimal("2"),
+        max_weekly_loss_pct=Decimal("5"),
+        control_writer=None,
+        alert=lambda _message: None,
+        journal=Journal(),
+        realized_pnl_provider=realized,
+        clock=lambda: datetime(2026, 11, 17, 1, 0, tzinfo=UTC),
+    )
+    guard(())
+    assert starts[0] == datetime(2026, 11, 16, 21, tzinfo=UTC)
+
+
+def test_pnl_guard_override_only_relaxes_loss_limits() -> None:
+    class Broker:
+        def get_account(self) -> dict[str, Decimal]:
+            return {"equity": Decimal("1000")}
+
+    class Journal:
+        snapshot: dict[str, object] | None = None
+
+        def get_snapshot(self, _snapshot_id: str) -> dict[str, object] | None:
+            return self.snapshot
+
+        def save_snapshot(self, _snapshot_id: str, payload: dict[str, object]) -> None:
+            self.snapshot = payload
+
+    class Override:
+        def risk_override_active(self) -> bool:
+            return True
+
+    alerts: list[str] = []
+    guard = PnlLossGuard(
+        Broker(),
+        max_daily_loss_pct=Decimal("2"),
+        max_weekly_loss_pct=Decimal("5"),
+        control_writer=None,
+        alert=alerts.append,
+        journal=Journal(),
+        realized_pnl_provider=lambda _start: Decimal("-100"),
+        risk_override_source=Override(),
+    )
+    guard(())
+    assert alerts == []
+
+
 def test_position_manager_and_reconciler_alert_on_safety_mismatch() -> None:
     class Writer:
         def __init__(self) -> None:
