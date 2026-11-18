@@ -96,19 +96,19 @@ class RedisControlSource:
                 except TypeError:
                     self._client.set(self._risk_override_key, str(expires))
             else:
-                self._client.delete(self._risk_override_key)  # type: ignore[attr-defined]
+                self._client.delete(self._risk_override_key)
         except Exception:
             raise ControlUnavailable("risk override state is unavailable") from None
 
     def risk_override_active(self) -> bool:
         """Return whether this control scope has an unexpired risk override."""
         try:
-            raw = self._client.get(self._risk_override_key)  # type: ignore[attr-defined]
+            raw = self._client.get(self._risk_override_key)
             if raw is None:
                 return False
             expires = float(raw)
             if expires <= time.time():
-                self._client.delete(self._risk_override_key)  # type: ignore[attr-defined]
+                self._client.delete(self._risk_override_key)
                 return False
             return True
         except (TypeError, ValueError):
@@ -160,7 +160,7 @@ class RedisControlSource:
 
     def read(self) -> ControlMode:
         try:
-            value = self._client.get(self._key)  # type: ignore[attr-defined]
+            value = self._client.get(self._key)
         except Exception:
             raise ControlUnavailable("Redis control key is unavailable") from None
         if value is None:
@@ -182,9 +182,9 @@ class RedisControlSource:
                 self._last_honored = False
                 return
             if mode is ControlMode.RUN:
-                self._client.delete(self._key)  # type: ignore[attr-defined]
+                self._client.delete(self._key)
             else:
-                self._client.set(self._key, mode.value)  # type: ignore[attr-defined]
+                self._client.set(self._key, mode.value)
             self._last_honored = self.read() is mode
         except Exception:
             self._last_honored = False
