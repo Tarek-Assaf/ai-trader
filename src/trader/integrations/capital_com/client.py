@@ -102,9 +102,7 @@ class CapitalComClient:
         # not key by ``id(http_client)``.  Object ids can be reused after a test or
         # short-lived client is collected, which can attach a stale CST/token pair
         # to a new transport and make the first request look unauthorized.
-        transport_scope: object = (
-            weakref.ref(http_client) if http_client is not None else "default"
-        )
+        transport_scope: object = weakref.ref(http_client) if http_client is not None else "default"
         self._session_cache_key = (self._base_url, credential_digest, transport_scope)
         self._limiter = limiter
         if self._limiter is None:
