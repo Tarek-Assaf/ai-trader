@@ -64,10 +64,10 @@ def control_key(account_id: str) -> str:
 class RedisControlSource:
     """Read and update a persistent Redis control key shared by service workers."""
 
-    def __init__(self, client: object, key: str = GLOBAL_CONTROL_KEY) -> None:
+    def __init__(self, client: Any, key: str = GLOBAL_CONTROL_KEY) -> None:
         if not key.strip():
             raise ValueError("control key must not be empty")
-        self._client = client
+        self._client: Any = client
         self._key = key
         self._last_requested: ControlMode | None = None
         self._last_honored: bool | None = None
