@@ -1080,6 +1080,8 @@ class TaiDemoRunner:
                 position.size,
                 position.level,
                 self._managed[position.deal_id].one_r_value,
+                cycle_id=cycle_id,
+                deal_ids=(position.deal_id,),
             )
         )
         return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
@@ -1157,6 +1159,8 @@ class TaiDemoRunner:
                 sum(position.size for position in positions),
                 positions[0].level,
                 None,
+                cycle_id=cycle_id,
+                deal_ids=tuple(position.deal_id for position in positions),
             )
             + "\nThree legs: 40% / 30% / 30% ("
             + self.settings.three_leg_approval_text
@@ -1804,6 +1808,8 @@ class TaiDemoRunner:
         one_r_value: Decimal | None,
         *,
         prefix: str = "ENTRY",
+        cycle_id: str | None = None,
+        deal_ids: Sequence[str] | None = None,
     ) -> str:
         n = self._num
         tp1, tp2, tp3 = signal.levels()
@@ -1817,11 +1823,21 @@ class TaiDemoRunner:
             )
         else:
             plan_source = "Plan source: bot strategy"
-        return (
+        identifiers = []
+        if cycle_id:
+            identifiers.append(f"Cycle: {cycle_id}")
+        if deal_ids:
+            label = "Deal" if len(deal_ids) == 1 else "Deals"
+            identifiers.append(f"{label}: {', '.join(str(deal) for deal in deal_ids)}")
+        text = (
             f"{prefix} {signal.direction.value} {epic}\n"
             f"Time: {self._riyadh_time()}\n"
             "\n"
             f"{plan_source}\n"
+        )
+        if identifiers:
+            text += "\n".join(identifiers) + "\n"
+        return text + (
             f"Size: {n(size)}\n"
             f"Entry: {n(fill)}\n"
             "\n"
