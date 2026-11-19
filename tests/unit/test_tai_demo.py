@@ -723,9 +723,7 @@ def test_broker_refusing_a_partial_exit_does_not_crash_the_bar_and_alerts_once()
     gateway = RefusingGateway()
     alerts: list[str] = []
     journal: list[dict] = []
-    instance, _ = runner(
-        gateway, alerts=alerts, journal=journal.append, three_legs=True
-    )
+    instance, _ = runner(gateway, alerts=alerts, journal=journal.append, three_legs=True)
     instance.on_bar(bar())
     instance.on_bar(bar(high="101"))  # target 1: refused partial, bar must still complete
     instance.on_bar(bar(high="102"))
