@@ -1301,10 +1301,7 @@ class TaiDemoRunner:
                 # An earlier attempt failed (price too close, broker busy): retry each bar.
                 self._move_stop_to_entry(position, state, cycle_id)
             for index, target in enumerate(state.targets, start=1):
-                if (
-                    index in state.hit
-                    or not self._target_hit(state.direction, bar, target)
-                ):
+                if index in state.hit or not self._target_hit(state.direction, bar, target):
                     continue
                 if index == 1 and not state.entry_stop_moved:
                     self._move_stop_to_entry(position, state, cycle_id)
