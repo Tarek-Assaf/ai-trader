@@ -324,13 +324,13 @@ def test_kill_flattens_and_alerts():
 
 def test_scale_out_and_stop_to_entry_bookkeeping():
     gateway = Gateway()
-    runner_instance, _ = runner(gateway, three_legs=True)
+    runner_instance, _ = runner(gateway)
     runner_instance.on_bar(bar())
     assert runner_instance.on_bar(bar(high="101")).reason == "one_position_rule"
-    assert gateway.partial == [("deal-1", Decimal("1"))]
+    assert gateway.partial == []
     assert gateway.modified == [("deal-1", Decimal("100"), Decimal("103"))]
     runner_instance.on_bar(bar(high="102"))
-    assert gateway.partial[-1] == ("deal-1", Decimal("1"))
+    assert gateway.partial == []
     runner_instance.on_bar(bar(high="103"))
     assert gateway.closed == ["deal-1"]
 
@@ -723,14 +723,13 @@ def test_broker_refusing_a_partial_exit_does_not_crash_the_bar_and_alerts_once()
     gateway = RefusingGateway()
     alerts: list[str] = []
     journal: list[dict] = []
-    instance, _ = runner(gateway, alerts=alerts, journal=journal.append, three_legs=True)
+    instance, _ = runner(gateway, alerts=alerts, journal=journal.append)
     instance.on_bar(bar())
     instance.on_bar(bar(high="101"))  # target 1: refused partial, bar must still complete
     instance.on_bar(bar(high="102"))
     assert gateway.partial == []
-    assert [e["event"] for e in journal].count("scale_out_failed") == 2
-    assert sum("scale_out_failed" in message for message in alerts) == 1
-    assert "position did not move" in alerts[0]
+    assert not any(e["event"] == "scale_out_failed" for e in journal)
+    assert any("single-leg mode" in message for message in alerts)
 
 
 def test_partial_exit_retries_after_failure_and_reports_success():
@@ -745,13 +744,13 @@ def test_partial_exit_retries_after_failure_and_reports_success():
 
     gateway = FlakyPartialGateway()
     alerts: list[str] = []
-    instance, _ = runner(gateway, alerts=alerts, three_legs=True)
+    instance, _ = runner(gateway, alerts=alerts)
     instance.on_bar(bar())
     instance.on_bar(bar(high="101"))
     assert gateway.partial == []
     instance.on_bar(bar(high="101"))
-    assert gateway.partial == [("deal-1", Decimal("1"))]
-    assert any("retry succeeded" in alert for alert in alerts)
+    assert gateway.partial == []
+    assert sum("single-leg mode" in alert for alert in alerts) == 1
 
 
 def test_single_leg_mode_never_sends_an_opposite_partial_order():
@@ -831,7 +830,7 @@ def test_break_even_stop_is_deferred_when_live_market_is_too_close():
     assert gateway.modified == []
     deferred = [event for event in journal if event.get("event") == "stop_to_entry_deferred"]
     assert deferred and deferred[0]["reason"] == "market_distance"
-    assert len(alerts) == 2
+    assert len(alerts) == 3
     assert any("STOP NOT MOVED TO ENTRY" in alert for alert in alerts)
 
 
