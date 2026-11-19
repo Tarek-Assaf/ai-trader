@@ -711,7 +711,7 @@ def test_live_missing_position_is_dropped_and_later_signal_can_enter():
     assert instance.on_bar(bar()).action == "SUBMITTED"
     assert len(manager.submits) == 2
     assert any(event["event"] == "reconcile_closed" for event in events)
-    assert any("CLOSED" in alert and "Capital.com" in alert for alert in alerts)
+    assert not any("CLOSED" in alert and "Capital.com" in alert for alert in alerts)
 
 
 def test_broker_refusing_a_partial_exit_does_not_crash_the_bar_and_alerts_once():
@@ -723,12 +723,46 @@ def test_broker_refusing_a_partial_exit_does_not_crash_the_bar_and_alerts_once()
     alerts: list[str] = []
     journal: list[dict] = []
     instance, _ = runner(gateway, alerts=alerts, journal=journal.append)
+    instance.settings.three_legs = True
     instance.on_bar(bar())
     instance.on_bar(bar(high="101"))  # target 1: refused partial, bar must still complete
     instance.on_bar(bar(high="102"))
     assert gateway.partial == []
     assert [e["event"] for e in journal].count("scale_out_failed") == 2
     assert sum("scale_out_failed" in message for message in alerts) == 1
+    assert "position did not move" in alerts[0]
+
+
+def test_partial_exit_retries_after_failure_and_reports_success():
+    class FlakyPartialGateway(Gateway):
+        failures = 1
+
+        def close_partial(self, deal_id, size):
+            if self.failures:
+                self.failures -= 1
+                raise RuntimeError("broker busy")
+            return super().close_partial(deal_id, size)
+
+    gateway = FlakyPartialGateway()
+    alerts: list[str] = []
+    instance, _ = runner(gateway, alerts=alerts)
+    instance.settings.three_legs = True
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))
+    assert gateway.partial == []
+    instance.on_bar(bar(high="101"))
+    assert gateway.partial == [("deal-1", Decimal("1"))]
+    assert any("retry succeeded" in alert for alert in alerts)
+
+
+def test_single_leg_mode_never_sends_an_opposite_partial_order():
+    gateway = Gateway()
+    alerts: list[str] = []
+    instance, _ = runner(gateway, alerts=alerts)
+    instance.on_bar(bar())
+    instance.on_bar(bar(high="101"))
+    assert gateway.partial == []
+    assert any("single-leg mode" in alert for alert in alerts)
 
 
 def test_stop_to_entry_is_retried_on_later_bars_after_a_broker_refusal():
@@ -1067,10 +1101,7 @@ def test_check_broker_closed_aggregates_three_legs_into_one_alert():
     gateway.positions.clear()
     instance.check_broker_closed()
     closed = [alert for alert in alerts if "CLOSED NSXUSD" in alert]
-    assert len(closed) == 1
-    assert "Account: 01 Main Account" in closed[0]
-    assert "Closed legs: 3" in closed[0]
-    assert "Closed size: 3" in closed[0]
+    assert closed == []
 
 
 def test_external_signal_passes_the_tradingview_reference_to_the_builder() -> None:

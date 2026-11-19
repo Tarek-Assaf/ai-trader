@@ -374,6 +374,15 @@ class CapitalComBroker:
             reply = self._client.close_position(deal_id)
             reference = _required_text(reply.get("dealReference"), "dealReference")
             self._require_accepted(self._client.confirm_deal(reference), "position close")
+            # A successful deal confirmation only acknowledges the close request.  The
+            # broker can still leave the position open (or settle it asynchronously).  Do
+            # not let the runtime report a false ``CLOSED`` state; the caller will retain
+            # the managed position and retry reconciliation when this check fails.
+            remaining = {position.deal_id for position in self.get_positions()}
+            if deal_id in remaining:
+                raise BrokerProtocolError(
+                    "Capital.com confirmed the close request but the position is still open"
+                )
             return reference
 
     def close_partial(self, deal_id: str, size: Decimal) -> str:

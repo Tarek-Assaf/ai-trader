@@ -203,6 +203,8 @@ def result_text(
     lines = ([f"Account: {account_label}"] if account_label else []) + [
         f"RESULT {leg.epic}: {verdict} {money(leg.pnl, leg.currency)}",
         f"Time: {when}",
+        f"Deal: {leg.deal_id}",
+        "P&L source: Capital.com broker history (realized)",
     ]
     if reason:
         lines.append(f"Closed by: {reason}")
@@ -216,6 +218,7 @@ def result_summary_text(
     day_total: Decimal,
     *,
     account_label: str | None = None,
+    leg_reasons: Sequence[str] | None = None,
 ) -> str:
     """Render one result for all broker legs belonging to one logical trade."""
     if not legs:
@@ -228,6 +231,12 @@ def result_summary_text(
         return text
     lines = text.splitlines()
     lines.insert(2, f"Closed legs: {len(legs)}")
+    if leg_reasons is not None and len(leg_reasons) == len(legs):
+        breakdown = [
+            f"- {money(leg.pnl, leg.currency)} ({leg_reason or 'broker event'})"
+            for leg, leg_reason in zip(legs, leg_reasons, strict=True)
+        ]
+        lines.insert(3, "Breakdown:\n" + "\n".join(breakdown))
     return "\n".join(lines)
 
 
@@ -282,15 +291,17 @@ class ClosedTradeSync:
             self._ledger.record(leg, reason)
         # Capital.com returns each three-leg close as a separate transaction.  Keep
         # those rows in the ledger, but send one owner-facing result per logical
-        # close rather than three duplicate alerts.
+        # close rather than a stream of misleading per-leg alerts.  Cleanup and
+        # original-stop transactions can have different activity reasons, so the
+        # reason is rendered in the breakdown instead of splitting the alert.
         batches: list[list[tuple[ClosedLeg, str]]] = []
         for leg, reason in enriched:
             if (
                 batches
                 and batches[-1][0][0].epic == leg.epic
                 and batches[-1][0][0].currency == leg.currency
-                and batches[-1][0][1] == reason
-                and (leg.closed_at - batches[-1][-1][0].closed_at).total_seconds() <= 2
+                and len(batches[-1]) < 3
+                and (leg.closed_at - batches[-1][-1][0].closed_at).total_seconds() <= 5
             ):
                 batches[-1].append((leg, reason))
             else:
@@ -298,7 +309,12 @@ class ClosedTradeSync:
         day_total = self._ledger.day_total(day_start)
         for batch in batches:
             batch_legs = [leg for leg, _reason in batch]
-            batch_reason = batch[0][1]
+            distinct_reasons = {item[1] for item in batch if item[1]}
+            batch_reason = (
+                next(iter(distinct_reasons))
+                if len(distinct_reasons) == 1
+                else "multiple broker events"
+            )
             if all(
                 (end - leg.closed_at).total_seconds() <= FRESH_ALERT_SECONDS for leg in batch_legs
             ):
@@ -308,6 +324,7 @@ class ClosedTradeSync:
                         batch_reason,
                         day_total,
                         account_label=self._account_label,
+                        leg_reasons=[item[1] for item in batch],
                     )
                 )
         return len(new)
