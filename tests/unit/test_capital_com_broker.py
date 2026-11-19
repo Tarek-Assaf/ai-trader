@@ -97,6 +97,9 @@ class FakeCapitalClient:
 
     def close_position(self, deal_id: str) -> Mapping[str, object]:
         self.calls.append(("close_position", deal_id))
+        self.position_rows = [
+            row for row in self.position_rows if row["position"]["dealId"] != deal_id
+        ]
         return {"dealReference": "close-ref"}
 
     def cancel_working_order(self, deal_id: str) -> Mapping[str, object]:
@@ -252,9 +255,23 @@ def test_modify_close_cancel_and_polling_use_confirmed_references() -> None:
     assert broker.cancel_working_order("work-1") == "cancel-ref"
     assert broker.get_account()["accounts"] == []
     assert broker.get_market_details("US100")["market"]["epic"] == "US100"
-    assert broker.get_positions()[0].deal_id == "deal-1"
+    assert broker.get_positions() == ()
     assert broker.get_open_orders()[0]["workingOrderData"]["dealId"] == "work-1"
     assert broker.get_activity(now, now + timedelta(hours=1))[0]["status"] == "ACCEPTED"
+
+
+def test_close_requires_a_post_confirmation_flat_position() -> None:
+    client = FakeCapitalClient()
+
+    def leave_open(deal_id: str) -> Mapping[str, object]:
+        client.calls.append(("close_position", deal_id))
+        return {"dealReference": "close-ref"}
+
+    client.close_position = leave_open
+    broker = CapitalComBroker(client)
+
+    with pytest.raises(BrokerProtocolError, match="position is still open"):
+        broker.close_position("deal-1")
 
 
 class _HttpError(RuntimeError):

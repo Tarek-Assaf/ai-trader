@@ -1080,6 +1080,8 @@ class TaiDemoRunner:
                 position.size,
                 position.level,
                 self._managed[position.deal_id].one_r_value,
+                cycle_id=cycle_id,
+                deal_ids=(position.deal_id,),
             )
         )
         return self._outcome(cycle_id, "SUBMITTED", "entry_submitted")
@@ -1157,6 +1159,8 @@ class TaiDemoRunner:
                 sum(position.size for position in positions),
                 positions[0].level,
                 None,
+                cycle_id=cycle_id,
+                deal_ids=tuple(position.deal_id for position in positions),
             )
             + "\nThree legs: 40% / 30% / 30% ("
             + self.settings.three_leg_approval_text
@@ -1233,15 +1237,17 @@ class TaiDemoRunner:
         note_exit = getattr(self._signal, "note_exit", None)
         if callable(note_exit):
             note_exit(at)
+        # Do not emit a second, P&L-less ``CLOSED`` notification here.  The
+        # ClosedTradeSync poller is the authoritative source for broker history and
+        # sends one grouped result with the realized amount and closing reason.  The
+        # prior message raced that poller and made one close look like several trades.
         total_size = sum((state.original_size for state in closed), Decimal("0"))
-        legs_text = f"Closed legs: {len(closed)}\nClosed size: {self._num(total_size)}\n"
-        self._send_alert(
-            f"CLOSED {epic}\n"
-            f"Time: {self._riyadh_time()}\n"
-            "\n"
-            f"{legs_text}"
-            "The trade is no longer open on Capital.com (stop, target or manual).\n"
-            "Exact result: see Capital.com History."
+        self._journal_event(
+            cycle_id,
+            "close_detected_pending_result",
+            epic=epic,
+            closed_legs=len(closed),
+            closed_size=str(total_size),
         )
         self._persist_state()
 
@@ -1299,11 +1305,7 @@ class TaiDemoRunner:
                 # An earlier attempt failed (price too close, broker busy): retry each bar.
                 self._move_stop_to_entry(position, state, cycle_id)
             for index, target in enumerate(state.targets, start=1):
-                if (
-                    index in state.hit
-                    or index in state.blocked_exits
-                    or not self._target_hit(state.direction, bar, target)
-                ):
+                if index in state.hit or not self._target_hit(state.direction, bar, target):
                     continue
                 if index == 1 and not state.entry_stop_moved:
                     self._move_stop_to_entry(position, state, cycle_id)
@@ -1332,17 +1334,56 @@ class TaiDemoRunner:
                     )
                     self._persist_state()
                     break
+                if not self.settings.three_legs:
+                    # A single broker position cannot be safely scaled by sending an
+                    # opposite order on Capital.com.  In one-leg mode, keep the full
+                    # position, protect it at TP1, and wait for TP3 to close it.  This
+                    # is deliberately explicit in Telegram instead of pretending a
+                    # partial close happened.
+                    state.hit.add(index)
+                    self._journal_event(
+                        cycle_id,
+                        "single_leg_target_reached",
+                        deal_id=position.deal_id,
+                        target=index,
+                        size=current_size,
+                    )
+                    self._send_alert(
+                        f"TP{index} REACHED {bar.epic} (single-leg mode)\n"
+                        f"Time: {self._riyadh_time()}\n\n"
+                        f"Target: {self._num(target)}\n"
+                        f"Position held: {self._num(current_size)}\n"
+                        + (
+                            "Stop-to-entry is being retried until broker accepts it."
+                            if index == 1 and not state.entry_stop_moved
+                            else "No partial close was attempted; TP3 remains the exit."
+                        )
+                    )
+                    self._persist_state()
+                    continue
                 close_partial = getattr(self._positions, "close_partial", None)
                 if callable(close_partial):
                     amount = self._partial_amount(state, current_size, index)
                     if amount > 0 and amount < current_size:
+                        retry = index in state.blocked_exits
                         try:
                             close_partial(position.deal_id, amount)
                         except Exception as exc:  # noqa: BLE001 - stop and target still protect it
                             state.blocked_exits.add(index)
-                            self._exit_failed(position.deal_id, "scale_out_failed", exc, cycle_id)
+                            self._exit_failed(
+                                position.deal_id,
+                                "scale_out_failed",
+                                exc,
+                                cycle_id,
+                                context=(
+                                    f"TP{index} was reached but the position did not move. "
+                                    "The protective stop remains active; retrying on the next "
+                                    "closed bar."
+                                ),
+                            )
                             self._persist_state()
                             continue
+                        state.blocked_exits.discard(index)
                         state.hit.add(index)
                         current_size -= amount
                         self._journal_event(
@@ -1353,8 +1394,9 @@ class TaiDemoRunner:
                             amount=amount,
                             fraction=str(self._exit_fraction(index)),
                         )
+                        result_state = "retry succeeded" if retry else "completed"
                         self._send_alert(
-                            f"PARTIAL EXIT {bar.epic}: TP{index} reached\n"
+                            f"PARTIAL EXIT {bar.epic}: TP{index} reached ({result_state})\n"
                             f"Time: {self._riyadh_time()}\n"
                             "\n"
                             f"Target: {self._num(target)}\n"
@@ -1436,6 +1478,7 @@ class TaiDemoRunner:
                     distance = abs(reference - stop)
                     invalid = distance < min_stop_distance
                 if invalid:
+                    first_defer = not state.entry_stop_blocked
                     state.entry_stop_blocked = True
                     self._journal_event(
                         cycle_id,
@@ -1447,6 +1490,15 @@ class TaiDemoRunner:
                         minimum_stop_distance=str(min_stop_distance),
                     )
                     self._spread_alerted.add((position.deal_id, "stop_to_entry_deferred"))
+                    if first_defer:
+                        self._send_alert(
+                            f"STOP NOT MOVED TO ENTRY {position.epic}\n"
+                            f"Time: {self._riyadh_time()}\n\n"
+                            f"Requested stop: {self._num(stop)}\n"
+                            f"Reason: broker minimum distance ({self._num(min_stop_distance)})\n"
+                            "Status: original protective stop remains active; retrying on the "
+                            "next closed bar."
+                        )
                     self._persist_state()
                     return
                 state.entry_stop_blocked = False
@@ -1490,7 +1542,16 @@ class TaiDemoRunner:
                         requested_stop=str(stop),
                     )
                     self._persist_state()
-            self._exit_failed(position.deal_id, "stop_to_entry_failed", exc, cycle_id)
+            self._exit_failed(
+                position.deal_id,
+                "stop_to_entry_failed",
+                exc,
+                cycle_id,
+                context=(
+                    "break-even was not applied; the original protective stop remains active "
+                    "and the bot will retry on the next closed bar"
+                ),
+            )
             return
         state.entry_stop_moved = True
         state.entry_stop_blocked = False
@@ -1503,13 +1564,24 @@ class TaiDemoRunner:
             "The trade is protected at broker-safe break-even; TP3 stays as the target."
         )
 
-    def _exit_failed(self, deal_id: str, event: str, exc: Exception, cycle_id: str) -> None:
+    def _exit_failed(
+        self,
+        deal_id: str,
+        event: str,
+        exc: Exception,
+        cycle_id: str,
+        *,
+        context: str | None = None,
+    ) -> None:
         LOGGER.warning("tai demo %s deal=%s reason=%s", event, deal_id, type(exc).__name__)
         self._journal_event(cycle_id, event, deal_id=deal_id, reason=str(exc)[:200])
         key = (deal_id, event)
         if key not in self._spread_alerted:
             self._spread_alerted.add(key)
-            self._send_alert(f"{event} for {deal_id}: {str(exc)[:120]}")
+            message = f"{event} for {deal_id}: {str(exc)[:120]}"
+            if context:
+                message += f"\nStatus: {context}"
+            self._send_alert(message)
 
     def _manage_shadow_exits(self, bar: ClosedBar, cycle_id: str) -> None:
         for deal_id, state in tuple(self._managed.items()):
@@ -1736,15 +1808,36 @@ class TaiDemoRunner:
         one_r_value: Decimal | None,
         *,
         prefix: str = "ENTRY",
+        cycle_id: str | None = None,
+        deal_ids: Sequence[str] | None = None,
     ) -> str:
         n = self._num
         tp1, tp2, tp3 = signal.levels()
         risk = abs(signal.entry - signal.stop)
         risk_usd = f" (1R = ${n(one_r_value.quantize(Decimal('0.01')))})" if one_r_value else ""
-        return (
+        if "TradingView explicit plan" in signal.note:
+            plan_source = "Plan source: TradingView supplied entry/SL/TP levels"
+        elif "TradingView" in signal.note:
+            plan_source = (
+                "Plan source: bot reconstruction from TradingView close + live broker quote"
+            )
+        else:
+            plan_source = "Plan source: bot strategy"
+        identifiers = []
+        if cycle_id:
+            identifiers.append(f"Cycle: {cycle_id}")
+        if deal_ids:
+            label = "Deal" if len(deal_ids) == 1 else "Deals"
+            identifiers.append(f"{label}: {', '.join(str(deal) for deal in deal_ids)}")
+        text = (
             f"{prefix} {signal.direction.value} {epic}\n"
             f"Time: {self._riyadh_time()}\n"
             "\n"
+            f"{plan_source}\n"
+        )
+        if identifiers:
+            text += "\n".join(identifiers) + "\n"
+        return text + (
             f"Size: {n(size)}\n"
             f"Entry: {n(fill)}\n"
             "\n"

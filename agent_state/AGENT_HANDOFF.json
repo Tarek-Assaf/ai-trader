@@ -5,8 +5,8 @@
     "created": "2026-10-02T00:00:00Z",
     "description": "Single source of truth for coordination between Claude and Codex while building the trading agent."
   },
-  "turn": "codex",
-  "revision": 635,
+  "turn": "human",
+  "revision": 636,
   "current_phase": 1,
   "protocol": {
     "writer_rule": "Only the agent named in 'turn' may edit this file. When finished, set 'turn' to the other agent and increment 'revision'.",
@@ -31833,7 +31833,25 @@
         "agent_state/AGENT_HANDOFF.json"
       ],
       "summary": "Owner-authorized handoff assigns the next coordination turn to Codex for the protected operator resolver investigation. This is coordination-only: no runtime code, deployment, credentials, risk controls, or orders were changed; implementation remains gated on reviewed handoff and CI."
+    },
+    {
+      "revision": 636,
+      "ts": "2026-11-19T07:30:00Z",
+      "agent": "codex",
+      "action": "reconcile_exit_state_and_notifications",
+      "task_ids": [
+        "T-269"
+      ],
+      "files_changed": [
+        "src/trader/experiments/tai_demo.py",
+        "src/trader/execution/brokers/capital_com.py",
+        "src/trader/reports/trade_ledger.py",
+        "tests/unit/test_tai_demo.py",
+        "tests/unit/test_capital_com_broker.py",
+        "agent_state/AGENT_HANDOFF.json"
+      ],
+      "summary": "Fixed the production failure paths behind the owner's repeated mismatched alerts: one-leg mode no longer sends opposite partial orders, failed stop/scale operations retain protection and retry, Capital.com close confirmation now verifies the position is actually gone, and broker-history P&L is grouped into one result with breakdown and source. Entry notifications now identify plan source, cycle and deal IDs; the P&L-less CLOSED race was removed. CI run 44479409007 passed all quality, tests (1191 passed), handoff, secret scan, image build, database/Redis and ROLE=all checks. The current VM image remains d25578e until PR 532 is merged and separately deployed; no runtime controls, risk ceilings, credentials, or live orders were changed."
     }
   ],
-  "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; worker Tai alerts now flush immediately so Account 02 entry, TP, stop-loss and result messages carry its account label. T-269 latency work coalesces repeated instrument-rule fetches and prepares parallel Capital.com reconciliation plus concurrent three-leg submission; these changes are local only and not deployed. Demo only. The T-273 balance-scope fallback is deployed in image 7759355. No risk-control bypass was made."
+  "project_summary": "Multi-account (T-268) is merged and installed on the owner's VM: extra accounts run as workers inside the one container, one TradingView alert and one Telegram bot; account 02 is a real second Capital.com demo account, healthy. T-270 (account DB backups) and T-271 (per-account status, positions, P&L, risk, reports) are in PR 491. T-272 first open-market US100 alert was observed and submitted on both accounts; worker Tai alerts now flush immediately so Account 02 entry, TP, stop-loss and result messages carry its account label. PR 532 (Codex) reconciles single-leg exits, broker close confirmation, grouped realized P&L and owner-facing notification correlation; CI run 44479409007 passed all quality, tests, handoff, image and ROLE=all checks. Deployment remains pending merge and explicit authorization. Demo only. The T-273 balance-scope fallback is deployed in image 7759355. No risk-control bypass was made."
 }
