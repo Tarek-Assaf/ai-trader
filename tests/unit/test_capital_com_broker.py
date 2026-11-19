@@ -97,7 +97,11 @@ class FakeCapitalClient:
 
     def close_position(self, deal_id: str) -> Mapping[str, object]:
         self.calls.append(("close_position", deal_id))
-        self.position_rows = [row for row in self.position_rows if row["position"]["dealId"] != deal_id]
+        self.position_rows = [
+            row
+            for row in self.position_rows
+            if row["position"]["dealId"] != deal_id
+        ]
         return {"dealReference": "close-ref"}
 
     def cancel_working_order(self, deal_id: str) -> Mapping[str, object]:
