@@ -106,7 +106,9 @@ def runner(
     manager = Manager(gateway, veto=veto)
     signal = TaiSignal(Direction.BUY, Decimal("100"), Decimal("99"))
     return TaiDemoRunner(
-        settings=TaiDemoSettings("demo", "paper", False, three_legs),
+        settings=TaiDemoSettings(
+            "demo", "paper", False, True, three_legs=three_legs
+        ),
         order_manager=manager,
         position_gateway=gateway,
         signal_provider=signal_provider or (lambda _bar: signal),
