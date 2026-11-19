@@ -100,12 +100,13 @@ def runner(
     journal=None,
     alerts=None,
     signal_provider=None,
+    three_legs=False,
     **kwargs,
 ):
     manager = Manager(gateway, veto=veto)
     signal = TaiSignal(Direction.BUY, Decimal("100"), Decimal("99"))
     return TaiDemoRunner(
-        settings=TaiDemoSettings("demo", "paper", False, True),
+        settings=TaiDemoSettings("demo", "paper", False, three_legs),
         order_manager=manager,
         position_gateway=gateway,
         signal_provider=signal_provider or (lambda _bar: signal),
@@ -323,7 +324,7 @@ def test_kill_flattens_and_alerts():
 
 def test_scale_out_and_stop_to_entry_bookkeeping():
     gateway = Gateway()
-    runner_instance, _ = runner(gateway)
+    runner_instance, _ = runner(gateway, three_legs=True)
     runner_instance.on_bar(bar())
     assert runner_instance.on_bar(bar(high="101")).reason == "one_position_rule"
     assert gateway.partial == [("deal-1", Decimal("1"))]
@@ -722,8 +723,9 @@ def test_broker_refusing_a_partial_exit_does_not_crash_the_bar_and_alerts_once()
     gateway = RefusingGateway()
     alerts: list[str] = []
     journal: list[dict] = []
-    instance, _ = runner(gateway, alerts=alerts, journal=journal.append)
-    instance.settings.three_legs = True
+    instance, _ = runner(
+        gateway, alerts=alerts, journal=journal.append, three_legs=True
+    )
     instance.on_bar(bar())
     instance.on_bar(bar(high="101"))  # target 1: refused partial, bar must still complete
     instance.on_bar(bar(high="102"))
@@ -745,8 +747,7 @@ def test_partial_exit_retries_after_failure_and_reports_success():
 
     gateway = FlakyPartialGateway()
     alerts: list[str] = []
-    instance, _ = runner(gateway, alerts=alerts)
-    instance.settings.three_legs = True
+    instance, _ = runner(gateway, alerts=alerts, three_legs=True)
     instance.on_bar(bar())
     instance.on_bar(bar(high="101"))
     assert gateway.partial == []
@@ -832,7 +833,8 @@ def test_break_even_stop_is_deferred_when_live_market_is_too_close():
     assert gateway.modified == []
     deferred = [event for event in journal if event.get("event") == "stop_to_entry_deferred"]
     assert deferred and deferred[0]["reason"] == "market_distance"
-    assert len(alerts) == 1
+    assert len(alerts) == 2
+    assert any("STOP NOT MOVED TO ENTRY" in alert for alert in alerts)
 
 
 def test_break_even_stop_retries_after_market_distance_becomes_valid():
@@ -1064,7 +1066,8 @@ def test_check_broker_closed_notices_a_closed_trade_without_a_bar():
     gateway.positions.clear()
     instance.check_broker_closed()
     assert any(event["event"] == "reconcile_closed" for event in events)
-    assert any("CLOSED" in alert for alert in alerts)
+    assert not any("CLOSED" in alert for alert in alerts)
+    assert any(event["event"] == "close_detected_pending_result" for event in events)
     instance.check_broker_closed()  # nothing tracked any more: quiet
     assert sum(event["event"] == "reconcile_closed" for event in events) == 1
 

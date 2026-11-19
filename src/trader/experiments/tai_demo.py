@@ -1337,8 +1337,6 @@ class TaiDemoRunner:
                     # is deliberately explicit in Telegram instead of pretending a
                     # partial close happened.
                     state.hit.add(index)
-                    if index == 1 and not state.entry_stop_moved:
-                        self._move_stop_to_entry(position, state, cycle_id)
                     self._journal_event(
                         cycle_id,
                         "single_leg_target_reached",
