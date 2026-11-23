@@ -1,5 +1,29 @@
 {
   "last_exit_at": "2026-11-20T15:17:21.393021+00:00",
-  "positions": {},
+  "positions": {
+    "00000000-75bf-032d-0496-1fc40055311e": {
+      "blocked_exits": [],
+      "direction": "BUY",
+      "entry": "25675.8",
+      "entry_stop_blocked": false,
+      "entry_stop_moved": true,
+      "epic": "US100",
+      "hit": [
+        1
+      ],
+      "leg_target": null,
+      "one_r_value": "110.00",
+      "original_size": "1.0",
+      "remaining_size": null,
+      "risk": "110.0",
+      "shadow": false,
+      "size_step": "0.001",
+      "targets": [
+        "25784.1",
+        "25893.2",
+        "26002.3"
+      ]
+    }
+  },
   "version": 1
 }
